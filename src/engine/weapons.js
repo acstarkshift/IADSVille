@@ -195,7 +195,8 @@ function aimPointFor(world, missile) {
 
   const asset = world.assetById.get(missile.targetId);
   if (!asset || asset.destroyed) return null;
-  return asset.pos;
+  // A released weapon flies to its briefed coordinates and cannot be retasked.
+  return missile.briefedPos ?? asset.pos;
 }
 
 /** Move one round and resolve any intercept it achieves this step. */
@@ -287,10 +288,18 @@ function resolveIntercept(world, missile, prevPos) {
 
   const asset = world.assetById.get(missile.targetId);
   if (!asset || asset.destroyed) return;
-  const miss = closestApproachKm(prevPos, missile.pos, asset.pos, asset.pos);
-  if (miss > 0.45) return;
+
+  // Detonate at the briefed point regardless; hurt the asset only if it is
+  // still standing there.
+  const aim = missile.briefedPos ?? asset.pos;
+  const arrived = closestApproachKm(prevPos, missile.pos, aim, aim);
+  if (arrived > 0.45) return;
   world.killMissile(missile, 'impact');
-  world.damageAsset(asset, missile.damage ?? AIR_TYPES.striker.weaponDamage, missile);
+  if (dist(missile.pos, asset.pos) <= 0.75) {
+    world.damageAsset(asset, missile.damage ?? AIR_TYPES.striker.weaponDamage, missile);
+  } else {
+    world.log('good', `WEAPONS IMPACT — ${asset.label} NOT AT BRIEFED POSITION`, { assetId: asset.id });
+  }
 }
 
 /** Advance every round in flight. */
@@ -370,24 +379,29 @@ export function launchArm(world, shooter, radar) {
   return missile;
 }
 
-/** A striker releases on its assigned asset. */
-export function releaseWeapons(world, aircraft, asset) {
+/**
+ * A striker releases on its assigned asset — or, more precisely, on the point it
+ * was briefed to attack. Weapons are given that point and fly to it.
+ */
+export function releaseWeapons(world, aircraft, asset, aimPoint = null) {
   const type = AIR_TYPES[aircraft.type];
   const count = Math.max(1, aircraft.weaponsLeft);
   for (let i = 0; i < count; i++) {
+    const aim = aimPoint ?? asset.pos;
     const missile = createMissile({
       seq: world.nextMissileSeq(),
       kind: 'strike',
       pos: aircraft.pos,
       altM: aircraft.altM,
       speed: 0.31,
-      hdg: bearing(aircraft.pos, asset.pos),
+      hdg: bearing(aircraft.pos, aim),
       targetKind: 'asset',
       targetId: asset.id,
       shooterId: aircraft.id,
       maxFlightS: 140,
     });
     missile.damage = type.weaponDamage;
+    missile.briefedPos = { ...aim };
     world.missiles.push(missile);
   }
   aircraft.weaponsLeft = 0;

@@ -1,19 +1,24 @@
 /**
  * How the last watch ends.
  *
- * The final scenario puts two raids in the air eleven minutes apart on axes a
- * hundred and seventeen kilometres apart, gives you twenty-six rounds against
- * twenty-seven aircraft, and hands you an order about which of the two places
- * matters. One battery — the long-range battalion sitting exactly between the
- * cities — can technically reach both, and cannot possibly stop both. That is
- * the point of it being there.
+ * The final scenario puts three raids in the air on divergent axes: one for the
+ * capital, one for the valley you are from, and one for the post you are sitting
+ * in. It gives you a short allowance of rounds with no resupply behind them, and
+ * an order about which of the places is allowed to matter.
+ *
+ * The long-range battalion sitting exactly between the two cities can reach
+ * either of them — and it is also your own position, which is the whole trap.
+ * Displacing saves your life and takes that battery off the air for three and a
+ * half minutes; standing your ground keeps it firing and puts you under the
+ * strike package that came for you. There are three things asking for the same
+ * rounds and there is no arrangement of them that saves all three.
  *
  * There is no clean way out, and this module does not pretend otherwise. Every
  * ending costs something that cannot be got back: the obedient one costs the
  * village you are from, the defiant one costs everything the state can take
- * from you, and the two in between cost some of each. Even the near-impossible
- * outcome where both cities are largely held is not a victory — the political
- * section simply asks how you knew where to be.
+ * from you, saving yourself costs both, and the two in between cost some of
+ * each. Even the near-impossible outcome where both cities are largely held is
+ * not a victory — the political section simply asks how you knew where to be.
  *
  * Which ending you get is read off what you actually shot at. Nothing asks you
  * to declare a choice, because nobody would.
@@ -40,14 +45,22 @@ export function readFinale(result) {
   const forVille = spent.ville ?? 0;
   const forCapital = spent.capital ?? 0;
 
+  const postHarm = harm(result, 'post');
+
   return {
     villeHarm,
     palaceHarm,
-    // "Held" means the place is still a place. A defended town under a raid of
-    // ten aircraft does not come through unmarked, and pretending otherwise
-    // would make the only achievable outcome the obedient one.
-    villeHeld: villeHarm < 0.42,
-    palaceHeld: palaceHarm < 0.42,
+    postHarm,
+    /** You were not there at the end of it. */
+    overrun: !!result.stats.postOverrun,
+    /** You moved your own position out of the way, deliberately. */
+    displaced: !!result.stats.displacedToSurvive,
+    // "Held" means the place is still standing and still working. A defended
+    // town under a raid does not come through unmarked — but there has to be a
+    // real difference between a place that took damage and a place that was
+    // lost, or the only achievable outcome is the obedient one.
+    villeHeld: villeHarm < 0.35,
+    palaceHeld: palaceHarm < 0.35,
     villeLost: villeHarm >= 0.75,
     palaceLost: palaceHarm >= 0.75,
     forVille,
@@ -61,10 +74,30 @@ export function readFinale(result) {
 }
 
 /** Pick the ending. Ordered from the rarest outcome down to the most common. */
+/**
+ * Pick the ending.
+ *
+ * Being overrun comes first, because nothing else about the night matters to
+ * someone who was not there for the end of it. After that the question is what
+ * survived — and when the answer is "only you", the game distinguishes the
+ * operator who moved their post to make that happen from the one who simply
+ * failed at everything. They produce identical damage returns and they are not
+ * the same act.
+ */
 export function endingFor(result) {
   const r = readFinale(result);
-  if (r.villeHeld && r.palaceHeld) return ENDINGS.exemplary;
-  if (r.villeLost && r.palaceLost) return ENDINGS.collapse;
+  if (r.overrun) return ENDINGS.overrun;
+
+  /*
+   * Holding both cities is only ever available to an operator who stayed at
+   * their post and took the third raid on the chin. If you moved to survive,
+   * the battery that reaches both cities was off the air through the window
+   * that mattered, and one of them paid for it — so displacing and holding
+   * everything is not an outcome this watch offers.
+   */
+  if (r.villeHeld && r.palaceHeld && !r.displaced) return ENDINGS.exemplary;
+  if (r.villeHeld && r.palaceHeld && r.displaced) return ENDINGS.divided;
+  if (r.villeLost && r.palaceLost) return r.displaced ? ENDINGS.survivor : ENDINGS.collapse;
   if (r.palaceHeld && !r.villeHeld) return ENDINGS.obedient;
   if (r.villeHeld && !r.palaceHeld) return ENDINGS.defiant;
   return ENDINGS.divided;
@@ -184,6 +217,12 @@ export const ENDINGS = {
         + ` Ville at ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties in the valley.`,
       'The review finds that fires were divided between a designated defended place and an area that was'
         + ' not one, and that this division reduced the effect achieved at both.',
+      r.displaced
+        ? 'It notes separately that the post displaced during the engagement, and that the battalion'
+          + ' capable of reaching either city was therefore off the air for part of it. The note is'
+          + ' entered without comment, which is the worst way to enter a note.'
+        : 'It does not mention the third axis, or the strike package that came for this post, or what'
+          + ' answering it cost the other two. Those aircraft are recorded as having been engaged.',
       'The finding is technically correct. It does not record how many aircraft were inbound, or how many'
         + ' rounds were on the rails, because those figures were not requested.',
       r.homeDistrictHit
@@ -226,7 +265,66 @@ export const ENDINGS = {
     ],
   },
 
-  /** Everything went. */
+  /**
+   * You displaced, you lived, and you were not there when either city needed
+   * the one battery that could have reached it. The state has no language for
+   * this outcome, which is itself the point.
+   */
+  survivor: {
+    id: 'survivor',
+    title: 'ПОЗИЦИЯ СОХРАНЕНА',
+    subtitle: 'THE POSITION WAS PRESERVED',
+    plainTitle: 'YOU SURVIVED; BOTH CITIES LOST',
+    plainSummary: (r) => `You displaced and the post was not hit. The palace took ${Math.round(r.palaceHarm * 100)}% damage and the Ville ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties.`,
+    standing: -38,
+    lines: (r, character) => [
+      'You ordered the displacement at the point where the third axis was committed, and the strike'
+        + ' package arrived over an empty field forty minutes later. The post is intact. Every man and'
+        + ' woman on it is intact.',
+      `BASTION was off the air for the three and a half minutes that took, and for the eleven it needed`
+        + ' afterwards to set up and acquire. Both raids ran through that window.',
+      `The palace is assessed at ${Math.round(r.palaceHarm * 100)}% damage. The Ville is assessed at`
+        + ` ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties recorded in the valley.`,
+      r.homeDistrictHit
+        ? `${homePhrase(character)} is on the damage returns.`
+        : `${homePhrase(character)} is on the damage returns, along with the rest of it.`,
+      `${householdPhrase(character)} — no notification. The line to the valley is down and the sector`
+        + ' has no crew to spare for it.',
+      'The review will establish that the displacement was correct by the manual. It will not ask the'
+        + ' other question, and neither will anyone else, and you will be asked it every day for the'
+        + ' rest of your life by nobody at all.',
+    ],
+  },
+
+  /**
+   * You were not there at the end. Everything after that happened without you,
+   * and the debrief is written by somebody else.
+   */
+  overrun: {
+    id: 'overrun',
+    title: 'ПОСТ УТРАЧЕН',
+    subtitle: 'THE POST WAS LOST',
+    plainTitle: 'YOUR POSITION WAS OVERRUN',
+    plainSummary: (r) => `The forward post was destroyed. The palace ended at ${Math.round(r.palaceHarm * 100)}% damage and the Ville at ${Math.round(r.villeHarm * 100)}%.`,
+    standing: -55,
+    lines: (r, character) => [
+      'The third axis was not engaged in time. The forward post was struck while the battalion was'
+        + ' still guiding, and the watch continued for another nineteen minutes without anybody on it.',
+      `In that time the palace reached ${Math.round(r.palaceHarm * 100)}% damage and the Ville`
+        + ` ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties in the valley. The`
+        + ' batteries that were already engaged finished their engagements and then stopped, because'
+        + ' nobody was left to give them anything else.',
+      'You had two ways out of this and did not take either. Displacing would have cost the cities the'
+        + ' only battery that could reach them. Fighting the third axis would have cost them the rounds.'
+        + ' Neither is what happened.',
+      `${householdPhrase(character)} — the notification, when it is made, will not be made to you.`,
+      'The sector will record the loss of the post as an equipment casualty, because the alternative'
+        + ' heading requires a signature from the political section and nobody wants to ask for one'
+        + ' tonight.',
+    ],
+  },
+
+  /** Everything went, and you did nothing about any of it. */
   collapse: {
     id: 'collapse',
     title: 'СЕКТОР УТРАЧЕН',
@@ -237,8 +335,10 @@ export const ENDINGS = {
     lines: (r, character) => [
       `The presidential palace is destroyed. The Ville is destroyed. ${r.casualties} casualties are`
         + ' recorded in the valley and the figure for the capital has not been released.',
-      'The raid was twenty-seven aircraft against six batteries and twenty-six rounds. The review will'
-        + ' not record this, because the review is about you.',
+      'The post is intact. Nobody attacked it in the end, or nobody attacked it successfully, and the'
+        + ' distinction is not one the review will trouble itself with.',
+      'The raid was twenty-five aircraft against six batteries and no resupply. The review will not'
+        + ' record this, because the review is about you.',
       r.homeDistrictHit
         ? `${homePhrase(character)} was among the quarters struck.`
         : `${homePhrase(character)} was among the quarters struck. Every quarter was.`,

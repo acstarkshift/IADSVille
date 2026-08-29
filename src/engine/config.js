@@ -391,7 +391,7 @@ export const ASSET_TYPES = {
      * anything; if either were doomed regardless, this would be a cutscene.
      */
     id: 'palace', label: 'PRESIDENTIAL PALACE', name: 'Presidential palace',
-    value: 70, hp: 340,
+    value: 70, hp: 420,
     critical: false,
     /** Losing it is not survivable for the person who was on watch. */
     regime: true,
@@ -399,6 +399,32 @@ export const ASSET_TYPES = {
   ministry: {
     id: 'ministry', label: 'STATE MINISTRY', name: 'Ministry building',
     value: 22, hp: 95,
+  },
+  /**
+   * Where you are.
+   *
+   * The forward post is co-located with the battalion you belong to, so on the
+   * last watch your own position is also the only battery that can reach both
+   * cities. Losing it ends your watch; saving it by displacing takes that
+   * battery out of the fight for as long as the move takes. There is no version
+   * of this where all three survive.
+   */
+  post: {
+    /*
+     * Sized so that ignoring the third axis kills you and answering it costs
+     * four or five rounds: three strike aircraft carry enough to level the post
+     * twice over, and stopping two of the three leaves you standing.
+     */
+    /*
+     * Valued between the village and the palace. Threat ranking is "what will
+     * hurt me most", and losing this ends the watch — at a low value the
+     * aircraft coming to kill the operator sorted below everything else on the
+     * board, which is not how anybody prioritises anything.
+     */
+    id: 'post', label: 'FORWARD POST', name: 'Sector forward post',
+    value: 55, hp: 170,
+    /** Destroying this is destroying the operator. */
+    isPost: true,
   },
 };
 

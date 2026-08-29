@@ -246,8 +246,13 @@ A few decisions worth knowing about if you read the source:
 - **The last watch is geometry, not scripting.** Its tests assert the properties
   that make the choice real: that the cities are more than 100 km apart, that no
   medium battery covers both, that exactly one battery does and cannot hold both,
-  that point defence is sited forward of the release ring, and that every one of
-  the five endings is reachable.
+  that point defence is sited forward of the release ring, that being overrun
+  does not spare the cities, and that every one of the seven endings is
+  reachable.
+- **A strike package flies to a grid reference, not a live feed.** Sorties record
+  the coordinates they were briefed on; if the target has moved by the time they
+  arrive, the weapons land on empty ground. That one rule is what makes
+  displacing a battery a real way to survive rather than a cosmetic order.
 
 ## Credits
 

@@ -69,6 +69,15 @@ export function createAircraft(spec) {
     orbitCentre: spec.orbitCentre ?? null,
     orbitPhase: spec.orbitPhase ?? 0,
     waypoints: spec.waypoints ?? [],
+    /**
+     * Where the target was when this sortie was planned.
+     *
+     * A strike package flies to a grid reference, not to a live feed. If the
+     * thing it was briefed on has moved by the time it arrives, it puts its
+     * weapons on an empty field — which is the entire reason a battery
+     * displaces, and the reason displacing is a real way to save yourself.
+     */
+    briefedPos: spec.briefedPos ? { ...spec.briefedPos } : null,
     /** Mirrored each tick so Pk calculations can see the clock. */
     worldTimeS: 0,
   };
@@ -161,13 +170,15 @@ function stepStriker(world, aircraft, dt) {
 
   if (aircraft.evadingUntilS > world.t && evasiveStep(world, aircraft, dt)) return;
 
-  const range = dist(aircraft.pos, asset.pos);
+  // Navigate to the briefed point. Nobody re-plans a sortie in the air.
+  const aim = aircraft.briefedPos ?? asset.pos;
+  const range = dist(aircraft.pos, aim);
   if (range <= type.releaseRangeKm && aircraft.weaponsLeft > 0) {
-    releaseWeapons(world, aircraft, asset);
+    releaseWeapons(world, aircraft, asset, aim);
     aircraft.state = 'egress';
     return;
   }
-  flyToward(aircraft, asset.pos, dt);
+  flyToward(aircraft, aim, dt);
 }
 
 function stepCruise(world, aircraft, dt) {
@@ -191,19 +202,26 @@ function stepCruise(world, aircraft, dt) {
    * itself at the target, which is both what actually happens and what stops the
    * simulation waiting on an aircraft that will never land.
    */
-  const range = dist(aircraft.pos, asset.pos);
+  const aim = aircraft.briefedPos ?? asset.pos;
+  const range = dist(aircraft.pos, aim);
   if (range < 5) {
-    aircraft.hdg = bearing(aircraft.pos, asset.pos);
+    aircraft.hdg = bearing(aircraft.pos, aim);
     advance(aircraft, dt);
   } else {
-    flyToward(aircraft, asset.pos, dt);
+    flyToward(aircraft, aim, dt);
   }
 
-  if (dist(aircraft.pos, asset.pos) < 0.6) {
+  // It detonates where it was sent. Whether the target is still there is a
+  // separate question, and one the missile is in no position to ask.
+  if (dist(aircraft.pos, aim) < 0.6 && dist(aircraft.pos, asset.pos) < 0.9) {
     world.damageAsset(asset, AIR_TYPES.cruise.weaponDamage, aircraft);
     aircraft.alive = false;
     aircraft.impacted = true;
     world.log('alert', `${asset.label} — IMPACT`, { assetId: asset.id });
+  } else if (dist(aircraft.pos, aim) < 0.6) {
+    aircraft.alive = false;
+    aircraft.impacted = true;
+    world.log('good', 'VAMPIRE IMPACT — EMPTY GROUND', { aircraftId: aircraft.id });
   }
 }
 

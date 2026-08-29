@@ -117,6 +117,10 @@ export class World {
       turnedBack: 0,
       /** Set once a round lands on the quarter the operator's family lives in. */
       homeDistrictHit: false,
+      /** Set if the operator moved their own position out of the way. */
+      displacedToSurvive: false,
+      /** Set if it was overrun anyway. */
+      postOverrun: false,
       /**
        * Rounds expended, attributed to the defended place the target appeared to
        * be going for. On the last watch this is the record of what you chose,
@@ -171,6 +175,8 @@ export class World {
         label: spec.label ?? type.label,
         /** Which side of the sector this belongs to, where that matters. */
         cluster: spec.cluster ?? null,
+        /** A post packs up and moves when the battery it sits with displaces. */
+        follows: spec.follows ?? null,
         pos: { ...spec.pos },
         damage: 0,
         destroyed: false,
@@ -459,10 +465,20 @@ export class World {
     return best;
   }
 
-  pickAssetForRaid(fromPos) {
-    const alive = this.assets.filter((a) => !a.destroyed);
-    if (alive.length === 0) return null;
-    return alive.sort((a, b) => dist(fromPos, a.pos) - dist(fromPos, b.pos))[0];
+  /**
+   * A weapon whose target no longer exists looks for something else nearby.
+   *
+   * "Nearby" is the operative word: a cruise missile programmed against the
+   * valley cannot re-attack a capital a hundred and seventeen kilometres away.
+   * Without the limit, abandoning one city actively worsened the other, and
+   * committing to a side became strictly worse than spreading — which is the
+   * opposite of the decision the last watch is meant to pose.
+   */
+  pickAssetForRaid(fromPos, maxRangeKm = 45) {
+    const alive = this.assets
+      .filter((a) => !a.destroyed && dist(fromPos, a.pos) <= maxRangeKm)
+      .sort((a, b) => dist(fromPos, a.pos) - dist(fromPos, b.pos));
+    return alive[0] ?? null;
   }
 
   damageAsset(asset, amount, source) { damageAsset(this, asset, amount, source); }
@@ -551,6 +567,22 @@ export class World {
       site.pos = jitter;
       const radar = this.radarById.get(site.radarId);
       if (radar) radar.pos = { ...jitter };
+
+      /*
+       * Anything that lives with this battery packs up and goes with it — the
+       * forward post included. Rounds already tracking the old grid reference
+       * arrive at an empty field, which is the entire reason to move, and is
+       * also why moving is the deliberate act of saving yourself rather than a
+       * tactical adjustment.
+       */
+      for (const asset of this.assets) {
+        if (asset.follows !== site.id || asset.destroyed) continue;
+        asset.pos = { ...jitter };
+        if (site.id === this.homeBatteryId) {
+          this.stats.displacedToSurvive = true;
+          this.log('warn', `${asset.label} — DISPLACING WITH ${site.name}`, { assetId: asset.id });
+        }
+      }
     }
     return moved;
   }
@@ -577,6 +609,8 @@ export class World {
         altM: spec.altM ?? type.cruiseAltM,
         hdg: bearing(pos, target?.pos ?? this.centre),
         targetAssetId: target?.id ?? null,
+        // The grid reference the sortie was planned against.
+        briefedPos: target ? { ...target.pos } : null,
         spawnS: this.t,
         name: spec.name,
         waypoints: spec.waypoints,
@@ -639,6 +673,14 @@ export class World {
     if (this.phase !== 'running') return;
 
     if (this.console.destroyed) {
+      /*
+       * Being overrun must never be a way out. If the watch simply stopped when
+       * the post fell, the raid still in the air would never arrive and losing
+       * your position would *spare* the cities — so the rest of the night is
+       * played out with your batteries inert, and the figures in the debrief
+       * are the ones that would actually have been recorded.
+       */
+      if (this.scenario.finale) this.playOutWithoutYou();
       this.finish('site-lost');
       return;
     }
@@ -652,6 +694,39 @@ export class World {
     if (this.pendingWaves.length === 0 && !liveHostiles && !liveRounds) {
       this.finish('raid-spent');
     }
+  }
+
+  /**
+   * Run the remainder of the raid with the operator gone: no assignments, no
+   * emissions control, nothing but the batteries that were already fighting and
+   * whatever the enemy does next. Bounded, because it must always terminate.
+   */
+  playOutWithoutYou() {
+    for (const site of this.sites) {
+      if (site.id === this.homeBatteryId) {
+        site.alive = false;
+        site.engagements = [];
+      }
+    }
+    const wasDestroyed = this.console.destroyed;
+    this.console.destroyed = false;   // so checkEnd does not recurse
+    let steps = 0;
+    while (steps < 20000) {
+      const liveHostiles = this.aircraft.some((a) => a.alive && a.type !== 'civil'
+        && !(a.state === 'egress' && len(a.pos) > 110));
+      if (this.pendingWaves.length === 0 && !liveHostiles && !this.missiles.some((m) => m.alive)) break;
+      this.t += this.dt;
+      this.spawnDue();
+      stepDetection(this, this.dt);
+      scoreAllTracks(this);
+      runBatteryCrews(this, this.dt);
+      stepEngagements(this, this.dt);
+      stepAircraft(this, this.dt);
+      stepMissiles(this, this.dt);
+      steps++;
+    }
+    this.console.destroyed = wasDestroyed;
+    this.stats.postOverrun = true;
   }
 
   finish(reason) {

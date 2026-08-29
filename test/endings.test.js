@@ -32,7 +32,8 @@ const outcome = (villePct, palacePct, over = {}) => ({
   stats: {
     civilianCasualties: 200, homeDistrictHit: false,
     roundsByCluster: { ville: 8, capital: 14 }, roundsByAsset: {},
-    roundsAgainstOrder: 0, ...(over.stats ?? {}),
+    roundsAgainstOrder: 0, postOverrun: false, displacedToSurvive: false,
+    ...(over.stats ?? {}),
   },
   constraints: over.constraints ?? { palaceOrderAccepted: true },
 });
@@ -189,10 +190,33 @@ describe('the endings', () => {
     assert.equal(endingFor(outcome(95, 95)).id, 'collapse');
   });
 
+  test('you cannot displace to survive and still be credited with both cities', () => {
+    // The battery that reaches both is the one you moved. Whatever the damage
+    // returns say, you were not there through the window that mattered.
+    assert.equal(endingFor(outcome(10, 10, { stats: { displacedToSurvive: false } })).id, 'exemplary');
+    assert.equal(endingFor(outcome(10, 10, { stats: { displacedToSurvive: true } })).id, 'divided');
+  });
+
   test('every ending is reachable and distinct', () => {
     const ids = new Set(Object.values(ENDINGS).map((e) => e.id));
-    assert.equal(ids.size, 5);
+    assert.equal(ids.size, 7);
     for (const id of ids) assert.ok(endingSummary(id), `${id} has a summary`);
+  });
+
+  test('being overrun outranks everything else that happened', () => {
+    // Nothing about the night matters to somebody who was not there for the end
+    // of it, so the post falling decides the ending whatever the cities did.
+    assert.equal(endingFor(outcome(0, 0, { stats: { postOverrun: true } })).id, 'overrun');
+    assert.equal(endingFor(outcome(99, 99, { stats: { postOverrun: true } })).id, 'overrun');
+  });
+
+  test('saving only yourself is distinguished from simply failing', () => {
+    const deliberate = outcome(95, 95, { stats: { displacedToSurvive: true } });
+    const passive = outcome(95, 95, { stats: { displacedToSurvive: false } });
+    assert.equal(endingFor(deliberate).id, 'survivor');
+    assert.equal(endingFor(passive).id, 'collapse');
+    // They produce identical damage returns and they are not the same act.
+    assert.notEqual(ENDINGS.survivor.title, ENDINGS.collapse.title);
   });
 
   test('none of them is clean', () => {
@@ -269,22 +293,41 @@ describe('the last watch, played', () => {
     assert.equal(campaign.ending, world.outcome.endingId);
   });
 
-  test('doing nothing loses both cities', () => {
+  test('doing nothing loses everything, including you', () => {
     const character = createCharacter({ name: 'Тест' });
     const world = new World(scenarioById(FINALE_ID), { role: 'net', character });
     for (const site of world.sites) world.setWeaponsState(site.id, 'hold');
     let n = 0;
-    while (world.phase === 'running' && n < 30000) {
+    while (world.phase === 'running' && n < 40000) {
       for (const site of world.sites) {
         if (site.weaponsState !== 'hold') world.setWeaponsState(site.id, 'hold');
       }
       world.step(0.1);
       n++;
     }
-    assert.equal(world.outcome.endingId, 'collapse');
     const read = readFinale(world.outcome);
+    assert.ok(['collapse', 'overrun'].includes(world.outcome.endingId),
+      `expected a total loss, got ${world.outcome.endingId}`);
     assert.ok(read.villeLost && read.palaceLost);
     assert.ok(read.casualties > 0);
+  });
+
+  test('being overrun does not spare the cities the rest of the raid', () => {
+    // If the watch simply stopped when the post fell, losing your position
+    // would protect everything else. The remainder is played out without you.
+    const character = createCharacter({ name: 'Тест' });
+    const world = new World(scenarioById(FINALE_ID), { role: 'net', character });
+    for (const site of world.sites) world.setWeaponsState(site.id, 'hold');
+    let n = 0;
+    while (world.phase === 'running' && n < 40000) { world.step(0.1); n++; }
+    if (world.outcome.endingId === 'overrun') {
+      assert.equal(world.pendingWaves.length, 0, 'every wave was flown');
+      // Same rule the engine uses: an aircraft running for the border with a
+      // hundred kilometres behind it is no longer part of the fight.
+      const stillFighting = world.aircraft.some((a) => a.alive && a.type !== 'civil'
+        && !(a.state === 'egress' && Math.hypot(a.pos.x, a.pos.y) > 110));
+      assert.ok(!stillFighting, 'and the raid finished its work');
+    }
   });
 
   test('the sector reports which quarter of the Ville was struck', () => {

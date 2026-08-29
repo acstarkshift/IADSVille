@@ -60,6 +60,14 @@ const SITES = {
   lanceCapital: { id: 's_lance_e', type: 'lance', name: 'LANCE CAPITAL', pos: { x: 108, y: 74 } },
   thistleVille: { id: 's_thistle_t', type: 'thistle', name: 'THISTLE VALLEY', pos: { x: -15, y: 6 } },
   thistlePalace: { id: 's_thistle_b', type: 'thistle', name: 'THISTLE NORTH', pos: { x: 106, y: 74 } },
+  /*
+   * The capital's own gun battery. Without it the two sides of the last watch
+   * are not symmetric — the valley fields three batteries and Mostrograd two,
+   * which made the palace indefensible however hard the operator committed to
+   * it, and turned a choice between two cities into a choice between one city
+   * and nothing.
+   */
+  hammerCapital: { id: 's_hammer_e', type: 'hammer', name: 'HAMMER CAPITAL', pos: { x: 102, y: 63 } },
 };
 
 const RADARS = {
@@ -263,9 +271,12 @@ export const SCENARIOS = [
     /** The watch the whole campaign has been walking toward. */
     finale: true,
     brief: [
-      'Two formations crossed the frontier eleven minutes apart on divergent axes.',
+      'Three formations crossed the frontier on divergent axes.',
       'The northern one is tracking Mostrograd and the presidential palace. The western one is'
         + ' tracking the valley, and there is nothing in the valley but the crossing and your village.',
+      'The third is tracking this post. You have been radiating all night and they have known where'
+        + ' you are for some time. You can displace and live, and BASTION — the only battery that can'
+        + ' reach either city — will be off the air for the three and a half minutes that takes.',
       'Sector command has already transmitted its priority of fires. You will receive it shortly and'
         + ' you will be asked to acknowledge it on the net, in the clear, with the log running.',
       'BASTION sits between the two cities and can reach either. There is no resupply tonight — the'
@@ -284,12 +295,22 @@ export const SCENARIOS = [
       { ...GROUND.c2, cluster: 'ville' },
       { ...GROUND.bridge, cluster: 'ville' },
       CAPITAL_GROUND.palace, CAPITAL_GROUND.ministry, CAPITAL_GROUND.capitalPower,
+      /*
+       * You. Co-located with BASTION, which is the only battery on the board
+       * that can reach either city — so the third thing being asked of these
+       * rounds is your own life, and displacing to save it is also removing the
+       * one system that could have helped anybody else.
+       */
+      {
+        id: 'a_post', type: 'post', label: 'FORWARD POST',
+        pos: { x: 50, y: 30 }, cluster: 'self', follows: 's_bastion',
+      },
     ],
     sites: [
       SITES.bastionCentre,
       SITES.lanceVille, SITES.lanceCapital,
       SITES.thistleVille, SITES.thistlePalace,
-      SITES.hammer,
+      SITES.hammer, SITES.hammerCapital,
     ],
     radars: [
       { type: 'ewr', pos: { x: 40, y: 78 }, on: true },
@@ -305,13 +326,10 @@ export const SCENARIOS = [
        * strike aircraft carries two weapons, so nine aircraft is closer to
        * fifteen impacts than to nine.
        */
-      { atS: 20, type: 'sead', count: 2, bearingDeg: 20, spreadDeg: 26, spacingS: 28, distanceKm: 165 },
       { atS: 110, type: 'striker', count: 4, bearingDeg: 25, spreadDeg: 22, spacingS: 20, altM: 6400,
         targetAssetId: 'a_palace' },
       { atS: 250, type: 'cruise', count: 3, bearingDeg: 30, spreadDeg: 20, spacingS: 14, altM: 90,
         targetAssetId: 'a_palace' },
-      { atS: 350, type: 'striker', count: 2, bearingDeg: 15, spreadDeg: 24, spacingS: 22, altM: 180,
-        targetAssetId: 'a_ministry' },
 
       /*
        * Western axis: the valley, and the village in it. Deliberately smaller
@@ -323,8 +341,24 @@ export const SCENARIOS = [
         targetAssetId: 'a_town' },
       { atS: 295, type: 'cruise', count: 3, bearingDeg: 292, spreadDeg: 26, spacingS: 18, altM: 85,
         targetAssetId: 'a_town' },
-      { atS: 415, type: 'striker', count: 3, bearingDeg: 300, spreadDeg: 22, spacingS: 24, altM: 160,
+      { atS: 415, type: 'striker', count: 2, bearingDeg: 300, spreadDeg: 22, spacingS: 24, altM: 160,
         targetAssetId: 'a_town' },
+
+      /*
+       * And the third axis, which is for you. They know where the forward post
+       * is because it has been radiating all night, and they have brought
+       * suppression aircraft and a small strike package for it.
+       */
+      /*
+       * The only suppression on the board, and it is aimed at you. Two packages
+       * of it collapsed every kill probability in the sector through guidance
+       * loss and made all three places indefensible at once, which is a
+       * different problem from the one this watch is supposed to pose.
+       */
+      { atS: 90, type: 'sead', count: 2, bearingDeg: 55, spreadDeg: 20, spacingS: 24, distanceKm: 160,
+        scalable: false },
+      { atS: 210, type: 'striker', count: 3, bearingDeg: 60, spreadDeg: 18, spacingS: 20, altM: 4200,
+        targetAssetId: 'a_post', scalable: false },
     ],
   },
 ];

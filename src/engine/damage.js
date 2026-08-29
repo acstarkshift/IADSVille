@@ -150,6 +150,14 @@ export function damageAsset(world, asset, amount, source) {
   if (asset.damage >= type.hp) {
     asset.destroyed = true;
     world.stats.assetsLost++;
+
+    // The forward post is not a building you are defending; it is the room you
+    // are sitting in. Losing it ends the watch whichever seat you are in.
+    if (type.isPost) {
+      world.stats.postOverrun = true;
+      world.console.destroyed = true;
+      world.log('alert', `${asset.label} — POSITION OVERRUN`, { severity: 'high' });
+    }
     world.log('alert', `${asset.label} — DESTROYED`, { assetId: asset.id, severity: 'high' });
     world.standingDelta(
       type.critical ? COMMAND.standing.perCriticalAssetLost : COMMAND.standing.perAssetLost,
