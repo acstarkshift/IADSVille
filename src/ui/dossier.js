@@ -12,6 +12,7 @@ import {
   rankOf, backgroundOf, householdOf, districtOf, nextRank, canLearn, suggestName,
 } from '../engine/character.js';
 import { ENDINGS } from '../engine/endings.js';
+import { knownRevelations } from '../engine/revelations.js';
 import { tierFor } from '../engine/command.js';
 import { STATE, PLATES } from './lexicon.js';
 
@@ -173,6 +174,16 @@ export function renderDossier(host, state) {
         Correspondence to and from the Ville passes through the sector political section. This is
         described as routine. The village is fourteen kilometres from this console.</p>` : ''}
     </div>
+
+    ${knownRevelations(state.campaign).length && state.narrativePressure ? `<div class="card revelation-card">
+      <h3>What you have worked out</h3>
+      <table class="ledger">
+        ${knownRevelations(state.campaign).map((r) => `<tr>
+          <td><b style="color:var(--ink-bright)">${esc(r.tm)}</b> · ${esc(r.title)}</td>
+          <td style="color:var(--ink-dim);text-align:left">${esc(r.lines[0])}</td>
+        </tr>`).join('')}
+      </table>
+    </div>` : ''}
 
     ${character.record.length ? `<div class="card">
       <h3>Record of service</h3>

@@ -19,6 +19,7 @@ import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/charact
 import { serviceSummary } from './dossier.js';
 import { STATE } from './lexicon.js';
 import { composeEnding, ENDINGS, endingSummary } from '../engine/endings.js';
+import { knownRevelations, standing as arcStanding } from '../engine/revelations.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -160,9 +161,18 @@ export function renderBriefing(host, state) {
 
     ${note ? `<div class="card"><p style="color:var(--ink-dim);font-style:italic">${esc(note)}</p></div>` : ''}
 
+    ${state.narrativePressure && arcStanding(state.campaign) ? `<div class="card file-entry">
+      <h3>What you know</h3>
+      <p>${esc(arcStanding(state.campaign))}</p>
+    </div>` : ''}
+
     <div class="card">
       <h3>Situation</h3>
       ${mission.brief.map((line) => `<p>${esc(line)}</p>`).join('')}
+      ${state.narrativePressure ? Object.entries(mission.briefIfKnown ?? {})
+    .filter(([id]) => (state.campaign.revelations ?? []).includes(id))
+    .flatMap(([, lines]) => lines)
+    .map((line) => `<p style="color:var(--warn)">${esc(line)}</p>`).join('') : ''}
     </div>
 
     <div class="card">
@@ -290,6 +300,11 @@ export function renderDebrief(host, state, result, entry) {
       <h3>${esc(consequence.title)}</h3>
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>
+
+    ${state.narrativePressure && entry?.revelation ? `<div class="card revelation-card">
+      <h3>${esc(entry.revelation.tm)} · ${esc(entry.revelation.title)}</h3>
+      ${entry.revelation.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
+    </div>` : ''}
 
     <div class="actions">
       <button class="btn-primary" id="btn-again">STAND ANOTHER WATCH</button>

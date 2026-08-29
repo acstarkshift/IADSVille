@@ -36,6 +36,18 @@ const CAPITAL_GROUND = {
   capitalPower: { id: 'a_cap_power', type: 'power', label: 'MOSTROGRAD POWER', pos: { x: 92, y: 70 }, cluster: 'capital' },
 };
 
+/**
+ * The district hospital, out on the Kubin road.
+ *
+ * Sited deliberately clear of everything else that is defended: forty-odd
+ * kilometres from the Ville and twenty-five from the nearest other structure, so
+ * a contact committed to it is unambiguous and the decision about it is a
+ * decision rather than an accident of geometry. LANCE WEST covers it comfortably
+ * — with the same rounds and the same two channels that the town and the power
+ * station need.
+ */
+const HOSPITAL = { id: 'a_hospital', type: 'hospital', label: 'DISTRICT HOSPITAL', pos: { x: -40, y: 20 } };
+
 const SITES = {
   bastion: { id: 's_bastion', type: 'bastion', name: 'BASTION', pos: { x: 2, y: 28 } },
   lanceWest: { id: 's_lance_w', type: 'lance', name: 'LANCE WEST', pos: { x: -24, y: 6 } },
@@ -215,6 +227,44 @@ export const SCENARIOS = [
   },
 
   {
+    id: 'economy-of-force',
+    name: 'Economy of Force',
+    subtitle: 'There are rounds on the rails. You have been told what they are for.',
+    theme: 'crt-amber',
+    roles: ['net', 'crew', 'both'],
+    seed: 'economy-08',
+    leakerTolerance: 3,
+    playerBatteryId: 's_lance_w',
+    roundAllowance: 12,
+    brief: [
+      'Sector has transmitted an expenditure freeze ahead of tonight. You will receive it formally'
+        + ' once the raid is up, and you will be asked to acknowledge it.',
+      'The district hospital is out on the Kubin road, twenty-one kilometres from LANCE WEST and well'
+        + ' inside its envelope. It is not on the schedule of designated defended places. Nothing in'
+        + ' this sector is, except the airbase, the power station and sector operations.',
+      'You have rounds. You will be told they are not yours to spend.',
+    ],
+    teaches: 'What the allocation is actually for.',
+    assets: [
+      GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, HOSPITAL,
+    ],
+    sites: [SITES.bastion, SITES.lanceWest, SITES.thistleTown, SITES.hammer],
+    radars: [RADARS.ewrNorth, RADARS.gapSouth],
+    waves: [
+      { atS: 25, type: 'striker', count: 3, bearingDeg: 350, spreadDeg: 22, spacingS: 26, altM: 6200,
+        targetAssetId: 'a_airbase' },
+      // The hospital package and the power station package arrive together, so
+      // the rounds genuinely compete and the freeze is not a free order to obey.
+      { atS: 150, type: 'striker', count: 3, bearingDeg: 288, spreadDeg: 14, spacingS: 24, altM: 5400,
+        targetAssetId: 'a_hospital' },
+      { atS: 195, type: 'striker', count: 3, bearingDeg: 20, spreadDeg: 20, spacingS: 24, altM: 260,
+        targetAssetId: 'a_power' },
+      { atS: 330, type: 'striker', count: 2, bearingDeg: 292, spreadDeg: 14, spacingS: 20, altM: 180,
+        targetAssetId: 'a_hospital' },
+    ],
+  },
+
+  {
     id: 'ville-under-fire',
     name: 'Ville Under Fire',
     subtitle: 'Everything at once, and then the lights go out.',
@@ -284,6 +334,17 @@ export const SCENARIOS = [
         + ' nothing more. Nine aircraft on each axis. Every strike aircraft carries two weapons.',
     ],
     teaches: 'That the equipment was never the constraint.',
+    /**
+     * The official line about the depots, read by somebody who has seen the
+     * returns, is a different sentence entirely.
+     */
+    briefIfKnown: {
+      ledger: ['You have seen what the depot returns say the sector is holding. You know what the'
+        + ' magazines actually contain. "The depots are committed to the capital" is a sentence you'
+        + ' can no longer hear the way it is meant.'],
+      freeze: ['Nothing in the western valley is a designated defended place. You have been told'
+        + ' that before, about a building with people in it.'],
+    },
     /*
      * Clustered, because the sector operations centre sits eleven kilometres
      * from the village and a track bound for one passes close to the other. On

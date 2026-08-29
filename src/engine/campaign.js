@@ -16,6 +16,7 @@
 import { COMMAND } from './config.js';
 import { tierFor } from './command.js';
 import { createCharacter, recordWatch, characterModifiers } from './character.js';
+import { learn } from './revelations.js';
 
 const KEY = 'iadsville.campaign.v1';
 
@@ -59,6 +60,8 @@ export function emptyCampaign(character = null) {
     commendations: 0,
     /** Set once the last watch has been stood, whichever way it went. */
     ending: null,
+    /** What the operator has worked out about their own side, in order. */
+    revelations: [],
   };
 }
 
@@ -130,11 +133,14 @@ export function recordMission(campaign, result) {
 
   if (result.finale && result.endingId) campaign.ending = result.endingId;
 
+  // Some watches teach you something about the people giving the orders.
+  const revelation = learn(campaign, result.missionId);
+
   const previous = campaign.completed[result.missionId];
   if (!previous || result.score > previous.score) {
     campaign.completed[result.missionId] = { score: result.score, tier: tier.id, role: result.role };
   }
-  return { ...entry, service };
+  return { ...entry, service, revelation };
 }
 
 /** What the simulation should be handed for this campaign: supply plus the soldier. */

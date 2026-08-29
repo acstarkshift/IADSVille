@@ -431,3 +431,11 @@ table.ledger .down { color: var(--hostile); }
 }
 .ending-card p { line-height: 1.8; margin-bottom: 12px; }
 .ending-card p:first-child { color: var(--ink-bright); }
+
+/* Documents the operator was not meant to read. */
+.revelation-card {
+  border-left: 3px solid var(--warn);
+  background: color-mix(in srgb, var(--warn) 5%, var(--bg-panel));
+}
+.revelation-card h3 { color: var(--warn); }
+.revelation-card p { line-height: 1.75; }

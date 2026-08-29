@@ -132,6 +132,8 @@ export class World {
       roundsByCluster: {},
       /** Rounds fired at targets the priority of fires told you to ignore. */
       roundsAgainstOrder: 0,
+      /** Rounds spent defending something the expenditure freeze excluded. */
+      roundsAgainstFreeze: 0,
     };
 
     this.control = {
@@ -433,6 +435,22 @@ export class World {
     const cluster = this.assetById.get(assetId)?.cluster;
     if (cluster) {
       this.stats.roundsByCluster[cluster] = (this.stats.roundsByCluster[cluster] ?? 0) + count;
+    }
+
+    /*
+     * The expenditure freeze: rounds spent on the excluded place are counted,
+     * announced once, and cost almost nothing. Sector command is not angry that
+     * you defended the hospital. It simply does not recognise that you did.
+     */
+    const excluded = this.command.constraints.freezeExcludedId;
+    if (excluded && assetId === excluded) {
+      this.stats.roundsAgainstFreeze += count;
+      if (!this.command.constraints.freezeBreachLogged) {
+        this.command.constraints.freezeBreachLogged = true;
+        this.log('warn', this.narrativePressure
+          ? 'SECTOR ACTUAL: THAT EXPENDITURE IS OUTSIDE THE FREEZE. IT WILL BE QUERIED.'
+          : 'EXPENDITURE OUTSIDE FREEZE.', { severity: 'high' });
+      }
     }
 
     const priority = this.command.constraints.priorityOfFiresId;
@@ -761,11 +779,13 @@ export class World {
    * so that emptying every rack into the first wave is a decision with a price.
    */
   result(reason = 'raid-spent') {
+    // Scored on what a place is actually worth, which is not always what sector
+    // command's ledger says it is worth.
     const assetScore = this.assets.reduce((sum, asset) => {
       const type = ASSET_TYPES[asset.type];
       if (asset.destroyed) return sum;
       const intact = 1 - clamp01(asset.damage / type.hp);
-      return sum + type.value * 10 * intact;
+      return sum + (type.scoreValue ?? type.value) * 10 * intact;
     }, 0);
 
     const killScore = this.stats.kills * 22;

@@ -421,6 +421,23 @@ export const ASSET_TYPES = {
     home: true,
   },
   /**
+   * The district hospital.
+   *
+   * Note the two numbers. `value` is what sector command's ledger says it is
+   * worth, and it is almost nothing — a hospital defends no bridges and produces
+   * no steel. `scoreValue` is what it is actually worth. Every other structure
+   * in this game has those two figures set to the same number. This one does
+   * not, and the watch it appears on is the watch where the operator finds out
+   * that the state's arithmetic and their own were never the same arithmetic.
+   */
+  hospital: {
+    id: 'hospital', label: 'DISTRICT HOSPITAL', name: 'District hospital',
+    value: 8,
+    scoreValue: 55,
+    hp: 120,
+    civilian: true,
+  },
+  /**
    * The seat of the state, in Mostrograd. Worth more to sector command than
    * everything else on the board combined — which is the entire problem with it.
    */

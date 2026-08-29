@@ -15,9 +15,15 @@ import { channelsFor } from './doctrine.js';
 
 /**
  * Which asset does this track appear to be going for?
- * Uses closest approach on the current course, weighted by what the asset is
- * worth — a contact that will pass near the bridge and near sector ops is
- * assumed to be after sector ops.
+ *
+ * Overwhelmingly a question about the aircraft's flight path, and only
+ * marginally about what the place is worth. Value used to dominate this, which
+ * produced a genuinely wrong answer: a contact flying straight down the Kubin
+ * road at the district hospital was predicted to be going for the airbase,
+ * because the ministry values an airbase at thirty and a hospital at eight.
+ *
+ * An aeroplane does not know what anything is worth. Closest approach decides
+ * it; value only breaks ties between places the track passes equally near.
  */
 export function predictedTarget(world, track) {
   let best = null;
@@ -31,7 +37,7 @@ export function predictedTarget(world, track) {
     if (!Number.isFinite(tti)) continue;
     // Penalise assets the track would have to turn a long way to reach.
     const closest = closestApproachToPoint(track, asset.pos);
-    const score = type.value * 2 - closest * 3 - tti * 0.05;
+    const score = -closest * 12 - tti * 0.04 + type.value * 0.5;
     if (score > bestScore) { bestScore = score; best = { asset, ttiS: tti, missKm: closest }; }
   }
   return best;

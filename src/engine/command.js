@@ -111,6 +111,40 @@ export const DIRECTIVES = {
   },
 
   /**
+   * The expenditure freeze.
+   *
+   * The turn in the campaign. Up to this point sector command has been
+   * unreasonable in the ordinary way that command is unreasonable — demanding
+   * things the picture cannot deliver, punishing the discipline that keeps you
+   * alive. This order is different in kind: it is not asking you to fight
+   * harder or to take a risk. It is telling you that a building full of people
+   * is not on a schedule, and that the rounds sitting on your rails are not
+   * yours to spend on it.
+   *
+   * Obeying costs you almost nothing in standing, which is the point. Sector
+   * command's ledger and yours stop agreeing here, and the debrief will show
+   * you both figures side by side.
+   */
+  expenditureFreeze: {
+    id: 'expenditureFreeze',
+    label: 'the expenditure freeze',
+    priority: 'high',
+    once: true,
+    text: () => 'SECTOR ACTUAL: Expenditure freeze in effect. Rounds are to be expended only '
+      + 'against aircraft threatening designated defended places. The district hospital is not a '
+      + 'designated defended place. Acknowledge.',
+    plain: () => 'SECTOR: Expenditure freeze. Engage only aircraft threatening designated defended '
+      + 'places. The district hospital is not designated. Acknowledge.',
+    trigger: (w) => w.assets.some((a) => a.type === 'hospital') && w.t > 45,
+    onAccept: (w) => {
+      const hospital = w.assets.find((a) => a.type === 'hospital');
+      w.command.constraints.freezeExcludedId = hospital?.id ?? null;
+      w.command.constraints.freezeAccepted = true;
+    },
+    onRefuse: (w) => { w.command.constraints.freezeRefused = true; },
+  },
+
+  /**
    * The last watch's order, and the hinge the campaign turns on.
    *
    * It arrives before the western axis is anywhere near detection range, so it
@@ -163,6 +197,24 @@ export const DIRECTIVES = {
     onRefuse: (w) => { w.command.acknowledgedDisplacements = w.stats.displacements; },
   },
 };
+
+/**
+ * Orders a whole watch turns on. These are issued the moment their moment
+ * arrives, and no routine traffic goes out before them.
+ *
+ * `pendingOn` answers "is this watch going to receive this order at some point",
+ * which is what lets the net stay clear in the minutes beforehand.
+ */
+const HINGE_DIRECTIVES = [
+  {
+    ...DIRECTIVES.expenditureFreeze,
+    pendingOn: (w) => w.assets.some((a) => a.type === 'hospital'),
+  },
+  {
+    ...DIRECTIVES.palacePriority,
+    pendingOn: (w) => w.scenario.finale === true,
+  },
+];
 
 /** However well the watch went otherwise, a shoot-down caps the assessment here. */
 const CIVIL_SHOOTDOWN_CEILING = 12;
@@ -299,19 +351,23 @@ export function stepCommand(world, dt) {
   }
 
   /*
-   * The priority of fires jumps the queue, and holds it.
+   * Hinge orders jump the queue, and hold it.
    *
-   * On the last watch nothing else may go out until this has been sent and
-   * answered — partly because a routine order about leakers would sit oddly
-   * beside an instruction that the village is not a defended place, and partly
-   * because the whole point is that you commit to this one before you know
-   * what it will cost.
+   * Two watches turn on a single transmission — the expenditure freeze and the
+   * priority of fires. On those nights nothing routine may go out until the
+   * hinge has been sent and answered: partly because an order about leakers
+   * would sit oddly beside an instruction that the hospital is not a defended
+   * place, and partly because the whole point is that you commit to it before
+   * you know what it will cost.
    */
-  const hinge = DIRECTIVES.palacePriority;
-  if (world.scenario.finale === true && !world.command.issuedOnce[hinge.id]) {
-    if (hinge.trigger(world)) issueDirective(world, hinge);
+  for (const hinge of HINGE_DIRECTIVES) {
+    if (world.command.issuedOnce[hinge.id]) continue;
+    if (!hinge.trigger(world)) continue;
+    issueDirective(world, hinge);
     return;
   }
+  // A watch that has a hinge order coming stays off the net until it has gone.
+  if (HINGE_DIRECTIVES.some((h) => !world.command.issuedOnce[h.id] && h.pendingOn(world))) return;
 
   world.command.thinkTimerS = (world.command.thinkTimerS ?? 0) - dt;
   if (world.command.thinkTimerS > 0) return;
@@ -321,7 +377,7 @@ export function stepCommand(world, dt) {
   if (rate <= 0) return;
 
   for (const template of Object.values(DIRECTIVES)) {
-    if (template === hinge) continue;
+    if (HINGE_DIRECTIVES.includes(template)) continue;
     if (template.once && world.command.issuedOnce[template.id]) continue;
     const last = world.command.issuedAtS[template.id];
     if (last !== undefined && world.t - last < (template.cooldownS ?? 9999) / rate) continue;
@@ -382,6 +438,18 @@ export function settleDirectives(world) {
   const wasted = Math.max(0, world.stats.roundsFired - world.roundAllowance);
   if (wasted > 0) {
     standingDelta(world, COMMAND.standing.perWastedRound * wasted, `${wasted} rounds over allocation`);
+  }
+
+  /*
+   * Rounds spent outside an accepted expenditure freeze are queried, and the
+   * query costs a little. Note how little. A hospital reduced to rubble costs
+   * this file nothing at all, because a hospital is not a designated defended
+   * place — and the score the operator is shown alongside this ledger will
+   * disagree with it violently. That disagreement is the point of the watch.
+   */
+  if (c.freezeAccepted && world.stats.roundsAgainstFreeze > 0) {
+    standingDelta(world, -0.8 * world.stats.roundsAgainstFreeze,
+      `${world.stats.roundsAgainstFreeze} rounds expended outside the freeze`);
   }
 
   // Last, and decisive. A civil shoot-down is the one outcome no amount of

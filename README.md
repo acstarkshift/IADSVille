@@ -58,6 +58,50 @@ into numbers the simulation uses:
 | **Decorations** | Awarded for things that are hard to do, including one for losing your position and holding the sector anyway. |
 | **Injury** | If your battery is overrun you are wounded, and everything takes you longer until one more watch is behind you. |
 
+## The arc
+
+The campaign runs from devoted defence of the homeland to knowing exactly what
+you are defending it for, and it is not delivered by anybody making a speech. It
+arrives the way this kind of knowledge actually arrives: as a form, a figure that
+does not reconcile, a remark from a clerk who assumed you already knew.
+
+Crucially, every step of it is anchored in something you have already *felt*.
+The ammunition has been short since the third watch. The allocation has been
+queried. Reloads have been denied. By the time the ledger explains why, you have
+spent hours inside the consequence.
+
+**Economy of Force** is where it turns. An expenditure freeze comes down: rounds
+are to be spent only against aircraft threatening *designated defended places*,
+and the district hospital is not one. The hospital sits twenty-one kilometres
+from a battery that covers it comfortably, with rounds on the rails.
+
+You do not know where a contact is going until it commits — so obeying is not
+declining to assign. It is calling a battery off a target it is already tracking.
+
+Then the debrief shows you two numbers that have agreed all campaign and now do
+not:
+
+| | Standing | Score |
+|---|---|---|
+| Obey the freeze | **87** | 1181 |
+| Defend it anyway | **85** | **1576** |
+| Refuse the order outright | **7** | 1576 |
+
+Defending the hospital costs two points of standing and is worth four hundred
+points of actual value. Refusing costs eighty. Sector command does not punish
+what you did — it punishes having said no. The hospital was never on their books
+at all, and that is the whole lesson.
+
+After that the documents start turning up: an allocation spent before the quarter
+began, a depot return properly countersigned at three levels showing four hundred
+rounds that are not in the magazines, and finally the transfer manifests, filed
+in a room nobody has a reason to enter, with a column headed ADMINISTRATIVE
+RECOVERY. The rounds were sold. The expenditure freeze exists so the magazines
+are never opened and counted.
+
+By the last watch, "the depots are committed to the capital" is a sentence you
+can no longer hear the way it is meant.
+
 ## Two seats
 
 Both are the same simulation. What changes is which half of it you drive; the AI
@@ -68,6 +112,33 @@ fills whichever seat you are not sitting in.
 | **Battle Manager** | The fused sector picture. Identify contacts, assign them to batteries, set weapons states, manage emissions across every radar you own. | Wide and cerebral. You will spend the whole watch deciding what to ignore. |
 | **SAM Operator** | One battery. Your own radar's coverage, cues over the net, and the acquire → lock → launch → guide loop by hand. | Tight and personal. The rounds come at *you*. |
 | **Commander** | Both — run the picture, and take a console yourself when a shot matters. | Delegate, then grab the one that counts. |
+
+## The four classes of air defence
+
+A sector is built out of four layers, each covering what the next one down
+cannot. Losing one leaves a hole nothing else can fill.
+
+| Class | System | Envelope | What it is for |
+|---|---|---|---|
+| **ЗЕНИТНАЯ АРТИЛЛЕРИЯ** · Guns | ZU-4 HAMMER | 0.2–4 km, to 2,500 m | Shells, not rounds. No minimum range and no guidance to lose — which is what you want when something is already overhead. |
+| **МАЛАЯ ДАЛЬНОСТЬ** · Short-range | S-12 THISTLE | 0.8–12 km, to 6,000 m | Point defence. Must be sited *forward on the threat axis* or it never sees a target before the weapons are off. |
+| **СРЕДНЯЯ ДАЛЬНОСТЬ** · Medium-range | S-75 LANCE | 3–42 km, to 15,000 m | The workhorse. Covers the release ring, and the class you run out of first. |
+| **БОЛЬШАЯ ДАЛЬНОСТЬ** · Long-range | S-200 BASTION | 6–120 km, to 25,000 m | Owns the approach, and reaches the standoff aircraft nothing else can touch. |
+
+## The map
+
+The battle manager's scope carries an underlay of Trans Mordovia: the Mordava
+running down from the northern hills through the Ville and under the crossing the
+raids keep trying to drop, the Kubin ridge and the northern hills the western
+axis comes down between, Lake Yasen, the trunk road to Mostrograd, the towns, and
+the frontier every raid crosses.
+
+The geography is invented but consistent with the scenarios rather than
+decorative — the river really does pass under the bridge, and the trunk road
+really is 129 km by road against 117 direct. An operator reads a scope against
+ground they know, and it turns "a contact at 285 for 90" into "something coming
+down the valley". It also makes the river line sector command keeps issuing
+orders about an actual line. `M` toggles it.
 
 ## What is actually being simulated
 
@@ -129,8 +200,9 @@ escalates.
 | 3 | Solo Battery | green phosphor | The whole engagement loop from the seat, alone *(operator only)* |
 | 4 | Weasel Hour | amber phosphor | Emissions control — blink to survive, and pay for it in guidance |
 | 5 | White Noise | amber phosphor | Jamming, burnthrough, decoys, ammunition discipline |
-| 6 | Ville Under Fire | tactical display | All of it, and then the centre goes down |
-| 7 | The Two Cities | tactical display | That the equipment was never the constraint |
+| 6 | Economy of Force | amber phosphor | What the allocation is actually for |
+| 7 | Ville Under Fire | tactical display | All of it, and then the centre goes down |
+| 8 | The Two Cities | tactical display | That the equipment was never the constraint |
 
 ### The last watch
 
@@ -210,6 +282,8 @@ src/engine/           the simulation — pure JS, no DOM, runs under node --test
   doctrine.js           engagement state machine + the AI in the other seat
   command.js            directives, constraints, standing
   character.js          ranks, training, decorations, injury — the service record
+  geography.js          the country: rivers, ridges, roads, frontier, towns
+  revelations.js        what the operator works out about their own side, and when
   endings.js            how the last watch ends, and what it costs either way
   campaign.js           the file that follows you between missions
   world.js              the fixed-step tick that orders all of it
@@ -240,6 +314,15 @@ A few decisions worth knowing about if you read the source:
   the tube in about four seconds, which is a mistake this code made once.
 - **One lexicon.** Every legend on the console comes from `src/ui/lexicon.js`, so
   a switch can never end up labelled differently from the thing it does.
+- **Two valuations.** Assets carry `value` (what sector command's ledger says
+  they are worth) and `scoreValue` (what they are actually worth). Every
+  structure in the game sets these to the same number except one, and the watch
+  that one appears on is the watch the campaign turns on.
+- **Aeroplanes do not know what things are worth.** Predicting a track's
+  objective is a question about its flight path, with value only breaking ties.
+  Getting that backwards had contacts flying straight down the Kubin road at the
+  hospital predicted as going for the airbase, because the ministry values an
+  airbase at thirty and a hospital at eight.
 - **The RPG layer is measured, not asserted.** The character tests build a real
   `World` and check that a qualification changed a number in it — a channel
   count, a reaction multiplier, a blackout duration.
