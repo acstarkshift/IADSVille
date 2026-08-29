@@ -15,8 +15,10 @@
 
 import { COMMAND } from './config.js';
 import { tierFor } from './command.js';
-import { createCharacter, recordWatch, characterModifiers } from './character.js';
+import { createCharacter, recordWatch, characterModifiers, RANKS, rankIndexOf } from './character.js';
 import { learn } from './revelations.js';
+import { SCENARIOS } from './scenarios.js';
+import { reachedEchelon, appointmentNote } from './echelon.js';
 
 const KEY = 'iadsville.campaign.v1';
 
@@ -68,6 +70,12 @@ export function emptyCampaign(character = null) {
     epilogue: null,
     /** What the operator has worked out about their own side, in order. */
     revelations: [],
+    /**
+     * The command this record currently holds. It is derived from the watches
+     * stood, and stored so that being appointed can be an event with a date on
+     * it rather than a number the menu recomputes silently.
+     */
+    appointment: 'battalion',
   };
 }
 
@@ -147,7 +155,40 @@ export function recordMission(campaign, result) {
   if (!previous || result.score > previous.score) {
     campaign.completed[result.missionId] = { score: result.score, tier: tier.id, role: result.role };
   }
-  return { ...entry, service, revelation };
+
+  // And the promotion, which is decided by the watches you have stood rather
+  // than by how any of them went — this service does not have enough officers
+  // to be selective, and says so by never mentioning it.
+  const appointment = appointTo(campaign);
+
+  return { ...entry, service, revelation, appointment };
+}
+
+/**
+ * Move the record up to whatever command the watches stood now justify.
+ *
+ * The rank comes with the job. An officer appointed to a district is gazetted
+ * to Major on the same order, which is how most people in this service find out
+ * they have been promoted — and why nobody here believes a rank means anything
+ * about the person holding it.
+ */
+export function appointTo(campaign) {
+  const echelon = reachedEchelon(campaign, SCENARIOS);
+  if (echelon.id === campaign.appointment) return null;
+  campaign.appointment = echelon.id;
+
+  let gazetted = null;
+  if (campaign.character) {
+    const floor = rankIndexOf(echelon.rankFloor);
+    if (campaign.character.rankIndex < floor) {
+      campaign.character.rankIndex = floor;
+      gazetted = RANKS[floor];
+      campaign.character.record.push({
+        kind: 'appointment', id: echelon.id, at: campaign.character.watches,
+      });
+    }
+  }
+  return { echelon, gazetted, note: appointmentNote(echelon) };
 }
 
 /** What the simulation should be handed for this campaign: supply plus the soldier. */

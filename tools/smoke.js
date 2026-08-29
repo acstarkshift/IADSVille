@@ -14,12 +14,24 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
+import { SCENARIOS } from '../src/engine/scenarios.js';
+import { ECHELON_ORDER } from '../src/engine/echelon.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const PORT = Number(process.env.SMOKE_PORT ?? 8181);
+// Derived from the process id when not set, so two smoke runs started close
+// together do not fight over one port and report a connection refused that has
+// nothing to do with the page.
+const PORT = Number(process.env.SMOKE_PORT ?? 8100 + (process.pid % 600));
 const ORIGIN = `http://127.0.0.1:${PORT}/`;
 
-/** Missions to play, and the seat to play them from. */
+/**
+ * Missions to play, and the seat to play them from.
+ *
+ * The campaign is a promotion, so most of these watches are not on a fresh
+ * record's roster at all. Each run seeds a service record that has stood
+ * everything below the echelon it needs, which is also a check on the gating
+ * itself: if the appointment logic breaks, these runs stop finding their button.
+ */
 const RUNS = [
   { mission: 'first-light', role: 'net', theme: 'crt-green', background: 'factory' },
   { mission: 'solo-battery', role: 'crew', theme: 'crt-green', background: 'border' },
@@ -27,14 +39,28 @@ const RUNS = [
   { mission: 'economy-of-force', role: 'net', theme: 'crt-amber', background: 'factory' },
   { mission: 'across-the-line', role: 'net', theme: 'crt-amber', background: 'border' },
   { mission: 'ville-under-fire', role: 'both', theme: 'ops-modern', background: 'penal' },
+  { mission: 'four-sectors', role: 'net', theme: 'ops-modern', background: 'academy' },
+  { mission: 'reinforce-the-capital', role: 'net', theme: 'ops-modern', background: 'factory' },
   { mission: 'two-cities', role: 'net', theme: 'ops-modern', background: 'border' },
-  // The epilogue is not on the roster until the last watch has been stood and
-  // the palace held, so this run seeds a record that has done exactly that.
+  // The epilogue needs both gates open: the appointment, and a palace that was
+  // still standing at the end of the last watch.
   {
     mission: 'presidents-flight', role: 'net', theme: 'ops-modern', background: 'academy',
     campaignEnding: 'obedient',
   },
 ];
+
+/** Every watch below this one's echelon, which is what its roster entry needs. */
+function recordFor(missionId) {
+  const scenario = SCENARIOS.find((s) => s.id === missionId);
+  const order = ECHELON_ORDER.find((e) => e.id === scenario.echelon).order;
+  const completed = {};
+  for (const other of SCENARIOS) {
+    const otherOrder = ECHELON_ORDER.find((e) => e.id === other.echelon).order;
+    if (otherOrder < order) completed[other.id] = { score: 1, tier: 'satisfactory', role: 'net' };
+  }
+  return completed;
+}
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -84,15 +110,13 @@ async function main() {
      * file is written before the page loads, so the game reads it the way it
      * would read a real one rather than being poked into shape afterwards.
      */
-    if (run.campaignEnding) {
-      await page.addInitScript((ending) => {
-        try {
-          const key = 'iadsville.campaign.v1';
-          const existing = JSON.parse(window.localStorage.getItem(key) ?? '{}');
-          window.localStorage.setItem(key, JSON.stringify({ ...existing, ending }));
-        } catch { /* the run will fail on the missing mission button instead */ }
-      }, run.campaignEnding);
-    }
+    await page.addInitScript((seed) => {
+      try {
+        const key = 'iadsville.campaign.v1';
+        const existing = JSON.parse(window.localStorage.getItem(key) ?? '{}');
+        window.localStorage.setItem(key, JSON.stringify({ ...existing, ...seed }));
+      } catch { /* the run will fail on the missing mission button instead */ }
+    }, { completed: recordFor(run.mission), ...(run.campaignEnding ? { ending: run.campaignEnding } : {}) });
 
     await page.goto(ORIGIN, { waitUntil: 'networkidle' });
 

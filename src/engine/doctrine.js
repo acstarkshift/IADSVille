@@ -190,7 +190,7 @@ export function fireEngagement(world, site, engagement) {
 }
 
 /* ------------------------------------------------------------------ *
- * AI battle manager — fills the seat when the player is crewing a gun.
+ * AI battle managers — the commanders you are not currently being.
  * ------------------------------------------------------------------ */
 
 /**
@@ -201,25 +201,67 @@ export function fireEngagement(world, site, engagement) {
  * plan ahead, husband long-range rounds, or notice that six of the fourteen
  * contacts are decoys. A player who is paying attention will beat it, which is
  * the point of sitting in the chair.
+ *
+ * It runs once per formation that the player is not personally commanding —
+ * which at battalion and sector is none of them, or all of them if the player
+ * is crewing a gun instead, and at district and national command is most of the
+ * country most of the time. Each of those formations has a named officer with
+ * their own competence and their own reading of their orders, and the whole
+ * experience of high command is watching them do a slightly worse job than you
+ * would have done, in four places at once, while you are only in one.
  */
 export function runAiBattleManager(world, dt) {
+  for (const formation of world.formations) {
+    if (world.formationIsHumanRun(formation)) continue;
+    runFormationCommander(world, formation, dt);
+  }
+}
+
+function runFormationCommander(world, formation, dt) {
   if (!world.fusionOnline) return;      // no centre, no assignment
-  world.aiThinkTimerS -= dt;
-  if (world.aiThinkTimerS > 0) return;
-  world.aiThinkTimerS = 1.0;
+  if (world.t < formation.handoverUntilS) return;   // nobody has this one yet
+  if (formation.posture === 'hold') return;
+
+  /*
+   * How good this officer is, and what "good" means here.
+   *
+   * Two things, and both are ordinary human failures rather than handicaps
+   * bolted on to make the player feel clever. A slower officer looks at the
+   * board less often, so a contact sits unengaged for a beat or two longer than
+   * it should; and a slower officer waits for a target to look properly
+   * dangerous before spending a round on it, so the marginal ones — the low
+   * one on a bearing nobody is watching, the second aircraft of a pair — get
+   * picked up late or not at all.
+   *
+   * That gap is the entire value of a district commander standing in a sector
+   * personally, and it is why the appointment is a decision rather than a
+   * larger map.
+   */
+  const competence = formation.commander?.competence ?? 1;
+  formation.thinkTimerS = (formation.thinkTimerS ?? 0) - dt;
+  if (formation.thinkTimerS > 0) return;
+  formation.thinkTimerS = 1.0 + (1 - competence) * 5;
+
+  const sites = world.sitesOf(formation);
+  if (!sites.length) return;
+
+  // Never below the base filter: a good officer is quicker off the mark, not
+  // willing to spend rounds on contacts that are not worth one.
+  const worthARound = Math.max(0.5, 0.5 + (1 - competence) * 34);
 
   const candidates = sortedTracks(world).filter((t) =>
     t.hostility === 'hostile'
     && !t.destroyed
     && t.quality >= DETECTION.firmQuality
-    && t.threat > 0.5
-    && t.assignedTo.length === 0);
+    && t.threat > worthARound
+    && t.assignedTo.length === 0
+    && commanderWillEngage(world, formation, t));
 
   for (const track of candidates) {
     let best = null;
     let bestValue = -Infinity;
 
-    for (const site of world.sites) {
+    for (const site of sites) {
       // The player's own battery is cued, not commanded: the AI hands it a
       // target and the human decides what to do about it.
       const manual = world.control.crewedBatteryId === site.id;
@@ -233,6 +275,25 @@ export function runAiBattleManager(world, dt) {
 
     if (best) beginEngagement(world, best.site, track, { manual: best.manual });
   }
+}
+
+/**
+ * Will this officer take this target?
+ *
+ * A formation on 'tight' fights what comes to it and does not reach across the
+ * district for somebody else's problem. And an officer the file describes as
+ * politically reliable does not expend rounds on anything outside the priority
+ * of fires — not because he is a coward but because he has read the same order
+ * you have and, unlike you, has never once considered not obeying it.
+ */
+function commanderWillEngage(world, formation, track) {
+  if (formation.commander?.political) {
+    const priority = world.command?.constraints?.priorityOfFiresId;
+    if (priority && track.predictedAssetId && track.predictedAssetId !== priority) return false;
+  }
+  if (formation.posture !== 'tight') return true;
+  const sites = world.sitesOf(formation);
+  return sites.some((site) => dist(site.pos, track.pos) < SAM_TYPES[site.type].maxRangeKm * 1.4);
 }
 
 /* ------------------------------------------------------------------ *

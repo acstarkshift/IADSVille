@@ -19,9 +19,11 @@ import { STATE, CONTROLS, STATUS, EQUIPMENT, PLATES, pair, pairHtml, legendText 
 import { RANKS, BACKGROUNDS, SKILLS, DECORATIONS, DISTRICTS } from '../src/engine/character.js';
 import { DEFENCE_CLASSES } from '../src/engine/config.js';
 import { MAP } from '../src/engine/geography.js';
+import { SCENARIOS } from '../src/engine/scenarios.js';
 import { ENDINGS } from '../src/engine/endings.js';
 import { FLIGHT_ENDINGS } from '../src/engine/epilogue.js';
 import { REVELATIONS } from '../src/engine/revelations.js';
+import { ECHELONS } from '../src/engine/echelon.js';
 
 const CYRILLIC = /[Ѐ-ӿ]/;
 const hasCyrillic = (v) => typeof v === 'string' && CYRILLIC.test(v);
@@ -67,6 +69,27 @@ describe('the service record', () => {
 
   test('the four classes of air defence are paired', () => {
     assertPaired(DEFENCE_CLASSES, 'DEFENCE_CLASSES');
+  });
+
+  test('the four appointments are paired, and so are the job titles', () => {
+    assertPaired(ECHELONS, 'ECHELONS');
+    assertPaired(
+      Object.fromEntries(Object.entries(ECHELONS).map(([id, e]) => [id, e.appointment])),
+      'ECHELONS.appointment',
+    );
+  });
+
+  test('every subordinate command a scenario names carries both halves', () => {
+    for (const scenario of SCENARIOS) {
+      for (const formation of scenario.formations ?? []) {
+        assert.ok(formation.en && !CYRILLIC.test(formation.en),
+          `${scenario.id}/${formation.id} needs an English name`);
+        if (formation.commander?.tm) {
+          assert.ok(formation.commander.name && !CYRILLIC.test(formation.commander.name),
+            `${scenario.id}/${formation.id} names its officer in Cyrillic with no gloss`);
+        }
+      }
+    }
   });
 });
 

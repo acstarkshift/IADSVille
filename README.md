@@ -2,14 +2,20 @@
 
 A browser game about running the air defence of a town called the Ville.
 
-You are a conscript of the **Trans-Mordovian People's Air Defence Forces** — not
+You are an officer of the **Trans-Mordovian People's Air Defence Forces** — not
 a pilot and not a gun, but the person reading the scope. The job is triage:
 sixteen contacts, four batteries, ninety seconds, and a command that reads your
 log afterwards.
 
-You are also from the Ville. It is the village at the centre of every scope you
-will ever sit at, and your family is still in it. That is not set dressing; it
-is the whole shape of the campaign.
+The campaign is a promotion. You begin commanding a battalion, four batteries in
+one valley, every one of them yours to point personally. You end commanding the
+air defence of a country. The equipment never changes. What changes is the kind
+of decision you are making — and every promotion takes something away.
+
+You are also from the Ville. It is the village at the centre of the first scope
+you sit at, and your family is still in it. That is not set dressing; it is the
+whole shape of the campaign, and it is why the last appointment is the one that
+costs you something.
 
 Trans Mordovia is invented, and so is everything in it: the state, the service,
 its equipment, its ranks, its decorations, and the Slavic language stencilled on
@@ -38,6 +44,51 @@ Every mechanic hangs off that trade. Most sharply: a surface-to-air round is
 guided by the radar that launched it. Shut that radar down to dodge an incoming
 anti-radiation missile and the round you already have in the air goes stupid and
 falls in a field. Leave it up and you may not be there when the round arrives.
+
+## The four appointments
+
+| | Appointment | You decide | It costs you |
+|---|---|---|---|
+| **ДИВИЗИОН** | Battalion commander | Which battery shoots this track | — |
+| **СЕКТОР** | Sector commander | Which tracks are worth a round at all | The illusion that you can answer everything |
+| **ОКРУГ ПВО** | District commander | *Which sector you are standing in* | The console. You never sit in a launcher again |
+| **ГЛАВНЫЙ ШТАБ ПВО** | Chief of Air Defence | *Which region is allowed to be defended* | Everything else |
+
+The mechanism is the number of subordinate commands you may hold under your own
+hand at once. At battalion and sector level there is one formation and it is
+yours, so those watches play exactly as they always did — you assign every
+track, you set every battery's emissions state, you can take a console yourself.
+
+From district command upward there are four sectors and you may stand in **two**.
+At national command there are two and you may stand in **one**. Everything you
+are not standing in fights on the **standing order** you left it with — hold,
+tight, or free — carried out by a named officer with their own competence and
+their own reading of their orders, whom you will never meet. Taking a formation
+under your own hand costs a **handover**: eighteen seconds at district level,
+twenty-six at national, during which nobody at all is commanding it.
+
+So the standing order stops being a convenience and becomes your principal
+weapon: issued in advance, to somebody you cannot see, about a raid that has not
+happened yet. And one of those officers, at the level where it matters most, is
+a political appointee who will not expend a round on anything the priority of
+fires does not name — not out of cowardice, but because he has read the same
+order you have and, unlike you, has never once considered not obeying it.
+
+Your own **headquarters battalion** is the exception. It is always under your
+hand, it never counts against the limit, and on the last watch it is what the
+enemy is coming for.
+
+At national command you also hold the **strategic reserve**: rounds nobody below
+you can release, four minutes of road between the order and a rail, and never
+enough to cover two of anything. Sending it somewhere the priority of fires does
+not name is the largest single act of disobedience available in the game, and it
+is recorded in exactly the same column as everything else.
+
+Appointments open on watches stood, not on marks — a bad night is still a night
+stood, and a campaign that locked you out of its second half for one raid is a
+campaign nobody finishes. The rank comes with the job: an officer appointed to a
+district is gazetted Major on the same order, which is how most people in this
+service find out they have been promoted.
 
 ## The soldier
 
@@ -124,8 +175,18 @@ in a room nobody has a reason to enter, with a column headed ADMINISTRATIVE
 RECOVERY. The rounds were sold. The expenditure freeze exists so the magazines
 are never opened and counted.
 
+Then you are promoted, and the arc changes register. At district command the
+orders stop being about your conscience and start being about equipment: the
+directorate takes your long-range battalion for a capital that is not under
+attack, and you watch a district town burn in a sector that battalion covered.
+And at national command you find that the officer holding one of your two
+sectors is a colonel of the political section who will not expend a round on
+anything the priority of fires does not name — which means the thing you spent
+eleven watches learning to resent is now working *for* you, in the city you were
+told to save, while you are standing in the valley.
+
 By the last watch, "the depots are committed to the capital" is a sentence you
-can no longer hear the way it is meant.
+can no longer hear the way it is meant — and you are the one who signs it.
 
 ## Two seats
 
@@ -137,6 +198,12 @@ fills whichever seat you are not sitting in.
 | **Battle Manager** | The fused sector picture. Identify contacts, assign them to batteries, set weapons states, manage emissions across every radar you own. | Wide and cerebral. You will spend the whole watch deciding what to ignore. |
 | **SAM Operator** | One battery. Your own radar's coverage, cues over the net, and the acquire → lock → launch → guide loop by hand. | Tight and personal. The rounds come at *you*. |
 | **Commander** | Both — run the picture, and take a console yourself when a shot matters. | Delegate, then grab the one that counts. |
+
+Which seats are available is decided by the appointment you hold. A battalion or
+sector commander may sit anywhere. A district commander may not: there is no
+console at that level, and losing it is part of what the promotion costs. At
+national command you keep one — your own headquarters battalion's — because on
+the last watch that battery is in the room you are sitting in.
 
 ## The four classes of air defence
 
@@ -214,27 +281,74 @@ restart; it is written down, and the next briefing opens with it. At the bottom
 of the scale the consequences stop being text and become mission modifiers — a
 forward posting with no resupply is both a punishment and a harder problem.
 
+The orders escalate with the appointment. A battalion commander is told to keep
+radiating. A sector commander is told a hospital is not a designated defended
+place. A district commander is told to hand over the only long-range battalion
+between two of his sectors, for a capital that is not under attack. And a
+national commander is told which of two cities is allowed to matter, and asked
+to acknowledge it on the net, in the clear, with the log running.
+
 If you would rather have the simulation without the coercion, **Settings →
 Narrative pressure: off** keeps every mechanic and drops the file entries.
 
 ## Missions
 
-Nine watches, each teaching one thing and then never letting you forget it, and
-a tenth that only some records ever see. Each names its own console theme, so
-the campaign visibly changes hardware as it escalates.
+Eleven watches across four appointments, each teaching one thing and then never
+letting you forget it, and a twelfth that only some records ever see. Each names
+its own console theme, so the campaign visibly changes hardware as it escalates.
 
-| # | Watch | Console | Teaches |
-|---|---|---|---|
-| 1 | First Light | green phosphor | Tracking, assignment, and that a radar has to radiate to see |
-| 2 | Low Riders | green phosphor | The radar horizon. Low contacts arrive close and stay close |
-| 3 | Solo Battery | green phosphor | The whole engagement loop from the seat, alone *(operator only)* |
-| 4 | Weasel Hour | amber phosphor | Emissions control — blink to survive, and pay for it in guidance |
-| 5 | White Noise | amber phosphor | Jamming, burnthrough, decoys, ammunition discipline |
-| 6 | Economy of Force | amber phosphor | What the allocation is actually for |
-| 7 | Across the Line | amber phosphor | What the schedule of defended places is really a schedule of |
-| 8 | Ville Under Fire | tactical display | All of it, and then the centre goes down |
-| 9 | The Two Cities | tactical display | That the equipment was never the constraint |
-| — | The President's Flight | tactical display | That the last decision was never about a building either *(sealed)* |
+**Act I — battalion command.** *Green phosphor. Four batteries in one valley.*
+
+| Watch | Teaches |
+|---|---|
+| First Light | Tracking, assignment, and that a radar has to radiate to see |
+| Low Riders | The radar horizon. Low contacts arrive close and stay close |
+| Solo Battery | The whole engagement loop from the seat, alone *(operator only)* |
+
+**Act II — sector command.** *Amber phosphor, then the tactical display. A sector,
+its radars, and more contacts than you have rounds.*
+
+| Watch | Teaches |
+|---|---|
+| Weasel Hour | Emissions control — blink to survive, and pay for it in guidance |
+| White Noise | Jamming, burnthrough, decoys, ammunition discipline |
+| Economy of Force | What the allocation is actually for |
+| Across the Line | What the schedule of defended places is really a schedule of |
+| Ville Under Fire | All of it, and then the centre goes down |
+
+**Act III — district command.** *Four sectors, a hundred and ninety kilometres,
+and one of you. No console from here on.*
+
+| Watch | Teaches |
+|---|---|
+| Four Sectors | That a standing order given to somebody you cannot see is a real weapon, and usually the only one you have |
+| Reinforce the Capital | What a redeployment order costs, and who it is actually for |
+
+**Act IV — national command.** *The whole country, one seat, and a reserve that
+will not cover two of anything.*
+
+| Watch | Teaches |
+|---|---|
+| The Two Cities | That the equipment was never the constraint |
+| The President's Flight | That the last decision was never about a building either *(sealed)* |
+
+### The district
+
+Four sectors — the valley you are from, Kubin on the western road, Lozan under
+the northern hills, and Brasov in the south where nothing has happened yet. They
+are built identically on purpose: a town, something industrial, three batteries,
+and an officer. They are interchangeable in every respect except which one you
+are from, and the two watches at this level are about discovering that the
+ranking you are being asked to do is not the arithmetic you think it is.
+
+**Reinforce the Capital** is where the corruption arc stops being about your
+own conscience and starts being about equipment. The directorate withdraws your
+long-range battalion — the only thing that reaches two of your four sectors —
+for a capital that is not under attack, has not been under attack all week, and
+whose air picture you are looking at. Obeying keeps your file and costs a
+district town. Refusing saves the town and ends your career. The two documents
+disagree by about two hundred points and a place with people in it, and neither
+of them mentions the other.
 
 ### The last watch
 
@@ -254,6 +368,12 @@ that battalion is. Answering it spends the rounds the cities need; displacing to
 survive takes the only battery that reaches either city off the air for three
 and a half minutes. There is no arrangement of those rounds that serves all
 three.
+
+At national command the choice is sharper still, because you may stand in one
+city and not the other. The valley's sector commander is competent and has
+nothing. The capital's is a colonel of the political section who will hold the
+palace beautifully and will not expend a round on the valley, because the valley
+contains no designated defended places and he has read the order.
 
 Before either raid is close enough to detect, sector command transmits its
 priority of fires and asks you to acknowledge it on the net, in the clear, with
@@ -329,6 +449,7 @@ decision the whole game is built on, and it should feel like throwing a switch.
 | `+` `−` | zoom the scope |
 | `Y` `N` | acknowledge / refuse a directive |
 | `Tab` | switch seat (commander) |
+| `Alt`+`1`…`4` | take or hand back a subordinate command (district and national) |
 | `H` | full controls and a plain-English explanation of the mechanics |
 
 **Battle manager:** click a contact to select it, drag it onto a battery to
@@ -337,6 +458,14 @@ hold / tight / free, `R` reloads, `X` displaces.
 
 **SAM operator:** click to designate, `L` to lock, `F` to fire, `E` to radiate or
 shut down — that last one is the whole game.
+
+**District and national command:** the formations panel is above the batteries.
+`Alt`+`1`…`4` takes or hands back a subordinate command; the posture button
+sets the standing order it fights on while you are somewhere else; and at
+national command the reserve strip releases four rounds at a time to a sector
+that will not see them for four minutes. Batteries in a command you are not
+holding are shown detached, with their controls disabled — they are still on the
+board and still shooting, they are simply not on your net.
 
 ## Layout
 
@@ -350,6 +479,7 @@ src/engine/           the simulation — pure JS, no DOM, runs under node --test
   doctrine.js           engagement state machine + the AI in the other seat
   command.js            directives, constraints, standing
   character.js          ranks, training, decorations, injury — the service record
+  echelon.js            the four appointments, and how little each one may touch
   geography.js          the country: rivers, ridges, roads, frontier, towns
   revelations.js        what the operator works out about their own side, and when
   endings.js            how the last watch ends, and what it costs either way
@@ -377,6 +507,18 @@ A few decisions worth knowing about if you read the source:
 - **The player gets no private mechanics.** Every command the operator issues —
   assign, fire, blink, reload, displace — is the same call the AI makes. What the
   player has is judgement, not a faster reaction timer.
+- **The promotion is one number.** `directLimit` — how many subordinate commands
+  an appointment may hold at once. Everything else about high command falls out
+  of it: the standing order matters because you cannot be everywhere, the
+  handover matters because changing your mind is not free, and the political
+  officer matters because he is running a quarter of the country while you are
+  looking at a different quarter. A battalion watch has one formation and is
+  therefore bit-for-bit the game it always was.
+- **Subordinates are fixed before the raid starts.** A sector commander's
+  competence and their reading of their orders are set at build time and nothing
+  you do changes either. That is the actual experience of commanding through
+  other people, and it is why the only lever you have is what you said before
+  you left.
 - **Only returns persist.** The phosphor layer holds radar echoes; the sweep is
   redrawn each frame. Painting the sweep into the persistence buffer saturates
   the tube in about four seconds, which is a mistake this code made once.

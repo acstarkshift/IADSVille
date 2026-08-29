@@ -9,7 +9,8 @@
  * register that stays in good taste.
  */
 
-import { SCENARIOS, isUnlocked } from '../engine/scenarios.js';
+import { SCENARIOS, isUnlocked, appointmentOf } from '../engine/scenarios.js';
+import { ECHELON_ORDER } from '../engine/echelon.js';
 import { DIFFICULTY, ROLES, SAM_TYPES, COMMAND, DEFENCE_CLASSES } from '../engine/config.js';
 import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor } from '../engine/command.js';
@@ -34,6 +35,43 @@ export function renderMenu(host, state, actions) {
 
   const character = campaign.character;
   const rank = character ? rankOf(character) : null;
+  const appointment = appointmentOf(campaign);
+
+  /**
+   * One watch on the roster.
+   *
+   * A watch above your appointment is not shown as sealed but as not yet held —
+   * the difference matters, because one of those is a secret and the other is
+   * simply a job you have not been given. The sealed treatment is reserved for
+   * the single scenario whose existence is the surprise.
+   */
+  const missionCard = (sc) => {
+    const done = campaign.completed[sc.id];
+    const active = state.missionId === sc.id;
+    if (!isUnlocked(sc, campaign)) {
+      const held = ECHELON_ORDER.find((e) => e.id === sc.echelon).order <= appointment.order;
+      return held
+        ? `<button class="mission is-sealed" disabled>
+            <b>▓▓▓▓▓▓▓▓ ▓▓▓▓▓▓</b>
+            <small>Not on the roster. This watch has not happened yet.</small>
+            <div class="flags"><span class="pill tight">ЗАПЕЧАТАНО · SEALED</span></div>
+          </button>`
+        : `<button class="mission is-sealed" disabled>
+            <b>${esc(sc.name)}</b>
+            <small>Above your appointment. You will be given it when you are given it.</small>
+            <div class="flags"><span class="pill tight">НЕ ПО ДОЛЖНОСТИ · NOT YOUR COMMAND</span></div>
+          </button>`;
+    }
+    return `<button class="mission ${active ? 'is-active' : ''}" data-mission="${sc.id}">
+        <b>${esc(sc.name)}</b>
+        <small>${esc(sc.subtitle)}</small>
+        <div class="flags">
+          <span class="pill">${esc(THEMES[sc.theme].label)}</span>
+          ${sc.roles.length === 1 ? `<span class="pill tight">${esc(ROLES[sc.roles[0]].label)} ONLY</span>` : ''}
+          ${done ? `<span class="pill free">BEST ${done.score}</span>` : ''}
+        </div>
+      </button>`;
+  };
 
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title">IADSVILLE</h1>
@@ -51,6 +89,8 @@ export function renderMenu(host, state, actions) {
       <h3>Personnel file${character ? ` — ${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}` : ''}</h3>
       <div class="score-grid">
         <div class="score-cell"><label>ЗВАНИЕ · RANK</label><b style="font-size:13px">${esc(rank?.en ?? '—')}</b></div>
+        <div class="score-cell"><label>ДОЛЖНОСТЬ · APPOINTMENT</label>
+          <b style="font-size:13px">${esc(appointment.en)}</b></div>
         <div class="score-cell"><label>АТТЕСТАЦИЯ · STANDING</label><b>${Math.round(campaign.standing)}</b></div>
         <div class="score-cell"><label>ОПЫТ · EXPERIENCE</label><b>${character?.xp ?? 0}</b></div>
         <div class="score-cell"><label>ВАХТ · WATCHES</label><b>${flown}</b></div>
@@ -70,34 +110,23 @@ export function renderMenu(host, state, actions) {
 
     <div class="card">
       <h3>Select a watch</h3>
-      <div class="mission-grid">
-        ${SCENARIOS.map((s) => {
-    const done = campaign.completed[s.id];
-    const active = state.missionId === s.id;
-    /*
-     * A watch that is not on the roster is shown, and shown as sealed. Hiding
-     * it entirely would mean nobody ever learns it exists; naming it would give
-     * away a thing the player is supposed to find out at four in the morning.
-     */
-    if (!isUnlocked(s, campaign)) {
-      return `<button class="mission is-sealed" disabled>
-            <b>▓▓▓▓▓▓▓▓ ▓▓▓▓▓▓</b>
-            <small>Not on the roster. This watch has not happened yet.</small>
-            <div class="flags"><span class="pill tight">ЗАПЕЧАТАНО · SEALED</span></div>
-          </button>`;
-    }
-    return `<button class="mission ${active ? 'is-active' : ''}" data-mission="${s.id}">
-            <b>${esc(s.name)}</b>
-            <small>${esc(s.subtitle)}</small>
-            <div class="flags">
-              <span class="pill">${esc(THEMES[s.theme].label)}</span>
-              ${s.roles.length === 1 ? `<span class="pill tight">${esc(ROLES[s.roles[0]].label)} ONLY</span>` : ''}
-              ${done ? `<span class="pill free">BEST ${done.score}</span>` : ''}
-            </div>
-          </button>`;
+      <p style="color:var(--ink-dim);margin:-2px 0 10px">
+        You currently hold <b style="color:var(--accent)">${esc(appointment.appointment.tm)} ·
+        ${esc(appointment.appointment.en)}</b>. ${esc(appointment.blurb)}</p>
+      ${ECHELON_ORDER.map((echelon) => {
+    const watches = SCENARIOS.filter((sc) => sc.echelon === echelon.id);
+    if (!watches.length) return '';
+    const reached = echelon.order <= appointment.order;
+    return `<div class="act ${reached ? '' : 'is-locked'}">
+          <div class="act-head">
+            <span class="lg"><b>${esc(echelon.tm)}</b><i>${esc(echelon.en.toUpperCase())} COMMAND</i></span>
+            <span>${reached ? esc(echelon.teaches) : 'Not yet held.'}</span>
+          </div>
+          <div class="mission-grid">${watches.map(missionCard).join('')}</div>
+        </div>`;
   }).join('')}
-      </div>
     </div>
+
 
     <div class="card">
       <h3>Seat</h3>
@@ -317,6 +346,16 @@ export function renderDebrief(host, state, result, entry) {
       <h3>${esc(consequence.title)}</h3>
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>
+
+    ${entry?.appointment ? `<div class="card file-entry is-good">
+      <h3>ПРИКАЗ О НАЗНАЧЕНИИ · ORDER OF APPOINTMENT</h3>
+      <p><b>${esc(entry.appointment.echelon.appointment.tm)} · ${esc(entry.appointment.echelon.appointment.en)}</b></p>
+      ${entry.appointment.gazetted ? `<p>You are gazetted to
+        ${esc(entry.appointment.gazetted.tm)} · ${esc(entry.appointment.gazetted.en)} on the same order.</p>` : ''}
+      ${state.narrativePressure && entry.appointment.note
+    ? `<p>${esc(entry.appointment.note)}</p>` : ''}
+      <p style="color:var(--ink-dim)">${esc(entry.appointment.echelon.blurb)}</p>
+    </div>` : ''}
 
     ${state.narrativePressure && entry?.revelation ? `<div class="card revelation-card">
       <h3>${esc(entry.revelation.tm)} · ${esc(entry.revelation.title)}</h3>

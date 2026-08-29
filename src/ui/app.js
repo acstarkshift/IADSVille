@@ -9,7 +9,7 @@
  */
 
 import { World } from '../engine/world.js';
-import { SCENARIOS, scenarioById } from '../engine/scenarios.js';
+import { SCENARIOS, scenarioById, rosterFor } from '../engine/scenarios.js';
 import { SIM, SAM_TYPES, ROLES } from '../engine/config.js';
 import {
   loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign,
@@ -23,7 +23,7 @@ import { Scope } from './scope.js';
 import { CrewConsole } from './console.js';
 import { Audio } from './audio.js';
 import {
-  renderTopbar, renderTrackList, renderFlightStrip, renderBatteries, renderCrewConsole,
+  renderTopbar, renderTrackList, renderFlightStrip, renderFormations, renderBatteries, renderCrewConsole,
   renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, RANGE_SCALES,
 } from './panels.js';
 import { renderMenu, renderBriefing, renderDebrief, renderControls } from './screens.js';
@@ -77,6 +77,18 @@ function loadSettings() {
     if (!raw) return;
     Object.assign(state, JSON.parse(raw));
   } catch { /* defaults are fine */ }
+
+  /*
+   * A saved selection can point at a watch this record is no longer — or not
+   * yet — entitled to: the file was wiped, or the settings outlived it. Fall
+   * back to something the appointment actually covers rather than opening on a
+   * disabled card.
+   */
+  const roster = rosterFor(state.campaign);
+  if (!roster.some((s) => s.id === state.missionId)) {
+    state.missionId = roster[0]?.id ?? SCENARIOS[0].id;
+  }
+  if (!state.mission.roles.includes(state.role)) state.role = state.mission.roles[0];
 }
 
 function saveSettings() {
@@ -111,6 +123,8 @@ function cacheEls() {
     fusionState: id('fusion-state'),
     trackList: id('track-list'),
     flightStrip: id('flight-strip'),
+    formationList: id('formation-list'),
+    echelonPlate: id('echelon-plate'),
     trackDetail: id('track-detail'),
     batteryList: id('battery-list'),
     crewConsole: id('crew-console'),
@@ -128,11 +142,13 @@ function cacheEls() {
 
 function boot() {
   cacheEls();
-  loadSettings();
   // Exposed for the headless smoke and integration tests, and genuinely handy
   // when debugging a campaign state by hand.
   window.__state = state;
+  // The service record first: the saved selection is validated against the
+  // appointment it holds, so it has to exist before the settings are read.
   state.campaign = loadCampaign(store);
+  loadSettings();
   scope = new Scope(els.canvas);
   crew = new CrewConsole(els.canvas);
   audio = new Audio();
@@ -336,7 +352,7 @@ function startMission() {
    * kilometres from it, and a scope centred on the sector's usual middle would
    * put the entire engagement in one corner.
    */
-  scope.rangeKm = world.scenario.scopeRangeKm ?? 150;
+  scope.rangeKm = world.scenario.scopeRangeKm ?? world.echelon.scopeRangeKm;
   scope.origin = { ...world.centre };
   scope.centre = { ...world.centre };
   scope.clearPaint();
@@ -425,6 +441,7 @@ function render(now) {
     renderTopbar(world, ui, els);
     renderTrackList(world, ui, els);
     renderFlightStrip(world, els);
+    renderFormations(world, ui, els);
     renderBatteries(world, ui, els);
     renderScopeSide(world, ui, els, ui.view === 'crew' ? crew.rangeKm : scope.rangeKm);
     if (world.control.crewedBatteryId && ui.view === 'crew') renderCrewConsole(world, ui, els);
@@ -609,7 +626,7 @@ function wirePanelInput() {
     const btn = e.target.closest('[data-act]');
     if (btn) {
       e.stopPropagation();
-      runAction(btn.dataset.act, btn.dataset.site, btn.dataset.radar);
+      runAction(btn.dataset.act, btn.dataset.site, btn.dataset.radar, btn.dataset.formation);
       return;
     }
     if (e.target.id === 'btn-fire') {
@@ -621,6 +638,7 @@ function wirePanelInput() {
   };
   els.batteryList.addEventListener('click', panelAction);
   els.crewConsole.addEventListener('click', panelAction);
+  els.formationList.addEventListener('click', panelAction);
 
   els.speedGroup.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-speed]');
@@ -649,10 +667,32 @@ function wirePanelInput() {
   document.getElementById('btn-refuse').onclick = () => world.answer('refused');
 }
 
-function runAction(act, siteId, radarId) {
+function runAction(act, siteId, radarId, formationId) {
   if (!world) return;
   const site = siteId ? world.siteById.get(siteId) : null;
+  const formation = formationId ? world.formationById.get(formationId) : null;
+  /*
+   * A battery in a command you are not holding is not on your net. The panel
+   * disables its controls, but the rule lives here as well so a keyboard
+   * shortcut cannot reach around the disabled attribute — the only thing you
+   * may say to a formation you are not standing in is its standing order, and
+   * that is a formation-level control, not a battery-level one.
+   */
+  if (site && !world.commandable(site.id) && act !== 'lock') return;
   switch (act) {
+    case 'direct':
+      if (formation) {
+        if (formation.direct) world.releaseDirect(formation.id);
+        else world.takeDirect(formation.id);
+      }
+      break;
+    case 'posture': {
+      if (!formation) break;
+      const order = ['hold', 'tight', 'free'];
+      world.setPosture(formation.id, order[(order.indexOf(formation.posture) + 1) % 3]);
+      break;
+    }
+    case 'reserve': if (formation) world.commitReserve(formation.id, 4); break;
     case 'emcon': if (site) world.toggleRadar(site.radarId); break;
     case 'emcon-radar': world.toggleRadar(radarId); break;
     case 'weapons': {
@@ -687,18 +727,30 @@ function wireGlobalInput() {
       }
       return;
     }
-    const site = ui.selectedSiteId ? world.siteById.get(ui.selectedSiteId) : null;
+    // Same rule as the panel: the keys act on the selected battery only while it
+    // is on your net.
+    const selected = ui.selectedSiteId ? world.siteById.get(ui.selectedSiteId) : null;
+    const site = selected && world.commandable(selected.id) ? selected : null;
     const crewedId = world.control.crewedBatteryId;
 
     switch (e.key.toLowerCase()) {
       case ' ': e.preventDefault(); setSpeed(state.speed === 0 ? 1 : 0); break;
       case '1': case '2': case '3': case '4': {
-        // Numbers pick a speed on their own, or a battery with shift held.
-        if (e.shiftKey) {
-          const target = world.sites[Number(e.key) - 1];
+        // Numbers pick a speed on their own, or a battery with shift held. At
+        // district and national command, where the number of batteries is
+        // silly, the alt key takes a formation instead.
+        const n = Number(e.key) - 1;
+        if (e.altKey && world.formations.length > 1) {
+          const target = world.formations.filter((f) => !f.hq)[n];
+          if (target) {
+            if (target.direct) world.releaseDirect(target.id);
+            else world.takeDirect(target.id);
+          }
+        } else if (e.shiftKey) {
+          const target = world.sites[n];
           if (target) { ui.selectedSiteId = target.id; assignSelected(target.id); }
         } else {
-          setSpeed([1, 2, 4, 0][Number(e.key) - 1] ?? 1);
+          setSpeed([1, 2, 4, 0][n] ?? 1);
         }
         break;
       }

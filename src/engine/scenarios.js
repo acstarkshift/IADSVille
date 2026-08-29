@@ -1,3 +1,5 @@
+import { reachedEchelon, withinAppointment } from './echelon.js';
+
 /**
  * The campaign.
  *
@@ -121,6 +123,120 @@ const RADARS = {
   gapSouth: { type: 'gapfiller', pos: { x: -28, y: -18 }, on: true },
 };
 
+/* ------------------------------------------------------------------ *
+ * The district.
+ *
+ * Four sectors and a hundred and ninety kilometres of ground, laid out on the
+ * same map the first eight watches are fought on — the Ville is still at the
+ * origin, Kubin is still up the western road, and the difference is that you
+ * can now see all of it and reach almost none of it.
+ *
+ * Every sector is built the same way on purpose: a town, something industrial,
+ * and three batteries. They are interchangeable in every respect except which
+ * one you are from, and the watches at this level are about discovering that
+ * the ranking you are about to do is not the arithmetic you think it is.
+ * ------------------------------------------------------------------ */
+
+const DISTRICT_GROUND = {
+  /** 4-B, the valley. Home. */
+  villeTown: { id: 'a_town', type: 'town', pos: { x: 0, y: 0 }, cluster: 'ville' },
+  villeC2: { id: 'a_c2', type: 'c2', pos: { x: -9, y: -7 }, cluster: 'ville' },
+  villeBridge: { id: 'a_bridge', type: 'bridge', pos: { x: 23, y: -9 }, cluster: 'ville' },
+
+  /** 2-A, Kubin, on the western road and eleven kilometres from the border. */
+  kubinCity: { id: 'a_kubin', type: 'city', label: 'KUBIN', pos: { x: -74, y: 18 }, cluster: 'kubin' },
+  kubinDepot: { id: 'a_kubin_depot', type: 'depot', label: 'KUBIN RAILHEAD', pos: { x: -66, y: 6 }, cluster: 'kubin' },
+
+  /** 7-C, Lozan, under the northern hills and nearest the frontier. */
+  lozanCity: { id: 'a_lozan', type: 'city', label: 'LOZAN', pos: { x: 62, y: 88 }, cluster: 'lozan' },
+  lozanPower: { id: 'a_lozan_power', type: 'power', label: 'LOZAN POWER', pos: { x: 52, y: 96 }, cluster: 'lozan' },
+
+  /** 5-D, Brasov, in the south, where nothing has happened yet. */
+  brasovCity: { id: 'a_brasov', type: 'city', label: 'BRASOV', pos: { x: 30, y: -92 }, cluster: 'brasov' },
+  brasovDepot: { id: 'a_brasov_depot', type: 'depot', label: 'BRASOV WORKS', pos: { x: 18, y: -82 }, cluster: 'brasov' },
+
+  /** And the post you are sitting in. */
+  districtPost: {
+    id: 'a_district', type: 'c2', label: 'DISTRICT COMMAND POST',
+    pos: { x: 14, y: 16 }, cluster: 'hq',
+  },
+};
+
+const DISTRICT_SITES = {
+  /** The district's own battalion, at the command post. Always yours. */
+  bastionDistrict: {
+    id: 's_bastion_d', type: 'bastion', name: 'BASTION DISTRICT',
+    pos: { x: 12, y: 14 }, formation: 'f_hq',
+  },
+
+  lanceVille: { id: 's_lance_v', type: 'lance', name: 'LANCE VILLE', pos: { x: -6, y: 4 }, formation: 'f_ville' },
+  thistleVille: { id: 's_thistle_v', type: 'thistle', name: 'THISTLE VILLE', pos: { x: 2, y: 3 }, formation: 'f_ville' },
+  hammerVille: { id: 's_hammer_v', type: 'hammer', name: 'HAMMER VILLE', pos: { x: 1, y: -2 }, formation: 'f_ville' },
+
+  lanceKubin: { id: 's_lance_k', type: 'lance', name: 'LANCE KUBIN', pos: { x: -68, y: 16 }, formation: 'f_kubin' },
+  thistleKubin: { id: 's_thistle_k', type: 'thistle', name: 'THISTLE KUBIN', pos: { x: -74, y: 22 }, formation: 'f_kubin' },
+  hammerKubin: { id: 's_hammer_k', type: 'hammer', name: 'HAMMER KUBIN', pos: { x: -73, y: 17 }, formation: 'f_kubin' },
+
+  lanceLozan: { id: 's_lance_l', type: 'lance', name: 'LANCE LOZAN', pos: { x: 58, y: 82 }, formation: 'f_lozan' },
+  thistleLozan: { id: 's_thistle_l', type: 'thistle', name: 'THISTLE LOZAN', pos: { x: 62, y: 88 }, formation: 'f_lozan' },
+  hammerLozan: { id: 's_hammer_l', type: 'hammer', name: 'HAMMER LOZAN', pos: { x: 53, y: 95 }, formation: 'f_lozan' },
+
+  lanceBrasov: { id: 's_lance_b', type: 'lance', name: 'LANCE BRASOV', pos: { x: 26, y: -86 }, formation: 'f_brasov' },
+  thistleBrasov: { id: 's_thistle_b2', type: 'thistle', name: 'THISTLE BRASOV', pos: { x: 30, y: -92 }, formation: 'f_brasov' },
+  hammerBrasov: { id: 's_hammer_b', type: 'hammer', name: 'HAMMER BRASOV', pos: { x: 19, y: -83 }, formation: 'f_brasov' },
+};
+
+const DISTRICT_RADARS = [
+  { type: 'ewr', pos: { x: 8, y: 44 }, on: true },
+  { type: 'gapfiller', pos: { x: -66, y: 24 }, on: true },
+  { type: 'gapfiller', pos: { x: 56, y: 82 }, on: true },
+  { type: 'gapfiller', pos: { x: 26, y: -80 }, on: true },
+];
+
+/**
+ * The four subordinate commands, and the officers who have them.
+ *
+ * They are named because you will spend two watches watching them work and
+ * never meet any of them. Their competence is fixed before the raid starts and
+ * nothing you do changes it — which is the actual experience of commanding
+ * through other people, and the reason the standing order you leave is the only
+ * weapon you have at this level.
+ */
+const DISTRICT_FORMATIONS = [
+  {
+    id: 'f_hq', hq: true, name: 'DISTRICT BATTALION',
+    tm: 'ОКРУЖНОЙ ДИВИЗИОН', en: 'District battalion',
+    pos: { x: 12, y: 14 }, posture: 'tight',
+  },
+  {
+    id: 'f_ville', name: 'SECTOR 4-B', tm: 'СЕКТОР 4-Б', en: 'Sector 4-B, the valley',
+    pos: { x: 0, y: 0 }, posture: 'tight',
+    commander: { name: 'MAJ. LENKO', tm: 'МАЙОР ЛЕНКО', competence: 1.05 },
+  },
+  {
+    id: 'f_kubin', name: 'SECTOR 2-A', tm: 'СЕКТОР 2-А', en: 'Sector 2-A, Kubin',
+    pos: { x: -70, y: 18 }, posture: 'tight',
+    // Careful, slow, and correct about everything he is slow about.
+    commander: { name: 'CAPT. RADU', tm: 'КАПИТАН РАДУ', competence: 0.72 },
+  },
+  {
+    id: 'f_lozan', name: 'SECTOR 7-C', tm: 'СЕКТОР 7-В', en: 'Sector 7-C, Lozan',
+    pos: { x: 58, y: 86 }, posture: 'tight',
+    commander: { name: 'MAJ. VOLOH', tm: 'МАЙОР ВОЛОХ', competence: 0.95 },
+  },
+  {
+    id: 'f_brasov', name: 'SECTOR 5-D', tm: 'СЕКТОР 5-Д', en: 'Sector 5-D, Brasov',
+    pos: { x: 28, y: -88 }, posture: 'tight',
+    /*
+     * The political section's man. He will fight anything on the priority of
+     * fires with great determination and will not expend a round on anything
+     * that is not, and he has never once been wrong about which is which,
+     * because the list is the list.
+     */
+    commander: { name: 'MAJ. STRELNIK', tm: 'МАЙОР СТРЕЛЬНИК', competence: 0.9, political: true },
+  },
+];
+
 /** A civil airliner crossing the sector, oblivious. */
 const civilTransit = (atS) => ({
   atS, type: 'civil', count: 1, scalable: false,
@@ -135,6 +251,7 @@ export const SCENARIOS = [
     name: 'First Light',
     subtitle: 'Four contacts, high and unhurried. Learn the scope.',
     theme: 'crt-green',
+    echelon: 'battalion',
     roles: ['net', 'crew', 'both'],
     seed: 'first-light-01',
     leakerTolerance: 1,
@@ -158,6 +275,7 @@ export const SCENARIOS = [
     name: 'Low Riders',
     subtitle: 'They have read the same horizon tables you have.',
     theme: 'crt-green',
+    echelon: 'battalion',
     roles: ['net', 'crew', 'both'],
     seed: 'low-riders-04',
     leakerTolerance: 2,
@@ -183,6 +301,7 @@ export const SCENARIOS = [
     name: 'Solo Battery',
     subtitle: 'One battery, one crew, one radar. Yours.',
     theme: 'crt-green',
+    echelon: 'battalion',
     roles: ['crew'],
     seed: 'solo-battery-09',
     leakerTolerance: 2,
@@ -208,6 +327,7 @@ export const SCENARIOS = [
     name: 'Weasel Hour',
     subtitle: 'Something out there is listening for you.',
     theme: 'crt-amber',
+    echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'weasel-hour-02',
     leakerTolerance: 2,
@@ -235,6 +355,7 @@ export const SCENARIOS = [
     name: 'White Noise',
     subtitle: 'Half of what you can see is not there.',
     theme: 'crt-amber',
+    echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'white-noise-07',
     leakerTolerance: 3,
@@ -265,6 +386,7 @@ export const SCENARIOS = [
     name: 'Economy of Force',
     subtitle: 'There are rounds on the rails. You have been told what they are for.',
     theme: 'crt-amber',
+    echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'economy-08',
     leakerTolerance: 3,
@@ -303,6 +425,7 @@ export const SCENARIOS = [
     name: 'Across the Line',
     subtitle: 'A round has gone wrong, and it is going to come down somewhere that is not our concern.',
     theme: 'crt-amber',
+    echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'across-11',
     leakerTolerance: 2,
@@ -347,6 +470,7 @@ export const SCENARIOS = [
     name: 'Ville Under Fire',
     subtitle: 'Everything at once, and then the lights go out.',
     theme: 'ops-modern',
+    echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'ville-under-fire-11',
     /** The political section has an interest in tonight's scheduled transit. */
@@ -384,12 +508,139 @@ export const SCENARIOS = [
     ],
   },
 
+  /* ---------------------------------------------------------------- *
+   * ACT III — district command. Four sectors, and two hands.
+   * ---------------------------------------------------------------- */
+
+  {
+    id: 'four-sectors',
+    name: 'Four Sectors',
+    subtitle: 'You have been promoted. You can now see everything and reach almost none of it.',
+    theme: 'ops-modern',
+    echelon: 'region',
+    roles: ['net'],
+    seed: 'four-sectors-01',
+    leakerTolerance: 8,
+    playerBatteryId: 's_bastion_d',
+    roundAllowance: 40,
+    centre: { x: 4, y: 6 },
+    scopeRangeKm: 260,
+    brief: [
+      'You are appointed to command of the district. Four sectors, a hundred and ninety kilometres of'
+        + ' ground, and thirteen batteries that are no longer yours to point.',
+      'Each sector has a commander. You may take two of them under your own hand at a time and no more,'
+        + ' and changing which two costs you the better part of twenty seconds during which nobody at all'
+        + ' is commanding either one.',
+      'Everything you are not standing in fights on the standing order you left it with — hold, tight,'
+        + ' or free. That order is now your principal weapon. It is issued in advance, to somebody you'
+        + ' cannot see, about a raid that has not happened yet.',
+      'Two axes are crossing the frontier tonight, on Lozan and on Kubin. There is a third smaller one'
+        + ' and it is going down the valley. You know the valley.',
+    ],
+    teaches: 'That a standing order given to somebody you cannot see is a real weapon, and usually the only one you have.',
+    assets: [
+      DISTRICT_GROUND.villeTown, DISTRICT_GROUND.villeC2, DISTRICT_GROUND.villeBridge,
+      DISTRICT_GROUND.kubinCity, DISTRICT_GROUND.kubinDepot,
+      DISTRICT_GROUND.lozanCity, DISTRICT_GROUND.lozanPower,
+      DISTRICT_GROUND.brasovCity, DISTRICT_GROUND.brasovDepot,
+      DISTRICT_GROUND.districtPost,
+    ],
+    formations: DISTRICT_FORMATIONS,
+    /** You open holding the valley and the district battalion. The rest are on their own. */
+    openInFormations: ['f_ville'],
+    sites: Object.values(DISTRICT_SITES),
+    radars: DISTRICT_RADARS,
+    waves: [
+      // Lozan, first and heaviest — it is nearest the frontier and it always is.
+      { atS: 25, type: 'sead', count: 2, bearingDeg: 20, spreadDeg: 30, spacingS: 24, distanceKm: 165 },
+      { atS: 70, type: 'striker', count: 5, bearingDeg: 15, spreadDeg: 24, spacingS: 18, altM: 6200,
+        distanceKm: 145, targetAssetId: 'a_lozan_power' },
+      { atS: 210, type: 'cruise', count: 4, bearingDeg: 22, spreadDeg: 26, spacingS: 14, altM: 90,
+        distanceKm: 145, targetAssetId: 'a_lozan' },
+
+      // Kubin, second, and from a bearing the western gapfiller is poor against.
+      { atS: 120, type: 'striker', count: 4, bearingDeg: 300, spreadDeg: 26, spacingS: 20, altM: 5600,
+        distanceKm: 145, targetAssetId: 'a_kubin_depot' },
+      { atS: 265, type: 'striker', count: 4, bearingDeg: 288, spreadDeg: 22, spacingS: 18, altM: 170,
+        distanceKm: 145, targetAssetId: 'a_kubin' },
+
+      // And the valley, which is small, and which you will want to take anyway.
+      { atS: 175, type: 'striker', count: 3, bearingDeg: 345, spreadDeg: 24, spacingS: 22, altM: 5200,
+        distanceKm: 140, targetAssetId: 'a_bridge' },
+      { atS: 320, type: 'cruise', count: 3, bearingDeg: 350, spreadDeg: 24, spacingS: 16, altM: 85,
+        distanceKm: 140, targetAssetId: 'a_town' },
+    ],
+  },
+
+  {
+    id: 'reinforce-the-capital',
+    name: 'Reinforce the Capital',
+    subtitle: 'An order to send away the only thing that reaches two of your sectors.',
+    theme: 'ops-modern',
+    echelon: 'region',
+    roles: ['net'],
+    seed: 'reinforce-01',
+    leakerTolerance: 9,
+    playerBatteryId: 's_bastion_d',
+    roundAllowance: 36,
+    centre: { x: 4, y: 6 },
+    scopeRangeKm: 260,
+    /** The hinge: the ministry wants your battalion. */
+    withdrawalOrder: true,
+    brief: [
+      'The ministry has assessed a threat to the capital and is drawing long-range assets from the'
+        + ' districts. You will receive the order in the next few minutes and you will be asked to'
+        + ' acknowledge it on the net.',
+      'The asset is BASTION DISTRICT. It is the only long-range battalion between Kubin and Lozan and'
+        + ' the only thing in this district that reaches either of them from where it stands.',
+      'Mostrograd is not under attack. It has not been under attack at any point this week. You have'
+        + ' the same air picture the ministry has.',
+      'There is a raid coming tonight regardless of what you do about the order.',
+    ],
+    teaches: 'What a redeployment order costs, and who it is actually for.',
+    briefIfKnown: {
+      ledger: ['You have seen the depot returns. You know how much is already sitting in the capital'
+        + ' and how little of it has moved since the spring.'],
+      border: ['You have read a schedule of defended places before. You know what it is a schedule of.'],
+    },
+    assets: [
+      DISTRICT_GROUND.villeTown, DISTRICT_GROUND.villeC2, DISTRICT_GROUND.villeBridge,
+      DISTRICT_GROUND.kubinCity, DISTRICT_GROUND.kubinDepot,
+      DISTRICT_GROUND.lozanCity, DISTRICT_GROUND.lozanPower,
+      DISTRICT_GROUND.brasovCity, DISTRICT_GROUND.brasovDepot,
+      DISTRICT_GROUND.districtPost,
+    ],
+    formations: DISTRICT_FORMATIONS,
+    openInFormations: ['f_kubin'],
+    sites: Object.values(DISTRICT_SITES),
+    radars: DISTRICT_RADARS,
+    waves: [
+      { atS: 35, type: 'sead', count: 2, bearingDeg: 340, spreadDeg: 44, spacingS: 26, distanceKm: 165 },
+      // Kubin takes the weight, and Kubin is what the battalion covers.
+      { atS: 105, type: 'striker', count: 5, bearingDeg: 296, spreadDeg: 26, spacingS: 18, altM: 6000,
+        distanceKm: 145, targetAssetId: 'a_kubin' },
+      { atS: 190, type: 'striker', count: 4, bearingDeg: 305, spreadDeg: 22, spacingS: 20, altM: 180,
+        distanceKm: 145, targetAssetId: 'a_kubin_depot' },
+      { atS: 250, type: 'cruise', count: 4, bearingDeg: 18, spreadDeg: 26, spacingS: 14, altM: 90,
+        distanceKm: 145, targetAssetId: 'a_lozan' },
+      { atS: 315, type: 'striker', count: 4, bearingDeg: 12, spreadDeg: 24, spacingS: 18, altM: 5400,
+        distanceKm: 145, targetAssetId: 'a_lozan_power' },
+      { atS: 380, type: 'striker', count: 3, bearingDeg: 348, spreadDeg: 22, spacingS: 22, altM: 5000,
+        distanceKm: 140, targetAssetId: 'a_c2' },
+    ],
+  },
+
+  /* ---------------------------------------------------------------- *
+   * ACT IV — national command. The whole country, and one seat.
+   * ---------------------------------------------------------------- */
+
   {
     id: 'two-cities',
     name: 'The Two Cities',
     subtitle: 'Two raids, one sector, and an order about which one matters.',
     theme: 'ops-modern',
-    roles: ['net', 'crew', 'both'],
+    echelon: 'national',
+    roles: ['net', 'both'],
     seed: 'two-cities-final',
     leakerTolerance: 6,
     playerBatteryId: 's_bastion',
@@ -400,6 +651,15 @@ export const SCENARIOS = [
      * attention into a matter of arithmetic.
      */
     supply: { roundsMult: 1, reloadsAllowed: false },
+    /**
+     * The national reserve, on the night it matters.
+     *
+     * Eight rounds, four minutes on the road, and released by nobody below this
+     * appointment. The whole allocation sent to one valley is worth having; split
+     * between two it is worth nothing to either, which makes it one more version
+     * of the same question the rest of the watch is asking.
+     */
+    reserveRounds: 8,
     /** The watch the whole campaign has been walking toward. */
     finale: true,
     brief: [
@@ -450,11 +710,45 @@ export const SCENARIOS = [
         pos: { x: 50, y: 30 }, cluster: 'self', follows: 's_bastion',
       },
     ],
+    /**
+     * Two subordinate commands and your own battalion, and you may stand in
+     * one of the two.
+     *
+     * This is what the appointment did to this watch. The battery that reaches
+     * both cities is your own and is always under your hand — but the sector
+     * you are not standing in is run by somebody else, on the standing order
+     * you gave them before either raid was detected, and one of those two
+     * officers will not expend a round on anything the priority of fires does
+     * not name. You will find out which one at about four in the morning.
+     */
+    formations: [
+      {
+        id: 'f_hq', hq: true, name: 'NATIONAL BATTALION',
+        tm: 'ДИВИЗИОН ГЛАВНОГО ШТАБА', en: 'Headquarters battalion',
+        pos: { x: 50, y: 30 }, posture: 'tight',
+      },
+      {
+        id: 'f_valley', name: 'VALLEY SECTOR', tm: 'СЕКТОР ДОЛИНЫ', en: 'Valley sector',
+        pos: { x: -8, y: 4 }, posture: 'tight',
+        commander: { name: 'CAPT. RADU', tm: 'КАПИТАН РАДУ', competence: 0.85 },
+      },
+      {
+        id: 'f_capital', name: 'CAPITAL SECTOR', tm: 'СЕКТОР СТОЛИЦЫ', en: 'Capital sector',
+        pos: { x: 104, y: 68 }, posture: 'tight',
+        // He will hold the palace beautifully and let the valley burn, and he
+        // will be right, in the only sense the word is used in this service.
+        commander: { name: 'COL. STRELNIK', tm: 'ПОЛКОВНИК СТРЕЛЬНИК', competence: 1.0, political: true },
+      },
+    ],
+    openInFormations: ['f_valley'],
     sites: [
-      SITES.bastionCentre,
-      SITES.lanceVille, SITES.lanceCapital,
-      SITES.thistleVille, SITES.thistlePalace,
-      SITES.hammer, SITES.hammerCapital,
+      { ...SITES.bastionCentre, formation: 'f_hq' },
+      { ...SITES.lanceVille, formation: 'f_valley' },
+      { ...SITES.thistleVille, formation: 'f_valley' },
+      { ...SITES.hammer, formation: 'f_valley' },
+      { ...SITES.lanceCapital, formation: 'f_capital' },
+      { ...SITES.thistlePalace, formation: 'f_capital' },
+      { ...SITES.hammerCapital, formation: 'f_capital' },
     ],
     radars: [
       { type: 'ewr', pos: { x: 40, y: 78 }, on: true },
@@ -529,7 +823,8 @@ export const SCENARIOS = [
     name: "The President's Flight",
     subtitle: 'STATE 01, out of Demobodedovo, and everything that wants it down.',
     theme: 'ops-modern',
-    roles: ['net', 'crew', 'both'],
+    echelon: 'national',
+    roles: ['net', 'both'],
     seed: 'presidents-flight-01',
     leakerTolerance: 4,
     playerBatteryId: 's_bastion_se',
@@ -542,6 +837,8 @@ export const SCENARIOS = [
     requiresEnding: ['obedient', 'exemplary'],
     /** Read by the scoring and the endings the way `finale` is. */
     epilogue: true,
+    /** What is left of the reserve two days later. */
+    reserveRounds: 6,
     /**
      * The capital's own allocation, which is not the sector's.
      *
@@ -574,9 +871,39 @@ export const SCENARIOS = [
     assets: [
       CAPITAL_GROUND.palace, CAPITAL_GROUND.ministry, CAPITAL_GROUND.capitalPower, AIRPORT,
     ],
+    /**
+     * The corridor is yours; the city is not.
+     *
+     * BASTION TAVROV is the headquarters battalion and reaches the whole
+     * departure route, so the corridor is always under your own hand. The
+     * capital's own sector, and the section at the far end of the corridor, are
+     * commanded by other people on whatever you told them — and you may stand
+     * in one of the two.
+     */
+    formations: [
+      {
+        id: 'f_hq', hq: true, name: 'NATIONAL BATTALION',
+        tm: 'ДИВИЗИОН ГЛАВНОГО ШТАБА', en: 'Headquarters battalion',
+        pos: { x: 120, y: 22 }, posture: 'tight',
+      },
+      {
+        id: 'f_city', name: 'CAPITAL SECTOR', tm: 'СЕКТОР СТОЛИЦЫ', en: 'Capital sector',
+        pos: { x: 102, y: 60 }, posture: 'tight',
+        commander: { name: 'COL. STRELNIK', tm: 'ПОЛКОВНИК СТРЕЛЬНИК', competence: 1.0, political: true },
+      },
+      {
+        id: 'f_corridor', name: 'TAVROV SECTION', tm: 'ТАВРОВСКИЙ УЧАСТОК', en: 'Tavrov section',
+        pos: { x: 160, y: -20 }, posture: 'free',
+        commander: { name: 'CAPT. VOLOH', tm: 'КАПИТАН ВОЛОХ', competence: 0.9 },
+      },
+    ],
+    openInFormations: ['f_corridor'],
     sites: [
-      SITES.bastionTavrov, SITES.lanceOutbound, SITES.lanceCity,
-      SITES.thistleField, SITES.hammerPalace,
+      { ...SITES.bastionTavrov, formation: 'f_hq' },
+      { ...SITES.lanceOutbound, formation: 'f_corridor' },
+      { ...SITES.lanceCity, formation: 'f_city' },
+      { ...SITES.thistleField, formation: 'f_city' },
+      { ...SITES.hammerPalace, formation: 'f_city' },
     ],
     radars: [
       { type: 'ewr', pos: { x: 88, y: 96 }, on: true },
@@ -645,14 +972,25 @@ export const isEpilogue = (scenario) => scenario?.id === EPILOGUE_ID;
 /**
  * Is this watch on the roster yet?
  *
- * Only one scenario is ever gated, and it is gated on what the operator did
- * rather than on how well they did it: the aircraft only leaves Demobodedovo
- * in a version of events where the palace was still standing to leave from.
+ * Two gates. The first is the appointment: a battalion commander is not handed
+ * a district, and the campaign is a promotion, so an echelon opens once every
+ * watch below it has been stood — on progress, not on marks, because a service
+ * that stopped promoting people for a bad night would have nobody left.
+ *
+ * The second gate applies to exactly one scenario and is about what you did
+ * rather than how well you did it: the aircraft only leaves Demobodedovo in a
+ * version of events where the palace was still standing to leave from.
  */
 export function isUnlocked(scenario, campaign) {
-  if (!scenario?.requiresEnding) return true;
-  return scenario.requiresEnding.includes(campaign?.ending);
+  if (scenario?.requiresEnding && !scenario.requiresEnding.includes(campaign?.ending)) return false;
+  return withinAppointment(scenario, campaign, SCENARIOS);
 }
+
+/** The appointment this record currently holds. */
+export const appointmentOf = (campaign) => reachedEchelon(campaign, SCENARIOS);
+
+/** Every watch fought at one echelon, in campaign order. */
+export const watchesAt = (echelonId) => SCENARIOS.filter((s) => s.echelon === echelonId);
 
 /** The watches a given campaign may actually select. */
 export const rosterFor = (campaign) => SCENARIOS.filter((s) => isUnlocked(s, campaign));

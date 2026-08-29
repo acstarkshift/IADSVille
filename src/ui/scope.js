@@ -208,6 +208,7 @@ export class Scope {
     ctx.globalCompositeOperation = 'source-over';
 
     this.drawDeadSectors(world);
+    this.drawFormations(world);
     this.drawAssets(world, ui);
     this.drawSites(world, ui);
     this.drawStandaloneRadars(world, ui);
@@ -442,6 +443,50 @@ export class Scope {
         ctx.fillStyle = withAlpha(this.palette.hostile, 0.06);
         ctx.fill();
       }
+    }
+  }
+
+  /**
+   * Where the subordinate commands are, and whose hand each is in.
+   *
+   * Drawn under everything else, as boundaries on a wall map are: a ring at the
+   * sector's centre of responsibility, solid where you are standing, dashed
+   * while a handover is running, and faint where somebody else has it. On a
+   * district board this is the only way to read at a glance which quarter of
+   * the country you are actually commanding.
+   */
+  drawFormations(world) {
+    if (!world.formations || world.formations.length < 2) return;
+    const { ctx } = this;
+    const p = this.palette;
+
+    for (const formation of world.formations) {
+      if (!formation.pos) continue;
+      const s = this.toScreen(formation.pos);
+      const handover = formation.handoverUntilS > world.t;
+      const held = formation.direct && !handover;
+      const colour = handover ? p.warn : held ? p.accent : p.inkDim;
+
+      ctx.save();
+      ctx.strokeStyle = withAlpha(colour, held ? 0.55 : 0.28);
+      ctx.lineWidth = (held ? 1.8 : 1.2) * this.dpr;
+      if (handover) ctx.setLineDash([5 * this.dpr, 4 * this.dpr]);
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, 13 * this.dpr, 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      this.queueLabel({
+        lines: [formation.name, held ? 'DIRECT' : handover
+          ? `HANDOVER ${Math.ceil(formation.handoverUntilS - world.t)}s`
+          : (formation.commander?.name ?? 'SUBORDINATE')],
+        x: s.x, y: s.y,
+        colours: [colour, p.inkDim],
+        colour,
+        priority: held ? 64 : 40,
+        offset: 16 * this.dpr,
+      });
     }
   }
 

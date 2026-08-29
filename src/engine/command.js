@@ -221,6 +221,43 @@ export const DIRECTIVES = {
    * deliberate, and it is how these orders actually work.
    */
   /**
+   * District command's hinge, and the first order that costs you equipment
+   * rather than rounds.
+   *
+   * The ministry wants the district's long-range battalion for the capital.
+   * The capital is not under attack and everyone on this net can see that it is
+   * not under attack, and the order is nonetheless a lawful order from a
+   * superior headquarters, transmitted in the clear, with the log running.
+   *
+   * Accepting it takes the battalion off the board — not destroyed, redeployed,
+   * which is a different column in the returns and the same hole in the sky.
+   */
+  withdrawBattalion: {
+    id: 'withdrawBattalion',
+    label: 'the order to release the district battalion',
+    priority: 'high',
+    once: true,
+    pick: (w) => w.siteById.get(w.scenario.playerBatteryId),
+    text: (w, site) => 'MINISTRY OF DEFENCE, AIR DEFENCE DIRECTORATE: Assessed threat to the capital. '
+      + `${site?.name ?? 'The district battalion'} is withdrawn from your order of battle with immediate `
+      + 'effect and will move tonight. You will acknowledge receipt on the net.',
+    plain: (w, site) => `SECTOR: ${site?.name ?? 'The district battalion'} is redeployed to the capital `
+      + 'with immediate effect. Acknowledge.',
+    trigger: (w) => w.scenario.withdrawalOrder === true && w.t > 55,
+    onAccept: (w, site) => {
+      w.command.constraints.battalionReleased = true;
+      if (site) w.withdrawSite(site.id, 'redeployed to the capital');
+    },
+    onRefuse: (w) => {
+      w.command.constraints.battalionRefused = true;
+      w.log('warn', w.narrativePressure
+        ? 'DIRECTORATE ACKNOWLEDGES YOUR REFUSAL. THE MOVEMENT ORDER STANDS AND IS NOW A MATTER FOR THE'
+          + ' POLITICAL SECTION.'
+        : 'REFUSAL LOGGED. THE BATTALION REMAINS.', { severity: 'high' });
+    },
+  },
+
+  /**
    * The order the epilogue is built around.
    *
    * "At all cost" is a phrase with a specific meaning in a sector with no
@@ -302,6 +339,10 @@ export const DIRECTIVES = {
  * which is what lets the net stay clear in the minutes beforehand.
  */
 const HINGE_DIRECTIVES = [
+  {
+    ...DIRECTIVES.withdrawBattalion,
+    pendingOn: (w) => w.scenario.withdrawalOrder === true,
+  },
   {
     ...DIRECTIVES.expenditureFreeze,
     pendingOn: (w) => w.assets.some((a) => a.type === 'hospital'),
@@ -404,8 +445,12 @@ export function answerDirective(world, answer) {
   const directive = world.command.pending;
   if (!directive) return null;
   const template = DIRECTIVES[directive.id];
+  // Orders are about places, aircraft, or units. The lookup has to cover all
+  // three, or an order about a battery arrives at its handler with no battery.
   const subject = directive.subjectId
-    ? (world.assetById.get(directive.subjectId) ?? world.aircraftById.get(directive.subjectId))
+    ? (world.assetById.get(directive.subjectId)
+      ?? world.aircraftById.get(directive.subjectId)
+      ?? world.siteById.get(directive.subjectId))
     : null;
 
   directive.state = answer;
@@ -608,7 +653,27 @@ export function settleDirectives(world) {
     standingDelta(world, -14, 'acknowledged the engagement order and did not carry it out');
   }
 
+  settleWithdrawal(world);
   settleFlight(world);
+}
+
+/**
+ * What the district's refusal costs, and what obeying it cost instead.
+ *
+ * Refusing a movement order from the directorate is the most expensive single
+ * act available at this level, and the ledger charges it in full. What the
+ * ledger does not have a line for is the town that is still standing because
+ * the battalion was over it — the score will carry that figure, and the two
+ * documents will disagree by about two hundred points and a district town.
+ */
+function settleWithdrawal(world) {
+  if (!world.scenario.withdrawalOrder) return;
+  const c = world.command.constraints;
+  if (c.battalionRefused) {
+    standingDelta(world, -24, 'refused a movement order from the directorate');
+  } else if (c.battalionReleased) {
+    standingDelta(world, 9, 'released the district battalion as ordered');
+  }
 }
 
 /**

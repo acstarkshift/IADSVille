@@ -91,6 +91,15 @@ export function renderTopbar(world, ui, els) {
     lamp(STATUS.fault, faulted, { colour: 'amber' }),
   ].join('');
 
+  // The appointment, stencilled where the operator can see what they are.
+  if (els.echelonPlate && els.echelonPlate.dataset.echelon !== world.echelon.id) {
+    els.echelonPlate.dataset.echelon = world.echelon.id;
+    els.echelonPlate.innerHTML = `<span class="data-plate">
+      <b>${esc(world.echelon.tm)}</b><br>${esc(world.echelon.appointment.en)}
+    </span>`;
+    els.echelonPlate.title = `${world.echelon.appointment.tm} · ${world.echelon.appointment.en}`;
+  }
+
   if (world.character && els.operatorPlate.dataset.name !== world.character.name) {
     els.operatorPlate.dataset.name = world.character.name;
     const rank = rankOf(world.character);
@@ -222,6 +231,101 @@ function renderTrackDetail(world, ui, els) {
     ${track.assignedTo.length ? `<br>Assigned: <b>${esc(track.assignedTo.map((id) => world.siteById.get(id)?.name).join(', '))}</b>` : ''}`;
 }
 
+/* ---------------------------------------------------------- formations */
+
+/**
+ * The commands under this one.
+ *
+ * Invisible at battalion and sector level, where there is a single formation
+ * and it is yours. From district command upward this is the panel the watch is
+ * actually played on: four sectors, two of which you may hold, each with a
+ * standing order and an officer who is carrying it out somewhere you cannot
+ * see. Taking one costs a handover, and the handover is shown running, because
+ * the seconds in which nobody is commanding a sector are the price of the
+ * decision and hiding them would make the decision free.
+ */
+export function renderFormations(world, ui, els) {
+  const host = els.formationList;
+  if (!host) return;
+  if (world.formations.length < 2) { host.hidden = true; return; }
+  host.hidden = false;
+
+  const limit = world.echelon.directLimit;
+  const held = world.formations.filter((f) => f.direct && !f.hq).length;
+
+  const cards = world.formations.map((formation) => {
+    const sites = world.sites.filter((s) => s.formationId === formation.id);
+    const alive = sites.filter((s) => s.alive);
+    const rounds = alive.reduce((n, s) => n + s.readyRounds, 0);
+    const engaged = alive.reduce((n, s) => n + s.engagements.length, 0);
+    const handover = Math.max(0, formation.handoverUntilS - world.t);
+    const state = handover > 0 ? 'handover' : formation.hq ? 'hq' : formation.direct ? 'direct' : 'detached';
+    const postureEntry = CONTROLS[formation.posture];
+
+    return `<div class="fmn is-${state}" data-formation="${formation.id}">
+      <div class="fmn-head">
+        <span class="lg"><b>${esc(formation.tm)}</b><i>${esc(formation.en)}</i></span>
+        <span class="fmn-state">${esc(
+    handover > 0 ? `ПЕРЕДАЧА · HANDOVER ${Math.ceil(handover)}s`
+      : formation.hq ? 'ВАШ ДИВИЗИОН · YOURS'
+        : formation.direct ? 'ПОД ВАШЕЙ РУКОЙ · DIRECT'
+          : `${formation.commander?.tm ?? ''} · ${formation.commander?.name ?? 'SUBORDINATE'}`)}</span>
+      </div>
+      <div class="fmn-figures">
+        <span><label>BTY</label>${alive.length}/${sites.length}</span>
+        <span><label>ROUNDS</label>${rounds}</span>
+        <span><label>ENGAGED</label>${engaged}</span>
+        <span><label>ORDER</label>${esc(postureEntry.en)}</span>
+      </div>
+      <div class="fmn-controls">
+        <button class="pb" data-act="posture" data-formation="${formation.id}"
+          title="The standing order this formation fights on while you are elsewhere">
+          <span class="lg"><b>${esc(postureEntry.tm)}</b><i>WEAPONS ${esc(postureEntry.en)}</i></span>
+        </button>
+        ${formation.hq ? '' : `<button class="pb ${formation.direct ? 'is-down' : ''}"
+          data-act="direct" data-formation="${formation.id}"
+          title="${formation.direct ? 'Hand it back to its commander' : `Take it under your own hand (${held}/${limit} held)`}">
+          <span class="lg"><b>${formation.direct ? 'ОТДАТЬ' : 'ПРИНЯТЬ'}</b><i>${
+  formation.direct ? 'RELEASE' : 'TAKE'}</i></span>
+        </button>`}
+      </div>
+    </div>`;
+  }).join('');
+
+  host.innerHTML = `<div class="fmn-bar">
+      <span class="lg"><b>ПОДЧИНЁННЫЕ КОМАНДЫ</b><i>SUBORDINATE COMMANDS</i></span>
+      <span class="fmn-count">${held}/${Number.isFinite(limit) ? limit : '∞'} DIRECT</span>
+    </div>${cards}${renderReserve(world)}`;
+}
+
+/**
+ * The strategic reserve, at the one appointment that can release it.
+ *
+ * Rounds nobody below you can move, four minutes of road between the order and
+ * a rail, and not enough of them to cover two of anything.
+ */
+function renderReserve(world) {
+  if (!world.reserve.rounds && !world.reserve.released) return '';
+  const transit = world.reserve.inTransit
+    .map((c) => `${c.rounds} → ${esc(world.formationById.get(c.formationId)?.name ?? '')} `
+      + `(${Math.ceil(c.arrivesAtS - world.t)}s)`)
+    .join(', ');
+  return `<div class="fmn is-reserve">
+    <div class="fmn-head">
+      <span class="lg"><b>СТРАТЕГИЧЕСКИЙ РЕЗЕРВ</b><i>STRATEGIC RESERVE</i></span>
+      <span class="fmn-state">${world.reserve.rounds} ROUNDS HELD</span>
+    </div>
+    ${transit ? `<div class="fmn-figures"><span><label>ON THE ROAD</label>${transit}</span></div>` : ''}
+    <div class="fmn-controls">
+      ${world.formations.filter((f) => !f.hq).map((f) => `<button class="pb"
+        data-act="reserve" data-formation="${f.id}" ${world.reserve.rounds <= 0 ? 'disabled' : ''}
+        title="Release four rounds to ${esc(f.name)}. They take four minutes to arrive.">
+        <span class="lg"><b>4 → ${esc(f.tm)}</b><i>RELEASE TO ${esc(f.en.toUpperCase())}</i></span>
+      </button>`).join('')}
+    </div>
+  </div>`;
+}
+
 /* ------------------------------------------------------------- weapons */
 
 export function renderBatteries(world, ui, els) {
@@ -244,8 +348,13 @@ export function renderBatteries(world, ui, els) {
 
     const weaponsEntry = CONTROLS[site.weaponsState];
 
+    // A battery in a formation somebody else is commanding is still on the
+    // board and still shooting; it simply is not taking orders from this seat.
+    const detached = !world.commandable(site.id);
+
     return `<div class="unit ${ui.selectedSiteId === site.id ? 'is-selected' : ''}
-        ${!site.alive ? 'is-dead' : ''} ${mine ? 'is-mine' : ''}" data-site="${site.id}">
+        ${!site.alive ? 'is-dead' : ''} ${mine ? 'is-mine' : ''}
+        ${detached ? 'is-detached' : ''}" data-site="${site.id}">
       <span class="screw ${'abcd'[index % 4]}"></span>
       <div class="unit-head">
         <span class="unit-name">${index + 1}. ${esc(site.name)}</span>
@@ -282,17 +391,19 @@ export function renderBatteries(world, ui, els) {
 
       <div class="unit-controls">
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
-    { act: 'emcon', site: site.id, disabled: !radar?.alive })}
-        <button class="pb" data-act="weapons" data-site="${site.id}"
+    { act: 'emcon', site: site.id, disabled: detached || !radar?.alive })}
+        <button class="pb" data-act="weapons" data-site="${site.id}" ${detached ? 'disabled' : ''}
           title="Weapons state — hold, tight or free (Q / W / Shift+E)">
           <span class="lg"><b>${esc(weaponsEntry.tm)}</b><i>WEAPONS ${esc(weaponsEntry.en)}</i></span>
         </button>
-        <button class="pb" data-act="salvo" data-site="${site.id}" title="Rounds per engagement">
+        <button class="pb" data-act="salvo" data-site="${site.id}" ${detached ? 'disabled' : ''}
+          title="Rounds per engagement">
           <span class="lg"><b>${esc(CONTROLS.salvo.tm)} ${site.salvoSize}</b><i>SALVO</i></span>
         </button>
         ${press(CONTROLS.reload, { act: 'reload', site: site.id,
-    disabled: site.magazine <= 0 || site.reloadRemainingS > 0 })}
-        ${press(CONTROLS.displace, { act: 'scoot', site: site.id, disabled: site.scootRemainingS > 0 })}
+    disabled: detached || site.magazine <= 0 || site.reloadRemainingS > 0 })}
+        ${press(CONTROLS.displace, { act: 'scoot', site: site.id,
+    disabled: detached || site.scootRemainingS > 0 })}
       </div>
     </div>`;
   }).join('');

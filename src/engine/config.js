@@ -490,6 +490,19 @@ export const ASSET_TYPES = {
     critical: true,
   },
   airbase: { id: 'airbase', label: 'AIRBASE', name: 'Airbase', value: 30, hp: 150 },
+  /**
+   * A district town — Kubin, Lozan, Brasov.
+   *
+   * The generic version of the Ville: somewhere with people in it that is not
+   * where you are from. That distinction is the entire subject of district
+   * command, where you find out how you rank three towns none of which is
+   * yours, and then find out at the next appointment that somebody was already
+   * ranking yours.
+   */
+  city: {
+    id: 'city', label: 'DISTRICT TOWN', name: 'District town',
+    value: 20, hp: 300, civilian: true,
+  },
   power: { id: 'power', label: 'POWER', name: 'Power station', value: 16, hp: 85 },
   depot: { id: 'depot', label: 'DEPOT', name: 'Munitions depot', value: 14, hp: 75 },
   bridge: { id: 'bridge', label: 'BRIDGE', name: 'River crossing', value: 10, hp: 60 },

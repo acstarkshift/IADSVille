@@ -36,7 +36,11 @@ import {
   createCommandState, stepCommand, standingDelta, settleDirectives, answerDirective, tierFor,
 } from './command.js';
 import { composeEnding } from './endings.js';
+import { echelonForScenario } from './echelon.js';
 import { composeFlightEnding } from './epilogue.js';
+
+/** Minutes on a road, in seconds. The reserve is not an inventory screen. */
+const RESERVE_TRANSIT_S = 240;
 
 export class World {
   constructor(scenario, options = {}) {
@@ -91,7 +95,6 @@ export class World {
      */
     this.centre = scenario.centre ? { ...scenario.centre } : { x: 0, y: 0 };
     this.nextTn = 1;
-    this.aiThinkTimerS = 0;
 
     // Id sequences are per world, so two worlds in one process stay independent
     // and a seed always replays the same way.
@@ -158,6 +161,24 @@ export class World {
     };
 
     /**
+     * What this appointment is allowed to command directly.
+     *
+     * At battalion and sector command there is one formation and it is yours,
+     * so this is invisible. From district command upward it is the whole game:
+     * four sectors, two hands, and a handover cost every time you change your
+     * mind about which fight is yours.
+     */
+    this.echelon = echelonForScenario(scenario);
+    this.formations = [];
+    this.formationById = new Map();
+    this.reserve = {
+      rounds: scenario.reserveRounds ?? this.echelon.reserveRounds,
+      released: 0,
+      frozen: false,
+      inTransit: [],
+    };
+
+    /**
      * The battery you belong to, whether or not you are sitting in it. In the
      * operator's seat this is the console under your hands; in the battle
      * manager's seat it is still your parent unit, so training you paid for is
@@ -169,6 +190,7 @@ export class World {
 
     this.buildAssets();
     this.buildDefences();
+    this.buildFormations();
     this.buildWaves();
     this.applyRole(options.role ?? 'net', options.batteryId);
 
@@ -292,6 +314,254 @@ export class World {
       site.radarId = radar.id;
       this.sites.push(site);
       this.siteById.set(site.id, site);
+    }
+  }
+
+  /**
+   * Group the batteries into the formations somebody actually commands.
+   *
+   * A scenario that names no formations gets one containing everything, which
+   * is what a battalion or a sector is: one command, one commander, and that
+   * commander is the player. From district command upward the scenario names
+   * them, each with an officer whose competence and reading of their orders are
+   * fixed at the start and never explained to you.
+   */
+  buildFormations() {
+    const specs = this.scenario.formations ?? [{
+      id: 'f_command',
+      name: this.scenario.formationName ?? 'THIS COMMAND',
+      tm: 'ЭТА КОМАНДА',
+      en: 'This command',
+    }];
+
+    for (const spec of specs) {
+      const formation = {
+        id: spec.id,
+        name: spec.name,
+        tm: spec.tm ?? spec.name,
+        en: spec.en ?? spec.name,
+        /** Where the formation's own responsibility lies, for the scope. */
+        pos: spec.pos ? { ...spec.pos } : null,
+        posture: spec.posture ?? 'tight',
+        /**
+         * Your own headquarters battalion.
+         *
+         * Every commander from district level upward has one formation that is
+         * simply theirs — the batteries sitting around the post they are
+         * sitting in. It is always under your hand and it never counts against
+         * what the appointment lets you hold, because nobody has to hand it to
+         * you. It is also, on the last watch, the thing the enemy is coming for.
+         */
+        hq: spec.hq === true,
+        direct: false,
+        handoverUntilS: 0,
+        takenAtS: -Infinity,
+        thinkTimerS: 0,
+        commander: spec.commander
+          ? { competence: 1, political: false, ...spec.commander }
+          : { name: null, competence: 1, political: false },
+        /** Rounds released to it out of the strategic reserve. */
+        reserveReceived: 0,
+      };
+      this.formations.push(formation);
+      this.formationById.set(formation.id, formation);
+    }
+
+    // Anything the scenario forgot to place belongs to the first formation, so
+    // a battery can never end up commanded by nobody.
+    const fallback = this.formations[0];
+    for (const site of this.sites) {
+      const spec = this.scenario.sites.find((x) => x.id === site.id);
+      const formation = this.formationById.get(spec?.formation) ?? fallback;
+      site.formationId = formation.id;
+      // The formation's standing order is the batteries' weapons state: there
+      // is no second system, so what you told a sector is exactly what its
+      // batteries are doing.
+      site.weaponsState = spec?.weaponsState ?? formation.posture;
+    }
+
+    /*
+     * Everything you may hold at once, held from the first second. At battalion
+     * and sector that is the single formation; higher up it is whichever ones
+     * the scenario opens you in, and the rest are already fighting on their
+     * standing orders before you have looked at them.
+     */
+    {
+      const subordinate = this.formations.filter((f) => !f.hq);
+      const limit = Number.isFinite(this.echelon.directLimit)
+        ? this.echelon.directLimit : subordinate.length;
+      const opening = this.scenario.openInFormations
+        ?? subordinate.slice(0, limit).map((f) => f.id);
+      for (const formation of this.formations) {
+        if (formation.hq || opening.includes(formation.id)) {
+          formation.direct = true;
+          formation.takenAtS = -1;
+        }
+      }
+    }
+  }
+
+  /** Every battery under a formation. */
+  sitesOf(formation) {
+    return this.sites.filter((s) => s.alive && s.formationId === formation.id);
+  }
+
+  formationOf(siteId) {
+    return this.formationById.get(this.siteById.get(siteId)?.formationId) ?? null;
+  }
+
+  /**
+   * Is a human actually running this formation's assignments right now?
+   *
+   * Two things have to be true: the appointment holds it directly, and the
+   * player is in the net seat rather than sitting in a battery. An operator
+   * crewing a gun holds no formations in any sense that matters — the net above
+   * them is run by somebody else, and this is what tells the AI to run it.
+   */
+  formationIsHumanRun(formation) {
+    return this.control.netIsHuman && formation.direct && this.t >= formation.handoverUntilS;
+  }
+
+  /** Is this formation under this appointment's own hand, whoever is sitting where? */
+  isDirect(formationId) {
+    const formation = this.formationById.get(formationId);
+    return !!formation?.direct && this.t >= formation.handoverUntilS;
+  }
+
+  /**
+   * Take a formation under your own hand.
+   *
+   * You may hold as many as the appointment allows and no more, so taking a
+   * third sector at district command means letting go of the one you have held
+   * longest — and both of them go quiet for the handover, because a command
+   * changing hands in the middle of a raid is not instantaneous and pretending
+   * otherwise would remove the only cost this decision has.
+   */
+  takeDirect(formationId) {
+    const formation = this.formationById.get(formationId);
+    if (!formation || !this.control.netIsHuman) return false;
+    if (formation.direct) return false;
+
+    if (formation.hq) { formation.direct = true; return true; }
+
+    const limit = this.echelon.directLimit;
+    const held = this.formations.filter((f) => f.direct && !f.hq);
+    if (held.length >= limit) {
+      const oldest = held.sort((a, b) => a.takenAtS - b.takenAtS)[0];
+      this.releaseDirect(oldest.id, 'to take another');
+    }
+
+    formation.direct = true;
+    formation.takenAtS = this.t;
+    formation.handoverUntilS = this.t + this.echelon.handoverS;
+    this.log('info', `${formation.name} — UNDER DIRECT COMMAND`, { formationId: formation.id });
+    return true;
+  }
+
+  releaseDirect(formationId, why = null) {
+    const formation = this.formationById.get(formationId);
+    if (!formation || !formation.direct) return false;
+    // You cannot hand your own headquarters to anybody. There is nobody to hand
+    // it to; that is what makes it yours.
+    if (formation.hq) return false;
+    formation.direct = false;
+    formation.handoverUntilS = this.t + this.echelon.handoverS;
+    formation.thinkTimerS = 0;
+    this.log('info', `${formation.name} — RELEASED${why ? ` ${why}` : ''}`
+      + `${formation.commander?.name ? ` TO ${formation.commander.name}` : ''}`,
+    { formationId: formation.id });
+    return true;
+  }
+
+  /**
+   * The standing order you leave a formation with.
+   *
+   * This is the only thing a district or national commander can say to three
+   * quarters of their command, and it is said once, in advance, about a fight
+   * that has not happened yet.
+   */
+  setPosture(formationId, posture) {
+    const formation = this.formationById.get(formationId);
+    if (!formation) return false;
+    formation.posture = posture;
+    for (const site of this.sitesOf(formation)) this.setWeaponsState(site.id, posture);
+    this.log('info', `${formation.name} — WEAPONS ${posture.toUpperCase()}`, { formationId: formation.id });
+    return true;
+  }
+
+  /** May the operator give this battery an order at this moment? */
+  commandable(siteId) {
+    const formation = this.formationOf(siteId);
+    if (!formation) return true;
+    // Your own console is always your own console.
+    if (this.control.crewedBatteryId === siteId) return true;
+    return this.isDirect(formation.id);
+  }
+
+  /* ---------------------------------------------------------------- *
+   * The strategic reserve — national command only.
+   * ---------------------------------------------------------------- */
+
+  /**
+   * Release rounds to a formation.
+   *
+   * Nobody below national command can do this, there are sixteen of them, and
+   * they take four minutes to reach a rail. It is not enough to save two of
+   * anything, which is the point: the reserve is not a resource, it is a
+   * question about which place you have decided matters.
+   */
+  commitReserve(formationId, rounds = 4) {
+    const formation = this.formationById.get(formationId);
+    if (!formation) return 0;
+    if (this.reserve.frozen) {
+      this.log('warn', 'RESERVE IS FROZEN BY ORDER OF THE MINISTRY', { severity: 'high' });
+      return 0;
+    }
+    const sending = Math.min(rounds, this.reserve.rounds);
+    if (sending <= 0) return 0;
+
+    /*
+     * The reserve is fires like any other fires, and a priority of fires you
+     * acknowledged covers it. Sending the national reserve to a place the order
+     * says is not a defended place is the largest single act of disobedience
+     * available anywhere in this game, and it is logged in the same column as
+     * everything else.
+     */
+    const priorityId = this.command?.constraints?.priorityOfFiresId;
+    if (priorityId) {
+      const priority = this.assetById.get(priorityId);
+      const covers = priority && this.sitesOf(formation)
+        .some((site) => dist(site.pos, priority.pos) <= SAM_TYPES[site.type].maxRangeKm);
+      if (!covers) {
+        this.stats.roundsAgainstOrder += sending;
+        this.noteFiresOutsidePriority();
+      }
+    }
+
+    this.reserve.rounds -= sending;
+    this.reserve.released += sending;
+    this.reserve.inTransit.push({
+      formationId, rounds: sending, arrivesAtS: this.t + RESERVE_TRANSIT_S,
+    });
+    this.log('info', `RESERVE — ${sending} ROUNDS RELEASED TO ${formation.name}`,
+      { formationId: formation.id });
+    return sending;
+  }
+
+  /** Rounds on the road. They arrive when they arrive. */
+  stepReserve() {
+    if (!this.reserve.inTransit.length) return;
+    const arrived = this.reserve.inTransit.filter((c) => c.arrivesAtS <= this.t);
+    if (!arrived.length) return;
+    this.reserve.inTransit = this.reserve.inTransit.filter((c) => c.arrivesAtS > this.t);
+    for (const convoy of arrived) {
+      const formation = this.formationById.get(convoy.formationId);
+      const sites = formation ? this.sitesOf(formation) : [];
+      if (!sites.length) continue;
+      formation.reserveReceived += convoy.rounds;
+      for (let i = 0; i < convoy.rounds; i++) sites[i % sites.length].magazine += 1;
+      this.log('good', `${formation.name} — ${convoy.rounds} ROUNDS DELIVERED`,
+        { formationId: formation.id });
     }
   }
 
@@ -494,7 +764,11 @@ export class World {
     if (!aircraft.alive) return false;
     const type = AIR_TYPES[aircraft.type];
     if (type.friendly && !type.isVip) return false;
-    return !(aircraft.state === 'egress' && len(aircraft.pos) > 110);
+    // Measured from the centre of the watch rather than from the map origin.
+    // On a district board the far sectors are a hundred kilometres out to begin
+    // with, and an origin-relative rule held the watch open for six minutes
+    // after the last aircraft had turned for home.
+    return !(aircraft.state === 'egress' && dist(aircraft.pos, this.centre) > 110);
   }
 
   registerLeaker(aircraft, asset) {
@@ -558,12 +832,16 @@ export class World {
     // Firing outside an accepted priority of fires. It is recorded either way;
     // the first time, sector command says so out loud.
     this.stats.roundsAgainstOrder += count;
-    if (!this.command.constraints.priorityBreachLogged) {
-      this.command.constraints.priorityBreachLogged = true;
-      this.log('alert', this.narrativePressure
-        ? 'SECTOR ACTUAL: YOU ARE FIRING OUTSIDE THE PRIORITY OF FIRES. THE LOG IS RUNNING.'
-        : 'ORDER VIOLATION: FIRES OUTSIDE DESIGNATED PRIORITY.', { severity: 'high' });
-    }
+    this.noteFiresOutsidePriority();
+  }
+
+  /** Said out loud once, and written down every time. */
+  noteFiresOutsidePriority() {
+    if (this.command.constraints.priorityBreachLogged) return;
+    this.command.constraints.priorityBreachLogged = true;
+    this.log('alert', this.narrativePressure
+      ? 'SECTOR ACTUAL: YOU ARE FIRING OUTSIDE THE PRIORITY OF FIRES. THE LOG IS RUNNING.'
+      : 'ORDER VIOLATION: FIRES OUTSIDE DESIGNATED PRIORITY.', { severity: 'high' });
   }
 
   nearestThreatTo(aircraft) {
@@ -593,6 +871,28 @@ export class World {
     return alive[0] ?? null;
   }
 
+  /**
+   * A battery ordered away.
+   *
+   * It packs up and drives out of the sector, and it is not a casualty — the
+   * returns will show it as a redeployment, correctly, and the place it was
+   * covering will show as undefended, also correctly, and nobody will put those
+   * two lines on the same page.
+   */
+  withdrawSite(siteId, reason = 'redeployed') {
+    const site = this.siteById.get(siteId);
+    if (!site || !site.alive) return false;
+    site.alive = false;
+    site.withdrawn = true;
+    site.engagements = [];
+    const radar = this.radarById.get(site.radarId);
+    if (radar) { radar.alive = false; radar.on = false; radar.state = 'off'; }
+    this.stats.sitesWithdrawn = (this.stats.sitesWithdrawn ?? 0) + 1;
+    this.log('warn', `${site.name} — OFF THE AIR, ${reason.toUpperCase()}`,
+      { siteId: site.id, severity: 'high' });
+    return true;
+  }
+
   damageAsset(asset, amount, source) { damageAsset(this, asset, amount, source); }
   damageRadar(radar, amount, cause) { damageRadar(this, radar, amount, cause); }
   damageSite(site, amount, cause) { damageSite(this, site, amount, cause); }
@@ -605,6 +905,9 @@ export class World {
     const track = this.tracks.get(trackId);
     const site = this.siteById.get(siteId);
     if (!track || !site) return null;
+    // A battery in a formation you are not commanding does not take your orders.
+    // It is not being insubordinate; you are simply not on its net.
+    if (!this.commandable(siteId)) return null;
     const manual = this.control.crewedBatteryId === siteId;
     return beginEngagement(this, site, track, { manual, ...opts });
   }
@@ -612,6 +915,9 @@ export class World {
   unassign(trackId, siteId) {
     const site = this.siteById.get(siteId);
     if (!site) return false;
+    // You cannot call off an engagement being run by somebody else's command
+    // any more than you could have ordered it.
+    if (!this.commandable(siteId)) return false;
     const engagement = site.engagements.find((e) => e.trackId === trackId);
     if (!engagement) return false;
     endEngagement(this, site, engagement, 'cancelled');
@@ -762,7 +1068,10 @@ export class World {
     this.plots = stepDetection(this, dt);
     scoreAllTracks(this);
 
-    if (!this.control.netIsHuman) runAiBattleManager(this, dt);
+    // Always: it runs the formations the player is not personally commanding,
+    // which at battalion and sector is none of them and at national command is
+    // nearly the whole country.
+    runAiBattleManager(this, dt);
     runBatteryCrews(this, dt);
     // The player's own battery still needs its radar handled if they are running
     // the net rather than sitting in it.
@@ -777,6 +1086,7 @@ export class World {
     stepMissiles(this, dt);
     stepDamage(this, dt);
     stepCommand(this, dt);
+    this.stepReserve();
     this.checkEnd();
   }
 

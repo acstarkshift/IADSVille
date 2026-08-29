@@ -34,7 +34,24 @@ export const RANKS = [
   { id: 'lt', tm: 'ЛЕЙТЕНАНТ', en: 'Lieutenant', xp: 24500, standing: 66 },
   { id: 'slt', tm: 'СТ. ЛЕЙТЕНАНТ', en: 'Senior Lieutenant', xp: 31500, standing: 70 },
   { id: 'capt', tm: 'КАПИТАН', en: 'Captain', xp: 40000, standing: 74 },
+  /*
+   * Field and general officer.
+   *
+   * Nobody reaches these on merit alone and the game does not pretend they do:
+   * the appointment carries the rank, so a district or national command gazettes
+   * you to whatever it needs you to be on the same order that gives you the job.
+   * The thresholds below are what it takes to earn one without an appointment,
+   * which in this service has happened to nobody.
+   */
+  { id: 'major', tm: 'МАЙОР', en: 'Major', xp: 52000, standing: 76 },
+  { id: 'ltcol', tm: 'ПОДПОЛКОВНИК', en: 'Lieutenant Colonel', xp: 66000, standing: 78 },
+  { id: 'col', tm: 'ПОЛКОВНИК', en: 'Colonel', xp: 82000, standing: 80 },
+  { id: 'majgen', tm: 'ГЕНЕРАЛ-МАЙОР', en: 'Major General', xp: 100000, standing: 82 },
+  { id: 'ltgen', tm: 'ГЕНЕРАЛ-ЛЕЙТЕНАНТ', en: 'Lieutenant General', xp: 122000, standing: 84 },
 ];
+
+/** Index of a rank by id, for the appointments that carry one. */
+export const rankIndexOf = (id) => Math.max(0, RANKS.findIndex((r) => r.id === id));
 
 /**
  * Where you were before the army had you. Backgrounds are permanent and are

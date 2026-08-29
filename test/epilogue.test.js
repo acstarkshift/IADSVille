@@ -27,6 +27,20 @@ import { closestApproachBetween } from '../src/engine/threat.js';
 
 const epilogue = scenarioById(EPILOGUE_ID);
 
+/**
+ * A record that has stood every watch up to and including the last one, and
+ * finished it the given way. Both gates on the epilogue need this.
+ */
+function servedRecord(ending) {
+  const campaign = emptyCampaign();
+  for (const scenario of SCENARIOS) {
+    if (scenario.id === EPILOGUE_ID) continue;
+    campaign.completed[scenario.id] = { score: 1, tier: 'satisfactory', role: 'net' };
+  }
+  campaign.ending = ending;
+  return campaign;
+}
+
 /** A finished result, shaped the way World produces one. */
 const outcome = (stats = {}, over = {}) => ({
   missionId: EPILOGUE_ID,
@@ -61,16 +75,29 @@ describe('the watch that only some records have', () => {
 
   test('holding the palace opens it; losing it does not', () => {
     for (const ending of ['obedient', 'exemplary']) {
-      assert.ok(isUnlocked(epilogue, { ending }), `${ending} should open the epilogue`);
+      assert.ok(isUnlocked(epilogue, servedRecord(ending)), `${ending} should open the epilogue`);
     }
     for (const ending of ['defiant', 'survivor', 'collapse', 'overrun', 'divided']) {
-      assert.equal(isUnlocked(epilogue, { ending }), false, `${ending} should not`);
+      assert.equal(isUnlocked(epilogue, servedRecord(ending)), false, `${ending} should not`);
     }
   });
 
-  test('every other watch stays on the roster regardless', () => {
-    assert.equal(rosterFor(emptyCampaign()).length, SCENARIOS.length - 1);
-    assert.equal(rosterFor({ ending: 'obedient' }).length, SCENARIOS.length);
+  test('the appointment gates it too: holding the palace is not enough on its own', () => {
+    // Both gates have to open. A record that held the palace but has not been
+    // appointed to national command cannot be given a national watch, and a
+    // record appointed to national command that lost the palace has nothing to
+    // protect out of Demobodedovo.
+    const noService = { completed: {}, ending: 'obedient' };
+    assert.equal(isUnlocked(epilogue, noService), false);
+    assert.ok(isUnlocked(epilogue, servedRecord('obedient')));
+  });
+
+  test('the roster grows with the appointment', () => {
+    const fresh = rosterFor(emptyCampaign());
+    assert.ok(fresh.length > 0, 'a new record has somewhere to start');
+    assert.ok(fresh.every((s) => s.echelon === 'battalion'),
+      'and it is not handed a district on its first night');
+    assert.equal(rosterFor(servedRecord('obedient')).length, SCENARIOS.length);
   });
 });
 
@@ -235,8 +262,10 @@ function play({ posture = 'free', shootTheFlight = false, seed = 'epilogue-test'
       const vip = world.vipAircraft();
       const track = vip && [...world.tracks.values()].find((t) => t.truthId === vip.id);
       if (track && track.hostility === 'friendly') {
+        // Only batteries this appointment actually commands: at national level
+        // most of the country belongs to somebody else.
         const site = world.sites
-          .filter((s) => s.alive && s.readyRounds > 0)
+          .filter((s) => s.alive && s.readyRounds > 0 && world.commandable(s.id))
           .sort((a, b) => dist(a.pos, vip.pos) - dist(b.pos, vip.pos))[0];
         if (site && world.assign(track.id, site.id)) fired = true;
       }
@@ -289,12 +318,33 @@ describe('the flight, flown', () => {
     assert.equal(world.outcome.endingId, 'abandoned');
   });
 
-  test('an operator can fire on it, and the game knows who did', () => {
+  test('an operator can fire on it, and the tape records the fire order either way', () => {
     const world = play({ shootTheFlight: true });
     assert.ok(world.stats.vipRoundsFired > 0, 'the rounds are on the tape');
+    // Firing on it does not guarantee yours is the round that arrives — the
+    // fighters are also trying — so the ending has to follow the attribution
+    // rather than the intent.
     if (world.stats.vipDown) {
-      assert.equal(world.stats.vipDownedBy, 'operator');
-      assert.equal(world.outcome.endingId, 'judgement');
+      assert.ok(['operator', 'enemy'].includes(world.stats.vipDownedBy));
+      assert.equal(world.outcome.endingId,
+        world.stats.vipDownedBy === 'operator' ? 'judgement' : 'abandoned');
+    }
+  });
+
+  test('attribution follows the weapon that arrived, not the one that was fired', () => {
+    // The distinction the whole epilogue turns on, checked directly rather than
+    // waiting for a seed in which it happens to come up.
+    for (const [kind, expected] of [['aam', 'enemy'], ['sam', 'operator']]) {
+      const world = new World(epilogue, { role: 'net', seed: `attrib-${kind}` });
+      let n = 0;
+      while (!world.vipAircraft() && n < 3000) { world.step(0.1); n++; }
+      const vip = world.vipAircraft();
+      assert.ok(vip, 'the aircraft takes off');
+      world.killAircraft(vip, { kind });
+      assert.equal(world.stats.vipDown, true);
+      assert.equal(world.stats.vipDownedBy, expected);
+      assert.equal(world.stats.civilianAircraftShot, 0,
+        'and it is never filed as a civil transit');
     }
   });
 
@@ -307,10 +357,10 @@ describe('the flight, flown', () => {
     for (const seed of ['c1', 'c2', 'c3', 'c4']) {
       const world = new World(epilogue, { role: 'net', seed });
       world.control.netIsHuman = false;
-      for (const site of world.sites) {
-        world.setWeaponsState(site.id, 'tight');
-        world.setSalvo(site.id, 2);
-      }
+      // A commander who puts the whole country on the corridor: every formation
+      // released to fire, salvos of two, and their own hand on the corridor.
+      for (const formation of world.formations) world.setPosture(formation.id, 'free');
+      for (const site of world.sites) world.setSalvo(site.id, 2);
       let n = 0;
       while (world.phase === 'running' && n < 30000) {
         for (const radar of world.radars) if (radar.alive && !radar.siteId) radar.on = true;
@@ -322,7 +372,9 @@ describe('the flight, flown', () => {
             if (track.hostility !== 'hostile' || track.destroyed) continue;
             if (track.quality < 0.5 || track.assignedTo.length) continue;
             if (closestApproachBetween(track, vip).missKm > 40) continue;
-            for (const site of world.sites) if (world.assign(track.id, site.id)) break;
+            for (const site of world.sites) {
+              if (world.commandable(site.id) && world.assign(track.id, site.id)) break;
+            }
           }
         }
         n++;
@@ -351,8 +403,8 @@ describe('the file, afterwards', () => {
   });
 
   test('the epilogue is recorded without locking itself', () => {
-    const campaign = emptyCampaign(createCharacter({ name: 'Тест' }));
-    campaign.ending = 'obedient';
+    const campaign = servedRecord('obedient');
+    campaign.character = createCharacter({ name: 'Тест' });
     const world = play({ posture: 'hold' });
     recordMission(campaign, world.outcome);
     assert.equal(campaign.epilogue, world.outcome.endingId);
