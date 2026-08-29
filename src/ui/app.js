@@ -23,7 +23,7 @@ import { Scope } from './scope.js';
 import { CrewConsole } from './console.js';
 import { Audio } from './audio.js';
 import {
-  renderTopbar, renderTrackList, renderBatteries, renderCrewConsole,
+  renderTopbar, renderTrackList, renderFlightStrip, renderBatteries, renderCrewConsole,
   renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, RANGE_SCALES,
 } from './panels.js';
 import { renderMenu, renderBriefing, renderDebrief, renderControls } from './screens.js';
@@ -110,6 +110,7 @@ function cacheEls() {
     standingFill: id('standing-fill'),
     fusionState: id('fusion-state'),
     trackList: id('track-list'),
+    flightStrip: id('flight-strip'),
     trackDetail: id('track-detail'),
     batteryList: id('battery-list'),
     crewConsole: id('crew-console'),
@@ -329,7 +330,15 @@ function startMission() {
   window.__state = state;
   window.__scope = scope;
   window.__ui = ui;
-  scope.rangeKm = 150;
+  /*
+   * Frame the watch. Almost every scenario is drawn around the Ville at the
+   * origin; the one fought over the capital is a hundred and seventeen
+   * kilometres from it, and a scope centred on the sector's usual middle would
+   * put the entire engagement in one corner.
+   */
+  scope.rangeKm = world.scenario.scopeRangeKm ?? 150;
+  scope.origin = { ...world.centre };
+  scope.centre = { ...world.centre };
   scope.clearPaint();
   audio.resume();
   audio.boot();
@@ -415,6 +424,7 @@ function render(now) {
     ui.lastPanelAt = now;
     renderTopbar(world, ui, els);
     renderTrackList(world, ui, els);
+    renderFlightStrip(world, els);
     renderBatteries(world, ui, els);
     renderScopeSide(world, ui, els, ui.view === 'crew' ? crew.rangeKm : scope.rangeKm);
     if (world.control.crewedBatteryId && ui.view === 'crew') renderCrewConsole(world, ui, els);

@@ -9,7 +9,7 @@
  * register that stays in good taste.
  */
 
-import { SCENARIOS } from '../engine/scenarios.js';
+import { SCENARIOS, isUnlocked } from '../engine/scenarios.js';
 import { DIFFICULTY, ROLES, SAM_TYPES, COMMAND, DEFENCE_CLASSES } from '../engine/config.js';
 import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor } from '../engine/command.js';
@@ -19,6 +19,7 @@ import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/charact
 import { serviceSummary } from './dossier.js';
 import { STATE } from './lexicon.js';
 import { composeEnding, ENDINGS, endingSummary } from '../engine/endings.js';
+import { composeFlightEnding, flightEndingSummary } from '../engine/epilogue.js';
 import { knownRevelations, standing as arcStanding } from '../engine/revelations.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
@@ -59,6 +60,8 @@ export function renderMenu(host, state, actions) {
       </div>
       ${campaign.ending ? `<p style="margin-top:9px;color:var(--hostile)">
         <b>${esc(endingSummary(campaign.ending) ?? '')}</b> — the last watch has been stood.</p>` : ''}
+      ${campaign.epilogue ? `<p style="margin-top:4px;color:var(--hostile)">
+        <b>${esc(flightEndingSummary(campaign.epilogue) ?? '')}</b> — and what happened two days after it.</p>` : ''}
       ${character ? `<p style="color:var(--ink-dim);margin-top:9px">
         ${esc(backgroundOf(character).en)}, of the Ville · ${esc(householdOf(character).en)}.
         ${character.decorations.length ? `${character.decorations.length} decoration${character.decorations.length > 1 ? 's' : ''} on file.` : ''}
@@ -71,6 +74,18 @@ export function renderMenu(host, state, actions) {
         ${SCENARIOS.map((s) => {
     const done = campaign.completed[s.id];
     const active = state.missionId === s.id;
+    /*
+     * A watch that is not on the roster is shown, and shown as sealed. Hiding
+     * it entirely would mean nobody ever learns it exists; naming it would give
+     * away a thing the player is supposed to find out at four in the morning.
+     */
+    if (!isUnlocked(s, campaign)) {
+      return `<button class="mission is-sealed" disabled>
+            <b>▓▓▓▓▓▓▓▓ ▓▓▓▓▓▓</b>
+            <small>Not on the roster. This watch has not happened yet.</small>
+            <div class="flags"><span class="pill tight">ЗАПЕЧАТАНО · SEALED</span></div>
+          </button>`;
+    }
     return `<button class="mission ${active ? 'is-active' : ''}" data-mission="${s.id}">
             <b>${esc(s.name)}</b>
             <small>${esc(s.subtitle)}</small>
@@ -211,7 +226,9 @@ export function renderDebrief(host, state, result, entry) {
    */
   const ending = result.finale
     ? composeEnding(result, state.campaign.character, { narrativePressure: state.narrativePressure })
-    : null;
+    : result.epilogue
+      ? composeFlightEnding(result, state.campaign.character, { narrativePressure: state.narrativePressure })
+      : null;
   const b = result.breakdown;
   const s = result.stats;
 

@@ -11,6 +11,8 @@
  *   jammer   wants to stand where it ruins the picture and stay out of reach
  *   decoy    wants to be shot at
  *   civil    wants to be somewhere else entirely, and doesn't know any of this
+ *   fighter  wants one particular aeroplane and nothing on the ground at all
+ *   state 01 wants to be out of national airspace before any of them arrive
  *
  * The most important behaviour here is the abort. A striker that turns for home
  * because a round went past its nose never bombs anything — a miss can still win
@@ -20,15 +22,16 @@
 import { AIR_TYPES, SIM, ARM } from './config.js';
 import {
   bearing, dist, add, scale, headingVec, turnToward, norm, sub, len, wrapDeg,
-  clamp, polar,
+  clamp, polar, leadPoint,
 } from './math.js';
-import { launchArm, releaseWeapons } from './weapons.js';
+import { launchArm, launchAirToAir, releaseWeapons } from './weapons.js';
 
 /** Callsigns give the log some texture: "RAID 04 TURNING BACK" reads better than an id. */
 function callsign(type, n) {
   const prefix = {
     striker: 'RAID', cruise: 'VAMPIRE', sead: 'WEASEL',
     jammer: 'SHROUD', decoy: 'GHOST', civil: 'TRANSIT',
+    interceptor: 'HUNTER', vip: 'STATE',
   }[type] ?? 'UNKNOWN';
   return `${prefix} ${String(n).padStart(2, '0')}`;
 }
@@ -58,6 +61,9 @@ export function createAircraft(spec) {
     damaged: false,
     armsLeft: type.arms ?? 0,
     lastArmS: -999,
+    /** Air-to-air rounds, carried by exactly one type on exactly one watch. */
+    airToAirLeft: type.airToAir ?? 0,
+    lastAamS: -999,
     jamming: false,
     evadingUntilS: -1,
     threatenedAtS: -999,
@@ -342,6 +348,99 @@ function stepCivil(world, aircraft, dt) {
   if (dist(aircraft.pos, wp) < 6) aircraft.waypoints.shift();
 }
 
+/** Seconds between rounds off the same fighter — one pass, one shot, then reset. */
+const AAM_RELOAD_S = 14;
+
+/** Wait on a combat air patrol station: fly to it, then turn circles over it. */
+function holdStation(world, aircraft, dt) {
+  const station = aircraft.waypoints[0] ?? world.centre;
+  if (dist(aircraft.pos, station) > 20) {
+    flyToward(aircraft, station, dt);
+    return;
+  }
+  aircraft.orbitPhase = wrapDeg(aircraft.orbitPhase + 10 * dt);
+  flyToward(aircraft, polar(station, aircraft.orbitPhase, 14), dt);
+}
+
+/**
+ * Enemy fighters, hunting an aeroplane.
+ *
+ * They ignore the ground entirely — no radars, no batteries, no towns. They fly
+ * lead pursuit on the one aircraft they were sent for and shoot at it from
+ * twenty-six kilometres, and when it is gone, or their rounds are, they leave.
+ *
+ * They can still be broken. Their nerve is tested like anybody else's, so a
+ * round that misses can turn one of them for home — which is the cheapest way
+ * there is of keeping the aircraft they came for in the air.
+ */
+function stepInterceptor(world, aircraft, dt) {
+  const type = AIR_TYPES.interceptor;
+  const quarry = world.vipAircraft();
+
+  if (!quarry) {
+    /*
+     * Nothing to chase yet, or nothing left to chase.
+     *
+     * A pair sent for an aircraft that has not taken off holds where it was
+     * told to hold — which is what puts them on the operator's scope four
+     * minutes before the thing they came for exists, doing nothing, in a place
+     * that only makes sense once it does. A pair whose target is down or gone
+     * has no further business over somebody else's country.
+     */
+    if (world.pendingWaves.some((w) => AIR_TYPES[w.type]?.isVip)) {
+      holdStation(world, aircraft, dt);
+      return;
+    }
+    aircraft.state = 'egress';
+    egress(aircraft, dt);
+    return;
+  }
+
+  if (aircraft.airToAirLeft <= 0 || aircraft.state === 'egress') {
+    aircraft.state = 'egress';
+    egress(aircraft, dt);
+    return;
+  }
+
+  if (aircraft.evadingUntilS > world.t && evasiveStep(world, aircraft, dt)) return;
+
+  const range = dist(aircraft.pos, quarry.pos);
+  if (range <= type.airToAirRangeKm && world.t - aircraft.lastAamS > AAM_RELOAD_S) {
+    launchAirToAir(world, aircraft, quarry);
+    aircraft.lastAamS = world.t;
+    if (aircraft.airToAirLeft <= 0) aircraft.state = 'egress';
+    return;
+  }
+
+  // Lead pursuit: fly at where it is going to be. Flying at where it is loses
+  // the race, and these are faster than what they are chasing by a quarter.
+  const aim = leadPoint(aircraft.pos, quarry.pos, quarry.vel, aircraft.speed);
+  flyToward(aircraft, aim, dt);
+}
+
+/**
+ * The state aircraft, climbing out of Demobodedovo.
+ *
+ * It flies a filed route and nothing else. It does not manoeuvre for advantage,
+ * it does not go home, and it does not know or care what is being said about it
+ * on the net. When a round is fired at it, it beams the shooter for half a
+ * minute — which costs it distance it cannot afford, and is the reason a fighter
+ * that misses is still doing its job.
+ */
+function stepVip(world, aircraft, dt) {
+  const type = AIR_TYPES.vip;
+  if (aircraft.altM < type.cruiseAltM) {
+    aircraft.altM = Math.min(type.cruiseAltM, aircraft.altM + type.climbRateMps * dt);
+  }
+
+  if (aircraft.evadingUntilS > world.t && evasiveStep(world, aircraft, dt)) return;
+
+  const wp = aircraft.waypoints[0];
+  if (!wp) { egress(aircraft, dt); return; }
+  flyToward(aircraft, wp, dt);
+  if (dist(aircraft.pos, wp) < 6) aircraft.waypoints.shift();
+}
+
 const BEHAVIOURS = {
   striker: stepStriker,
   cruise: stepCruise,
@@ -349,6 +448,8 @@ const BEHAVIOURS = {
   jammer: stepJammer,
   decoy: stepDecoy,
   civil: stepCivil,
+  interceptor: stepInterceptor,
+  vip: stepVip,
 };
 
 /** Advance the whole raid one step. */

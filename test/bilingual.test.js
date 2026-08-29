@@ -20,6 +20,7 @@ import { RANKS, BACKGROUNDS, SKILLS, DECORATIONS, DISTRICTS } from '../src/engin
 import { DEFENCE_CLASSES } from '../src/engine/config.js';
 import { MAP } from '../src/engine/geography.js';
 import { ENDINGS } from '../src/engine/endings.js';
+import { FLIGHT_ENDINGS } from '../src/engine/epilogue.js';
 import { REVELATIONS } from '../src/engine/revelations.js';
 
 const CYRILLIC = /[Ѐ-ӿ]/;
@@ -85,6 +86,15 @@ describe('the country', () => {
 describe('the narrative tables', () => {
   test('endings pair their Cyrillic title with an English subtitle', () => {
     for (const [id, ending] of Object.entries(ENDINGS)) {
+      assert.ok(hasCyrillic(ending.title), `${id} should have a Trans-Mordovian title`);
+      assert.ok(ending.subtitle && !CYRILLIC.test(ending.subtitle), `${id} needs an English subtitle`);
+      assert.ok(ending.plainTitle && !CYRILLIC.test(ending.plainTitle),
+        `${id} needs a plain title for the pressure-off setting`);
+    }
+  });
+
+  test('the epilogue endings pair theirs the same way', () => {
+    for (const [id, ending] of Object.entries(FLIGHT_ENDINGS)) {
       assert.ok(hasCyrillic(ending.title), `${id} should have a Trans-Mordovian title`);
       assert.ok(ending.subtitle && !CYRILLIC.test(ending.subtitle), `${id} needs an English subtitle`);
       assert.ok(ending.plainTitle && !CYRILLIC.test(ending.plainTitle),

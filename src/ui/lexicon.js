@@ -71,6 +71,11 @@ export const STATUS = {
   outOfZone: { tm: 'ВНЕ ЗОНЫ', en: 'OUT OF ZONE' },
   noSolution: { tm: 'НЕТ РЕШЕНЬЯ', en: 'NO FIRING SOLUTION' },
   armWarning: { tm: 'ОБЛУЧЕНЬЕ', en: 'INBOUND ARM', hint: 'a round is homing on you' },
+  protectedFlight: {
+    tm: 'ОСОБО ОХРАНЯЕМЫЙ БОРТ',
+    en: 'PROTECTED FLIGHT',
+    hint: 'sector command answers for this one personally',
+  },
   fusion: { tm: 'ЕДИНАЯ КАРТА', en: 'FUSED PICTURE' },
   localControl: { tm: 'МЕСТНОЕ УПР.', en: 'LOCAL CONTROL' },
   airPicture: { tm: 'ВОЗДУШНАЯ ОБСТАНОВКА', en: 'AIR PICTURE' },

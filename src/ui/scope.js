@@ -30,6 +30,8 @@ export class Scope {
     this.h = 0;
     this.rangeKm = 150;
     this.centre = { x: 0, y: 0 };
+    /** Where the range rings and bearing spokes are struck from. */
+    this.origin = { x: 0, y: 0 };
     this.theme = THEMES['crt-green'];
     this.palette = null;
     this.lastSweepAz = new Map();
@@ -392,7 +394,7 @@ export class Scope {
   drawGrid(world) {
     const { ctx } = this;
     const p = this.palette;
-    const centre = this.toScreen({ x: 0, y: 0 });
+    const centre = this.toScreen(this.origin);
     const step = this.rangeKm > 160 ? 50 : this.rangeKm > 80 ? 25 : 10;
 
     ctx.save();
@@ -649,6 +651,27 @@ export class Scope {
         ctx.stroke();
       }
 
+      /*
+       * The protected flight.
+       *
+       * Once identified it is the only thing on the scope the whole watch is
+       * about, and it is drawn as a friendly like any other, so it needs a
+       * marking of its own: a slow pulsing ring, the way a controller keeps a
+       * finger on the one contact that matters. Nothing else in the game draws
+       * this, because nothing else in the game is one aircraft.
+       */
+      if (AIR_TYPES[track.classification]?.isVip) {
+        const pulse = 0.5 + 0.5 * Math.sin(world.t * 2.2);
+        ctx.save();
+        ctx.strokeStyle = withAlpha(p.friendly, 0.3 + pulse * 0.45);
+        ctx.lineWidth = 1.6 * this.dpr;
+        ctx.setLineDash([4 * this.dpr, 3 * this.dpr]);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, size * (2.4 + pulse * 0.5), 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       // Velocity leader: one minute of flight at the current estimate. This is
       // the single most useful thing on the scope — it shows intent.
       const speed = len(track.vel);
@@ -685,8 +708,11 @@ export class Scope {
         x: s.x, y: s.y,
         colours: [selected ? p.inkBright : colour, p.inkDim],
         colour,
-        // Contacts always outrank scenery, and the selected one outranks everything.
-        priority: selected ? 100 : 70 + Math.min(track.threat / 10, 20),
+        // Contacts always outrank scenery; the selected one and the aircraft the
+        // watch exists to protect outrank everything.
+        priority: selected ? 100
+          : AIR_TYPES[track.classification]?.isVip ? 98
+            : 70 + Math.min(track.threat / 10, 20),
         force: selected,
         offset: size + 4,
       });

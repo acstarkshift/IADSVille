@@ -131,6 +131,92 @@ export const AIR_TYPES = {
     tellRangeKm: 40,
   },
   /**
+   * The president's aircraft, out of Demobodedovo.
+   *
+   * Friendly, so nothing engages it on its own initiative and no doctrine will
+   * do this for you. If it comes down, somebody decided that — either the pair
+   * of fighters coming for it, or the person at the console.
+   */
+  vip: {
+    id: 'vip',
+    label: 'STATE 01',
+    name: 'Presidential aircraft',
+    rcs: 30,
+    speed: 0.26,
+    cruiseAltM: 11000,
+    turnRate: 3,
+    releaseRangeKm: 0,
+    weapons: 0,
+    weaponDamage: 0,
+    resolve: 1,
+    /*
+     * A transport beaming an air-to-air round is not a fighter defeating one.
+     * It buys something, and not much: the seeker still has the geometry and
+     * the aircraft still has the turn rate of a bus.
+     */
+    evadeFactor: 0.72,
+    evadeDurationS: 30,
+    threatWeight: 0,
+    friendly: true,
+    idSpeedMult: 2.4,
+    /** The one aircraft in the game the whole watch is about. */
+    isVip: true,
+    /**
+     * Metres a second on the climb out.
+     *
+     * It leaves Demobodedovo at circuit height and needs three minutes to reach
+     * altitude. Those three minutes are the whole engagement: low, slow, inside
+     * everybody's horizon and only just clear of the field it took off from.
+     */
+    climbRateMps: 60,
+  },
+
+  /**
+   * Enemy fighters, hunting an aircraft rather than a place.
+   *
+   * The only air-to-air threat in the game, and it exists for one watch. They
+   * close on their target and shoot at it; they have no interest in the ground
+   * and will not attack anything on it.
+   */
+  interceptor: {
+    id: 'interceptor',
+    label: 'FIGHTER',
+    name: 'Interceptor',
+    rcs: 4,
+    /*
+     * Fast enough to matter. A quarter faster than an airliner is not an
+     * interceptor, it is an escort: from eighty kilometres astern it never
+     * closes, and the watch it is supposed to threaten resolves itself. At
+     * supersonic dash it runs the target down from behind or cuts across in
+     * front of it, which is the only reason the corridor has to be defended
+     * at all.
+     */
+    speed: 0.46,
+    cruiseAltM: 10500,
+    turnRate: 11,
+    releaseRangeKm: 0,
+    weapons: 0,
+    weaponDamage: 0,
+    resolve: 0.9,
+    evadeFactor: 0.6,
+    evadeDurationS: 16,
+    threatWeight: 1.4,
+    /**
+     * One round each, off one pass, from twenty-six kilometres.
+     *
+     * Four fighters is therefore four launches and no more, which is what makes
+     * the corridor defensible at all: every fighter stopped before it reaches
+     * its launch point is a round that is never in the air, and the difference
+     * between stopping three of them and stopping none is the difference
+     * between a fair chance and none.
+     */
+    airToAir: 1,
+    airToAirRangeKm: 26,
+    /** Probability one round kills what it was fired at. */
+    airToAirPk: 0.55,
+  },
+
+  /**
    * Civil traffic in the corridor. It is not part of the raid, it does not know
    * there is a raid, and shooting one is the single fastest way to lose your
    * file. It exists to make identification a decision instead of a formality.
@@ -475,6 +561,17 @@ export const ASSET_TYPES = {
   ministry: {
     id: 'ministry', label: 'STATE MINISTRY', name: 'Ministry building',
     value: 22, hp: 95,
+  },
+  /**
+   * Demobodedovo, the state field south-east of Mostrograd.
+   *
+   * On the roster it is an airfield like any other. On the one watch it
+   * appears, it is the place an aircraft leaves from, and what the runway is
+   * worth has nothing to do with the runway.
+   */
+  airport: {
+    id: 'airport', label: 'DEMOBODEDOVO', name: 'Demobodedovo state airport',
+    value: 24, hp: 130,
   },
   /**
    * Where you are.

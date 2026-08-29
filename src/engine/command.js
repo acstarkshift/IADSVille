@@ -14,7 +14,7 @@
  * module is designed to spend it.
  */
 
-import { COMMAND, ASSET_TYPES } from './config.js';
+import { COMMAND, ASSET_TYPES, AIR_TYPES } from './config.js';
 import { bearing, clamp } from './math.js';
 import { radiating } from './detection.js';
 
@@ -220,6 +220,33 @@ export const DIRECTIVES = {
    * is accepted — or refused — without knowing yet what it will cost. That is
    * deliberate, and it is how these orders actually work.
    */
+  /**
+   * The order the epilogue is built around.
+   *
+   * "At all cost" is a phrase with a specific meaning in a sector with no
+   * resupply and one battalion covering a hundred and thirty kilometres of
+   * corridor. The cost is the palace, the field, the city, and every round on
+   * the rails, and sector command knows that when it transmits this.
+   *
+   * There is no directive for the other thing you can do. Nobody writes an
+   * order about that, and nobody has to.
+   */
+  protectFlight: {
+    id: 'protectFlight',
+    label: 'the order to protect the state aircraft',
+    priority: 'high',
+    once: true,
+    pick: (w) => w.vipAircraft(),
+    text: (w, vip) => `SECTOR ACTUAL: ${vip?.name ?? 'STATE 01'} is airborne out of Demobodedovo `
+      + 'routing south-east. That aircraft is protected at all cost. All batteries, every round, any '
+      + 'contact that threatens it. You will answer for it personally. Acknowledge on the net.',
+    plain: (w, vip) => `SECTOR: ${vip?.name ?? 'STATE 01'} is airborne and is the priority of fires. `
+      + 'Protect it with everything in the sector. Acknowledge.',
+    trigger: (w) => w.scenario.epilogue === true && !!w.vipAircraft(),
+    onAccept: (w) => { w.command.constraints.flightOrderAccepted = true; },
+    onRefuse: (w) => { w.command.constraints.flightOrderRefused = true; },
+  },
+
   palacePriority: {
     id: 'palacePriority',
     label: 'the priority of fires to the palace',
@@ -293,10 +320,25 @@ const HINGE_DIRECTIVES = [
     ...DIRECTIVES.palacePriority,
     pendingOn: (w) => w.scenario.finale === true,
   },
+  {
+    ...DIRECTIVES.protectFlight,
+    // Held until the aircraft is actually off the ground: an order to protect
+    // something that has not taken off yet is an order about nothing.
+    pendingOn: (w) => w.scenario.epilogue === true
+      && (!!w.vipAircraft() || w.pendingWaves.some((wave) => wave.type === 'vip')),
+  },
 ];
 
 /** However well the watch went otherwise, a shoot-down caps the assessment here. */
 const CIVIL_SHOOTDOWN_CEILING = 12;
+
+/**
+ * And the floor for the other one.
+ *
+ * Nothing offsets firing on the state aircraft. The file does not have a
+ * heading for it, so it uses the lowest one it has.
+ */
+const VIP_SHOOTDOWN_CEILING = 0;
 
 export function createCommandState() {
   return {
@@ -404,7 +446,8 @@ function timeoutDirective(world) {
 
 /** Cumulative seconds spent with nothing radiating while hostiles are up. */
 function accrueDarkTime(world, dt) {
-  const hostiles = world.hostileTrackCount() > 0 || world.aircraft.some((a) => a.alive && a.type !== 'civil');
+  const hostiles = world.hostileTrackCount() > 0
+    || world.aircraft.some((a) => a.alive && !AIR_TYPES[a.type]?.friendly);
   if (!hostiles) return;
   const anyRadiating = world.ownedRadars().some(radiating);
   if (!anyRadiating) world.command.darkTimeS += dt;
@@ -563,5 +606,52 @@ export function settleDirectives(world) {
   } else if (c.civilOrderAccepted) {
     // Acknowledged and then quietly not done. Sector command notices eventually.
     standingDelta(world, -14, 'acknowledged the engagement order and did not carry it out');
+  }
+
+  settleFlight(world);
+}
+
+/**
+ * The epilogue's account, in the state's own arithmetic.
+ *
+ * Three outcomes and three quite different files. Holding the corridor open is
+ * the only thing this ledger recognises as success. Losing the aircraft to the
+ * fighters is a failure of the ordinary kind — bad, survivable, written up.
+ * Firing on it yourself is not on the list of things the sector has a form for,
+ * and the assessment goes to the floor and stays there.
+ *
+ * Note what is *not* here. Nothing in this function knows what was aboard the
+ * aircraft, where it was going, or what the man on it had spent the last watch
+ * doing with a sector's worth of missiles. The file does not record that,
+ * because the file has never recorded that.
+ */
+function settleFlight(world) {
+  if (!world.scenario.epilogue) return;
+  const s = world.stats;
+  const c = world.command.constraints;
+
+  if (s.vipDown && s.vipDownedBy === 'operator') {
+    standingDelta(world, -60, 'engaged the state aircraft');
+    if (c.flightOrderAccepted) {
+      standingDelta(world, -12, 'acknowledged the protection order and engaged the aircraft');
+    }
+    if (world.command.standing > VIP_SHOOTDOWN_CEILING) {
+      standingDelta(world, VIP_SHOOTDOWN_CEILING - world.command.standing,
+        'assessment capped: state aircraft destroyed by this battery');
+    }
+    return;
+  }
+
+  // Rounds committed against it that did not bring it down are still rounds
+  // that left the rails with that track selected, and the tape has them.
+  if (s.vipRoundsFired > 0) {
+    standingDelta(world, -9 * s.vipRoundsFired,
+      `${s.vipRoundsFired} rounds expended against the state aircraft`);
+  }
+
+  if (s.vipDown) {
+    standingDelta(world, -34, 'the state aircraft was lost to enemy fighters');
+  } else if (s.vipEscaped) {
+    standingDelta(world, 22, 'the state aircraft cleared national airspace');
   }
 }

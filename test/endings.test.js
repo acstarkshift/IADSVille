@@ -41,8 +41,11 @@ const outcome = (villePct, palacePct, over = {}) => ({
 describe('the scenario itself', () => {
   const finale = scenarioById(FINALE_ID);
 
-  test('it is the last watch and it knows it', () => {
-    assert.equal(SCENARIOS.at(-1).id, FINALE_ID);
+  test('it is the last watch on the roster and it knows it', () => {
+    // Everything unconditional ends here. The only scenario after it is the
+    // epilogue, which does not appear at all unless the palace was held.
+    const unconditional = SCENARIOS.filter((s) => !s.requiresEnding);
+    assert.equal(unconditional.at(-1).id, FINALE_ID);
     assert.ok(isFinale(finale));
     assert.equal(finale.finale, true);
   });
@@ -328,6 +331,39 @@ describe('the last watch, played', () => {
         && !(a.state === 'egress' && Math.hypot(a.pos.x, a.pos.y) > 110));
       assert.ok(!stillFighting, 'and the raid finished its work');
     }
+  });
+
+  test('saving all three stays the exception, not the way the watch normally goes', () => {
+    /*
+     * The load-bearing property of this scenario, and the one that is easiest
+     * to break by accident: three things ask for the same rounds and there is
+     * no arrangement of them that reliably serves all three.
+     *
+     * It is deliberately not asserted as "never". Both cities held and the post
+     * still standing is a real outcome with a real ending written for it — an
+     * ending that pointedly refuses to call it a victory. What must not happen
+     * is that it becomes the ordinary result of delegating everything, which is
+     * exactly what happened once when an unrelated fix stopped batteries
+     * wasting a channel re-engaging tracks whose aircraft were already down.
+     */
+    let allThree = 0;
+    const seeds = ['b1', 'b2', 'b3', 'b4', 'b5', 'b6'];
+    for (const seed of seeds) {
+      const world = new World(scenarioById(FINALE_ID), { role: 'net', seed });
+      world.control.netIsHuman = false;
+      for (const site of world.sites) world.setWeaponsState(site.id, 'free');
+      let n = 0;
+      while (world.phase === 'running' && n < 40000) {
+        for (const radar of world.radars) if (radar.alive && !radar.siteId) radar.on = true;
+        world.step(0.1);
+        if (world.command.pending) world.answer('accepted');
+        n++;
+      }
+      if (world.outcome.endingId === 'exemplary') allThree++;
+    }
+    assert.ok(allThree <= seeds.length / 3,
+      `both cities and the post came through on ${allThree} of ${seeds.length} seeds with everything`
+      + ' delegated; the raid is no longer big enough for the choice to be a choice');
   });
 
   test('the sector reports which quarter of the Ville was struck', () => {

@@ -192,6 +192,11 @@ orders about an actual line. `M` toggles it.
 - **Civil traffic** crosses the sector on a schedule, knows nothing about any of
   this, and shooting one caps your assessment no matter how the rest of the watch
   went.
+- **Air-to-air**, on one watch only. Enemy fighters ignore the ground completely
+  and fly a lead-pursuit solution on a single aircraft, launching from twenty-six
+  kilometres. Their rounds are guided by nothing of yours, so blinking a radar
+  does not save what they are chasing — the only thing that does is killing the
+  fighter before it reaches its launch point.
 
 ## The pressure
 
@@ -214,9 +219,9 @@ Narrative pressure: off** keeps every mechanic and drops the file entries.
 
 ## Missions
 
-Six watches, each teaching one thing and then never letting you forget it. Each
-names its own console theme, so the campaign visibly changes hardware as it
-escalates.
+Nine watches, each teaching one thing and then never letting you forget it, and
+a tenth that only some records ever see. Each names its own console theme, so
+the campaign visibly changes hardware as it escalates.
 
 | # | Watch | Console | Teaches |
 |---|---|---|---|
@@ -229,6 +234,7 @@ escalates.
 | 7 | Across the Line | amber phosphor | What the schedule of defended places is really a schedule of |
 | 8 | Ville Under Fire | tactical display | All of it, and then the centre goes down |
 | 9 | The Two Cities | tactical display | That the equipment was never the constraint |
+| — | The President's Flight | tactical display | That the last decision was never about a building either *(sealed)* |
 
 ### The last watch
 
@@ -243,6 +249,12 @@ channels and eight rounds against eighteen aircraft, which is the point of it
 being there. There is no resupply: the depots are committed to the capital, so
 every battery fights with what is on its rails.
 
+And a third formation is tracking the post you are sitting in, which is where
+that battalion is. Answering it spends the rounds the cities need; displacing to
+survive takes the only battery that reaches either city off the air for three
+and a half minutes. There is no arrangement of those rounds that serves all
+three.
+
 Before either raid is close enough to detect, sector command transmits its
 priority of fires and asks you to acknowledge it on the net, in the clear, with
 the log running. The capital's raid arrives first, so if you obey you will have
@@ -256,6 +268,36 @@ everything else. Splitting your fires does neither well. And the near-impossible
 outcome where both cities are held is not a victory either: there is no
 decoration for it, because a citation would have to name what you defended, and
 one of those two things does not officially exist.
+
+### And the watch after it
+
+One scenario is not on the roster. It appears as a sealed entry with its name
+redacted, and it opens for exactly one kind of service record: an operator who
+held the presidential palace on the last watch. Nothing else unlocks it, and
+flying it does not lock it again.
+
+Two days later, a state aircraft lifts from Demobodedovo, the state field
+south-east of Mostrograd, and routes for the frontier with the hold loaded. The
+same sector command that told you which city was allowed to matter now tells you
+that this aircraft is protected **at all cost**, and asks you to acknowledge it
+on the net.
+
+Four enemy fighters are already up for it. They ignore the ground entirely — no
+radars, no batteries, no city — and fly lead pursuit on the one aircraft they
+came for, one round each from twenty-six kilometres. Every fighter you stop
+before its launch point is a round that never leaves the rail. Meanwhile a
+strike package is coming for the palace and the field, and the long-range
+battalion that reaches the whole departure corridor is the same battalion those
+raids need.
+
+There are three ways it ends, and the game does not favour any of them. Hold the
+corridor open and watch him go. Defend the city instead and let the fighters do
+what fighters do. Or select a track your own system has already identified as
+friendly and give a fire order against it — which is a thing the interface will
+let you do, without comment, exactly once.
+
+Nothing asks you which you meant. The tape only records what left the rails, and
+whose battery it left from.
 
 ## The console
 

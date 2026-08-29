@@ -339,6 +339,23 @@ kbd {
 .file-entry p { color: var(--ink-bright); }
 .file-entry.is-good { border-left-color: var(--good); }
 
+/* The protected flight: one strip, one aircraft, one watch. */
+.flight-strip {
+  margin: 6px 4px 0; padding: 7px 9px; border-radius: var(--radius);
+  border: 1px solid var(--friendly); background: color-mix(in srgb, var(--friendly) 8%, transparent);
+}
+.flight-strip.is-threatened { border-color: var(--hostile); animation: flight-pulse 1.1s infinite; }
+.flight-strip.is-lost { border-color: var(--hostile); opacity: .8; }
+.flight-strip.is-clear { border-color: var(--good); }
+.flight-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.flight-head b { color: var(--friendly); letter-spacing: .12em; }
+.flight-head span { color: var(--ink-dim); font-size: 10px; letter-spacing: .06em; text-align: right; }
+.flight-figures { display: flex; gap: 12px; margin-top: 5px; }
+.flight-figures span { color: var(--ink-bright); font-size: 12px; }
+.flight-figures span.is-bad { color: var(--hostile); }
+.flight-figures label { display: block; color: var(--ink-dim); font-size: 9px; letter-spacing: .1em; }
+@keyframes flight-pulse { 50% { background: color-mix(in srgb, var(--hostile) 14%, transparent); } }
+
 .mission-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
 .mission {
   text-align: left; padding: 11px 13px; cursor: pointer;
@@ -349,6 +366,9 @@ kbd {
 .mission b { display: block; color: var(--ink-bright); letter-spacing: .1em; margin-bottom: 3px; }
 .mission small { color: var(--ink-dim); display: block; line-height: 1.5; }
 .mission .flags { margin-top: 6px; display: flex; gap: 5px; flex-wrap: wrap; }
+/* A watch that is not on this operator's roster. Present, and unreadable. */
+.mission.is-sealed { cursor: not-allowed; opacity: .55; border-style: dashed; }
+.mission.is-sealed b { color: var(--ink-dim); letter-spacing: .18em; }
 
 .choice-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .choice {

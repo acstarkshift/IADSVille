@@ -21,8 +21,21 @@ import {
   wrapDeg, sub, scale, add, len, norm,
 } from './math.js';
 
-/** Radars only see the air breathers and cruise missiles; ARMs are too small and too fast. */
-const DETECTABLE = new Set(['striker', 'cruise', 'sead', 'jammer', 'decoy', 'civil']);
+/**
+ * What a radar can see.
+ *
+ * Everything that flies as an aircraft — including the friendly traffic and the
+ * aircraft the sector is trying to protect, both of which have to appear on the
+ * scope for the operator to have any decision to make about them. Rounds in
+ * flight are not aircraft in this simulation and are never plotted: an
+ * anti-radiation round is too small and too fast to hold, which is why the
+ * warning of one comes from the launch and not from the track.
+ *
+ * A type may opt out with `radarInvisible`. Nothing currently does; the flag
+ * exists so that adding a type to the game cannot silently make it undetectable,
+ * which is exactly what a whitelist here did.
+ */
+const detectable = (aircraft) => !AIR_TYPES[aircraft.type]?.radarInvisible;
 
 /**
  * Nominal detection range for one radar against one target, after RCS scaling,
@@ -152,7 +165,7 @@ export function sweepRadar(radar, targets, jammers, rng, dt) {
   const az1 = radar.az;
 
   for (const target of targets) {
-    if (!target.alive || !DETECTABLE.has(target.type)) continue;
+    if (!target.alive || !detectable(target)) continue;
 
     const az = bearing(radar.pos, target.pos);
     if (!sweptPast(az0, az1, az)) continue;

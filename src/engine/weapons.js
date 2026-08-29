@@ -18,7 +18,7 @@ import {
 } from './math.js';
 
 /** Turn rates by round type, degrees per second. */
-const TURN_RATE = { sam: 26, arm: 16, strike: 9 };
+const TURN_RATE = { sam: 26, arm: 16, strike: 9, aam: 30 };
 
 /**
  * Minimum separation between a moving round and a moving target over one step.
@@ -259,7 +259,14 @@ function resolveIntercept(world, missile, prevPos) {
     if (miss > Math.max(lethal, 0.35)) return;
 
     const site = world.siteById.get(missile.siteId);
-    const pk = site ? computeSamPk(site, target, missile, world.difficulty) : 0.3;
+    // An air-to-air round has no battery behind it and no envelope to be at the
+    // edge of; it is simply fired from a fighter at close range.
+    const evading = target.evadingUntilS > (target.worldTimeS ?? 0);
+    const pk = missile.kind === 'aam'
+      ? clamp01((missile.pk ?? AIR_TYPES.interceptor.airToAirPk)
+        * (evading ? AIR_TYPES[target.type]?.evadeFactor ?? 1 : 1)
+        * (world.difficulty?.enemyPkMult ?? 1))
+      : site ? computeSamPk(site, target, missile, world.difficulty) : 0.3;
     world.killMissile(missile, 'detonated');
 
     if (world.rng.chance(pk)) {
@@ -353,8 +360,41 @@ export function launchSalvo(world, site, track, count) {
     });
     world.warnTargetOfLaunch(target);
     world.registerRoundsSpent(track, launched);
+    // Firing on the state aircraft is recorded whether or not it works. The act
+    // is the fire order, not the result of it.
+    if (AIR_TYPES[target.type].isVip) world.registerVipFires(site, launched);
   }
   return launched;
+}
+
+/**
+ * A fighter shoots at another aircraft.
+ *
+ * The only air-to-air engagement in the game, and it reuses the whole rest of
+ * the missile pipeline — the round is guided by nothing on the ground, so
+ * blinking a radar does not save the aircraft it is chasing.
+ */
+export function launchAirToAir(world, shooter, target) {
+  const type = AIR_TYPES[shooter.type];
+  const missile = createMissile({
+    seq: world.nextMissileSeq(),
+    kind: 'aam',
+    pos: shooter.pos,
+    altM: shooter.altM,
+    speed: 0.85,
+    hdg: bearing(shooter.pos, target.pos),
+    targetKind: 'aircraft',
+    targetId: target.id,
+    shooterId: shooter.id,
+    maxFlightS: 90,
+  });
+  missile.pk = type.airToAirPk;
+  missile.trackLabel = target.name;
+  world.missiles.push(missile);
+  shooter.airToAirLeft--;
+  world.warnTargetOfLaunch(target);
+  world.log('alert', `${shooter.name} — LAUNCH ON ${target.name}`, { severity: 'high' });
+  return missile;
 }
 
 /** An anti-radiation round leaves a suppression aircraft. */

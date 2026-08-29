@@ -39,6 +39,10 @@ export function channelsFor(site) {
 export function beginEngagement(world, site, track, { manual = false, salvo = null } = {}) {
   const type = SAM_TYPES[site.type];
   if (!site.alive) return null;
+  // The aircraft behind this track is already wreckage. The symbol stays on the
+  // scope until the track drops, and without this every battery in the sector
+  // re-engages it once a tick for the next forty-five seconds.
+  if (track.destroyed) return null;
   if (site.engagements.length >= channelsFor(site)) return null;
   if (site.engagements.some((e) => e.trackId === track.id)) return null;
   if (site.readyRounds <= 0) return null;
@@ -206,6 +210,7 @@ export function runAiBattleManager(world, dt) {
 
   const candidates = sortedTracks(world).filter((t) =>
     t.hostility === 'hostile'
+    && !t.destroyed
     && t.quality >= DETECTION.firmQuality
     && t.threat > 0.5
     && t.assignedTo.length === 0);
@@ -342,6 +347,7 @@ export function runBatteryCrews(world, dt) {
     if (site.weaponsState === 'free') {
       const available = [...world.tracks.values()]
         .filter((t) => t.hostility === 'hostile'
+          && !t.destroyed
           && t.quality >= DETECTION.firmQuality
           && t.assignedTo.length === 0
           && (world.fusionOnline || t.sources.includes(site.radarId))

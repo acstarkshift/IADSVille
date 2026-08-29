@@ -56,6 +56,15 @@ const HOSPITAL = { id: 'a_hospital', type: 'hospital', label: 'DISTRICT HOSPITAL
  */
 const CAMP = { id: 'a_camp', type: 'camp', label: 'REFUGEE ENCAMPMENT', pos: { x: -58, y: 20 } };
 
+/**
+ * Demobodedovo, the state field south-east of Mostrograd.
+ *
+ * Twenty-six kilometres from the palace and well clear of the city, on the
+ * Tavrov road. It exists on the map for one watch, and on that watch what
+ * matters about it is not the runway but the direction the runway points.
+ */
+const AIRPORT = { id: 'a_airport', type: 'airport', label: 'DEMOBODEDOVO', pos: { x: 112, y: 40 } };
+
 const SITES = {
   bastion: { id: 's_bastion', type: 'bastion', name: 'BASTION', pos: { x: 2, y: 28 } },
   lanceWest: { id: 's_lance_w', type: 'lance', name: 'LANCE WEST', pos: { x: -24, y: 6 } },
@@ -88,6 +97,23 @@ const SITES = {
    * and nothing.
    */
   hammerCapital: { id: 's_hammer_e', type: 'hammer', name: 'HAMMER CAPITAL', pos: { x: 102, y: 63 } },
+
+  /*
+   * The epilogue's order of battle, strung out along a departure corridor
+   * rather than ringed around a place.
+   *
+   * The long-range battalion south-east of the city is the spine of it: sited
+   * at Tavrov it reaches from the northern approaches to the capital all the
+   * way down the outbound leg, which is the only way one battery can cover a
+   * hundred and thirty kilometres of somebody else's flight plan. Everything
+   * else covers a point — the field, the palace, the last stretch — and none of
+   * them covers two.
+   */
+  bastionTavrov: { id: 's_bastion_se', type: 'bastion', name: 'BASTION TAVROV', pos: { x: 120, y: 22 } },
+  lanceOutbound: { id: 's_lance_out', type: 'lance', name: 'LANCE YASEN', pos: { x: 160, y: -20 } },
+  lanceCity: { id: 's_lance_city', type: 'lance', name: 'LANCE MOSTROGRAD', pos: { x: 96, y: 74 } },
+  thistleField: { id: 's_thistle_fld', type: 'thistle', name: 'THISTLE FIELD', pos: { x: 110, y: 47 } },
+  hammerPalace: { id: 's_hammer_pal', type: 'hammer', name: 'HAMMER PALACE', pos: { x: 100, y: 62 } },
 };
 
 const RADARS = {
@@ -387,7 +413,8 @@ export const SCENARIOS = [
         + ' you will be asked to acknowledge it on the net, in the clear, with the log running.',
       'BASTION sits between the two cities and can reach either. There is no resupply tonight — the'
         + ' depots are committed to the capital — so every battery fights with what is on its rails and'
-        + ' nothing more. Nine aircraft on each axis. Every strike aircraft carries two weapons.',
+        + ' nothing more. Nine aircraft on each axis, and six more for this post. Every strike aircraft'
+        + ' carries two weapons.',
     ],
     teaches: 'That the equipment was never the constraint.',
     /**
@@ -443,9 +470,9 @@ export const SCENARIOS = [
        * strike aircraft carries two weapons, so nine aircraft is closer to
        * fifteen impacts than to nine.
        */
-      { atS: 110, type: 'striker', count: 4, bearingDeg: 25, spreadDeg: 22, spacingS: 20, altM: 6400,
+      { atS: 110, type: 'striker', count: 5, bearingDeg: 25, spreadDeg: 22, spacingS: 20, altM: 6400,
         targetAssetId: 'a_palace' },
-      { atS: 250, type: 'cruise', count: 3, bearingDeg: 30, spreadDeg: 20, spacingS: 14, altM: 90,
+      { atS: 250, type: 'cruise', count: 4, bearingDeg: 30, spreadDeg: 20, spacingS: 14, altM: 90,
         targetAssetId: 'a_palace' },
 
       /*
@@ -454,7 +481,7 @@ export const SCENARIOS = [
        * committed to the Ville can cycle its channels and genuinely hold —
        * the choice has to be a choice, not a foregone loss dressed up as one.
        */
-      { atS: 175, type: 'striker', count: 3, bearingDeg: 285, spreadDeg: 24, spacingS: 26, altM: 5800,
+      { atS: 175, type: 'striker', count: 4, bearingDeg: 285, spreadDeg: 24, spacingS: 26, altM: 5800,
         targetAssetId: 'a_town' },
       { atS: 295, type: 'cruise', count: 3, bearingDeg: 292, spreadDeg: 26, spacingS: 18, altM: 85,
         targetAssetId: 'a_town' },
@@ -474,8 +501,133 @@ export const SCENARIOS = [
        */
       { atS: 90, type: 'sead', count: 2, bearingDeg: 55, spreadDeg: 20, spacingS: 24, distanceKm: 160,
         scalable: false },
-      { atS: 210, type: 'striker', count: 3, bearingDeg: 60, spreadDeg: 18, spacingS: 20, altM: 4200,
+      { atS: 210, type: 'striker', count: 4, bearingDeg: 60, spreadDeg: 18, spacingS: 20, altM: 4200,
         targetAssetId: 'a_post', scalable: false },
+    ],
+  },
+
+  /**
+   * The epilogue, and the only watch in the game that is not about a place.
+   *
+   * It exists only for an operator who held the palace on the last watch —
+   * which is to say, for an operator who obeyed. Two days later the man the
+   * palace was defended for leaves the country from the state field at
+   * Demobodedovo, and the same sector command that ordered the palace held now
+   * orders his aircraft protected at all cost.
+   *
+   * There are three ways this ends and the simulation does not favour any of
+   * them. You can hold the corridor open and watch him go. You can spend your
+   * rounds on the palace, the field and the city, and let the fighters do what
+   * fighters do. Or you can select a track your own system has already
+   * identified as friendly, and give a fire order against it.
+   *
+   * Nothing in the interface asks which one you meant. The log records what
+   * left the rails.
+   */
+  {
+    id: 'presidents-flight',
+    name: "The President's Flight",
+    subtitle: 'STATE 01, out of Demobodedovo, and everything that wants it down.',
+    theme: 'ops-modern',
+    roles: ['net', 'crew', 'both'],
+    seed: 'presidents-flight-01',
+    leakerTolerance: 4,
+    playerBatteryId: 's_bastion_se',
+    roundAllowance: 20,
+    /** The watch is fought over the capital, so its geometry is struck from there. */
+    centre: { x: 106, y: 50 },
+    /** And framed wide enough to hold the whole departure corridor at once. */
+    scopeRangeKm: 175,
+    /** Only for an operator who held the palace. */
+    requiresEnding: ['obedient', 'exemplary'],
+    /** Read by the scoring and the endings the way `finale` is. */
+    epilogue: true,
+    /**
+     * The capital's own allocation, which is not the sector's.
+     *
+     * The last watch was fought on what was on the rails because the depots
+     * were "committed to the capital". This is the capital. The rounds that
+     * were not in the valley two nights ago are here, stacked, for one
+     * aeroplane — and an operator who has read the depot returns will notice
+     * the arithmetic without anybody drawing attention to it.
+     */
+    supply: { roundsMult: 1.4, reloadsAllowed: true },
+    brief: [
+      'Two days after the last watch. You have been moved to the capital sector, which is what happens'
+        + ' to people whose files say what yours now says.',
+      'At 0410 a state aircraft, callsign STATE 01, will lift from Demobodedovo and route south-east for'
+        + ' the frontier. The passenger list is not being transmitted. Sector command has ordered the'
+        + ' aircraft protected at all cost, and has used those words.',
+      'Two pairs of enemy fighters are already airborne to the north. They are not interested in the'
+        + ' palace, the city, or you. They are interested in one aeroplane, and they carry two rounds each.',
+      'There is also a strike package coming for the palace and the field, and you have one battalion'
+        + ' that can cover the corridor. It cannot cover the corridor and the city at the same time.',
+      'STATE 01 will be on your scope, identified, for eight minutes.',
+    ],
+    teaches: 'That the last decision was never about a building either.',
+    briefIfKnown: {
+      buyer: ['You know who has been buying what, and through which ministry, and what the aircraft'
+        + ' at Demobodedovo has been loading since yesterday afternoon. Nobody has asked you to know it.'],
+      ledger: ['The depot returns you saw are the returns for a sector that no longer has a government'
+        + ' to account to. Nothing was ever going to be resupplied.'],
+    },
+    assets: [
+      CAPITAL_GROUND.palace, CAPITAL_GROUND.ministry, CAPITAL_GROUND.capitalPower, AIRPORT,
+    ],
+    sites: [
+      SITES.bastionTavrov, SITES.lanceOutbound, SITES.lanceCity,
+      SITES.thistleField, SITES.hammerPalace,
+    ],
+    radars: [
+      { type: 'ewr', pos: { x: 88, y: 96 }, on: true },
+      { type: 'gapfiller', pos: { x: 148, y: 4 }, on: true },
+    ],
+    waves: [
+      /*
+       * The first pair, crossing the frontier north of the city while the
+       * aircraft they came for is still on the ground. They hold north of
+       * Mostrograd until it rolls, which gives the operator four minutes of
+       * knowing exactly what is about to happen and being unable to start it.
+       */
+      { atS: 20, type: 'interceptor', count: 2, spacingKm: 16, scalable: false,
+        pos: { x: 150, y: 142 }, waypoints: [{ x: 150, y: 100 }] },
+
+      /*
+       * STATE 01. It rolls at four minutes, climbs at sixty metres a second and
+       * flies the filed route — south-east down the Tavrov corridor and out.
+       * It is friendly, it is identified as friendly, and no doctrine in the
+       * game will ever engage it on its own.
+       */
+      { atS: 60, type: 'vip', count: 1, scalable: false,
+        pos: { x: 112, y: 40 }, altM: 300, name: 'STATE 01',
+        waypoints: [{ x: 150, y: 10 }, { x: 195, y: -40 }] },
+
+      /*
+       * The other thing asking for your rounds. The strike package is for the
+       * palace and the field, not for the corridor, and every round spent on it
+       * is a round that is not available eighty kilometres to the south-east
+       * four minutes later.
+       */
+      { atS: 0, type: 'striker', count: 3, bearingDeg: 340, spreadDeg: 26, spacingS: 20,
+        distanceKm: 100, altM: 6100, targetAssetId: 'a_palace' },
+      { atS: 60, type: 'cruise', count: 3, bearingDeg: 355, spreadDeg: 22, spacingS: 14,
+        distanceKm: 95, altM: 90, targetAssetId: 'a_airport' },
+
+      /*
+       * Suppression, aimed at the sets holding the corridor. Blinking keeps the
+       * radar; it also drops every round in the air between here and the
+       * fighters, and the fighters do not need a radar of yours to work.
+       */
+      { atS: 30, type: 'sead', count: 2, bearingDeg: 350, spreadDeg: 34, spacingS: 26,
+        distanceKm: 150, scalable: false },
+
+      /*
+       * The second pair, from the north-east, timed for the far end of the
+       * corridor where one battalion's coverage runs out and the reloads have
+       * not come back yet.
+       */
+      { atS: 290, type: 'interceptor', count: 2, spacingKm: 16, scalable: false,
+        pos: { x: 196, y: 40 }, waypoints: [{ x: 186, y: -6 }] },
     ],
   },
 ];
@@ -485,3 +637,22 @@ export const scenarioById = (id) => SCENARIOS.find((s) => s.id === id) ?? SCENAR
 /** The watch the campaign is built toward. */
 export const FINALE_ID = 'two-cities';
 export const isFinale = (scenario) => scenario?.id === FINALE_ID;
+
+/** The conditional watch after it. */
+export const EPILOGUE_ID = 'presidents-flight';
+export const isEpilogue = (scenario) => scenario?.id === EPILOGUE_ID;
+
+/**
+ * Is this watch on the roster yet?
+ *
+ * Only one scenario is ever gated, and it is gated on what the operator did
+ * rather than on how well they did it: the aircraft only leaves Demobodedovo
+ * in a version of events where the palace was still standing to leave from.
+ */
+export function isUnlocked(scenario, campaign) {
+  if (!scenario?.requiresEnding) return true;
+  return scenario.requiresEnding.includes(campaign?.ending);
+}
+
+/** The watches a given campaign may actually select. */
+export const rosterFor = (campaign) => SCENARIOS.filter((s) => isUnlocked(s, campaign));

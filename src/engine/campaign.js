@@ -60,6 +60,12 @@ export function emptyCampaign(character = null) {
     commendations: 0,
     /** Set once the last watch has been stood, whichever way it went. */
     ending: null,
+    /**
+     * And once the watch after it has been, which only some records ever have.
+     * Kept separate from `ending` because `ending` is what unlocks the
+     * epilogue: folding one into the other would make flying it lock it.
+     */
+    epilogue: null,
     /** What the operator has worked out about their own side, in order. */
     revelations: [],
   };
@@ -132,6 +138,7 @@ export function recordMission(campaign, result) {
   campaign.history.push(entry);
 
   if (result.finale && result.endingId) campaign.ending = result.endingId;
+  if (result.epilogue && result.endingId) campaign.epilogue = result.endingId;
 
   // Some watches teach you something about the people giving the orders.
   const revelation = learn(campaign, result.missionId);

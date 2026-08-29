@@ -54,6 +54,55 @@ export function closestApproachToPoint(track, point) {
 }
 
 /**
+ * Closest approach between two things that are both moving.
+ *
+ * The single-point version above is fine for a ground target, which stays where
+ * it is. It is useless against an aircraft under lead pursuit, where the
+ * fighter is deliberately pointing at empty sky twenty kilometres ahead of what
+ * it is chasing and the point-wise miss distance is therefore enormous right up
+ * until the launch.
+ */
+export function closestApproachBetween(track, mover) {
+  const rel = { x: mover.pos.x - track.pos.x, y: mover.pos.y - track.pos.y };
+  const relVel = { x: (mover.vel?.x ?? 0) - track.vel.x, y: (mover.vel?.y ?? 0) - track.vel.y };
+  const speed2 = relVel.x * relVel.x + relVel.y * relVel.y;
+  const range = Math.hypot(rel.x, rel.y);
+  if (speed2 < 1e-9) return { missKm: range, ttiS: Infinity, rangeKm: range };
+  const t = Math.max(0, -(rel.x * relVel.x + rel.y * relVel.y) / speed2);
+  const miss = Math.hypot(rel.x + relVel.x * t, rel.y + relVel.y * t);
+  return { missKm: miss, ttiS: t, rangeKm: range };
+}
+
+/**
+ * What a defended place is worth when it has wings.
+ *
+ * Set just above the palace. On the one watch this applies, sector command's
+ * order is "at all cost", and the threat list is where that order becomes a
+ * number: a fighter closing on the state aircraft outranks a strike package
+ * over the capital, which is exactly the trade the operator has been told to
+ * make and exactly the one they may not want to.
+ */
+const PROTECTED_FLIGHT_VALUE = 82;
+
+/**
+ * How badly does this track threaten the aircraft the watch is about?
+ *
+ * Zero on every other watch in the game, because there is no such aircraft on
+ * any of them. Where there is one, it is scored the way a defended place is
+ * scored — by how near this contact will pass and how soon — so the same sort
+ * order that serves the operator serves the batteries.
+ */
+function flightThreat(world, track) {
+  const vip = world.vipAircraft?.();
+  if (!vip) return 0;
+  const cpa = closestApproachBetween(track, vip);
+  if (!Number.isFinite(cpa.ttiS)) return 0;
+  const urgency = 1 - clamp01(cpa.ttiS / 240);
+  const proximity = 1 - clamp01(cpa.missKm / 45);
+  return PROTECTED_FLIGHT_VALUE * (0.35 + urgency * urgency * 2.2) * (0.4 + proximity);
+}
+
+/**
  * Threat score. Higher is more urgent.
  *
  * The dominant term is time — a cruise missile ninety seconds from the power
@@ -66,15 +115,22 @@ export function threatScore(world, track) {
   const known = track.classification !== 'unknown' ? AIR_TYPES[track.classification] : null;
   const typeWeight = known?.threatWeight ?? 1;
 
+  const againstFlight = typeWeight * flightThreat(world, track);
+
   const prediction = predictedTarget(world, track);
-  if (!prediction) return typeWeight * 4; // loitering, but still hostile
+  // Loitering over somebody else's country, but still hostile — and possibly
+  // loitering exactly where an aircraft of ours is about to fly.
+  if (!prediction) return Math.max(typeWeight * 4, againstFlight);
 
   const assetType = ASSET_TYPES[prediction.asset.type];
   // Urgency ramps hard inside five minutes and is near-total inside one.
   const urgency = 1 - clamp01(prediction.ttiS / 300);
   const proximity = 1 - clamp01(prediction.missKm / 40);
 
-  let score = typeWeight * assetType.value * (0.35 + urgency * urgency * 2.2) * (0.4 + proximity);
+  let score = Math.max(
+    typeWeight * assetType.value * (0.35 + urgency * urgency * 2.2) * (0.4 + proximity),
+    againstFlight,
+  );
 
   // A contact already being shot at is less urgent than one nobody has answered.
   if (track.engagedBy.length > 0) score *= 0.35;

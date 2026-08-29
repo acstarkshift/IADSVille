@@ -28,6 +28,12 @@ const RUNS = [
   { mission: 'across-the-line', role: 'net', theme: 'crt-amber', background: 'border' },
   { mission: 'ville-under-fire', role: 'both', theme: 'ops-modern', background: 'penal' },
   { mission: 'two-cities', role: 'net', theme: 'ops-modern', background: 'border' },
+  // The epilogue is not on the roster until the last watch has been stood and
+  // the palace held, so this run seeds a record that has done exactly that.
+  {
+    mission: 'presidents-flight', role: 'net', theme: 'ops-modern', background: 'academy',
+    campaignEnding: 'obedient',
+  },
 ];
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -72,6 +78,21 @@ async function main() {
     const errors = [];
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
     page.on('pageerror', (e) => errors.push(`PAGEERROR: ${e.message}`));
+
+    /*
+     * A gated watch needs a service record that has earned it. The campaign
+     * file is written before the page loads, so the game reads it the way it
+     * would read a real one rather than being poked into shape afterwards.
+     */
+    if (run.campaignEnding) {
+      await page.addInitScript((ending) => {
+        try {
+          const key = 'iadsville.campaign.v1';
+          const existing = JSON.parse(window.localStorage.getItem(key) ?? '{}');
+          window.localStorage.setItem(key, JSON.stringify({ ...existing, ending }));
+        } catch { /* the run will fail on the missing mission button instead */ }
+      }, run.campaignEnding);
+    }
 
     await page.goto(ORIGIN, { waitUntil: 'networkidle' });
 

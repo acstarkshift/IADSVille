@@ -8,7 +8,7 @@
  * expensive, while the canvas underneath stays at full rate.
  */
 
-import { SAM_TYPES, ASSET_TYPES, AIR_TYPES, COMMAND, DEFENCE_CLASSES } from '../engine/config.js';
+import { SIM, SAM_TYPES, ASSET_TYPES, AIR_TYPES, COMMAND, DEFENCE_CLASSES } from '../engine/config.js';
 import { bearing, dist, len, clockString, clamp01 } from '../engine/math.js';
 import { sortedTracks } from '../engine/threat.js';
 import { trackProfile } from '../engine/detection.js';
@@ -98,6 +98,55 @@ export function renderTopbar(world, ui, els) {
       <b>${esc(rank.tm)}</b> ${esc(world.character.name)}<br>${esc(rank.en)}
     </span>`;
   }
+}
+
+/* --------------------------------------------------------- flight strip */
+
+/**
+ * The protected flight, on the one watch there is one.
+ *
+ * A strip of the kind an approach controller keeps on the aircraft they are
+ * responsible for: what it is, where it is, how far it still has to go, and how
+ * near the nearest thing hunting it has got. Without this the operator can see
+ * a friendly symbol among thirty others and no reason to care about it, which
+ * is a poor way to run the only watch in the game that is about one aeroplane.
+ */
+export function renderFlightStrip(world, els) {
+  const strip = els.flightStrip;
+  if (!strip) return;
+  if (!world.scenario.epilogue) { strip.hidden = true; return; }
+
+  const vip = world.vipAircraft();
+  if (!vip) {
+    const down = world.stats.vipDown;
+    strip.hidden = false;
+    strip.className = `flight-strip ${down ? 'is-lost' : 'is-clear'}`;
+    strip.innerHTML = `<div class="flight-head"><b>STATE 01</b>
+      <span>${down ? 'ЦЕЛЬ УНИЧТОЖЕНА · DESTROYED' : world.stats.vipEscaped
+    ? 'ВНЕ ВОЗДУШНОГО ПРОСТРАНСТВА · CLEAR OF NATIONAL AIRSPACE' : 'НЕ В ВОЗДУХЕ · NOT AIRBORNE'}</span></div>`;
+    return;
+  }
+
+  // Distance still to fly before it is out of national airspace, and the
+  // nearest hostile contact to it — the two numbers the whole watch turns on.
+  const toGo = Math.max(0, SIM.worldRadiusKm - len(vip.pos));
+  let nearest = Infinity;
+  for (const track of world.tracks.values()) {
+    if (track.hostility === 'friendly' || track.quality <= 0) continue;
+    nearest = Math.min(nearest, dist(track.pos, vip.pos));
+  }
+  const threatened = nearest < 45;
+
+  strip.hidden = false;
+  strip.className = `flight-strip${threatened ? ' is-threatened' : ''}`;
+  strip.innerHTML = `<div class="flight-head"><b>STATE 01</b>
+      <span>${esc(pair(STATUS.protectedFlight))}</span></div>
+    <div class="flight-figures">
+      <span><label>ALT</label>${Math.round(vip.altM / 100) * 100} M</span>
+      <span><label>TO FRONTIER</label>${Math.round(toGo)} KM</span>
+      <span class="${threatened ? 'is-bad' : ''}"><label>NEAREST</label>${
+  Number.isFinite(nearest) ? `${Math.round(nearest)} KM` : '—'}</span>
+    </div>`;
 }
 
 /* ----------------------------------------------------------- track list */

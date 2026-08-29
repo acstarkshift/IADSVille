@@ -20,7 +20,7 @@ import {
   SIM, SAM_TYPES, RADAR_TYPES, ASSET_TYPES, AIR_TYPES, DIFFICULTY, COMMAND, DAMAGE,
 } from './config.js';
 import { makeRng } from './rng.js';
-import { dist, len, bearing, polar, clamp, clamp01 } from './math.js';
+import { dist, len, bearing, polar, wrapDeg, clamp, clamp01 } from './math.js';
 import { stepDetection } from './detection.js';
 import { stepMissiles, inEnvelope } from './weapons.js';
 import { stepAircraft, createAircraft } from './ai.js';
@@ -36,6 +36,7 @@ import {
   createCommandState, stepCommand, standingDelta, settleDirectives, answerDirective, tierFor,
 } from './command.js';
 import { composeEnding } from './endings.js';
+import { composeFlightEnding } from './epilogue.js';
 
 export class World {
   constructor(scenario, options = {}) {
@@ -82,7 +83,13 @@ export class World {
     this.dt = SIM.dt;
     this.phase = 'running';       // running | complete
     this.outcome = null;
-    this.centre = { x: 0, y: 0 };
+    /*
+     * The centre of the watch. The sector was drawn around the Ville and almost
+     * every scenario uses it, but a watch fought entirely over the capital has
+     * its geometry — ingress bearings, standoff orbits, the range rings on the
+     * scope — measured from the capital instead.
+     */
+    this.centre = scenario.centre ? { ...scenario.centre } : { x: 0, y: 0 };
     this.nextTn = 1;
     this.aiThinkTimerS = 0;
 
@@ -114,6 +121,12 @@ export class World {
       kills: 0, roundsFired: 0, leakers: 0, assetsLost: 0, sitesLost: 0,
       radarsLost: 0, civilianCasualties: 0, abortedSorties: 0, armsIncoming: 0,
       civilianAircraftShot: 0, displacements: 0, decoysEngaged: 0, sortiesTotal: 0,
+      /*
+       * The state aircraft, on the one watch there is one. Three outcomes and
+       * they are not interchangeable: it left, somebody else brought it down,
+       * or the person reading this brought it down.
+       */
+      vipEscaped: false, vipDown: false, vipDownedBy: null, vipRoundsFired: 0,
       turnedBack: 0,
       /** Set once a round lands on the quarter the operator's family lives in. */
       homeDistrictHit: false,
@@ -300,11 +313,34 @@ export class World {
           targetAssetId: wave.targetAssetId ?? null,
           waypoints: wave.waypoints ?? null,
           name: wave.name ?? null,
+          /*
+           * A wave may name the exact point it comes from instead of a bearing
+           * and a range off the centre. Bearings are the right way to describe
+           * a raid arriving over a frontier; they are a poor way to describe an
+           * aircraft leaving a particular runway, or a pair of fighters placed
+           * to cut a particular corner.
+           */
+          pos: wave.pos ? this.formationSlot(wave, i, count) : null,
         });
       }
     }
     this.pendingWaves.sort((a, b) => a.atS - b.atS);
-    this.stats.sortiesTotal = this.pendingWaves.filter((w) => w.type !== 'civil').length;
+    // Friendly movements are not sorties. An airliner crossing the corridor and
+    // a state aircraft leaving the country are both traffic, not raid.
+    this.stats.sortiesTotal = this.pendingWaves.filter((w) => !AIR_TYPES[w.type]?.friendly).length;
+  }
+
+  /**
+   * Where the i-th aircraft of a positioned wave actually starts.
+   *
+   * A wave given a point rather than a bearing is a formation, not a stack:
+   * the aircraft are spread abeam of their run-in, so a pair of fighters
+   * crossing the frontier crosses it line abreast the way a pair does.
+   */
+  formationSlot(wave, i, count) {
+    if (count === 1) return { ...wave.pos };
+    const abeam = wrapDeg(bearing(wave.pos, this.centre) + 90);
+    return polar(wave.pos, abeam, (i - (count - 1) / 2) * (wave.spacingKm ?? 12));
   }
 
   applyRole(role, batteryId) {
@@ -369,7 +405,19 @@ export class World {
     aircraft.deadSinceS = this.t;
     const type = AIR_TYPES[aircraft.type];
 
-    if (type.friendly) {
+    if (type.isVip) {
+      /*
+       * Who fired decides everything that follows. An air-to-air round is the
+       * fighters doing what they came to do and you failing to stop them; a
+       * surface-to-air round is a decision taken at this console, by somebody
+       * who had to select a track the system had already identified as
+       * friendly and then give a fire order against it.
+       */
+      this.stats.vipDown = true;
+      this.stats.vipDownedBy = missile?.kind === 'aam' ? 'enemy' : 'operator';
+      this.log('alert', `${aircraft.name} DESTROYED`, { severity: 'high' });
+      addEffect(this, { kind: 'flash', magnitude: 1, durationS: 1.4 });
+    } else if (type.friendly) {
       this.stats.civilianAircraftShot++;
       this.log('alert', `${aircraft.name} DESTROYED — CIVIL AIRCRAFT`, { severity: 'high' });
       addEffect(this, { kind: 'flash', magnitude: 1, durationS: 1.2 });
@@ -412,8 +460,41 @@ export class World {
   }
 
   onAircraftExit(aircraft) {
+    if (AIR_TYPES[aircraft.type].isVip) {
+      this.stats.vipEscaped = true;
+      this.log('good', `${aircraft.name} — CLEAR OF NATIONAL AIRSPACE`, { severity: 'high' });
+      return;
+    }
     if (aircraft.type === 'civil') return;
     if (aircraft.aborted) this.stats.turnedBack++;
+  }
+
+  /** The aircraft the whole watch is about, while it is still flying. */
+  vipAircraft() {
+    return this.aircraft.find((a) => a.alive && AIR_TYPES[a.type].isVip) ?? null;
+  }
+
+  /** Rounds committed against the state aircraft, and the first site to do it. */
+  registerVipFires(site, count) {
+    this.stats.vipRoundsFired += count;
+    if (!this.stats.vipFiredFirstBy) this.stats.vipFiredFirstBy = site.name;
+    this.log('alert', `${site.name} — ROUNDS AWAY ON STATE 01`, { severity: 'high' });
+  }
+
+  /**
+   * Does this contact hold the watch open?
+   *
+   * Everything hostile does, until it is a hundred kilometres out and running.
+   * Civil traffic never does — the watch is not waiting on an airliner to leave
+   * the corridor. The state aircraft does, and is the only friendly that ever
+   * has: the entire question of that watch is whether it gets out, so ending it
+   * the moment the last fighter dies would decide the thing being asked.
+   */
+  holdsWatchOpen(aircraft) {
+    if (!aircraft.alive) return false;
+    const type = AIR_TYPES[aircraft.type];
+    if (type.friendly && !type.isVip) return false;
+    return !(aircraft.state === 'egress' && len(aircraft.pos) > 110);
   }
 
   registerLeaker(aircraft, asset) {
@@ -628,7 +709,7 @@ export class World {
     while (this.pendingWaves.length && this.pendingWaves[0].atS <= this.t) {
       const spec = this.pendingWaves.shift();
       const type = AIR_TYPES[spec.type];
-      const pos = polar(this.centre, spec.bearingDeg, spec.distanceKm);
+      const pos = spec.pos ?? polar(this.centre, spec.bearingDeg, spec.distanceKm);
       const target = spec.targetAssetId
         ? this.assetById.get(spec.targetAssetId)
         : this.pickRaidTarget(spec.type);
@@ -638,7 +719,7 @@ export class World {
         type: spec.type,
         pos,
         altM: spec.altM ?? type.cruiseAltM,
-        hdg: bearing(pos, target?.pos ?? this.centre),
+        hdg: bearing(pos, spec.waypoints?.[0] ?? target?.pos ?? this.centre),
         targetAssetId: target?.id ?? null,
         // The grid reference the sortie was planned against.
         briefedPos: target ? { ...target.pos } : null,
@@ -711,16 +792,14 @@ export class World {
        * played out with your batteries inert, and the figures in the debrief
        * are the ones that would actually have been recorded.
        */
-      if (this.scenario.finale) this.playOutWithoutYou();
+      if (this.scenario.finale || this.scenario.epilogue) this.playOutWithoutYou();
       this.finish('site-lost');
       return;
     }
     // An aircraft running for the border with a hundred kilometres behind it is
     // no longer part of the fight, and the watch should not be held open waiting
     // for it to finish its flight home.
-    const liveHostiles = this.aircraft.some((a) =>
-      a.alive && a.type !== 'civil'
-      && !(a.state === 'egress' && len(a.pos) > 110));
+    const liveHostiles = this.aircraft.some((a) => this.holdsWatchOpen(a));
     const liveRounds = this.missiles.some((m) => m.alive);
     if (this.pendingWaves.length === 0 && !liveHostiles && !liveRounds) {
       this.finish('raid-spent');
@@ -743,8 +822,7 @@ export class World {
     this.console.destroyed = false;   // so checkEnd does not recurse
     let steps = 0;
     while (steps < 20000) {
-      const liveHostiles = this.aircraft.some((a) => a.alive && a.type !== 'civil'
-        && !(a.state === 'egress' && len(a.pos) > 110));
+      const liveHostiles = this.aircraft.some((a) => this.holdsWatchOpen(a));
       if (this.pendingWaves.length === 0 && !liveHostiles && !this.missiles.some((m) => m.alive)) break;
       this.t += this.dt;
       this.spawnDue();
@@ -777,6 +855,18 @@ export class World {
       standingDelta(this, ending.standing,
         this.narrativePressure ? ending.subtitle.toLowerCase() : ending.title.toLowerCase());
       this.endingId = ending.id;
+    }
+
+    /*
+     * The epilogue is read the same way, off what actually happened, but its
+     * standing has already been settled on the command net — the arithmetic
+     * there needs to know how many rounds went at the aircraft and whether the
+     * order was acknowledged, which is not something an ending text should be
+     * doing. So this only names the outcome.
+     */
+    if (this.scenario.epilogue) {
+      this.endingId = composeFlightEnding(this.result(reason), this.character,
+        { narrativePressure: this.narrativePressure }).id;
     }
 
     this.outcome = this.result(reason);
@@ -851,6 +941,7 @@ export class World {
       /** Orders accepted or refused, for the endings to read. */
       constraints: { ...this.command.constraints },
       finale: this.scenario.finale === true,
+      epilogue: this.scenario.epilogue === true,
       endingId: this.endingId ?? null,
       assets: this.assets.map((a) => ({
         id: a.id,
