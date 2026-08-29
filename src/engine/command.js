@@ -87,14 +87,28 @@ export const DIRECTIVES = {
     label: 'the priority of fires',
     priority: 'normal',
     cooldownS: 300,
+    maxPerWatch: 2,
     pick: (w) => {
       const alive = w.assets.filter((a) => !a.destroyed && !ASSET_TYPES[a.type].civilian);
       return alive.sort((a, b) => ASSET_TYPES[b.type].value - ASSET_TYPES[a.type].value)[1] ?? alive[0];
     },
     text: (w, target) => `SECTOR ACTUAL: Priority of fires to ${target?.label ?? 'SECTOR OPS'}. It is not to be touched. Your file reflects this order. Acknowledge.`,
     plain: (w, target) => `SECTOR: Priority of fires to ${target?.label ?? 'SECTOR OPS'}. Acknowledge.`,
-    trigger: (w) => w.t > 120 && w.hostileTrackCount() > 2,
-    onAccept: (w, target) => { w.command.constraints.priorityAssetId = target?.id ?? null; },
+    /*
+     * Routine traffic never overrides a hinge. The watches whose whole design
+     * is one priority-of-fires transmission must not have sector command
+     * absent-mindedly redesignate the forward post mid-apocalypse — which is
+     * exactly what happened before this guard: the routine order fired during
+     * the finale and overwrote the palace designation, corrupting the ledger
+     * ("FORWARD POST lost after being designated priority").
+     */
+    trigger: (w) => w.t > 120 && w.hostileTrackCount() > 2
+      && !w.scenario.finale && !w.scenario.epilogue
+      && !w.command.constraints.priorityIsHinge,
+    onAccept: (w, target) => {
+      if (w.command.constraints.priorityIsHinge) return;
+      w.command.constraints.priorityAssetId = target?.id ?? null;
+    },
   },
 
   civilCorridor: {
@@ -103,6 +117,7 @@ export const DIRECTIVES = {
     label: 'the civil corridor',
     priority: 'high',
     cooldownS: 200,
+    maxPerWatch: 2,
     pick: (w) => w.aircraft.find((a) => a.alive && a.type === 'civil'),
     text: (w, civ) => `AIR TRAFFIC: Scheduled transit on bearing ${civ ? Math.round(bearing(w.centre, civ.pos)) : '---'}. It is carrying people who matter. Weapons tight in that sector. Acknowledge.`,
     plain: (w, civ) => `AIR TRAFFIC: Civil transit on bearing ${civ ? Math.round(bearing(w.centre, civ.pos)) : '---'}. Weapons tight in that sector. Acknowledge.`,
@@ -299,6 +314,9 @@ export const DIRECTIVES = {
       const palace = w.assets.find((a) => a.type === 'palace');
       w.command.constraints.priorityOfFiresId = palace?.id ?? null;
       w.command.constraints.priorityAssetId = palace?.id ?? null;
+      // A hinge designation is final for the watch; routine traffic may not
+      // redesignate over it.
+      w.command.constraints.priorityIsHinge = true;
       w.command.constraints.palaceOrderAccepted = true;
     },
     onRefuse: (w) => { w.command.constraints.palaceOrderRefused = true; },
@@ -310,6 +328,8 @@ export const DIRECTIVES = {
     label: 'the request for confirmation',
     priority: 'low',
     cooldownS: 150,
+    /** Twice is menace. Seven times, as measured, was a doorbell. */
+    maxPerWatch: 2,
     text: (w) => `POLITICAL SECTION: Your expenditure and your emissions are both being reviewed. Confirm you are reading this transmission.`,
     plain: () => 'SECTOR: Radio check. Confirm you are reading this transmission.',
     trigger: (w) => w.t > 200 && w.stats.roundsFired > 4,
@@ -390,6 +410,8 @@ export function createCommandState() {
     log: [],
     issuedAtS: {},
     issuedOnce: {},
+    /** Times each routine directive has gone out this watch, for the caps. */
+    issuedCount: {},
     constraints: {},
     darkTimeS: 0,
     acknowledgedDisplacements: 0,
@@ -407,7 +429,22 @@ export function standingDelta(world, amount, reason) {
   // point noise.
   world.command.standing = Math.round(
     clamp(before + scaled, COMMAND.minStanding, COMMAND.maxStanding) * 10) / 10;
-  world.command.ledger.push({ t: world.t, delta: world.command.standing - before, reason });
+  /*
+   * The ledger records what the state CHARGED, not merely what it could still
+   * collect. Once standing hits the floor every further delta clamps to zero,
+   * and the old ledger filtered those entries out of the debrief — the state's
+   * bookkeeping went silent at rock bottom, the one moment its pettiness is
+   * most worth showing. `charged` keeps the un-floored figure; `atFloor` marks
+   * the entries the account could no longer pay.
+   */
+  const applied = world.command.standing - before;
+  world.command.ledger.push({
+    t: world.t,
+    delta: applied,
+    charged: Math.round(scaled * 10) / 10,
+    atFloor: scaled < 0 && Math.abs(applied) < Math.abs(scaled) - 0.05,
+    reason,
+  });
 }
 
 export function tierFor(standing) {
@@ -422,6 +459,13 @@ export function issueDirective(world, template) {
     ? template.text(world, subject)
     : template.plain(world, subject);
 
+  /*
+   * The first directive this soldier has ever received gets twice the clock.
+   * They are about to learn that the net exists, that it times out, and that
+   * silence is an answer — three lessons at once is enough without also
+   * learning them in forty-five seconds.
+   */
+  const firstEver = (world.character?.watches ?? 1) === 0 && world.command.log.length === 0;
   const directive = {
     uid: `dir${world.command.log.length + 1}`,
     id: template.id,
@@ -429,12 +473,15 @@ export function issueDirective(world, template) {
     priority: template.priority,
     subjectId: subject?.id ?? null,
     issuedS: world.t,
-    deadlineS: world.t + COMMAND.directiveTimeoutS * (world.modifiers?.directiveTimeMult ?? 1),
+    deadlineS: world.t + COMMAND.directiveTimeoutS
+      * (world.modifiers?.directiveTimeMult ?? 1) * (firstEver ? 2 : 1),
     state: 'pending',
   };
   world.command.pending = directive;
   world.command.log.push(directive);
   world.command.issuedAtS[template.id] = world.t;
+  world.command.issuedCount = world.command.issuedCount ?? {};
+  world.command.issuedCount[template.id] = (world.command.issuedCount[template.id] ?? 0) + 1;
   if (template.once) world.command.issuedOnce[template.id] = true;
   world.log('command', body, { severity: template.priority === 'high' ? 'high' : 'normal' });
   return directive;
@@ -536,6 +583,10 @@ export function stepCommand(world, dt) {
   // A watch that has a hinge order coming stays off the net until it has gone.
   if (HINGE_DIRECTIVES.some((h) => !world.command.issuedOnce[h.id] && h.pendingOn(world))) return;
 
+  // A scenario may hold routine traffic off the net for its opening minutes —
+  // the teaching watch runs its lesson before sector command runs its test.
+  if (world.t < (world.scenario.directiveGraceS ?? 0)) return;
+
   world.command.thinkTimerS = (world.command.thinkTimerS ?? 0) - dt;
   if (world.command.thinkTimerS > 0) return;
   world.command.thinkTimerS = 6;
@@ -543,9 +594,21 @@ export function stepCommand(world, dt) {
   const rate = world.difficulty?.directiveRate ?? 1;
   if (rate <= 0) return;
 
+  /*
+   * Routine traffic keeps its distance. Seventeen to nineteen directives a
+   * watch — 'explain' alone firing seven times — turned the net's menace into
+   * a doorbell: repetition is the one thing a threat cannot survive. Each
+   * routine order may repeat at most a few times, and no two routine orders
+   * arrive inside ninety seconds of each other. Hinge orders are exempt from
+   * both, because a watch turns on exactly one of those.
+   */
+  if (world.t - (world.command.lastRoutineAtS ?? -999) < 90 / rate) return;
+
   for (const template of Object.values(DIRECTIVES)) {
     if (HINGE_DIRECTIVES.includes(template)) continue;
     if (template.once && world.command.issuedOnce[template.id]) continue;
+    const count = world.command.issuedCount?.[template.id] ?? 0;
+    if (count >= (template.maxPerWatch ?? 3)) continue;
     const last = world.command.issuedAtS[template.id];
     if (last !== undefined && world.t - last < (template.cooldownS ?? 9999) / rate) continue;
     if (!template.trigger(world)) continue;
@@ -553,6 +616,7 @@ export function stepCommand(world, dt) {
     // of traffic, so directives arrive with some slack rather than instantly.
     if (!world.rng.chance(0.55 * rate)) continue;
     issueDirective(world, template);
+    world.command.lastRoutineAtS = world.t;
     return;
   }
 }
@@ -625,8 +689,23 @@ export function settleDirectives(world) {
    * how modest the figure is beside what it bought.
    */
   if (c.borderAccepted && world.stats.roundsAcrossBorder > 0) {
-    standingDelta(world, -3 * world.stats.roundsAcrossBorder,
+    standingDelta(world, -2 * world.stats.roundsAcrossBorder,
       `${world.stats.roundsAcrossBorder} rounds fired across the Listonian border`);
+  }
+
+  /*
+   * A refused hinge is followed up. The immediate cost of the word "no" on
+   * the net is small; what arrives later is the referral — and it must always
+   * outweigh the accept-then-violate path, because in this service the crime
+   * has never been the act. It is the refusal to sign. (These flags existed
+   * for the ending text and were read by nothing mechanical, which quietly
+   * made open refusal the CHEAPEST route once a few rounds had been queried.)
+   */
+  if (c.freezeRefused) {
+    standingDelta(world, -12, 'the refusal of the expenditure freeze is referred');
+  }
+  if (c.borderRefused) {
+    standingDelta(world, -18, 'the refusal of the border restriction is referred');
   }
 
   // Last, and decisive. A civil shoot-down is the one outcome no amount of

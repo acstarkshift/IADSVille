@@ -43,7 +43,19 @@ So:
 Every mechanic hangs off that trade. Most sharply: a surface-to-air round is
 guided by the radar that launched it. Shut that radar down to dodge an incoming
 anti-radiation missile and the round you already have in the air goes stupid and
-falls in a field. Leave it up and you may not be there when the round arrives.
+falls in a field. Leave it up and you may not be there when the round arrives —
+or give the one order the crew will never give itself (`G`, **RIDE — HOLD THE
+BEAM**) and keep guiding with the enemy's round inbound on your own set.
+
+And attention is priced. A crew on weapons *free* engages at first opportunity:
+the earliest shot there is, taken at the edge of the envelope where kill
+probability is worst, at whatever is nearest — including the decoys. A net
+assignment holds for a sweet-spot shot when there is time to spend, skips the
+contact whose impossibly steady flight a well-held track has already given away,
+and spends a third fewer rounds for the same defence. Measured across 24 seeded
+watches, a commander who works the picture beats one who sets everything free
+and walks away by about 14% — and beats one who does nothing at all by a
+thousand points. Delegation is viable. Absence is not.
 
 ## The four appointments
 
@@ -450,11 +462,14 @@ decision the whole game is built on, and it should feel like throwing a switch.
 | `Y` `N` | acknowledge / refuse a directive |
 | `Tab` | switch seat (commander) |
 | `Alt`+`1`…`4` | take or hand back a subordinate command (district and national) |
+| `G` | RIDE — hold the selected battery's emissions through guidance with an ARM inbound |
 | `H` | full controls and a plain-English explanation of the mechanics |
 
 **Battle manager:** click a contact to select it, drag it onto a battery to
-assign the engagement, right-click a radar to blink it. `Q` `W` `E` set weapons
-hold / tight / free, `R` reloads, `X` displaces.
+assign the engagement, right-click a radar to blink it. `Q` / `W` set weapons
+hold / tight, `Shift`+`E` sets weapons free, plain `E` toggles the selected
+battery's radar (mind the difference — one of those silences your own set),
+`R` reloads, `X` displaces.
 
 **SAM operator:** click to designate, `L` to lock, `F` to fire, `E` to radiate or
 shut down — that last one is the whole game.
@@ -519,6 +534,31 @@ A few decisions worth knowing about if you read the source:
   you do changes either. That is the actual experience of commanding through
   other people, and it is why the only lever you have is what you said before
   you left.
+- **Eagerness is the price of delegation.** Crews on weapons free snap the
+  earliest shot at whatever is nearest; net assignments hold for the sweet spot
+  when the target's time-to-impact allows and fire instantly when it does not —
+  a terminal cruise missile grants no second chances. Launch geometry is priced
+  at intercept (`edgeLaunchPk`), so a maximum-range snap shot stays a bad shot
+  even against a closing target, and only a credible launch can break a pilot's
+  nerve — spraying edge shots used to farm aborts.
+- **Discrimination is bought with exposure.** A decoy reveals itself at forty
+  kilometres for free — after most batteries have fired — or early, to anyone
+  who holds its track above 0.85 quality for thirty continuous seconds, which
+  means radars radiating on it. A splashed decoy scores as plywood.
+- **The bookends are alive.** Watches open on handover chatter and a spoken
+  first contact instead of two silent minutes; an unengaged egressor nothing
+  can reach no longer holds the watch open, which removed one and a half to
+  four minutes of terminal dead air from every long mission; and the debrief
+  waits two and a half seconds so the last splash is actually seen.
+- **The event log is capped; its sequence is not.** Everything that consumes
+  events keys on a monotonic `seq` — comparing against the capped array's
+  length once silenced every sound in the game for the finale's last two
+  minutes.
+- **The state's ledger grieves by its own valuation.** Losing a place it
+  refuses to recognise moves the file not at all, an account at its floor
+  keeps being billed (and the bill is shown), and the debrief closes with THE
+  FILE AND THE NIGHT — the watch's two currencies, side by side, for every
+  decision on which they parted company.
 - **Only returns persist.** The phosphor layer holds radar echoes; the sweep is
   redrawn each frame. Painting the sweep into the persistence buffer saturates
   the tube in about four seconds, which is a mistake this code made once.

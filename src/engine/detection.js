@@ -248,6 +248,15 @@ export function correlatePlots(world, plots) {
     if (!best) {
       const track = newTrack(world, plot);
       world.tracks.set(track.id, track);
+      // The first contact of the watch is an event, spoken like one. Every
+      // track after it is routine and stays off the net — but a watch used to
+      // pass its first two minutes in total log silence while the tube quietly
+      // grew symbols nobody announced.
+      if (!world.firstContactLoggedAtS && world.log) {
+        world.firstContactLoggedAtS = world.t;
+        world.log('warn', `NEW CONTACT — ${track.tn}. THE WATCH HAS COMPANY.`,
+          { trackId: track.id });
+      }
       continue;
     }
 
@@ -286,11 +295,25 @@ export function ageTracks(world, dt) {
       track.quality = Math.max(0, track.quality - DETECTION.qualityDecayPerS * dt);
     }
 
+    // How long this track has been held at high quality without a break —
+    // the currency the decoy tell is bought with.
+    track.wellHeldS = track.quality >= DETECTION.steadyTellQuality
+      ? (track.wellHeldS ?? 0) + dt : 0;
+
     if (since > DETECTION.coastAfterS) {
       track.coasting = true;
       // Dead reckoning: the symbol keeps flying the last known course, and is
       // wrong in exactly the way that gets operators killed.
       track.pos = add(track.pos, scale(track.vel, dt));
+    }
+
+    // A destroyed track leaves the picture quickly. The wreck is falling, not
+    // flying: holding the hostile symbol on its old course for the full coast
+    // window meant a kill looked like nothing had happened for most of a
+    // minute — and offered the AI a ghost to re-engage.
+    if (track.destroyed && world.t - (track.destroyedAtS ?? world.t) > 5) {
+      world.dropTrack(id, 'destroyed');
+      continue;
     }
 
     if (since > DETECTION.dropAfterS || track.quality <= 0) {
@@ -325,10 +348,18 @@ function advanceIdentification(world, track, dt) {
   if (track.idProgressS < DETECTION.idTimeS) return;
 
   if (truth.type === 'decoy') {
-    // A decoy is built to read as a striker and it does — right up until it is
-    // close enough that its impossibly steady flight gives it away.
+    /*
+     * A decoy is built to read as a striker and it does — until either it is
+     * close enough that its impossibly steady flight gives it away for free
+     * (by which point most batteries have already fired at it), or an operator
+     * has held its track continuously at high quality long enough to notice
+     * the same thing early. The second tell is bought with radiating radars,
+     * which is the price of everything in this game.
+     */
     const rangeToCentre = len(track.pos);
-    track.classification = rangeToCentre < AIR_TYPES.decoy.tellRangeKm ? 'decoy' : 'striker';
+    const steadyTell = (track.wellHeldS ?? 0) >= DETECTION.steadyTellS;
+    track.classification = (rangeToCentre < AIR_TYPES.decoy.tellRangeKm || steadyTell)
+      ? 'decoy' : 'striker';
   } else {
     track.classification = truth.type;
   }

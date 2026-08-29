@@ -361,6 +361,9 @@ kbd {
 .fmn-figures span { color: var(--ink-bright); font-size: 12px; }
 .fmn-figures label { display: block; color: var(--ink-dim); font-size: 9px; letter-spacing: .1em; }
 .fmn-controls { display: flex; gap: 5px; flex-wrap: wrap; }
+/* The selected contact is outside this battery's envelope, said up front. */
+.unit-unfit span { color: var(--warn); font-size: 10px; letter-spacing: .05em; }
+
 /* A battery in somebody else's command: on the board, not on your net. */
 .unit.is-detached { opacity: .6; }
 .unit.is-detached .unit-name::after {

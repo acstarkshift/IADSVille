@@ -118,8 +118,19 @@ export function saveCampaign(store, campaign) {
  * next mission, but the campaign does not become unrecoverable from one bad raid.
  */
 export function recordMission(campaign, result) {
-  const carried = Math.round(campaign.standing * 0.25 + result.standing * 0.75);
-  campaign.standing = Math.max(COMMAND.minStanding, Math.min(COMMAND.maxStanding, carried));
+  /*
+   * The first entry in a new file is written kindly. A fumbled learning watch
+   * used to brand the campaign — FLAGGED standing, the political section in
+   * the corridor, and fifteen percent off the ammunition for watch two, all
+   * for a night on which the player was still finding the radiate switch. The
+   * first watch carries at quarter weight and lands no lower than "noted";
+   * from the second onward the file is the file.
+   */
+  const firstWatch = campaign.history.length === 0;
+  const weight = firstWatch ? 0.25 : 0.75;
+  const carried = Math.round(campaign.standing * (1 - weight) + result.standing * weight);
+  const floor = firstWatch ? 34 : COMMAND.minStanding;
+  campaign.standing = Math.max(floor, Math.min(COMMAND.maxStanding, carried));
 
   // The service record is updated against the standing the watch actually left
   // you on, so a promotion reflects where you now stand rather than where you

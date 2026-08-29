@@ -140,7 +140,18 @@ export function damageAsset(world, asset, amount, source) {
         + `${casualties} CASUALTIES REPORTED`,
         { assetId: asset.id, severity: 'high' });
     }
-    world.standingDelta(COMMAND.standing.perCivilianHit, 'civilian area struck');
+    /*
+     * The state's ledger grieves in proportion to its own valuation, and for
+     * a place it does not recognise it does not grieve at all. Charging the
+     * full civilian rate for the refugee encampment — a place whose `value` is
+     * zero precisely because the ledger refuses to know it — contradicted the
+     * campaign's central document and quietly correlated the two arithmetics
+     * the whole design keeps apart. The SCORE still counts every casualty in
+     * full; that is the other arithmetic, and it is yours.
+     */
+    if (type.value > 0) {
+      world.standingDelta(COMMAND.standing.perCivilianHit, 'civilian area struck');
+    }
   } else {
     const pct = Math.min(100, Math.round(100 * asset.damage / type.hp));
     world.log('alert', `${asset.label} — STRUCK (${pct}%)`, {
@@ -161,10 +172,22 @@ export function damageAsset(world, asset, amount, source) {
       world.log('alert', `${asset.label} — POSITION OVERRUN`, { severity: 'high' });
     }
     world.log('alert', `${asset.label} — DESTROYED`, { assetId: asset.id, severity: 'high' });
-    world.standingDelta(
-      type.critical ? COMMAND.standing.perCriticalAssetLost : COMMAND.standing.perAssetLost,
-      `${asset.label} lost`,
-    );
+    /*
+     * Scaled by the state's own valuation: full rate at the schedule's anchor
+     * (the town's 26), nothing at all for a value of zero. The ledger cannot
+     * simultaneously say the encampment is not a designated place and bill
+     * you fourteen points for losing it — its indifference has to be real or
+     * the divergence the campaign turns on is a lie the code tells about
+     * itself.
+     */
+    const weight = type.critical ? 1 : Math.min(1, type.value / 26);
+    if (weight > 0) {
+      world.standingDelta(
+        (type.critical ? COMMAND.standing.perCriticalAssetLost : COMMAND.standing.perAssetLost)
+          * weight,
+        `${asset.label} lost`,
+      );
+    }
     if (type.critical) loseCentralControl(world, asset);
   }
 }
@@ -183,7 +206,13 @@ export function loseCentralControl(world, asset) {
   world.fusionOnline = false;
   world.c2LostAtS = world.t;
   world.log('alert', 'SECTOR OPS OFF THE AIR — TRACK FUSION LOST', { severity: 'high' });
-  world.log('alert', 'NO CENTRAL CUEING. BATTERIES TO LOCAL CONTROL.', { severity: 'high' });
+  // Said in full, because the tactical consequence is the one thing an operator
+  // must not have to deduce while the building is still burning: without the
+  // centre there are no assignments, and a battery not on weapons free fights
+  // nothing at all.
+  world.log('alert',
+    'NO CENTRAL CUEING. BATTERIES TO LOCAL CONTROL — ONLY SETS ON WEAPONS FREE WILL ENGAGE.',
+    { severity: 'high' });
   addEffect(world, { kind: 'blackout', durationS: 3.5 });
   interruptConsole(world, 3.5, 'SECTOR OPS DOWN');
 

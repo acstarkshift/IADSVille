@@ -54,6 +54,15 @@ export const CONTROLS = {
   hold: { tm: 'ЗАПРЕТ', en: 'HOLD' },
   tight: { tm: 'КОНТРОЛЬ', en: 'TIGHT' },
   free: { tm: 'СВОБОДНО', en: 'FREE' },
+  /** The commander's override on the crew's blink arithmetic. */
+  ride: {
+    tm: 'ДЕРЖАТЬ ЛУЧ', en: 'RIDE — HOLD THE BEAM',
+    hint: 'keep guiding with a round homing on this set',
+  },
+  perDoctrine: {
+    tm: 'ПО УСТАВУ', en: 'EMCON PER DOCTRINE',
+    hint: 'the crew blinks when its own arithmetic says so',
+  },
   weapons: { tm: 'ОРУЖИЕ', en: 'WEAPONS' },
   abort: { tm: 'СДАТЬ ПОСТ', en: 'LEAVE POST' },
 };

@@ -78,7 +78,10 @@
   text-shadow: 0 1px 0 rgba(0, 0, 0, .65), 0 -1px 0 rgba(255, 255, 255, .07);
 }
 .lg i {
-  font-style: normal; font-size: 7.5px; letter-spacing: .09em;
+  /* The English gloss carries all the meaning for most players; it must not
+     be the smallest text on the console while the Cyrillic above it is bold
+     at 10px. Decorative plates and placards stay small — they are furniture. */
+  font-style: normal; font-size: 9px; letter-spacing: .07em;
   color: var(--engrave-dim);
 }
 .lg-stack { align-items: center; text-align: center; }
@@ -303,7 +306,7 @@
 
 .unit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
 .unit-name { font-size: 11px; letter-spacing: .1em; color: var(--engrave); font-weight: 700; }
-.unit-type { font-size: 7.5px; letter-spacing: .1em; color: var(--engrave-dim); }
+.unit-type { font-size: 9px; letter-spacing: .08em; color: var(--engrave-dim); }
 .unit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
 .unit-controls {
   display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap; margin-top: 7px;

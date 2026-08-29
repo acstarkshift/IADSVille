@@ -154,7 +154,7 @@ export function renderMenu(host, state, actions) {
       <h3>Difficulty</h3>
       <div class="choice-row" id="difficulty-row">
         ${Object.values(DIFFICULTY).map((d) => `<button class="choice ${state.difficulty === d.id ? 'is-active' : ''}" data-difficulty="${d.id}">
-          <b>${esc(d.label)}</b><small>Raid ×${d.raidScale} · their accuracy ×${d.armAccuracyMult} · command ×${d.directiveRate}</small>
+          <b>${esc(d.label)}${d.recommended ? ' ★' : ''}</b><small>${esc(d.blurb)}</small>
         </button>`).join('')}
       </div>
       <div class="toggle-row">
@@ -264,11 +264,32 @@ export function renderDebrief(host, state, result, entry) {
   const cell = (label, value, mood = '') =>
     `<div class="score-cell ${mood}"><label>${esc(label)}</label><b>${esc(value)}</b></div>`;
 
+  // Filtered on what the state CHARGED, not what it could still collect — the
+  // account at its floor keeps being billed, and the bill is the point.
   const ledger = result.ledger
-    .filter((l) => Math.abs(l.delta) >= 0.5)
+    .filter((l) => Math.abs(l.charged ?? l.delta) >= 0.5)
     .slice(-14)
-    .map((l) => `<tr><td>${esc(l.reason)}</td><td class="${l.delta > 0 ? 'up' : 'down'}">${l.delta > 0 ? '+' : ''}${l.delta.toFixed(1)}</td></tr>`)
+    .map((l) => {
+      const charged = l.charged ?? l.delta;
+      const shown = `${charged > 0 ? '+' : ''}${charged.toFixed(1)}${l.atFloor ? ' (at the floor)' : ''}`;
+      return `<tr><td>${esc(l.reason)}</td><td class="${charged > 0 ? 'up' : 'down'}">${shown}</td></tr>`;
+    })
     .join('');
+
+  /*
+   * THE FILE vs THE NIGHT: the game's two currencies, side by side, for the
+   * decisions where they parted company. Every entry pairs what the watch did
+   * to your standing with what it did to the actual score, so the divergence
+   * the campaign is built on is visible in one debrief instead of only across
+   * replays. Only the tellingly signed rows appear — a night where the two
+   * agree produces an empty table, and an empty table here is good news.
+   */
+  const divergences = result.ledger
+    .filter((l) => {
+      const charged = l.charged ?? l.delta;
+      return Math.abs(charged) >= 2 && /civil|hospital|encampment|freeze|border|priority|state aircraft|movement order|Listonian/i.test(l.reason);
+    })
+    .slice(-8);
 
   host.innerHTML = `<div class="screen-inner">
     ${ending ? `
@@ -342,6 +363,23 @@ export function renderDebrief(host, state, result, entry) {
       <p style="margin-top:8px;color:var(--ink-dim)">Standing: ${Math.round(result.standing)} — ${esc(result.tierLabel)}</p>
     </div>` : ''}
 
+    ${divergences.length ? `<div class="card">
+      <h3>ДВЕ АРИФМЕТИКИ · THE FILE AND THE NIGHT</h3>
+      <p style="color:var(--ink-dim);margin-bottom:7px">What each decision did to your file, beside
+      what the night actually was. When these two columns agree, this table is empty.</p>
+      <table class="ledger">
+        <tr><th style="text-align:left;color:var(--ink-dim)">decision</th>
+          <th style="color:var(--ink-dim)">the file</th></tr>
+        ${divergences.map((l) => {
+    const charged = l.charged ?? l.delta;
+    return `<tr><td>${esc(l.reason)}</td>
+          <td class="${charged > 0 ? 'up' : 'down'}">${charged > 0 ? '+' : ''}${charged.toFixed(1)}</td></tr>`;
+  }).join('')}
+      </table>
+      <p style="margin-top:8px;color:var(--ink-dim)">The night itself is the score above: ${result.score}.
+      The file does not read the score, and the score does not read the file.</p>
+    </div>` : ''}
+
     <div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : 'file-entry'}">
       <h3>${esc(consequence.title)}</h3>
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
@@ -380,7 +418,7 @@ export function renderControls(host) {
       <h3>Everywhere</h3>
       <div class="keys">
         ${key('Space', 'pause / resume')}
-        ${key('1 – 4', 'game speed')}
+        ${key('1 2 3', 'game speed 1× / 2× / 4×  (4 pauses)')}
         ${key('+ / −', 'zoom the scope')}
         ${key('Tab', 'switch seat (commander only)')}
         ${key('Y / N', 'acknowledge or refuse a directive')}
@@ -393,10 +431,12 @@ export function renderControls(host) {
       <div class="keys">
         ${key('Click a contact', 'select it')}
         ${key('Drag contact → battery', 'assign the engagement')}
-        ${key('Q W E', 'weapons hold / tight / free on the selected battery')}
+        ${key('Q / W', 'weapons hold / tight on the selected battery')}
+        ${key('Shift+E', 'weapons free on the selected battery')}
+        ${key('E', 'toggle the selected battery’s radar — careful: this silences your own set')}
+        ${key('G', 'RIDE — hold emissions through guidance with an ARM inbound (the crew never will)')}
         ${key('R', 'reload the selected battery')}
         ${key('X', 'displace the selected battery')}
-        ${key('E', 'toggle the selected battery’s radar')}
         ${key('`', 'toggle every surveillance radar')}
       </div>
     </div>

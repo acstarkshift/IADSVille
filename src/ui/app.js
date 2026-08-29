@@ -16,6 +16,7 @@ import {
   consequenceFor, missionModifiers, enlist,
 } from '../engine/campaign.js';
 import { armTimeToImpact } from '../engine/doctrine.js';
+import { cannotEngageReason } from '../engine/threat.js';
 import { AIR_TYPES } from '../engine/config.js';
 import { dist, clamp01 } from '../engine/math.js';
 import { applyTheme, THEMES } from './themes.js';
@@ -54,9 +55,11 @@ const ui = {
   dragFrom: null,
   dragTo: null,
   view: 'net',
-  lastEventIndex: 0,
+  lastEventSeq: 0,
   lastPanelAt: 0,
-  seenEvents: 0,
+  seenEventSeq: 0,
+  /** rAF timestamp at which the end-of-watch beat gives way to the debrief. */
+  watchEndsAt: 0,
   /** The country underlay. On by default; some people want a clean tube. */
   showMap: true,
 };
@@ -328,8 +331,9 @@ function startMission() {
 
   ui.selectedTrackId = null;
   ui.selectedSiteId = world.control.crewedBatteryId ?? world.sites[0]?.id ?? null;
-  ui.lastEventIndex = 0;
-  ui.seenEvents = 0;
+  ui.lastEventSeq = 0;
+  ui.seenEventSeq = 0;
+  ui.watchEndsAt = 0;
   ui.view = state.role === 'crew' ? 'crew' : 'net';
   els.eventLog.innerHTML = '';
   accumulator = 0;
@@ -409,26 +413,46 @@ function frame(now) {
   // resumes rather than trying to simulate the minute it missed.
   accumulator += dtReal * state.speed;
   let steps = 0;
+  // Radar returns from EVERY sim step this frame, not just the last one. At
+  // 2x and 4x several steps run per rendered frame, and painting only the
+  // final step's plots silently dropped most of the sweep's echoes exactly
+  // when the phosphor look matters most.
+  const framePlots = [];
   while (accumulator >= SIM.dt && steps < 40) {
     world.step(SIM.dt);
+    if (world.plots?.length) framePlots.push(...world.plots);
     accumulator -= SIM.dt;
     steps++;
     if (world.phase === 'complete') break;
   }
+  if (steps > 1) world.plots = framePlots;
 
-  render(now);
+  render(now, dtReal);
 
-  if (world.phase === 'complete') endMission();
+  /*
+   * The watch does not hard-cut to paperwork. When the simulation completes,
+   * the tube stays live for a beat — the last splash still fading, the WATCH
+   * ENDS line sitting in the ticker — before the debrief takes the screen.
+   * Cutting on the same frame meant the final event of every mission was
+   * never actually seen.
+   */
+  if (world.phase === 'complete') {
+    if (!ui.watchEndsAt) ui.watchEndsAt = now + 2500;
+    if (now >= ui.watchEndsAt) {
+      ui.watchEndsAt = 0;
+      endMission();
+    }
+  }
 }
 
-function render(now) {
+function render(now, frameDtS = 1 / 60) {
   const dark = world.dark;
 
   if (ui.view === 'crew') {
     if (!dark) crew.render(world, ui);
     else clearCanvas();
   } else if (!dark) {
-    scope.render(world, ui);
+    scope.render(world, ui, frameDtS);
   } else {
     clearCanvas();
   }
@@ -505,17 +529,36 @@ function applyEffects() {
  * defended asset.
  */
 function handleAudio() {
-  for (let i = ui.seenEvents; i < world.events.length; i++) {
-    const e = world.events[i];
+  // Keyed on the monotonic event seq, never on array position: the event list
+  // is capped, and comparing against its frozen length once made every sound
+  // in the game stop for the last two minutes of the finale.
+  for (const e of world.events) {
+    if (e.seq <= ui.seenEventSeq) continue;
     if (e.kind === 'launch') audio.launch();
     else if (e.kind === 'good' && e.text.startsWith('SPLASH')) audio.splash();
+    else if (e.kind === 'warn' && e.text.includes('MISS')) audio.miss();
+    else if (e.kind === 'warn' && e.text.startsWith('NEW CONTACT')) audio.newTrack();
+    else if (e.kind === 'alert' && e.text.includes('WEAPONS RELEASE')) audio.release();
     else if (e.kind === 'alert' && /IMPACT|STRUCK|DESTROYED/.test(e.text)) audio.impact();
     else if (e.kind === 'command') audio.command();
   }
-  ui.seenEvents = world.events.length;
+  ui.seenEventSeq = world.events.length
+    ? world.events[world.events.length - 1].seq : ui.seenEventSeq;
 
-  const armInbound = world.radars.some((r) => r.alive && Number.isFinite(armTimeToImpact(world, r)));
-  if (armInbound) audio.startArmWarning(); else audio.stopArmWarning();
+  // The warble runs while any set is under attack, and quickens with the
+  // soonest arrival — a two-minute monotone decays into wallpaper.
+  let soonestArm = Infinity;
+  for (const r of world.radars) {
+    if (!r.alive) continue;
+    const eta = armTimeToImpact(world, r);
+    if (eta < soonestArm) soonestArm = eta;
+  }
+  if (Number.isFinite(soonestArm)) {
+    audio.startArmWarning();
+    audio.setArmUrgency(soonestArm);
+  } else {
+    audio.stopArmWarning();
+  }
 
   // Tension rises with the nearest inbound striker's time to its release point.
   let worst = 0;
@@ -531,8 +574,11 @@ function handleAudio() {
 }
 
 function updateLegend() {
+  // The crew seat had no on-screen instruction at all — a first-timer who
+  // picked the flashier-sounding seat had to find the help screen to learn
+  // that the game had controls.
   els.scopeLegend.innerHTML = ui.view === 'crew'
-    ? ''
+    ? 'click to designate · L lock · F fire · E radiate / shut down — that last one is the whole game'
     : 'drag a contact onto a battery to assign · right-click a radar to blink it · M for the map';
 }
 
@@ -610,8 +656,21 @@ function assignSelected(siteId) {
   if (!ui.selectedTrackId) return;
   const site = world.siteById.get(siteId);
   const existing = site?.engagements.find((en) => en.trackId === ui.selectedTrackId);
-  if (existing) world.unassign(ui.selectedTrackId, siteId);
-  else world.assign(ui.selectedTrackId, siteId);
+  if (existing) {
+    world.unassign(ui.selectedTrackId, siteId);
+    return;
+  }
+  if (!world.assign(ui.selectedTrackId, siteId)) {
+    // A refused assignment says why, at the moment of the decision. The old
+    // behaviour was worse than silence: some refusals printed ENGAGING and
+    // then broke off fifteen seconds later in the dimmest line the log has.
+    const track = world.tracks.get(ui.selectedTrackId);
+    const reason = site && track ? cannotEngageReason(world, site, track) : null;
+    if (reason) {
+      world.log('warn', `${site.name} — CANNOT TAKE ${track.tn}: ${reason.toUpperCase()}`,
+        { siteId, trackId: track.id });
+    }
+  }
 }
 
 function wirePanelInput() {
@@ -702,6 +761,9 @@ function runAction(act, siteId, radarId, formationId) {
       break;
     }
     case 'salvo': if (site) world.setSalvo(site.id, site.salvoSize === 1 ? 2 : 1); break;
+    case 'ride':
+      if (site) world.setEmconOrder(site.id, site.emconOrder === 'ride' ? 'doctrine' : 'ride');
+      break;
     case 'reload': if (site) world.reload(site.id); break;
     case 'scoot': if (site) world.scoot(site.id); break;
     case 'lock': if (site && ui.selectedTrackId) world.assign(ui.selectedTrackId, site.id); break;
@@ -768,6 +830,14 @@ function wireGlobalInput() {
       case 'r': if (site) world.reload(site.id); break;
       case 'x': if (site) world.scoot(site.id); break;
       case 's': if (site) world.setSalvo(site.id, site.salvoSize === 1 ? 2 : 1); break;
+      case 'g': {
+        // Ride the warning: hold the selected (or crewed) battery's emissions
+        // through guidance with an ARM inbound. The one EMCON call the crew
+        // will never make for itself.
+        const target = ui.view === 'crew' ? world.siteById.get(crewedId) : site;
+        if (target) world.setEmconOrder(target.id, target.emconOrder === 'ride' ? 'doctrine' : 'ride');
+        break;
+      }
       case 'y': if (world.command.pending) world.answer('accepted'); break;
       case 'n': if (world.command.pending) world.answer('refused'); break;
       case 'm': ui.showMap = !ui.showMap; break;

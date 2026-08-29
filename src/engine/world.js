@@ -95,6 +95,8 @@ export class World {
      */
     this.centre = scenario.centre ? { ...scenario.centre } : { x: 0, y: 0 };
     this.nextTn = 1;
+    /** Monotonic id for log events; the events list itself is capped. */
+    this.eventSeq = 0;
 
     // Id sequences are per world, so two worlds in one process stay independent
     // and a seed always replays the same way.
@@ -192,6 +194,7 @@ export class World {
     this.buildDefences();
     this.buildFormations();
     this.buildWaves();
+    this.pendingChatter = this.buildOpeningChatter();
     this.applyRole(options.role ?? 'net', options.batteryId);
 
     this.roundAllowance = Math.round(
@@ -293,6 +296,13 @@ export class World {
         engagements: [],
         weaponsState: spec.weaponsState ?? 'tight',
         salvoSize: 1,
+        /**
+         * 'doctrine' — the crew blinks by its own safety arithmetic when an
+         * anti-radiation round is inbound. 'ride' — a commander has ordered the
+         * set held up through guidance regardless. Nobody but a commander ever
+         * sets 'ride'.
+         */
+        emconOrder: 'doctrine',
         // Crew quality starts at whatever the operator brings to it and is only
         // ever degraded from there by casualties.
         reactionMult: crewMult(m.reactionMult),
@@ -638,7 +648,15 @@ export class World {
    * ---------------------------------------------------------------- */
 
   log(kind, text, meta = {}) {
-    const event = { t: this.t, kind, text, ...meta };
+    /*
+     * Every event carries a monotonic sequence number, and consumers must key
+     * on it rather than on array position. The list is capped, and a busy
+     * climax minute can push hundreds of entries through it — an index-based
+     * consumer compares against a length that stops growing at the cap and
+     * silently goes deaf for the rest of the mission, which is precisely the
+     * part of the mission with the most to hear.
+     */
+    const event = { seq: ++this.eventSeq, t: this.t, kind, text, ...meta };
     this.events.push(event);
     if (this.events.length > 300) this.events.shift();
     return event;
@@ -649,7 +667,11 @@ export class World {
   hostileTrackCount() {
     let n = 0;
     for (const track of this.tracks.values()) {
-      if (track.hostility !== 'friendly' && track.quality > 0.2) n++;
+      // Identified hostiles only. Counting 'pending' contacts had sector
+      // command demanding no leakers seventeen seconds before the system had
+      // classified anything as hostile at all — the tutorial's first
+      // interactive moment was a loyalty test about nothing.
+      if (track.hostility === 'hostile' && track.quality > 0.2) n++;
     }
     return n;
   }
@@ -698,11 +720,34 @@ export class World {
       this.log('good', `SPLASH — ${missile?.trackLabel ?? aircraft.name}`, {
         aircraftId: aircraft.id, severity: 'good',
       });
+      // The kill gets a visible moment — a short bright wash, well under the
+      // magnitude of taking a hit yourself. The scope draws the expanding
+      // bloom at the impact point off the destroyed track.
+      addEffect(this, { kind: 'flash', magnitude: 0.3, durationS: 0.5 });
     }
 
     // Anything that was pointed at this aircraft has nothing left to guide on.
+    this.markTracksDown(aircraft.id);
+  }
+
+  /**
+   * Flag every track of an aircraft that no longer exists.
+   *
+   * Called from EVERY path that removes an aircraft from the fight — shot down,
+   * a cruise missile arriving, a decoy expiring, an egressor leaving the map —
+   * not only from the shoot-down. A coasting track whose truth is already gone
+   * still reads as a firm hostile for the better part of a minute, and any
+   * commander (human or AI) offered it will assign it, break off two seconds
+   * later on "target destroyed", and be offered it again next think. Measured
+   * at its worst that churn logged four events a second through a climax and
+   * flushed the entire real watch history out of the capped event list.
+   */
+  markTracksDown(aircraftId) {
     for (const track of this.tracks.values()) {
-      if (track.truthId === aircraft.id) track.destroyed = true;
+      if (track.truthId === aircraftId && !track.destroyed) {
+        track.destroyed = true;
+        track.destroyedAtS = this.t;
+      }
     }
   }
 
@@ -712,8 +757,10 @@ export class World {
   }
 
   onMissileMiss(target, missile) {
-    // Even a clean miss is worth something: it makes the pilot think about home.
-    target.threatenedAtS = this.t;
+    // A miss that resolved at all was a round going past the canopy — that is
+    // a credible attack whatever the launch geometry was, and it makes the
+    // pilot think very hard about home.
+    this.warnTargetOfLaunch(target, true);
   }
 
   onArmLaunch(radar, missile, shooter) {
@@ -730,6 +777,8 @@ export class World {
   }
 
   onAircraftExit(aircraft) {
+    // Gone is gone: nothing may be assigned against the coasting ghost.
+    this.markTracksDown(aircraft.id);
     if (AIR_TYPES[aircraft.type].isVip) {
       this.stats.vipEscaped = true;
       this.log('good', `${aircraft.name} — CLEAR OF NATIONAL AIRSPACE`, { severity: 'high' });
@@ -764,11 +813,36 @@ export class World {
     if (!aircraft.alive) return false;
     const type = AIR_TYPES[aircraft.type];
     if (type.friendly && !type.isVip) return false;
-    // Measured from the centre of the watch rather than from the map origin.
-    // On a district board the far sectors are a hundred kilometres out to begin
-    // with, and an origin-relative rule held the watch open for six minutes
-    // after the last aircraft had turned for home.
-    return !(aircraft.state === 'egress' && dist(aircraft.pos, this.centre) > 110);
+
+    if (aircraft.state === 'egress') {
+      // Measured from the centre of the watch rather than from the map origin.
+      // On a district board the far sectors are a hundred kilometres out to
+      // begin with, and an origin-relative rule held the watch open for six
+      // minutes after the last aircraft had turned for home.
+      if (dist(aircraft.pos, this.centre) > 110) return false;
+      /*
+       * An egressor nothing can touch is already gone. It is running for the
+       * rim, no round is chasing it, and no surviving battery can reach it —
+       * every long watch used to end on ninety to a hundred and sixty seconds
+       * of dead air while survivors flew out to an arbitrary line, and the
+       * finale ended on its longest silence. The outcome was decided minutes
+       * before the debrief admitted it.
+       */
+      const targeted = this.missiles.some((m) => m.alive && m.targetId === aircraft.id);
+      if (!targeted && !this.anySiteReaches(aircraft)) return false;
+    }
+    return true;
+  }
+
+  /** Can any surviving battery still put a round on this aircraft? */
+  anySiteReaches(aircraft) {
+    return this.sites.some((site) => {
+      if (!site.alive || site.scootRemainingS > 0) return false;
+      if (site.readyRounds <= 0 && site.magazine <= 0) return false;
+      const type = SAM_TYPES[site.type];
+      return dist(site.pos, aircraft.pos) <= type.maxRangeKm * 1.05
+        && aircraft.altM <= type.maxAltM && aircraft.altM >= type.minAltM;
+    });
   }
 
   registerLeaker(aircraft, asset) {
@@ -776,7 +850,16 @@ export class World {
     this.standingDelta(COMMAND.standing.perLeaker, `${aircraft.name} released on ${asset.label}`);
   }
 
-  warnTargetOfLaunch(target) { target.threatenedAtS = this.t; }
+  /**
+   * A launch warning. Every launch makes the target defensive; only a
+   * `credible` one — decent launch geometry, or a round that already went
+   * past — can break its nerve. The distinction is what stops maximum-range
+   * spray from farming aborts.
+   */
+  warnTargetOfLaunch(target, credible = true) {
+    target.threatenedAtS = this.t;
+    if (credible) target.crediblyThreatenedAtS = this.t;
+  }
 
   /**
    * Attribute a salvo to whatever the track was heading for.
@@ -931,7 +1014,17 @@ export class World {
     const engagement = trackId
       ? site.engagements.find((e) => e.trackId === trackId)
       : site.engagements.find((e) => e.state === 'ready');
-    if (!engagement) return 0;
+    if (!engagement) {
+      // A dry fire command answers. Silence on the fire key read as a broken
+      // keyboard; the refusal names what is actually missing, and is
+      // debounced so a held key does not fill the ticker with it.
+      if (this.t - (this.lastDryFireS ?? -9) > 1.5) {
+        this.lastDryFireS = this.t;
+        this.log('warn', `${site.name} — НЕТ РЕШЕНЬЯ · NO FIRING SOLUTION (lock a target first)`,
+          { siteId });
+      }
+      return 0;
+    }
     return fireEngagement(this, site, engagement);
   }
 
@@ -950,6 +1043,25 @@ export class World {
     if (!site) return;
     const cap = this.command.constraints.maxSalvo ?? 2;
     site.salvoSize = clamp(size, 1, cap);
+  }
+
+  /**
+   * The commander's override on the crew's blink arithmetic: 'ride' holds a
+   * set radiating through guidance with an anti-radiation round inbound. The
+   * crew never chooses this for itself, and no AI officer orders it either —
+   * it is the one call in the emissions game reserved for whoever answers for
+   * the outcome.
+   */
+  setEmconOrder(siteId, order) {
+    const site = this.siteById.get(siteId);
+    if (!site || !this.commandable(siteId)) return false;
+    if (order !== 'ride' && order !== 'doctrine') return false;
+    if (site.emconOrder === order) return true;
+    site.emconOrder = order;
+    this.log('warn', order === 'ride'
+      ? `${site.name} — ORDERED TO HOLD EMISSIONS THROUGH GUIDANCE`
+      : `${site.name} — EMISSIONS PER DOCTRINE`, { siteId });
+    return true;
   }
 
   setRadar(radarId, on) {
@@ -1011,7 +1123,45 @@ export class World {
    * The tick
    * ---------------------------------------------------------------- */
 
+  /**
+   * The net traffic that opens a watch.
+   *
+   * Every long watch used to begin with a blank tube and total silence — two
+   * minutes and a quarter of it on White Noise — because nothing in the
+   * simulation exists until the first wave spawns. But a watch does not start
+   * with the war; it starts with a handover, a readiness report, and, when the
+   * frontier posts have anything, a first vague word of what is coming. Two or
+   * three lines, honest but imprecise, timed so the tube is never dead for the
+   * length of a kettle boiling.
+   */
+  buildOpeningChatter() {
+    const chatter = [
+      { atS: 4, text: 'WATCH HANDED OVER — THE PICTURE IS YOURS' },
+      {
+        atS: 11,
+        text: `${this.radars.filter((r) => r.alive).length} SETS REPORTING. `
+          + `${this.sites.filter((s) => s.alive).length} BATTERIES ON THE RAILS. SECTOR QUIET.`,
+      },
+    ];
+
+    // A first, vague word from the frontier: real bearing, no numbers, timed
+    // to land in the middle of what would otherwise be the longest silence.
+    const first = this.pendingWaves.find((w) => !AIR_TYPES[w.type].friendly);
+    if (first && first.atS > 45) {
+      const octant = ['NORTH', 'NORTH-EAST', 'EAST', 'SOUTH-EAST', 'SOUTH',
+        'SOUTH-WEST', 'WEST', 'NORTH-WEST'][Math.round(((first.bearingDeg % 360) + 360) % 360 / 45) % 8];
+      chatter.push({
+        atS: Math.round(first.atS * 0.55),
+        text: `FRONTIER POSTS REPORT ENGINE NOISE TO THE ${octant}. NOTHING ON THE SETS YET.`,
+      });
+    }
+    return chatter.sort((a, b) => a.atS - b.atS);
+  }
+
   spawnDue() {
+    while (this.pendingChatter.length && this.pendingChatter[0].atS <= this.t) {
+      this.log('info', this.pendingChatter.shift().text);
+    }
     while (this.pendingWaves.length && this.pendingWaves[0].atS <= this.t) {
       const spec = this.pendingWaves.shift();
       const type = AIR_TYPES[spec.type];
@@ -1201,7 +1351,17 @@ export class World {
       return sum + (type.scoreValue ?? type.value) * 10 * intact;
     }, 0);
 
-    const killScore = this.stats.kills * 22;
+    /*
+     * A kill is worth what it stopped. A decoy is plywood with an amplifier:
+     * splashing one is worth almost nothing, and with rounds at 3 points each
+     * a salvo spent on it is a net loss — which is the entire point of the
+     * decoy, and the entire value of the operator who held fire until the
+     * track's impossibly steady flight gave it away. This used to pay +22 like
+     * a real kill, which quietly deleted the discrimination skill the White
+     * Noise briefing claims to teach.
+     */
+    const killScore = (this.stats.kills - this.stats.decoysEngaged) * 22
+      + this.stats.decoysEngaged * 4;
     const turnedBackScore = this.stats.turnedBack * 18;
     const leakerPenalty = this.stats.leakers * 45;
     const roundCost = this.stats.roundsFired * 3;

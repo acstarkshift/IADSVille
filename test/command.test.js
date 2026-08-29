@@ -197,15 +197,45 @@ describe('the campaign file', () => {
   });
 
   test('a bad watch marks the file and a good one commends it', () => {
+    // From the second watch onward, the file is the file. (The first entry is
+    // written kindly — see the clemency test below.)
+    const opener = { missionId: 'm0', role: 'net', score: 100, standing: 55, stats: { leakers: 1, kills: 2, assetsLost: 0 } };
+
     const bad = emptyCampaign();
+    recordMission(bad, opener);
     recordMission(bad, { missionId: 'm', role: 'net', score: -100, standing: 5, stats: { leakers: 6, kills: 0, assetsLost: 3 } });
     assert.equal(bad.fileMarks, 1);
     assert.equal(bad.commendations, 0);
 
     const good = emptyCampaign();
+    recordMission(good, opener);
     recordMission(good, { missionId: 'm', role: 'net', score: 900, standing: 98, stats: { leakers: 0, kills: 9, assetsLost: 0 } });
     assert.equal(good.commendations, 1);
     assert.equal(good.fileMarks, 0);
+  });
+
+  test('the first entry in a new file is written kindly', () => {
+    /*
+     * A fumbled LEARNING watch must not brand the campaign: it used to land
+     * the brand-new player at FLAGGED — political section in the corridor,
+     * ammunition cut for watch two — for a night spent finding the radiate
+     * switch. The first watch carries at quarter weight and floors at "noted";
+     * the second one counts in full.
+     */
+    const campaign = emptyCampaign();
+    recordMission(campaign, {
+      missionId: 'first-light', role: 'net', score: -400, standing: 3,
+      stats: { leakers: 4, kills: 0, assetsLost: 2 },
+    });
+    assert.ok(campaign.standing >= 34, `first-watch floor held: ${campaign.standing}`);
+    assert.equal(campaign.fileMarks, 0, 'no mark for a first night');
+
+    recordMission(campaign, {
+      missionId: 'low-riders', role: 'net', score: -400, standing: 3,
+      stats: { leakers: 4, kills: 0, assetsLost: 2 },
+    });
+    assert.ok(campaign.standing < 34, 'the second disaster counts in full');
+    assert.equal(campaign.fileMarks, 1);
   });
 
   test('only a better score replaces the recorded best', () => {

@@ -247,18 +247,42 @@ describe('track ageing', () => {
     assert.equal(track.classification, 'striker');
   });
 
-  test('a decoy reads as a striker until it is close enough to give itself away', () => {
+  test('a decoy reads as a striker until proximity or sustained attention gives it away', () => {
+    /*
+     * Two tells, priced differently. The free one is range: inside tellRangeKm
+     * the flight is too perfect to be a crew, but by then batteries have
+     * usually fired. The bought one is attention: a track held continuously at
+     * high quality — which means radars radiating on it — reveals the same
+     * thing early. A track held firm but below the steady threshold learns
+     * nothing at range, however long it is watched.
+     */
     const w = fakeWorld({
       aircraftById: new Map([['a1', { id: 'a1', type: 'decoy' }]]),
     });
     correlatePlots(w, [{ radarId: 'r1', truthId: 'a1', pos: { x: 0, y: 120 }, altM: 5000 }]);
     const track = [...w.tracks.values()][0];
-    const hold = () => { track.quality = 1; track.lastUpdateS = w.t; w.t += 0.1; ageTracks(w, 0.1); };
-    for (let i = 0; i < 400; i++) hold();
-    assert.equal(track.classification, 'striker', 'far out, a decoy is convincing');
+    const holdAt = (q) => { track.quality = q; track.lastUpdateS = w.t; w.t += 0.1; ageTracks(w, 0.1); };
 
-    track.pos = { x: 0, y: 20 };
-    hold();
+    // Firm but not well-held: convincing forever at range.
+    for (let i = 0; i < 400; i++) holdAt(DETECTION.steadyTellQuality - 0.05);
+    assert.equal(track.classification, 'striker', 'far out and loosely held, a decoy is convincing');
+
+    // Well-held for the steady interval: revealed at any range.
+    for (let i = 0; i < Math.ceil(DETECTION.steadyTellS * 10) + 5; i++) holdAt(1);
+    assert.equal(track.classification, 'decoy', 'sustained high-quality tracking gives it away');
+  });
+
+  test('a decoy close in gives itself away with no attention at all', () => {
+    const w = fakeWorld({
+      aircraftById: new Map([['a1', { id: 'a1', type: 'decoy' }]]),
+    });
+    correlatePlots(w, [{ radarId: 'r1', truthId: 'a1', pos: { x: 0, y: 20 }, altM: 5000 }]);
+    const track = [...w.tracks.values()][0];
+    // Loosely held, so only the proximity tell can be doing the work.
+    for (let i = 0; i < 400; i++) {
+      track.quality = DETECTION.steadyTellQuality - 0.05;
+      track.lastUpdateS = w.t; w.t += 0.1; ageTracks(w, 0.1);
+    }
     assert.equal(track.classification, 'decoy', 'close in, the trick stops working');
   });
 

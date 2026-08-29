@@ -178,7 +178,7 @@ export class Scope {
 
   /* ----------------------------------------------------------- rendering */
 
-  render(world, ui = {}) {
+  render(world, ui = {}, frameDtS = 1 / 60) {
     this.resize();
     if (!this.w) return;
     const { ctx } = this;
@@ -189,7 +189,7 @@ export class Scope {
     ctx.fillRect(0, 0, this.w, this.h);
     this.labelQueue = [];
 
-    this.updatePaint(world);
+    this.updatePaint(world, frameDtS);
     // Drawn before the grid so the country sits under everything, but its
     // labels are queued and placed with the rest at the end of the frame.
     if (ui.showMap !== false) this.drawMap();
@@ -230,7 +230,7 @@ export class Scope {
    * honest behaviour — the scope shows echoes, and everything else is a symbol
    * the system drew for you.
    */
-  updatePaint(world) {
+  updatePaint(world, frameDtS = 1 / 60) {
     const ctx = this.paintCtx;
     const p = this.palette;
     const glow = this.theme.afterglow;
@@ -238,8 +238,13 @@ export class Scope {
     if (glow <= 0) {
       ctx.clearRect(0, 0, this.w, this.h);
     } else {
+      // The afterglow constants are tuned as per-frame retention at 60Hz, so
+      // the fade is scaled to the real frame time: phosphor decays with the
+      // clock, not with the display's refresh rate. Unscaled, the persistence
+      // differed some fifty-fold between a 30Hz laptop and a 144Hz monitor.
+      const retained = Math.pow(glow, Math.max(0.2, frameDtS * 60));
       ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = `rgba(0,0,0,${1 - glow})`;
+      ctx.fillStyle = `rgba(0,0,0,${1 - retained})`;
       ctx.fillRect(0, 0, this.w, this.h);
       ctx.globalCompositeOperation = 'source-over';
     }
@@ -678,6 +683,40 @@ export class Scope {
       const colour = hostilityColour(p, track);
       const selected = ui.selectedTrackId === track.id;
       const size = 5 * this.dpr;
+
+      /*
+       * The kill, drawn as one. A destroyed track stops being a hostile
+       * diamond with a confident velocity leader — it is an expanding, fading
+       * bloom with a cross through it, held for the few seconds before the
+       * track drops. For most of the game's life the target you had just
+       * splashed kept flying its symbol along its old course for the better
+       * part of a minute, and the most satisfying event in air defence read
+       * as a log line.
+       */
+      if (track.destroyed) {
+        const age = clamp01((world.t - (track.destroyedAtS ?? world.t)) / 4.5);
+        const bloom = size * (1.6 + age * 2.6);
+        ctx.save();
+        ctx.globalAlpha = 0.85 * (1 - age);
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = 1.6 * this.dpr;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, bloom, 0, TAU);
+        ctx.stroke();
+        const arm = size * 0.9;
+        ctx.beginPath();
+        ctx.moveTo(s.x - arm, s.y - arm); ctx.lineTo(s.x + arm, s.y + arm);
+        ctx.moveTo(s.x - arm, s.y + arm); ctx.lineTo(s.x + arm, s.y - arm);
+        ctx.stroke();
+        ctx.restore();
+        this.queueLabel({
+          lines: [`${track.tn} ✕`],
+          x: s.x, y: s.y,
+          colours: [colour], colour,
+          priority: 60, offset: bloom + 3,
+        });
+        continue;
+      }
 
       ctx.save();
       ctx.globalAlpha = track.coasting ? 0.5 : 1;

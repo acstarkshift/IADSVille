@@ -15,7 +15,7 @@
  */
 
 import { SAM_TYPES, ENGAGEMENT, ARM, DETECTION } from './config.js';
-import { dist, len, clamp, clamp01 } from './math.js';
+import { dist, len, clamp, clamp01, closureRate } from './math.js';
 import { inEnvelope, launchSalvo, timeToInRangeS } from './weapons.js';
 import { engagementValue, sortedTracks } from './threat.js';
 
@@ -36,13 +36,17 @@ export function channelsFor(site) {
 }
 
 /** Start an engagement if the battery has a channel free. Returns it, or null. */
-export function beginEngagement(world, site, track, { manual = false, salvo = null } = {}) {
+export function beginEngagement(world, site, track, { manual = false, salvo = null, origin = null } = {}) {
   const type = SAM_TYPES[site.type];
   if (!site.alive) return null;
   // The aircraft behind this track is already wreckage. The symbol stays on the
   // scope until the track drops, and without this every battery in the sector
-  // re-engages it once a tick for the next forty-five seconds.
+  // re-engages it once a tick for the next forty-five seconds. The truth check
+  // backs up the flag: every death path is supposed to set `destroyed`, but a
+  // path that forgets must not reopen the churn.
   if (track.destroyed) return null;
+  const truth = world.aircraftById.get(track.truthId);
+  if (truth && !truth.alive) return null;
   if (site.engagements.length >= channelsFor(site)) return null;
   if (site.engagements.some((e) => e.trackId === track.id)) return null;
   if (site.readyRounds <= 0) return null;
@@ -53,6 +57,13 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
     timerS: type.reactionS * (site.reactionMult ?? 1),
     salvo: salvo ?? site.salvoSize,
     manual,
+    /**
+     * Who created this engagement decides how it shoots. 'assigned' — a net
+     * assignment, human or AI — holds fire for a sweet-spot shot; 'free' — a
+     * crew self-engaging on weapons free — snaps the earliest one, at the
+     * edge of the envelope, because that is what free means.
+     */
+    origin: origin ?? 'assigned',
     missileIds: [],
     startedS: world.t,
   };
@@ -122,15 +133,41 @@ export function stepEngagements(world, dt) {
 
       if (engagement.state === 'reacting') {
         engagement.timerS -= dt;
-        if (engagement.timerS <= 0) engagement.state = 'ready';
+        if (engagement.timerS <= 0) {
+          engagement.state = 'ready';
+          engagement.readyAtS = world.t;
+        }
       }
 
       if (engagement.state === 'ready') {
         const env = inEnvelope(site, track.pos, track.altM);
         const firm = track.quality >= DETECTION.firmQuality;
         if (!engagement.manual && env.ok && firm && site.weaponsState !== 'hold') {
-          fireEngagement(world, site, engagement);
-          engagement.unreachableS = 0;
+          /*
+           * An assigned engagement waits for a shot worth taking: a closing
+           * target still outside the hold-fire fraction of max range will be
+           * markedly deeper in the envelope in a few seconds, and Pk decays
+           * hard toward the edge. Bounded by holdFireMaxS and by closure —
+           * a crossing or receding target is shot now, never orbited. Free
+           * self-engagements skip all of this: doctrine for a free battery is
+           * the earliest shot there is, which is precisely what makes leaving
+           * the whole sector on free cheaper in attention and dearer in rounds.
+           */
+          const type = SAM_TYPES[site.type];
+          const closing = closureRate(track.pos, track.vel, site.pos) > 0.005;
+          // "Time available": hold only when the target's arrival at whatever
+          // it is going for leaves room for patience. A terminal vampire is
+          // shot the instant it can be, because there is no second shot.
+          const timeToSpare = (track.ttiS ?? Infinity) > ENGAGEMENT.holdFireMinTtiS;
+          const holdable = engagement.origin === 'assigned'
+            && closing
+            && timeToSpare
+            && env.rangeKm > type.maxRangeKm * ENGAGEMENT.holdFireFraction
+            && world.t - (engagement.readyAtS ?? world.t) < ENGAGEMENT.holdFireMaxS;
+          if (!holdable) {
+            fireEngagement(world, site, engagement);
+            engagement.unreachableS = 0;
+          }
         } else {
           /*
            * Give up on a target only once it is persistently unreachable.
@@ -341,8 +378,20 @@ export function runAiEmcon(world, dt, site) {
   const roundEta = ownRoundsTimeToImpact(world, site);
 
   if (armEta < 18) {
+    /*
+     * The crew's own arithmetic: stay up only when their round lands before
+     * the enemy's does. A commander can overrule it with the RIDE order —
+     * hold emissions through guidance even though the ARM will arrive first,
+     * trading the set (and the people at it) for the shot. No doctrine writes
+     * that order and no AI ever gives it; it exists so the game's central
+     * dilemma is finally decidable from the seat the player actually sits in
+     * rather than being settled by the crew's safety rules every time. It is
+     * self-limiting: with no rounds in the air there is nothing to guide, and
+     * the crew blinks as trained no matter what the order says.
+     */
     const worthIt = roundEta + 2 < armEta;
-    if (!worthIt) {
+    const ordered = site.emconOrder === 'ride' && Number.isFinite(roundEta);
+    if (!worthIt && !ordered) {
       if (radar.on) {
         world.log('warn', `${site.name} — SHUTTING DOWN, ROUND INBOUND`, { siteId: site.id });
       }
@@ -350,6 +399,16 @@ export function runAiEmcon(world, dt, site) {
       site.blinkUntilS = world.t + 25;
       return;
     }
+    if (ordered && !worthIt && radar.on) {
+      // Said once per warning, because somebody at the set is going to remember it.
+      if (!site.ridingArmSinceS) {
+        site.ridingArmSinceS = world.t;
+        world.log('warn', `${site.name} — HOLDING EMISSIONS THROUGH GUIDANCE, BY ORDER`,
+          { siteId: site.id, severity: 'high' });
+      }
+    }
+  } else {
+    site.ridingArmSinceS = 0;
   }
 
   if (world.t < (site.blinkUntilS ?? 0)) return;
@@ -413,8 +472,18 @@ export function runBatteryCrews(world, dt) {
           && t.assignedTo.length === 0
           && (world.fusionOnline || t.sources.includes(site.radarId))
           && inEnvelope(site, t.pos, t.altM).ok)
-        .sort((a, b) => b.threat - a.threat);
-      if (available[0]) beginEngagement(world, site, available[0]);
+        /*
+         * Nearest first — not most dangerous first. A crew on its own
+         * authority defends itself and the ground it is standing on; the
+         * sector-wide threat ranking lives at the net, because ranking is what
+         * the net is FOR. Nearest-first across a whole sector is not a
+         * defence: it is six batteries each shooting whatever happens to be
+         * passing, while the aircraft that matters flies between them. That
+         * misallocation, plus the snap shot at the envelope edge, is the full
+         * price of setting everything free and walking away.
+         */
+        .sort((a, b) => dist(site.pos, a.pos) - dist(site.pos, b.pos));
+      if (available[0]) beginEngagement(world, site, available[0], { origin: 'free' });
     }
   }
 }

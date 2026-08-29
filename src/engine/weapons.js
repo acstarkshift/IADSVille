@@ -91,6 +91,15 @@ export function computeSamPk(site, target, missile, difficulty) {
   if (r > sweet) {
     pk *= lerp(1, ENGAGEMENT.edgeRangePk, invLerp(sweet, type.maxRangeKm, r));
   }
+
+  // Launch discipline: a round fired at the edge of the envelope pays for it
+  // at intercept whatever the target did in between — no energy left, worst
+  // opening basket. This is the term that makes holding for a proper shot a
+  // skill rather than a superstition.
+  if (missile?.launchRangeKm > sweet) {
+    pk *= lerp(1, ENGAGEMENT.edgeLaunchPk,
+      invLerp(sweet, type.maxRangeKm, missile.launchRangeKm));
+  }
   if (r < type.minRangeKm * 1.6) {
     // Snapped off inside the minimum range: the round has no time to settle.
     pk *= lerp(ENGAGEMENT.edgeRangePk, 1, invLerp(type.minRangeKm, type.minRangeKm * 1.6, r));
@@ -272,7 +281,10 @@ function resolveIntercept(world, missile, prevPos) {
     if (world.rng.chance(pk)) {
       world.killAircraft(target, missile);
     } else {
-      world.log('info', `${missile.trackLabel ?? 'TRACK'} — MISS`, { trackId: missile.trackId });
+      // 'warn', not 'info': the miss is the game's shoot-again decision point,
+      // and it used to render in the dimmest colour the log has and make no
+      // sound at all.
+      world.log('warn', `${missile.trackLabel ?? 'TRACK'} — MISS`, { trackId: missile.trackId });
       world.onMissileMiss(target, missile);
     }
     return;
@@ -346,6 +358,9 @@ export function launchSalvo(world, site, track, count) {
       trackId: track.id,
     });
     missile.trackLabel = track.tn;
+    // The geometry the shot was TAKEN at, for the launch-discipline Pk term.
+    // Intercept range alone forgives an edge launch against a closing target.
+    missile.launchRangeKm = dist(site.pos, target.pos);
     // Rounds of a salvo leave the rail a couple of seconds apart; modelling that
     // as a small time-of-flight offset is enough for the display and the timing.
     missile.tofS = -i * type.salvoGapS;
@@ -358,7 +373,16 @@ export function launchSalvo(world, site, track, count) {
     world.log('launch', `${site.name} — ${launched} AWAY ON ${track.tn}`, {
       siteId: site.id, trackId: track.id,
     });
-    world.warnTargetOfLaunch(target);
+    /*
+     * Whether this launch can break the target's nerve depends on how good a
+     * shot it actually was. A snap launch from the very edge of the envelope
+     * reads as a light in the sky, not a death sentence — the pilot evades and
+     * presses on. Estimated with the same Pk arithmetic the intercept will use,
+     * at the launch geometry.
+     */
+    const launchQuality = computeSamPk(site, target,
+      { launchRangeKm: dist(site.pos, target.pos) }, world.difficulty);
+    world.warnTargetOfLaunch(target, launchQuality >= ENGAGEMENT.crediblePk);
     world.registerRoundsSpent(track, launched);
     // Firing on the state aircraft is recorded whether or not it works. The act
     // is the fire order, not the result of it.

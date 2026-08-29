@@ -74,7 +74,15 @@ export function createAircraft(spec) {
     /** Orbit bookkeeping for jammers. */
     orbitCentre: spec.orbitCentre ?? null,
     orbitPhase: spec.orbitPhase ?? 0,
-    waypoints: spec.waypoints ?? [],
+    /*
+     * The filed route is COPIED, never referenced. Routed aircraft consume
+     * their waypoints with shift(), and the spec they were spawned from traces
+     * back to the scenario module's singleton wave table — flown by reference,
+     * one playthrough permanently drained the routes out of the scenario, so a
+     * replay in the same session gave the civil transit and the state aircraft
+     * no route at all.
+     */
+    waypoints: (spec.waypoints ?? []).map((p) => ({ ...p })),
     /**
      * Where the target was when this sortie was planned.
      *
@@ -131,6 +139,17 @@ function handleThreat(world, aircraft, dt) {
   }
 
   if (aircraft.aborted || aircraft.released || aircraft.state === 'egress') return;
+
+  /*
+   * A pilot evades any launch, but nerve breaks only under CREDIBLE attack —
+   * a round with real launch geometry, or one that has already gone past the
+   * canopy. A maximum-range snap shot is a light in the sky; nobody jettisons
+   * for it. Without this distinction, spraying edge launches at everything was
+   * the cheapest way to break a formation, and a sector on weapons free farmed
+   * aborts that a disciplined shooter had to earn.
+   */
+  const credible = world.t - (aircraft.crediblyThreatenedAtS ?? -999) < 0.2;
+  if (!credible) return;
 
   // Nerve is tested once per engagement, not once per round. Otherwise a battery
   // could break a formation by firing single rounds at it from out of range.
@@ -223,10 +242,12 @@ function stepCruise(world, aircraft, dt) {
     world.damageAsset(asset, AIR_TYPES.cruise.weaponDamage, aircraft);
     aircraft.alive = false;
     aircraft.impacted = true;
+    world.markTracksDown(aircraft.id);
     world.log('alert', `${asset.label} — IMPACT`, { assetId: asset.id });
   } else if (dist(aircraft.pos, aim) < 0.6) {
     aircraft.alive = false;
     aircraft.impacted = true;
+    world.markTracksDown(aircraft.id);
     world.log('good', 'VAMPIRE IMPACT — EMPTY GROUND', { aircraftId: aircraft.id });
   }
 }
@@ -337,6 +358,7 @@ function stepDecoy(world, aircraft, dt) {
   if (aircraft.lifeS > AIR_TYPES.decoy.lifetimeS) {
     aircraft.alive = false;
     aircraft.expired = true;
+    world.markTracksDown(aircraft.id);
     world.log('info', 'CONTACT FADED — NO IMPACT', { aircraftId: aircraft.id });
   }
 }

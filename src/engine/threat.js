@@ -113,7 +113,10 @@ export function threatScore(world, track) {
   if (track.quality <= 0) return 0;
 
   const known = track.classification !== 'unknown' ? AIR_TYPES[track.classification] : null;
-  const typeWeight = known?.threatWeight ?? 1;
+  // A REVEALED decoy is plywood: it can hurt nothing, and the entire value of
+  // having worked out what it is lies in not spending another second or round
+  // on it. It keeps a whisper of score so it stays on the sorted list at all.
+  const typeWeight = track.classification === 'decoy' ? 0.02 : known?.threatWeight ?? 1;
 
   const againstFlight = typeWeight * flightThreat(world, track);
 
@@ -160,6 +163,30 @@ export function scoreAllTracks(world) {
 /** Tracks worth showing, most urgent first. */
 export function sortedTracks(world) {
   return [...world.tracks.values()].sort((a, b) => b.threat - a.threat);
+}
+
+/**
+ * Why a battery cannot take a track — in words, for the operator.
+ *
+ * `engagementValue` answers with a silent null, which is the right interface
+ * for the AI and the wrong one for a person: on the first watch of the game
+ * the recommended battery could not reach any contact in the mission (their
+ * altitude is above its ceiling), assignment printed a cheerful ENGAGING, and
+ * the refusal arrived fifteen seconds later as a dim log line. Returns null
+ * when the battery CAN engage.
+ */
+export function cannotEngageReason(world, site, track) {
+  if (!site.alive) return 'battery destroyed';
+  if (world.commandable && !world.commandable(site.id)) return 'not under your command';
+  const type = SAM_TYPES[site.type];
+  if (track.altM > type.maxAltM) {
+    return `above its ceiling (${Math.round(type.maxAltM / 1000)}km)`;
+  }
+  if (track.altM < type.minAltM) return `below its floor (${type.minAltM}m)`;
+  if (site.readyRounds <= 0) return 'no rounds on the rails';
+  if (site.engagements.length >= channelsFor(site)) return 'all channels engaged';
+  if (timeToInRangeS(site, track) === Infinity) return 'will never be in reach';
+  return null;
 }
 
 /**

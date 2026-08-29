@@ -438,6 +438,17 @@ export const DETECTION = {
   degradedCorrelationRadiusKm: 1.6,
   /** Seconds of observation to classify a track's type. */
   idTimeS: 26,
+  /**
+   * The attention tell. A decoy flies an impossibly steady line, and a track
+   * held continuously above this quality for this long gives it away at ANY
+   * range — but holding a track that well means keeping radars on it, which
+   * means radiating, which is the game's own currency. The alternative tell —
+   * simple proximity, inside the decoy's tellRangeKm — arrives after most
+   * batteries have already fired. Discrimination is a skill you pay for in
+   * exposure, or a fact you learn too late for free.
+   */
+  steadyTellQuality: 0.85,
+  steadyTellS: 30,
 };
 
 /** Surface-to-air engagement resolution. */
@@ -446,6 +457,50 @@ export const ENGAGEMENT = {
   edgeRangePk: 0.42,
   /** Fraction of max range inside which Pk is unpenalised. */
   sweetSpotFraction: 0.62,
+  /**
+   * A net-assigned engagement holds its fire while a closing target is still
+   * outside this fraction of max range, so the shot resolves near the sweet
+   * spot instead of at the edge. Crews self-engaging on weapons free do NOT
+   * hold — doctrine for a free battery is to engage at first opportunity, and
+   * that eagerness is what delegation costs: the same rounds, spent at the
+   * worst end of the Pk curve. This is the mechanical gap between a commander
+   * who assigns and a commander who walks away.
+   */
+  holdFireFraction: 0.72,
+  /**
+   * But never hold longer than this — a crossing target still gets shot.
+   * Sized for the long-range battalion: a striker closing at a quarter of a
+   * kilometre a second needs the better part of a minute to come down from
+   * the envelope edge to the hold-fire line, and a cap shorter than that
+   * quietly turned every assigned long-range shot back into an edge launch.
+   */
+  holdFireMaxS: 45,
+  /**
+   * Pk multiplier for a round LAUNCHED at the very edge of the envelope,
+   * independent of where it intercepts. A maximum-range shot arrives with no
+   * energy left to manoeuvre and opens on the worst possible guidance basket;
+   * chasing the target deeper into the envelope before firing is the whole
+   * craft of the assignment. Without this term, launch discipline was free —
+   * an inbound target closed the range before intercept and the edge penalty
+   * evaporated, which is why snap-shooting everything used to work.
+   */
+  edgeLaunchPk: 0.62,
+  /**
+   * Hold for a better shot only when there is time to spend. A target whose
+   * time-to-impact on its predicted objective is inside this many seconds is
+   * shot at the first opportunity whatever its range — a terminal cruise
+   * missile does not grant second chances, and a launch in the air is also
+   * suppression, forcing the evasive break that delays a weapon release.
+   * "Time available" is the first input of real fire control, and it is what
+   * separates the patient shot from the late one.
+   */
+  holdFireMinTtiS: 75,
+  /**
+   * Launch-quality Pk below which a shot cannot break the target's nerve.
+   * The round still flies and can still kill; it just does not read as the
+   * kind of attack anyone jettisons a war load over.
+   */
+  crediblePk: 0.3,
   /** Pk multiplier when the target is below 2x the system's minimum altitude. */
   lowAltPk: 0.6,
   /** Pk multiplier against a cruise-missile-sized target. */
@@ -676,16 +731,19 @@ export const COMMAND = {
 export const DIFFICULTY = {
   rookie: {
     id: 'rookie', label: 'CONSCRIPT',
+    blurb: 'A smaller raid, forgiving rounds, and a command with better things to do than read your log.',
     raidScale: 0.7, enemyPkMult: 0.7, friendlyPkMult: 1.15,
     armAccuracyMult: 0.7, directiveRate: 0.5, standingLossMult: 0.6,
   },
   veteran: {
-    id: 'veteran', label: 'OFFICER',
+    id: 'veteran', label: 'OFFICER', recommended: true,
+    blurb: 'The war as designed. Start here.',
     raidScale: 1, enemyPkMult: 1, friendlyPkMult: 1,
     armAccuracyMult: 1, directiveRate: 1, standingLossMult: 1,
   },
   nightmare: {
     id: 'nightmare', label: 'EXPENDABLE',
+    blurb: 'A third more aircraft, sharper suppression, and a political section that reads everything twice.',
     raidScale: 1.35, enemyPkMult: 1.2, friendlyPkMult: 0.88,
     armAccuracyMult: 1.2, directiveRate: 1.5, standingLossMult: 1.4,
   },

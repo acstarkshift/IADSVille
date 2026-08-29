@@ -255,6 +255,14 @@ export const SCENARIOS = [
     roles: ['net', 'crew', 'both'],
     seed: 'first-light-01',
     leakerTolerance: 1,
+    /**
+     * Sector command stays off the net for the first minute and a half. The
+     * player's first interactive decision on the teaching watch should be an
+     * assignment, not a timed loyalty test whose economics nothing has
+     * explained yet — the first directive used to land at forty-nine seconds,
+     * before the first contact had even classified hostile.
+     */
+    directiveGraceS: 95,
     playerBatteryId: 's_lance_w',
     brief: [
       'Four contacts crossed the border at height, tracking south. They are not trying to hide.',
@@ -373,8 +381,8 @@ export const SCENARIOS = [
     radars: [RADARS.ewrNorth, RADARS.gapSouth],
     waves: [
       { atS: 10, type: 'jammer', count: 2, bearingDeg: 0, spreadDeg: 70, spacingS: 20, distanceKm: 175, scalable: false },
-      { atS: 110, type: 'decoy', count: 6, bearingDeg: 350, spreadDeg: 40, spacingS: 14, altM: 5200 },
-      { atS: 170, type: 'striker', count: 5, bearingDeg: 10, spreadDeg: 34, spacingS: 22, altM: 5600 },
+      { atS: 70, type: 'decoy', count: 6, bearingDeg: 350, spreadDeg: 40, spacingS: 14, altM: 5200 },
+      { atS: 130, type: 'striker', count: 5, bearingDeg: 10, spreadDeg: 34, spacingS: 22, altM: 5600 },
       civilTransit(240),
       { atS: 330, type: 'decoy', count: 4, bearingDeg: 20, spreadDeg: 30, spacingS: 12, altM: 4800 },
       { atS: 380, type: 'striker', count: 4, bearingDeg: 340, spreadDeg: 28, spacingS: 20, altM: 180 },
@@ -764,7 +772,7 @@ export const SCENARIOS = [
        * strike aircraft carries two weapons, so nine aircraft is closer to
        * fifteen impacts than to nine.
        */
-      { atS: 110, type: 'striker', count: 5, bearingDeg: 25, spreadDeg: 22, spacingS: 20, altM: 6400,
+      { atS: 70, type: 'striker', count: 5, bearingDeg: 25, spreadDeg: 22, spacingS: 20, altM: 6400,
         targetAssetId: 'a_palace' },
       { atS: 250, type: 'cruise', count: 4, bearingDeg: 30, spreadDeg: 20, spacingS: 14, altM: 90,
         targetAssetId: 'a_palace' },

@@ -325,10 +325,9 @@ describe('the last watch, played', () => {
     while (world.phase === 'running' && n < 40000) { world.step(0.1); n++; }
     if (world.outcome.endingId === 'overrun') {
       assert.equal(world.pendingWaves.length, 0, 'every wave was flown');
-      // Same rule the engine uses: an aircraft running for the border with a
-      // hundred kilometres behind it is no longer part of the fight.
-      const stillFighting = world.aircraft.some((a) => a.alive && a.type !== 'civil'
-        && !(a.state === 'egress' && Math.hypot(a.pos.x, a.pos.y) > 110));
+      // The engine's own predicate: an aircraft that is running, unchased, and
+      // beyond everything that could still reach it is no longer in the fight.
+      const stillFighting = world.aircraft.some((a) => world.holdsWatchOpen(a));
       assert.ok(!stillFighting, 'and the raid finished its work');
     }
   });

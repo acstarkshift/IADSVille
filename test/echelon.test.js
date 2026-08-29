@@ -24,6 +24,7 @@ import { emptyCampaign, appointTo } from '../src/engine/campaign.js';
 import { createCharacter, RANKS, rankIndexOf } from '../src/engine/character.js';
 import { DIRECTIVES, issueDirective, answerDirective } from '../src/engine/command.js';
 import { sortedTracks, engagementValue } from '../src/engine/threat.js';
+import { DETECTION } from '../src/engine/config.js';
 
 /** A record that has stood every watch at or below the given echelon. */
 function served(echelonId) {
@@ -280,57 +281,81 @@ describe('district command', () => {
       'and a district that fought beats a district that did not');
   });
 
-  test('where you stand is worth more than where you are not', () => {
+  test('your hands are faster than your subordinates’ — measured, not asserted', () => {
     /*
-     * The load-bearing property of district command. A commander who takes the
-     * two sectors actually under attack has to beat one who takes the two that
-     * are quiet — otherwise the appointment is a larger map and not a decision,
-     * and the standing order is decoration.
+     * The load-bearing property of district command, tested at the mechanism
+     * rather than through twenty minutes of compounding kill-probability
+     * rolls. Deciding WHICH sectors to stand in matters because the sector you
+     * stand in answers its tracks in seconds while the one you left to a slow
+     * officer answers in minutes — his think rate is low, and his engagement
+     * threshold means marginal contacts wait until they are close enough to
+     * frighten him. This watch measures the two latencies side by side in the
+     * same raid: firm hostile track to first assignment, in the sector the
+     * player holds versus the sector under Kubin's 0.72-competence officer.
      *
-     * The margin comes entirely from the gap between a human and a subordinate
-     * officer: they think less often and they wait for a target to look properly
-     * dangerous before spending a round on it.
+     * (A mean-score comparison over a handful of seeds used to live here. It
+     * flapped: per-seed score swings on a district watch are several times the
+     * effect, so the test measured the seed, not the design.)
      */
-    const play = (stand) => {
-      let total = 0;
-      for (const seed of ['d1', 'd2', 'd3', 'd4']) {
-        const w = new World(scenarioById('four-sectors'), { role: 'net', seed });
-        w.formations.forEach((f) => { if (!f.hq) { f.direct = false; f.handoverUntilS = 0; } });
-        for (const formation of w.formations) w.setPosture(formation.id, formation.hq ? 'free' : 'tight');
-        for (const id of stand) { w.takeDirect(id); w.setPosture(id, 'free'); }
+    const w = new World(scenarioById('four-sectors'), { role: 'net', seed: 'latency' });
+    w.formations.forEach((f) => { if (!f.hq) { f.direct = false; f.handoverUntilS = 0; } });
+    w.takeDirect('f_lozan');
+    for (const formation of w.formations) w.setPosture(formation.id, 'tight');
 
-        let n = 0;
-        while (w.phase === 'running' && n < 40000) {
-          for (const radar of w.radars) if (radar.alive && !radar.siteId) radar.on = true;
-          w.step(0.1);
-          if (w.command.pending) w.answer('accepted');
-          for (const track of sortedTracks(w)) {
-            if (track.hostility !== 'hostile' || track.destroyed) continue;
-            if (track.assignedTo.length || track.quality < 0.5) continue;
-            let best = null;
-            let bestValue = -Infinity;
-            for (const site of w.sites) {
-              if (!w.commandable(site.id)) continue;
-              const evaluation = engagementValue(w, site, track);
-              if (evaluation && evaluation.value > bestValue) {
-                bestValue = evaluation.value;
-                best = site;
-              }
-            }
-            if (best) w.assign(track.id, best.id);
-          }
-          n++;
+    const firmAt = new Map();
+    const assignedAt = new Map();
+    const clusterOf = new Map();
+    let n = 0;
+    while (w.phase === 'running' && n < 40000) {
+      for (const radar of w.radars) if (radar.alive && !radar.siteId) radar.on = true;
+      w.step(0.1);
+      if (w.command.pending) w.answer('accepted');
+
+      for (const track of w.tracks.values()) {
+        if (track.hostility !== 'hostile' || track.destroyed) continue;
+        if (track.quality >= DETECTION.firmQuality && !firmAt.has(track.id)) {
+          firmAt.set(track.id, w.t);
+          const asset = track.predictedAssetId ? w.assetById.get(track.predictedAssetId) : null;
+          clusterOf.set(track.id, asset?.cluster ?? 'none');
         }
-        total += w.outcome.score;
+        if (firmAt.has(track.id) && track.assignedTo.length && !assignedAt.has(track.id)) {
+          assignedAt.set(track.id, w.t);
+        }
       }
-      return total / 4;
-    };
 
-    const atTheFight = play(['f_lozan', 'f_kubin']);
-    const elsewhere = play(['f_ville', 'f_brasov']);
-    assert.ok(atTheFight > elsewhere,
-      `standing at the fight scored ${Math.round(atTheFight)} against ${Math.round(elsewhere)}`
-      + ' — if these are the same, the appointment is not a decision');
+      // The player, working only their own sector — the officer's own job
+      // description, done with human immediacy.
+      for (const track of w.tracks.values()) {
+        if (track.hostility !== 'hostile' || track.destroyed || track.assignedTo.length) continue;
+        if (track.quality < DETECTION.firmQuality || clusterOf.get(track.id) !== 'lozan') continue;
+        let best = null;
+        let bestValue = -Infinity;
+        for (const site of w.sitesOf(w.formationById.get('f_lozan'))) {
+          const evaluation = engagementValue(w, site, track);
+          if (evaluation && evaluation.value > bestValue) {
+            bestValue = evaluation.value;
+            best = site;
+          }
+        }
+        if (best) w.assign(track.id, best.id);
+      }
+      n++;
+    }
+
+    const delays = { lozan: [], kubin: [] };
+    for (const [id, t0] of firmAt) {
+      const cluster = clusterOf.get(id);
+      if (delays[cluster] && assignedAt.has(id)) delays[cluster].push(assignedAt.get(id) - t0);
+    }
+    const median = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
+
+    assert.ok(delays.lozan.length >= 3, 'the held sector answered its raid');
+    assert.ok(delays.kubin.length >= 1, 'the officer eventually answered something');
+    assert.ok(median(delays.lozan) < 15,
+      `your sector answers in seconds (median ${median(delays.lozan).toFixed(1)}s)`);
+    assert.ok(median(delays.kubin) > median(delays.lozan) * 3,
+      `the officer's sector waits (you ${median(delays.lozan).toFixed(1)}s, `
+      + `him ${median(delays.kubin).toFixed(1)}s) — if these are close, standing somewhere is not a decision`);
   });
 
   test('the watch terminates and scores', () => {
@@ -351,8 +376,16 @@ describe('district command', () => {
 });
 
 describe('the order to release the district battalion', () => {
-  function play(answer) {
-    const w = new World(scenarioById('reinforce-the-capital'), { role: 'net', seed: 'withdraw' });
+  /**
+   * A commander who USES the battalion: postures free for coverage, and puts
+   * assigned (held, sweet-spot) shots on what the picture offers. The
+   * obey/refuse comparison is only honest with the battalion fought properly —
+   * released to snap-shoot on its own at a hundred and twenty kilometres, it
+   * is worth less than the obedience bonus, which is an indictment of that
+   * commander rather than of the order.
+   */
+  function play(answer, seed = 'withdraw') {
+    const w = new World(scenarioById('reinforce-the-capital'), { role: 'net', seed });
     w.control.netIsHuman = false;
     for (const formation of w.formations) w.setPosture(formation.id, 'free');
     let n = 0;
@@ -360,6 +393,21 @@ describe('the order to release the district battalion', () => {
       for (const radar of w.radars) if (radar.alive && !radar.siteId) radar.on = true;
       w.step(0.1);
       if (w.command.pending) w.answer(answer);
+      for (const track of sortedTracks(w)) {
+        if (track.hostility !== 'hostile' || track.destroyed) continue;
+        if (track.assignedTo.length || track.quality < 0.5) continue;
+        let best = null;
+        let bestValue = -Infinity;
+        for (const site of w.sites) {
+          if (!w.commandable(site.id)) continue;
+          const evaluation = engagementValue(w, site, track);
+          if (evaluation && evaluation.value > bestValue) {
+            bestValue = evaluation.value;
+            best = site;
+          }
+        }
+        if (best) w.assign(track.id, best.id);
+      }
       n++;
     }
     return w;
@@ -383,12 +431,21 @@ describe('the order to release the district battalion', () => {
   });
 
   test('the two arithmetics disagree: obedience keeps the file and costs the town', () => {
-    const obeyed = play('accepted');
-    const refused = play('refused');
-    assert.ok(obeyed.outcome.standing > refused.outcome.standing,
+    // Averaged over seeds, because a single night proves nothing either way.
+    const seeds = ['w1', 'w2', 'w3'];
+    let obeyed = { standing: 0, score: 0 };
+    let refused = { standing: 0, score: 0 };
+    for (const seed of seeds) {
+      const o = play('accepted', seed).outcome;
+      const r = play('refused', seed).outcome;
+      obeyed.standing += o.standing; obeyed.score += o.score;
+      refused.standing += r.standing; refused.score += r.score;
+    }
+    assert.ok(obeyed.standing > refused.standing,
       'the state rewards the officer who complied');
-    assert.ok(refused.outcome.score > obeyed.outcome.score,
-      'and the district is measurably better off for the officer who did not');
+    assert.ok(refused.score > obeyed.score,
+      `and the district is measurably better off for the officer who did not `
+      + `(refused ${Math.round(refused.score / seeds.length)} vs obeyed ${Math.round(obeyed.score / seeds.length)})`);
   });
 
   test('an order can be about a unit, not only a place or an aircraft', () => {

@@ -10,7 +10,7 @@
 
 import { SIM, SAM_TYPES, ASSET_TYPES, AIR_TYPES, COMMAND, DEFENCE_CLASSES } from '../engine/config.js';
 import { bearing, dist, len, clockString, clamp01 } from '../engine/math.js';
-import { sortedTracks } from '../engine/threat.js';
+import { sortedTracks, cannotEngageReason } from '../engine/threat.js';
 import { trackProfile } from '../engine/detection.js';
 import { engagementStatus } from './console.js';
 import { armTimeToImpact, channelsFor } from '../engine/doctrine.js';
@@ -352,6 +352,16 @@ export function renderBatteries(world, ui, els) {
     // board and still shooting; it simply is not taking orders from this seat.
     const detached = !world.commandable(site.id);
 
+    /*
+     * Fit against the selected contact, judged BEFORE the assignment. The
+     * first watch hands the player a battery whose ceiling is below every
+     * contact in the mission; the card now says so while they are deciding,
+     * instead of a cheerful ENGAGING followed by a quiet break-off.
+     */
+    const selectedTrack = ui.selectedTrackId ? world.tracks.get(ui.selectedTrackId) : null;
+    const unfit = selectedTrack && !detached && site.alive
+      ? cannotEngageReason(world, site, selectedTrack) : null;
+
     return `<div class="unit ${ui.selectedSiteId === site.id ? 'is-selected' : ''}
         ${!site.alive ? 'is-dead' : ''} ${mine ? 'is-mine' : ''}
         ${detached ? 'is-detached' : ''}" data-site="${site.id}">
@@ -361,6 +371,9 @@ export function renderBatteries(world, ui, els) {
         <span class="unit-type wrap" style="max-width:56%;text-align:right">
           ${esc(nomenclature ? pair(nomenclature) : type.label)}${crewed ? ` · ${esc(pair(STATUS.yourSeat))}` : ''}</span>
       </div>
+      ${unfit ? `<div class="unit-row unit-unfit" title="Against the selected contact">
+        <span>✗ CANNOT TAKE ${esc(selectedTrack.tn)} — ${esc(unfit.toUpperCase())}</span>
+      </div>` : ''}
 
       <div class="unit-row">
         ${lamp(STATUS.ready, site.alive && site.readyRounds > 0 && site.scootRemainingS === 0, { colour: 'green' })}
@@ -392,6 +405,12 @@ export function renderBatteries(world, ui, els) {
       <div class="unit-controls">
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
     { act: 'emcon', site: site.id, disabled: detached || !radar?.alive })}
+        <button class="pb ${site.emconOrder === 'ride' ? 'is-down' : ''}"
+          data-act="ride" data-site="${site.id}" ${detached || !radar?.alive ? 'disabled' : ''}
+          title="${esc(site.emconOrder === 'ride' ? CONTROLS.ride.hint : CONTROLS.perDoctrine.hint)} (G)">
+          <span class="lg"><b>${esc(CONTROLS.ride.tm)}</b><i>${esc(
+    site.emconOrder === 'ride' ? 'RIDING' : 'RIDE')}</i></span>
+        </button>
         <button class="pb" data-act="weapons" data-site="${site.id}" ${detached ? 'disabled' : ''}
           title="Weapons state — hold, tight or free (Q / W / Shift+E)">
           <span class="lg"><b>${esc(weaponsEntry.tm)}</b><i>WEAPONS ${esc(weaponsEntry.en)}</i></span>
@@ -526,10 +545,12 @@ export function renderCrewConsole(world, ui, els) {
 /* ------------------------------------------------------------ event log */
 
 export function renderEventLog(world, els, state) {
-  const from = state.lastEventIndex ?? 0;
-  if (world.events.length === from) return;
-  const fresh = world.events.slice(from);
-  state.lastEventIndex = world.events.length;
+  // Keyed on event seq, not array index — the list is capped, and an index
+  // comparison freezes the ticker for good the moment the cap is reached.
+  const from = state.lastEventSeq ?? 0;
+  const fresh = world.events.filter((e) => e.seq > from);
+  if (!fresh.length) return;
+  state.lastEventSeq = fresh[fresh.length - 1].seq;
 
   const html = fresh.map((e) => `<li class="kind-${e.kind}">
       <span class="t">${clockString(e.t)}</span><span>${esc(e.text)}</span></li>`).join('');

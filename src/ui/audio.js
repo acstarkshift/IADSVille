@@ -87,11 +87,29 @@ export class Audio {
     this.tone({ freq: 90, to: 400, dur: 0.6, type: 'triangle', gain: 0.12 });
   }
   splash() {
-    this.tone({ freq: 420, to: 110, dur: 0.32, type: 'triangle', gain: 0.22 });
-    this.noise({ dur: 0.25, gain: 0.18, freq: 900 });
+    // The payoff sound. Longer and prouder than it was: the fall, a thump with
+    // a mid-range body small speakers can actually reproduce, and a breath of
+    // debris. A kill earns two-thirds of a second.
+    this.tone({ freq: 520, to: 90, dur: 0.45, type: 'triangle', gain: 0.26 });
+    this.tone({ freq: 210, to: 140, dur: 0.3, type: 'sine', gain: 0.2, delay: 0.1 });
+    this.noise({ dur: 0.5, gain: 0.24, freq: 1100 });
+  }
+  /** A round gone past its target: flat, wrong, and impossible to miss-hear. */
+  miss() {
+    this.tone({ freq: 340, dur: 0.07, type: 'square', gain: 0.11 });
+    this.tone({ freq: 250, dur: 0.11, type: 'square', gain: 0.11, delay: 0.09 });
+  }
+  /** Weapons seen leaving an attacking aircraft — the bad kind of launch. */
+  release() {
+    this.tone({ freq: 980, to: 620, dur: 0.18, type: 'square', gain: 0.1 });
+    this.tone({ freq: 980, to: 620, dur: 0.18, type: 'square', gain: 0.1, delay: 0.22 });
   }
   impact() {
+    // The 70Hz body alone was below what a laptop speaker reproduces at all;
+    // the mid-range layer carries the hit on small hardware, the sub layer
+    // stays for anyone with real speakers.
     this.noise({ dur: 0.9, gain: 0.5, freq: 220 });
+    this.tone({ freq: 160, to: 90, dur: 0.5, type: 'triangle', gain: 0.24 });
     this.tone({ freq: 70, to: 35, dur: 0.8, type: 'sine', gain: 0.3 });
   }
   command() {
@@ -136,6 +154,21 @@ export class Audio {
   }
 
   /**
+   * The warble quickens as the round gets close. A fixed tone running for two
+   * minutes straight decays from terror into wallpaper; a rhythm that tracks
+   * the actual time-to-impact keeps meaning something, the way the last
+   * seconds of it mean the most.
+   */
+  setArmUrgency(etaS) {
+    if (!this.armOsc || !Number.isFinite(etaS)) return;
+    const urgency = Math.max(0, Math.min(1, 1 - etaS / 20));
+    try {
+      this.armOsc.lfo.frequency.value = 5 + urgency * 12;
+      this.armOsc.env.gain.value = 0.05 + urgency * 0.05;
+    } catch { /* context torn down mid-frame */ }
+  }
+
+  /**
    * The heartbeat. Level rises as something inbound gets close to releasing on
    * a defended asset; it is the only sound that plays continuously, and it is
    * meant to be felt rather than noticed.
@@ -147,6 +180,10 @@ export class Audio {
     const interval = 1.1 - level * 0.65;
     if (now - (this.lastPulseAt ?? 0) < interval) return;
     this.lastPulseAt = now;
+    // Two layers: the sub-bass thump for hardware that has it, and a quiet
+    // octave-up partial for the laptop speakers on which the original 58Hz
+    // sine simply did not exist.
     this.tone({ freq: 58 + level * 22, dur: 0.16, type: 'sine', gain: 0.05 + level * 0.13 });
+    this.tone({ freq: 116 + level * 44, dur: 0.14, type: 'sine', gain: 0.02 + level * 0.05 });
   }
 }
