@@ -366,9 +366,15 @@ export class Scope {
         ctx.arc(q.x, q.y, (town.capital ? 3 : 2) * this.dpr, 0, TAU);
         ctx.fill();
         this.queueLabel({
-          text: town.name,
+          // Both names, always: the Cyrillic is what is printed on the map
+          // sheet, and the English is what makes it readable to everyone else.
+          lines: [town.name, town.en],
+          colours: [
+            withAlpha(p.inkDim, town.capital ? 0.7 : 0.5),
+            withAlpha(p.inkDim, town.capital ? 0.5 : 0.34),
+          ],
+          colour: withAlpha(p.inkDim, 0.5),
           x: q.x, y: q.y,
-          colour: withAlpha(p.inkDim, town.capital ? 0.7 : 0.5),
           priority: town.capital ? 8 : 4,
           offset: 5,
         });

@@ -47,7 +47,7 @@ export function renderMenu(host, state, actions) {
 
     <div class="card record-card">
       <div class="record-stamp">${esc(tier.label)}</div>
-      <h3>Personnel file${character ? ` — ${esc(rank.tm)} ${esc(character.name)}` : ''}</h3>
+      <h3>Personnel file${character ? ` — ${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}` : ''}</h3>
       <div class="score-grid">
         <div class="score-cell"><label>ЗВАНИЕ · RANK</label><b style="font-size:13px">${esc(rank?.en ?? '—')}</b></div>
         <div class="score-cell"><label>АТТЕСТАЦИЯ · STANDING</label><b>${Math.round(campaign.standing)}</b></div>
@@ -154,7 +154,7 @@ export function renderBriefing(host, state) {
     <p class="subtitle">${esc(mission.subtitle)}</p>
     ${character ? `<div class="card record-card" style="padding:9px 14px">
       <div class="record-stamp">${esc(STATE.serviceShort.tm)}</div>
-      <p style="margin:0">Posting order for <b>${esc(rank.tm)} ${esc(character.name)}</b>.
+      <p style="margin:0">Posting order for <b>${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}</b>.
       Origin: ${esc(backgroundOf(character).en)}. Home: ${esc(STATE.town.en)}, ${esc(STATE.country.en)}.
       ${character.wounded ? '<span style="color:var(--hostile)">Returned to duty against medical advice.</span>' : ''}</p>
     </div>` : ''}

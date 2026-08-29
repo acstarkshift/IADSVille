@@ -14,7 +14,7 @@ import { sortedTracks } from '../engine/threat.js';
 import { trackProfile } from '../engine/detection.js';
 import { engagementStatus } from './console.js';
 import { armTimeToImpact, channelsFor } from '../engine/doctrine.js';
-import { CONTROLS, STATUS, EQUIPMENT, PLATES, legend } from './lexicon.js';
+import { CONTROLS, STATUS, EQUIPMENT, PLATES, legend, pair, pairHtml } from './lexicon.js';
 import { rankOf } from '../engine/character.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
@@ -30,8 +30,9 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
 function lamp(entry, lit, { colour = '', blinking = false, caption = null } = {}) {
   const classes = ['lamp', lit ? 'is-lit' : '', colour ? `is-${colour}` : '', blinking ? 'blinking' : '']
     .filter(Boolean).join(' ');
-  return `<span class="${classes}" title="${esc(entry.en)}">
-    <span class="lamp-dome"></span>${esc(caption ?? entry.tm)}</span>`;
+  return `<span class="${classes}" title="${esc(entry.hint ?? entry.en)}">
+    <span class="lamp-dome"></span>
+    <span class="lg"><b>${esc(caption ?? entry.tm)}</b><i>${esc(entry.en)}</i></span></span>`;
 }
 
 /** A bat-handle toggle. Lever up is on, and the position is the state. */
@@ -199,7 +200,8 @@ export function renderBatteries(world, ui, els) {
       <span class="screw ${'abcd'[index % 4]}"></span>
       <div class="unit-head">
         <span class="unit-name">${index + 1}. ${esc(site.name)}</span>
-        <span class="unit-type">${esc(nomenclature?.tm ?? type.label)}${crewed ? ` · ${STATUS.yourSeat.tm}` : ''}</span>
+        <span class="unit-type wrap" style="max-width:56%;text-align:right">
+          ${esc(nomenclature ? pair(nomenclature) : type.label)}${crewed ? ` · ${esc(pair(STATUS.yourSeat))}` : ''}</span>
       </div>
 
       <div class="unit-row">
@@ -214,18 +216,18 @@ export function renderBatteries(world, ui, els) {
 
       <div class="unit-row">
         <span class="rail" title="${site.readyRounds} ready of ${site.magazine} stored">${rail}</span>
-        <span class="unit-type" title="${esc(DEFENCE_CLASSES[type.class].en)} — ${esc(DEFENCE_CLASSES[type.class].blurb)}">
-          ${esc(DEFENCE_CLASSES[type.class].tm)}
+        <span class="unit-type wrap" title="${esc(DEFENCE_CLASSES[type.class].blurb)}">
+          ${esc(pair(DEFENCE_CLASSES[type.class]))}
         </span>
       </div>
       <div class="unit-row">
-        <span class="unit-type" style="max-width:none">${site.readyRounds}/${site.magazine}
-          · ${STATUS.channels.tm} ${site.engagements.length}/${channelsFor(site)}
-          · ${type.minRangeKm}–${type.maxRangeKm} КМ
-          · ${Math.round(type.minAltM)}–${Math.round(type.maxAltM / 1000)}К М</span>
+        <span class="unit-type wrap">${site.readyRounds}/${site.magazine} ROUNDS
+          · ${esc(pair(STATUS.channels))} ${site.engagements.length}/${channelsFor(site)}
+          · ${type.minRangeKm}–${type.maxRangeKm} КМ/KM
+          · ${Math.round(type.minAltM)}–${Math.round(type.maxAltM / 1000)}К М/M</span>
       </div>
       ${busyLabel ? `<div class="unit-row">
-        <span class="unit-type">${esc(busyLabel.entry.tm)}</span>
+        <span class="unit-type">${esc(pair(busyLabel.entry))}</span>
         <span class="gauge is-warn"><i style="width:${Math.round(busyLabel.frac * 100)}%"></i></span>
       </div>` : ''}
 
@@ -252,8 +254,8 @@ export function renderBatteries(world, ui, els) {
     return `<div class="unit" data-radar="${radar.id}">
       <span class="screw ${'abcd'[index % 4]}"></span>
       <div class="unit-head">
-        <span class="unit-name">${esc(nomenclature?.tm ?? radar.label)}</span>
-        <span class="unit-type">${radar.alive ? `${radar.rangeKm} КМ` : STATUS.destroyed.tm}</span>
+        <span class="unit-name" title="${esc(nomenclature?.en ?? radar.label)}">${esc(nomenclature ? nomenclature.tm : radar.label)}</span>
+        <span class="unit-type">${radar.alive ? `${radar.rangeKm} КМ/KM` : esc(pair(STATUS.destroyed))}</span>
       </div>
       <div class="unit-row">
         ${lamp(radar.state === 'warming' ? STATUS.warming : STATUS.radiating,
@@ -263,7 +265,7 @@ export function renderBatteries(world, ui, els) {
     caption: Number.isFinite(armEta) ? `${STATUS.armWarning.tm} ${Math.ceil(armEta)}s` : STATUS.armWarning.tm })}
       </div>
       <div class="unit-row">
-        <span class="unit-type">${esc(STATUS.exposure.tm)}</span>
+        <span class="unit-type">${esc(pair(STATUS.exposure))}</span>
         <span class="gauge ${radar.exposure > 0.65 ? 'is-hot' : radar.exposure > 0.35 ? 'is-warn' : ''}">
           <i style="width:${Math.round(radar.exposure * 100)}%"></i></span>
         <span class="unit-type">${Math.round(radar.exposure * 100)}%</span>
@@ -306,7 +308,7 @@ export function renderCrewConsole(world, ui, els) {
   const envelopeDetail = !status.hasTarget ? '—'
     : status.inEnvelope ? `${Math.round(status.rangeKm)} КМ`
       : status.timeToRangeS !== null ? `+${Math.ceil(status.timeToRangeS)}s`
-        : 'НЕТ РЕШЕНЬЯ';
+        : pair(STATUS.noSolution);
 
   const row = (entry, value, mood = '') =>
     `<div class="crew-row ${mood}">${legend(entry, { inline: true })}<b>${esc(value)}</b></div>`;
@@ -316,7 +318,8 @@ export function renderCrewConsole(world, ui, els) {
       <span class="screw a"></span>
       <div class="unit-head">
         <span class="unit-name">${esc(site.name)}</span>
-        <span class="unit-type">${esc(nomenclature?.tm ?? type.label)}</span>
+        <span class="unit-type" title="${esc(nomenclature?.en ?? type.label)}">
+          ${esc(nomenclature ? pair(nomenclature) : type.label)}</span>
       </div>
 
       <div class="unit-row" style="margin-top:7px">
@@ -328,7 +331,7 @@ export function renderCrewConsole(world, ui, els) {
 
       ${row(STATUS.target, status.trackLabel)}
       ${row(envelope, envelopeDetail, status.inEnvelope ? 'is-good' : '')}
-      ${row(STATUS.sequence, `${sequence.tm}${status.reactionRemainingS > 0 ? ` ${status.reactionRemainingS.toFixed(1)}s` : ''}`)}
+      ${row(STATUS.sequence, `${pair(sequence)}${status.reactionRemainingS > 0 ? ` ${status.reactionRemainingS.toFixed(1)}s` : ''}`)}
       ${row(STATUS.channels, `${status.channelsUsed}/${status.channels}`)}
       ${row(CONTROLS.reload, `${site.readyRounds} / ${site.magazine}`)}
 
@@ -354,9 +357,9 @@ export function renderCrewConsole(world, ui, els) {
         <span class="unit-type">${Math.round((radar?.exposure ?? 0) * 100)}%</span>
       </div>
       ${site.crewLosses ? `<div class="crew-row is-hot">${legend(STATUS.crew, { inline: true })}
-        <b>${site.crewLosses} ПОТЕРЬ</b></div>` : ''}
+        <b>${site.crewLosses} ПОТЕРЬ / CASUALTIES</b></div>` : ''}
 
-      <div class="placard" style="margin-top:9px">${esc(PLATES.warning)}<br>${esc(PLATES.warningEn)}</div>
+      <div class="placard" style="margin-top:9px">${esc(PLATES.warning.tm)}<br>${esc(PLATES.warning.en)}</div>
     </div>`;
 }
 
@@ -419,9 +422,11 @@ export function renderScopeSide(world, ui, els, rangeKm) {
       ${legend(CONTROLS.range, {})}
       <span class="knob-readout" id="range-readout"></span>
       <span class="data-plate" style="margin-top:auto">
-        <b>${esc(PLATES.type)}</b><br>${esc(PLATES.works)}<br>${esc(PLATES.factory)}
+        <b>${esc(PLATES.type.tm)}</b> ${esc(PLATES.type.en)}<br>
+        ${esc(PLATES.works.tm)}<br>${esc(PLATES.works.en)}<br>
+        ${esc(PLATES.factory.tm)}<br>${esc(PLATES.factory.en)}
       </span>
-      <span class="placard">${esc(PLATES.caution)}<br>${esc(PLATES.cautionEn)}</span>`;
+      <span class="placard">${esc(PLATES.caution.tm)}<br>${esc(PLATES.caution.en)}</span>`;
   }
 
   const pointer = els.scopeSide.querySelector('.knob-pointer');

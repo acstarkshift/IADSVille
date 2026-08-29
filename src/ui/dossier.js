@@ -41,7 +41,7 @@ export function renderEnlistment(host, state) {
     <p class="subtitle">SERVICE RECORD · ${esc(STATE.serviceShort.tm)} · ${esc(STATE.service.en)}</p>
 
     <div class="card record-card">
-      <div class="record-stamp">${esc(PLATES.standard)}</div>
+      <div class="record-stamp">${esc(PLATES.standard.tm)} · ${esc(PLATES.standard.en)}</div>
       <h3>Enlistment</h3>
       <p style="color:var(--ink-dim)">You are being posted to the air defence sector covering the valley
       of ${esc(STATE.town.en)} — the village you are from. The scope you will sit at is centred on your
@@ -107,18 +107,21 @@ export function renderDossier(host, state) {
 
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title" style="font-size:26px">${esc(rank.tm)} ${esc(character.name)}</h1>
-    <p class="subtitle">${esc(rank.en)} · ${esc(STATE.serviceShort.tm)} · ДЕЛО № ${esc(fileNumber(character))}</p>
+    <p class="subtitle">${esc(rank.en)} · ${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}
+      · ДЕЛО № / FILE NO. ${esc(fileNumber(character))}</p>
 
     <div class="card record-card">
       <div class="record-stamp">${esc(tier.label)}</div>
       <div class="score-grid">
-        <div class="score-cell"><label>ЗВАНИЕ · RANK</label><b style="font-size:13px">${esc(rank.tm)}</b></div>
+        <div class="score-cell"><label>ЗВАНИЕ · RANK</label>
+          <b style="font-size:12px">${esc(rank.tm)}</b>
+          <span style="display:block;font-size:9px;color:var(--ink-dim)">${esc(rank.en)}</span></div>
         <div class="score-cell"><label>ОПЫТ · EXPERIENCE</label><b>${character.xp}</b></div>
         <div class="score-cell"><label>ВАХТ · WATCHES</label><b>${character.watches}</b></div>
         <div class="score-cell"><label>АТТЕСТАЦИЯ · STANDING</label><b>${Math.round(state.campaign.standing)}</b></div>
         <div class="score-cell ${character.points ? 'is-good' : ''}"><label>ПОДГОТОВКА · TRAINING PTS</label><b>${character.points}</b></div>
         <div class="score-cell ${character.wounded ? 'is-bad' : ''}"><label>СОСТОЯНИЕ · CONDITION</label>
-          <b style="font-size:13px">${character.wounded ? 'РАНЕН · INJURED' : 'ГОДЕН · FIT'}</b></div>
+          <b style="font-size:12px">${character.wounded ? 'РАНЕН · INJURED' : 'ГОДЕН · FIT'}</b></div>
       </div>
       ${next ? `<div style="margin-top:10px">
         <div class="crew-row" style="border:0"><span>Toward ${esc(next.rank.tm)} · ${esc(next.rank.en)}</span>
@@ -164,7 +167,8 @@ export function renderDossier(host, state) {
       <h3>Particulars</h3>
       <table class="ledger">
         <tr><td>Origin</td><td>${esc(bg.tm)} · ${esc(bg.en)}</td></tr>
-        <tr><td>Home</td><td>${esc(character.home)} · ${esc(STATE.town.en)}, ${esc(STATE.country.en)}</td></tr>
+        <tr><td>Home</td><td>${esc(character.home)} · ${esc(STATE.town.en)},
+          ${esc(STATE.country.tm)} · ${esc(STATE.country.en)}</td></tr>
         <tr><td>Household</td><td>${esc(householdOf(character).en)}</td></tr>
         <tr><td>Quarter</td><td>${esc(districtOf(character).tm)} · ${esc(districtOf(character).en)}</td></tr>
         <tr><td>Watches stood</td><td>${character.watches}</td></tr>
@@ -190,10 +194,22 @@ export function renderDossier(host, state) {
       <table class="ledger">
         ${[...character.record].reverse().slice(0, 12).map((entry) => {
     const text = {
-      promotion: () => `Promoted to ${RANKS.find((r) => r.id === entry.id)?.tm ?? ''}`,
-      demotion: () => `Reduced to ${RANKS.find((r) => r.id === entry.id)?.tm ?? ''}`,
-      decoration: () => `Awarded ${DECORATIONS[entry.id]?.tm ?? ''}`,
-      training: () => `Qualified ${SKILLS[entry.id]?.tm ?? ''}`,
+      promotion: () => {
+        const r = RANKS.find((x) => x.id === entry.id);
+        return r ? `Promoted to ${r.tm} · ${r.en}` : 'Promoted';
+      },
+      demotion: () => {
+        const r = RANKS.find((x) => x.id === entry.id);
+        return r ? `Reduced to ${r.tm} · ${r.en}` : 'Reduced in rank';
+      },
+      decoration: () => {
+        const d = DECORATIONS[entry.id];
+        return d ? `Awarded ${d.tm} · ${d.en}` : 'Decorated';
+      },
+      training: () => {
+        const k = SKILLS[entry.id];
+        return k ? `Qualified ${k.tm} · ${k.en}` : 'Qualified';
+      },
       wounded: () => 'Position overrun. Evacuated.',
     }[entry.kind]?.() ?? entry.kind;
     const mood = entry.kind === 'demotion' || entry.kind === 'wounded' ? 'down' : 'up';
@@ -226,8 +242,9 @@ export function serviceSummary(character, service, campaign) {
     rows.push(`<tr><td><b>Reduced in rank</b></td><td class="down">${esc(service.demotion.tm)} · ${esc(service.demotion.en)}</td></tr>`);
   }
   for (const decoration of service.awarded) {
-    rows.push(`<tr><td><b>${esc(decoration.tm)}</b><br><span style="color:var(--ink-dim)">${esc(decoration.blurb)}</span></td>
-      <td class="up">${esc(decoration.en)}</td></tr>`);
+    rows.push(`<tr><td><b>${esc(decoration.tm)}</b> · ${esc(decoration.en)}<br>
+      <span style="color:var(--ink-dim)">${esc(decoration.blurb)}</span></td>
+      <td class="up">AWARDED</td></tr>`);
   }
   if (character.wounded) {
     rows.push('<tr><td><b>Wounded</b></td><td class="down">Your position was overrun</td></tr>');
@@ -243,8 +260,8 @@ export function serviceSummary(character, service, campaign) {
   }
 
   return `<div class="card record-card">
-    <div class="record-stamp">ДЕЛО № ${esc(fileNumber(character))}</div>
-    <h3>Service record — ${esc(rank.tm)} ${esc(character.name)}</h3>
+    <div class="record-stamp">ДЕЛО № / FILE ${esc(fileNumber(character))}</div>
+    <h3>Service record — ${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}</h3>
     <table class="ledger">${rows.join('')}</table>
     ${character.points ? `<p style="color:var(--accent);margin-top:8px">
       ${character.points} training point${character.points > 1 ? 's' : ''} unspent — open your dossier.</p>` : ''}

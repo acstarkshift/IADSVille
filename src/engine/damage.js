@@ -131,12 +131,14 @@ export function damageAsset(world, asset, amount, source) {
     if (home && home.id === district.id) {
       world.stats.homeDistrictHit = true;
       world.log('alert',
-        `${asset.label} — ${district.tm} КВАРТАЛ СТРУЧЁН. ${casualties} CASUALTIES`,
+        `${asset.label} — ${district.tm} / ${district.en.toUpperCase()} STRUCK. `
+        + `${casualties} CASUALTIES`,
         { assetId: asset.id, severity: 'high', personal: true });
     } else {
-      world.log('alert', `${asset.label} — ${district.tm} STRUCK. ${casualties} CASUALTIES REPORTED`, {
-        assetId: asset.id, severity: 'high',
-      });
+      world.log('alert',
+        `${asset.label} — ${district.tm} / ${district.en.toUpperCase()} STRUCK. `
+        + `${casualties} CASUALTIES REPORTED`,
+        { assetId: asset.id, severity: 'high' });
     }
     world.standingDelta(COMMAND.standing.perCivilianHit, 'civilian area struck');
   } else {

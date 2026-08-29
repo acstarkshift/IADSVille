@@ -314,6 +314,11 @@
 /* The rack is a fixed width; nothing in a unit strip may push past it. */
 .unit { overflow: hidden; }
 .unit-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 52%; }
+/* Bilingual lines are twice as long as monolingual ones; where the gloss
+   matters more than the single-line layout, let it wrap instead of truncate. */
+.unit-type.wrap {
+  white-space: normal; overflow: visible; max-width: none; line-height: 1.35;
+}
 .unit-head { min-width: 0; }
 .unit-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

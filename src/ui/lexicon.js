@@ -66,6 +66,7 @@ export const STATUS = {
   noGuidance: { tm: 'НЕТ ВЕДЕНЬЯ', en: 'NO GUIDANCE' },
   inEnvelope: { tm: 'В ЗОНЕ', en: 'IN ENVELOPE' },
   outOfZone: { tm: 'ВНЕ ЗОНЫ', en: 'OUT OF ZONE' },
+  noSolution: { tm: 'НЕТ РЕШЕНЬЯ', en: 'NO FIRING SOLUTION' },
   armWarning: { tm: 'ОБЛУЧЕНЬЕ', en: 'INBOUND ARM', hint: 'a round is homing on you' },
   fusion: { tm: 'ЕДИНАЯ КАРТА', en: 'FUSED PICTURE' },
   localControl: { tm: 'МЕСТНОЕ УПР.', en: 'LOCAL CONTROL' },
@@ -110,15 +111,13 @@ export const EQUIPMENT = {
  * but they are the details that make a panel feel manufactured rather than drawn.
  */
 export const PLATES = {
-  type: 'ТИП 4М-2',
-  works: 'ЗАВ. № 118-44',
-  year: 'ГОД ВЫПУСКА 19__',
-  factory: 'ЗАВОД ИМ. КОРНЕЛА',
-  standard: 'ТМСТ 4471-Б',
-  warning: 'ВЫСОКОЕ НАПРЯЖЕНИЕ',
-  warningEn: 'HIGH VOLTAGE',
-  caution: 'НЕ ВСКРЫВАТЬ ПОД ТОКОМ',
-  cautionEn: 'DO NOT OPEN UNDER POWER',
+  type: { tm: 'ТИП 4М-2', en: 'TYPE 4M-2' },
+  works: { tm: 'ЗАВ. № 118-44', en: 'WORKS NO. 118-44' },
+  year: { tm: 'ГОД ВЫПУСКА 19__', en: 'YEAR OF MANUFACTURE 19__' },
+  factory: { tm: 'ЗАВОД ИМ. КОРНЕЛА', en: 'KORNEL WORKS' },
+  standard: { tm: 'ТМСТ 4471-Б', en: 'TMST 4471-B' },
+  warning: { tm: 'ВЫСОКОЕ НАПРЯЖЕНИЕ', en: 'HIGH VOLTAGE' },
+  caution: { tm: 'НЕ ВСКРЫВАТЬ ПОД ТОКОМ', en: 'DO NOT OPEN UNDER POWER' },
 };
 
 /**
@@ -138,6 +137,32 @@ export function legend(entry, { inline = false, glossOnly = false } = {}) {
 export function legendText(entry, { both = true } = {}) {
   if (!entry) return '';
   return both ? `${entry.tm} · ${entry.en}` : entry.tm;
+}
+
+/**
+ * Pair any Cyrillic string with its English counterpart.
+ *
+ * The rule this enforces is that no Cyrillic ever appears on this console
+ * without its translation *beside* it — not in a tooltip, not on hover, beside
+ * it. Export-marked equipment is genuinely stencilled this way, and it means a
+ * player who cannot read the Cyrillic never has to guess what a control does,
+ * or what a place is called, or what a lamp is telling them.
+ *
+ * Takes either a {tm, en} entry or the two strings directly.
+ */
+export function pair(tmOrEntry, en) {
+  if (tmOrEntry && typeof tmOrEntry === 'object') {
+    return tmOrEntry.en ? `${tmOrEntry.tm} · ${tmOrEntry.en}` : tmOrEntry.tm;
+  }
+  return en ? `${tmOrEntry} · ${en}` : String(tmOrEntry ?? '');
+}
+
+/** Markup form of the same pairing: Cyrillic, then the gloss in smaller type. */
+export function pairHtml(tmOrEntry, en) {
+  const tm = typeof tmOrEntry === 'object' ? tmOrEntry?.tm : tmOrEntry;
+  const gloss = typeof tmOrEntry === 'object' ? tmOrEntry?.en : en;
+  if (!tm) return '';
+  return `<span class="lg"><b>${escapeHtml(tm)}</b>${gloss ? `<i>${escapeHtml(gloss)}</i>` : ''}</span>`;
 }
 
 function escapeHtml(s) {
