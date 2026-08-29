@@ -24,9 +24,6 @@ import {
 } from './math.js';
 import { launchArm, releaseWeapons } from './weapons.js';
 
-let aircraftSeq = 0;
-export function resetAircraftIds() { aircraftSeq = 0; }
-
 /** Callsigns give the log some texture: "RAID 04 TURNING BACK" reads better than an id. */
 function callsign(type, n) {
   const prefix = {
@@ -36,11 +33,13 @@ function callsign(type, n) {
   return `${prefix} ${String(n).padStart(2, '0')}`;
 }
 
+/** As with rounds, the sequence number comes from the world that owns it. */
 export function createAircraft(spec) {
   const type = AIR_TYPES[spec.type];
-  const n = ++aircraftSeq;
+  const n = spec.seq;
   return {
     id: `air${n}`,
+    seq: n,
     type: spec.type,
     name: spec.name ?? callsign(spec.type, n),
     pos: { ...spec.pos },
@@ -138,7 +137,8 @@ function evasiveStep(world, aircraft, dt) {
   if (!threat) return false;
   const toThreat = bearing(aircraft.pos, threat.pos);
   // Beam: put the threat on the wing, which is where the geometry hurts it most.
-  const beamHdg = wrapDeg(toThreat + (aircraft.id.charCodeAt(3) % 2 ? 90 : -90));
+  // Which wing is fixed per aircraft so the manoeuvre is stable and reproducible.
+  const beamHdg = wrapDeg(toThreat + (aircraft.seq % 2 ? 90 : -90));
   const type = AIR_TYPES[aircraft.type];
   aircraft.hdg = turnToward(aircraft.hdg, beamHdg, type.turnRate * dt);
   advance(aircraft, dt);

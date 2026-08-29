@@ -123,6 +123,9 @@ export const DIRECTIVES = {
   },
 };
 
+/** However well the watch went otherwise, a shoot-down caps the assessment here. */
+const CIVIL_SHOOTDOWN_CEILING = 12;
+
 export function createCommandState() {
   return {
     standing: COMMAND.startingStanding,
@@ -268,6 +271,14 @@ export function stepCommand(world, dt) {
  * one thing; standing as assessed afterwards, with the log in front of them, is
  * another.
  */
+/**
+ * End-of-mission accounting for accepted orders.
+ *
+ * Order matters here, because standing is clamped at zero. Credits are settled
+ * first and the unforgivable item last: otherwise a crew that shot down an
+ * airliner could have the penalty swallowed by the floor and then climb back out
+ * on "no batteries lost", which is precisely backwards.
+ */
 export function settleDirectives(world) {
   const c = world.command.constraints;
 
@@ -288,8 +299,11 @@ export function settleDirectives(world) {
     }
   }
 
-  if (world.stats.civilianAircraftShot > 0) {
-    standingDelta(world, -30 * world.stats.civilianAircraftShot, 'engaged a civil aircraft');
+  if (world.stats.assetsLost === 0) {
+    standingDelta(world, COMMAND.standing.cleanSweep, 'all defended assets intact');
+  }
+  if (world.stats.sitesLost === 0) {
+    standingDelta(world, COMMAND.standing.siteIntact, 'no batteries lost');
   }
 
   const darkMinutes = Math.max(0, world.command.darkTimeS - COMMAND.standing.darkGraceS) / 60;
@@ -302,10 +316,13 @@ export function settleDirectives(world) {
     standingDelta(world, COMMAND.standing.perWastedRound * wasted, `${wasted} rounds over allocation`);
   }
 
-  if (world.stats.assetsLost === 0) {
-    standingDelta(world, COMMAND.standing.cleanSweep, 'all defended assets intact');
-  }
-  if (world.stats.sitesLost === 0) {
-    standingDelta(world, COMMAND.standing.siteIntact, 'no batteries lost');
+  // Last, and decisive. A civil shoot-down is the one outcome no amount of
+  // otherwise-good work offsets, and it caps the assessment outright.
+  if (world.stats.civilianAircraftShot > 0) {
+    standingDelta(world, -30 * world.stats.civilianAircraftShot, 'engaged a civil aircraft');
+    if (world.command.standing > CIVIL_SHOOTDOWN_CEILING) {
+      const drop = CIVIL_SHOOTDOWN_CEILING - world.command.standing;
+      standingDelta(world, drop, 'assessment capped: civil aircraft destroyed');
+    }
   }
 }

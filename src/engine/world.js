@@ -22,8 +22,8 @@ import {
 import { makeRng } from './rng.js';
 import { dist, len, bearing, polar, clamp, clamp01 } from './math.js';
 import { stepDetection } from './detection.js';
-import { stepMissiles, resetMissileIds, inEnvelope } from './weapons.js';
-import { stepAircraft, createAircraft, resetAircraftIds } from './ai.js';
+import { stepMissiles, inEnvelope } from './weapons.js';
+import { stepAircraft, createAircraft } from './ai.js';
 import { scoreAllTracks } from './threat.js';
 import {
   stepEngagements, runAiBattleManager, runBatteryCrews, runAiEmcon,
@@ -35,8 +35,6 @@ import {
 import {
   createCommandState, stepCommand, standingDelta, settleDirectives, answerDirective, tierFor,
 } from './command.js';
-
-let radarSeq = 0;
 
 export class World {
   constructor(scenario, options = {}) {
@@ -56,9 +54,9 @@ export class World {
     this.nextTn = 1;
     this.aiThinkTimerS = 0;
 
-    resetMissileIds();
-    resetAircraftIds();
-    radarSeq = 0;
+    // Id sequences are per world, so two worlds in one process stay independent
+    // and a seed always replays the same way.
+    this.seq = { aircraft: 0, missile: 0, radar: 0 };
 
     this.assets = [];
     this.sites = [];
@@ -126,9 +124,11 @@ export class World {
     }
   }
 
+  nextMissileSeq() { return ++this.seq.missile; }
+
   addRadar(spec, siteId = null) {
     const radar = {
-      id: `rdr${++radarSeq}`,
+      id: `rdr${++this.seq.radar}`,
       siteId,
       kind: spec.kind,
       label: spec.label,
@@ -467,6 +467,7 @@ export class World {
         : this.pickRaidTarget(spec.type);
 
       const aircraft = createAircraft({
+        seq: ++this.seq.aircraft,
         type: spec.type,
         pos,
         altM: spec.altM ?? type.cruiseAltM,

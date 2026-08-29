@@ -82,11 +82,19 @@ export function turnToward(from, to, maxDeg) {
   return wrapDeg(from + clamp(d, -maxDeg, maxDeg));
 }
 
-/** True if the sweep moving from a0 to a1 (clockwise) crossed bearing b. */
+/**
+ * True if the beam moving clockwise from a0 to a1 crossed bearing b.
+ *
+ * The interval is half-open — (a0, a1] — which matters more than it looks. With
+ * a closed interval a target sitting exactly on a step boundary is counted both
+ * when the beam arrives at it and again when the next step departs from it,
+ * giving that one bearing twice everyone else's update rate.
+ */
 export function sweptPast(a0, a1, b) {
   const span = wrapDeg(a1 - a0);
   if (span <= 0) return false;
-  return wrapDeg(b - a0) <= span;
+  const offset = wrapDeg(b - a0);
+  return offset > 0 && offset <= span;
 }
 
 /**

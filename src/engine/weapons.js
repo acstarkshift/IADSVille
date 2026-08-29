@@ -127,13 +127,16 @@ export function computeArmPk(radar, missile, difficulty) {
   return clamp01(pk * mult);
 }
 
-let missileSeq = 0;
-/** Reset between missions so ids stay short and deterministic. */
-export function resetMissileIds() { missileSeq = 0; }
-
+/**
+ * Build a round. The caller supplies the sequence number, because id counters
+ * belong to a world rather than to this module — two worlds running in the same
+ * process (a test comparing seeds, say) must not share a counter, or they stop
+ * being reproducible.
+ */
 export function createMissile(spec) {
   return {
-    id: `msl${++missileSeq}`,
+    id: `msl${spec.seq}`,
+    seq: spec.seq,
     kind: spec.kind,                 // 'sam' | 'arm' | 'strike'
     pos: { ...spec.pos },
     altM: spec.altM ?? 0,
@@ -308,6 +311,7 @@ export function launchSalvo(world, site, track, count) {
     launched++;
 
     const missile = createMissile({
+      seq: world.nextMissileSeq(),
       kind: 'sam',
       pos: site.pos,
       altM: 20,
@@ -340,6 +344,7 @@ export function launchSalvo(world, site, track, count) {
 /** An anti-radiation round leaves a suppression aircraft. */
 export function launchArm(world, shooter, radar) {
   const missile = createMissile({
+    seq: world.nextMissileSeq(),
     kind: 'arm',
     pos: shooter.pos,
     altM: shooter.altM,
@@ -364,6 +369,7 @@ export function releaseWeapons(world, aircraft, asset) {
   const count = Math.max(1, aircraft.weaponsLeft);
   for (let i = 0; i < count; i++) {
     const missile = createMissile({
+      seq: world.nextMissileSeq(),
       kind: 'strike',
       pos: aircraft.pos,
       altM: aircraft.altM,
