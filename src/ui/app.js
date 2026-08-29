@@ -24,7 +24,7 @@ import { CrewConsole } from './console.js';
 import { Audio } from './audio.js';
 import {
   renderTopbar, renderTrackList, renderBatteries, renderCrewConsole,
-  renderEventLog, renderCommandNet, renderBlackout,
+  renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, RANGE_SCALES,
 } from './panels.js';
 import { renderMenu, renderBriefing, renderDebrief, renderControls } from './screens.js';
 import { renderEnlistment, renderDossier } from './dossier.js';
@@ -407,6 +407,7 @@ function render(now) {
     renderTopbar(world, ui, els);
     renderTrackList(world, ui, els);
     renderBatteries(world, ui, els);
+    renderScopeSide(world, ui, els, ui.view === 'crew' ? crew.rangeKm : scope.rangeKm);
     if (world.control.crewedBatteryId && ui.view === 'crew') renderCrewConsole(world, ui, els);
     else els.crewConsole.hidden = true;
   }
@@ -605,6 +606,15 @@ function wirePanelInput() {
   els.speedGroup.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-speed]');
     if (btn) setSpeed(Number(btn.dataset.speed));
+  });
+
+  // The range selector clicks round its detents; the wheel over the tube still
+  // works for anyone who would rather zoom continuously.
+  els.scopeSide.addEventListener('click', (e) => {
+    if (!e.target.closest('#range-knob') || ui.view === 'crew') return;
+    const current = RANGE_SCALES.findIndex((r) => r >= scope.rangeKm - 1);
+    const next = RANGE_SCALES[(current + 1 + RANGE_SCALES.length) % RANGE_SCALES.length];
+    scope.rangeKm = next;
   });
 
   els.viewToggle.onclick = toggleView;

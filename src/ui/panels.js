@@ -385,6 +385,43 @@ export function renderCommandNet(world, els) {
   els.commandTimer.textContent = `${Math.ceil(left)}s`;
 }
 
+/** Range scale positions on the selector, in kilometres. */
+export const RANGE_SCALES = [60, 100, 150, 220];
+
+/**
+ * The scope's own controls, mounted on the bezel beside the tube: a rotary range
+ * selector with real detents, and the plate the factory riveted on.
+ *
+ * The knob is drawn once and then only its pointer is rotated, so turning it
+ * costs a transform rather than a re-render.
+ */
+export function renderScopeSide(world, ui, els, rangeKm) {
+  const index = RANGE_SCALES.indexOf(rangeKm);
+  const detent = index >= 0 ? index : RANGE_SCALES.findIndex((r) => r >= rangeKm);
+  const angle = -135 + (Math.max(0, detent) / (RANGE_SCALES.length - 1)) * 270;
+
+  if (els.scopeSide.dataset.built !== '1') {
+    els.scopeSide.dataset.built = '1';
+    els.scopeSide.innerHTML = `
+      <div class="knob-group">
+        <button class="knob" id="range-knob" title="Range scale — mouse wheel over the scope also works">
+          <span class="knob-pointer"></span>
+        </button>
+      </div>
+      ${legend(CONTROLS.range, {})}
+      <span class="knob-readout" id="range-readout"></span>
+      <span class="data-plate" style="margin-top:auto">
+        <b>${esc(PLATES.type)}</b><br>${esc(PLATES.works)}<br>${esc(PLATES.factory)}
+      </span>
+      <span class="placard">${esc(PLATES.caution)}<br>${esc(PLATES.cautionEn)}</span>`;
+  }
+
+  const pointer = els.scopeSide.querySelector('.knob-pointer');
+  if (pointer) pointer.style.transform = `rotate(${angle}deg)`;
+  const readout = els.scopeSide.querySelector('#range-readout');
+  if (readout) readout.textContent = `${Math.round(rangeKm)} КМ`;
+}
+
 /** The boot sequence shown while the console is down. It is not a spinner. */
 export function renderBlackout(world, els) {
   const dark = world.dark;
