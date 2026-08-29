@@ -57,6 +57,8 @@ const ui = {
   lastEventIndex: 0,
   lastPanelAt: 0,
   seenEvents: 0,
+  /** The country underlay. On by default; some people want a clean tube. */
+  showMap: true,
 };
 
 let world = null;
@@ -504,7 +506,7 @@ function handleAudio() {
 function updateLegend() {
   els.scopeLegend.innerHTML = ui.view === 'crew'
     ? ''
-    : 'drag a contact onto a battery to assign · right-click a radar to blink it';
+    : 'drag a contact onto a battery to assign · right-click a radar to blink it · M for the map';
 }
 
 /* --------------------------------------------------------------- input */
@@ -706,6 +708,7 @@ function wireGlobalInput() {
       case 's': if (site) world.setSalvo(site.id, site.salvoSize === 1 ? 2 : 1); break;
       case 'y': if (world.command.pending) world.answer('accepted'); break;
       case 'n': if (world.command.pending) world.answer('refused'); break;
+      case 'm': ui.showMap = !ui.showMap; break;
       case 'h': showHelp(() => { els.screen.hidden = true; els.shell.hidden = false; state.phase = 'mission'; }); break;
       case 'tab': e.preventDefault(); toggleView(); break;
       case '`': {

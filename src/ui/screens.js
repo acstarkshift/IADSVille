@@ -10,7 +10,7 @@
  */
 
 import { SCENARIOS } from '../engine/scenarios.js';
-import { DIFFICULTY, ROLES, SAM_TYPES, COMMAND } from '../engine/config.js';
+import { DIFFICULTY, ROLES, SAM_TYPES, COMMAND, DEFENCE_CLASSES } from '../engine/config.js';
 import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor } from '../engine/command.js';
 import { THEMES, applyTheme } from './themes.js';
@@ -98,7 +98,8 @@ export function renderMenu(host, state, actions) {
         <span>Battery:</span>
         <select id="battery-pick" class="btn">
           ${state.mission.sites.map((s) => `<option value="${s.id}" ${state.batteryId === s.id ? 'selected' : ''}>
-            ${esc(s.name ?? s.id)} — ${esc(SAM_TYPES[s.type].label)} (${SAM_TYPES[s.type].maxRangeKm} km)
+            ${esc(s.name ?? s.id)} — ${esc(SAM_TYPES[s.type].label)},
+            ${esc(DEFENCE_CLASSES[SAM_TYPES[s.type].class].en.toLowerCase())} (${SAM_TYPES[s.type].maxRangeKm} km)
           </option>`).join('')}
         </select>
       </div>` : ''}
@@ -167,9 +168,12 @@ export function renderBriefing(host, state) {
     <div class="card">
       <h3>Your seat — ${esc(role.label)}</h3>
       <p>${esc(role.blurb)}</p>
-      ${battery ? `<p style="color:var(--ink-dim)">You are crewing <b>${esc(battery.name)}</b>
-        (${esc(SAM_TYPES[battery.type].label)}, ${SAM_TYPES[battery.type].maxRangeKm} km,
-        ${SAM_TYPES[battery.type].channels} channels, ${SAM_TYPES[battery.type].readyRounds} rounds on the rails).</p>` : ''}
+      ${battery ? `<p style="color:var(--ink-dim)">You are crewing <b>${esc(battery.name)}</b> —
+        ${esc(SAM_TYPES[battery.type].label)}, ${esc(DEFENCE_CLASSES[SAM_TYPES[battery.type].class].en.toLowerCase())}.
+        ${SAM_TYPES[battery.type].minRangeKm}–${SAM_TYPES[battery.type].maxRangeKm} km,
+        ${SAM_TYPES[battery.type].minAltM}–${SAM_TYPES[battery.type].maxAltM} m,
+        ${SAM_TYPES[battery.type].channels} channels, ${SAM_TYPES[battery.type].readyRounds} rounds on the rails.</p>
+        <p style="color:var(--ink-dim);font-style:italic">${esc(DEFENCE_CLASSES[SAM_TYPES[battery.type].class].blurb)}</p>` : ''}
       <p style="color:var(--ink-dim)">This watch teaches: ${esc(mission.teaches)}</p>
     </div>
 
@@ -309,6 +313,7 @@ export function renderControls(host) {
         ${key('+ / −', 'zoom the scope')}
         ${key('Tab', 'switch seat (commander only)')}
         ${key('Y / N', 'acknowledge or refuse a directive')}
+        ${key('M', 'the map of Trans Mordovia under the picture')}
         ${key('H', 'this screen')}
       </div>
     </div>
@@ -336,6 +341,19 @@ export function renderControls(host) {
         ${key('X', 'displace')}
       </div>
     </div>
+    <div class="card">
+      <h3>The four classes of air defence</h3>
+      <table class="ledger">
+        ${Object.values(DEFENCE_CLASSES).map((c) => {
+    const sys = Object.values(SAM_TYPES).find((t) => t.class === c.id);
+    return `<tr><td><b style="color:var(--ink-bright)">${esc(c.tm)}</b> · ${esc(c.en)}<br>
+      <span style="color:var(--ink-dim)">${esc(c.blurb)}</span></td>
+      <td>${esc(sys.label)}<br><span style="color:var(--ink-dim)">${sys.minRangeKm}–${sys.maxRangeKm} km<br>
+      ${sys.minAltM}–${sys.maxAltM} m</span></td></tr>`;
+  }).join('')}
+      </table>
+    </div>
+
     <div class="card">
       <h3>What is actually going on</h3>
       <p>A radar only sees a target when its beam sweeps that bearing, and it cannot see through

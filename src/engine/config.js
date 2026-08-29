@@ -157,13 +157,48 @@ export const AIR_TYPES = {
 };
 
 /**
- * Ground systems. Engagement `channels` is the real constraint: a battery with
- * eight rounds and two channels can only ever be fighting two targets, so a
- * fourteen-ship raid beats it on arithmetic no matter how good the operator is.
+ * The four classes of air defence, in the order a sector is built out of them.
+ *
+ * Each covers what the next one down cannot: the long-range battalion owns the
+ * approach, the medium battery owns the release ring, the point-defence section
+ * owns what got past it, and the guns own the last four kilometres, where
+ * missiles have a minimum range and shells do not. A sector missing one of
+ * these classes has a hole in it that nothing else can fill.
+ */
+export const DEFENCE_CLASSES = {
+  guns: {
+    id: 'guns', tm: 'ЗЕНИТНАЯ АРТИЛЛЕРИЯ', en: 'Anti-aircraft artillery', short: 'GUNS',
+    blurb: 'Shells, not rounds. No minimum range and no guidance to lose, which is exactly '
+      + 'what you want when something is already overhead.',
+  },
+  short: {
+    id: 'short', tm: 'МАЛАЯ ДАЛЬНОСТЬ', en: 'Short-range missiles', short: 'SHORT',
+    blurb: 'Point defence. Quick to react and short of reach, so it must be sited forward on '
+      + 'the threat axis or it never sees a target before the weapons are already off.',
+  },
+  medium: {
+    id: 'medium', tm: 'СРЕДНЯЯ ДАЛЬНОСТЬ', en: 'Medium-range missiles', short: 'MEDIUM',
+    blurb: 'The workhorse. Covers the release ring, kills strike aircraft before they can drop, '
+      + 'and is the class you will run out of first.',
+  },
+  long: {
+    id: 'long', tm: 'БОЛЬШАЯ ДАЛЬНОСТЬ', en: 'Long-range missiles', short: 'LONG',
+    blurb: 'Owns the approach and reaches the standoff aircraft nothing else can touch — '
+      + 'jammers, suppression, the things sitting outside everyone else\'s envelope.',
+  },
+};
+
+/**
+ * Ground systems, one per class. Engagement `channels` is the real constraint: a
+ * battery with eight rounds and two channels can only ever be fighting two
+ * targets, so a fourteen-ship raid beats it on arithmetic no matter how good the
+ * operator is.
  */
 export const SAM_TYPES = {
   bastion: {
     id: 'bastion',
+    /** Which of the four classes of air defence this is. */
+    class: 'long',
     label: 'BASTION',
     name: 'Long-range battalion',
     maxRangeKm: 120,
@@ -191,6 +226,8 @@ export const SAM_TYPES = {
   },
   lance: {
     id: 'lance',
+    /** Which of the four classes of air defence this is. */
+    class: 'medium',
     label: 'LANCE',
     name: 'Medium-range battery',
     maxRangeKm: 42,
@@ -214,6 +251,8 @@ export const SAM_TYPES = {
   },
   thistle: {
     id: 'thistle',
+    /** Which of the four classes of air defence this is. */
+    class: 'short',
     label: 'THISTLE',
     name: 'Point defence section',
     maxRangeKm: 12,
@@ -237,6 +276,8 @@ export const SAM_TYPES = {
   },
   hammer: {
     id: 'hammer',
+    /** Which of the four classes of air defence this is. */
+    class: 'guns',
     label: 'HAMMER',
     name: 'Gun battery',
     maxRangeKm: 4,

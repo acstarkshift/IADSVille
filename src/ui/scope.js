@@ -12,6 +12,7 @@
  */
 
 import { THEMES, readPalette, hostilityColour } from './themes.js';
+import { MAP } from '../engine/geography.js';
 import { SAM_TYPES, ASSET_TYPES, AIR_TYPES } from '../engine/config.js';
 import { bearing, dist, headingVec, len, wrapDeg, clamp01 } from '../engine/math.js';
 import { trackProfile } from '../engine/detection.js';
@@ -187,6 +188,9 @@ export class Scope {
     this.labelQueue = [];
 
     this.updatePaint(world);
+    // Drawn before the grid so the country sits under everything, but its
+    // labels are queued and placed with the rest at the end of the frame.
+    if (ui.showMap !== false) this.drawMap();
     this.drawGrid(world);
 
     // The beam itself is redrawn every frame rather than painted into the
@@ -282,6 +286,95 @@ export class Scope {
     ctx.strokeStyle = withAlpha(p.accent, 0.45);
     ctx.lineWidth = 1.4 * this.dpr;
     ctx.stroke();
+  }
+
+  /**
+   * The country, under the picture.
+   *
+   * An operator does not read a plan position indicator in the abstract — they
+   * read it against ground they know. Having the Mordava, the Kubin ridge and
+   * the trunk road underneath turns "a contact at 285 for 90" into "something
+   * coming down the valley", which is the way the job is actually done, and
+   * makes the river line the directives keep referring to an actual line.
+   *
+   * Drawn dim on purpose. If it ever competes with a track symbol it is wrong.
+   */
+  drawMap() {
+    const { ctx } = this;
+    const p = this.palette;
+    const s = this.scale;
+    const path = (points, close = false) => {
+      ctx.beginPath();
+      points.forEach((point, i) => {
+        const q = this.toScreen(point);
+        if (i === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y);
+      });
+      if (close) ctx.closePath();
+    };
+
+    ctx.save();
+
+    // High ground: filled, with a lighter crest line so ridges read as ridges.
+    for (const range of MAP.highGround) {
+      path(range.points, true);
+      ctx.fillStyle = withAlpha(p.inkDim, 0.07);
+      ctx.fill();
+      ctx.strokeStyle = withAlpha(p.inkDim, 0.22);
+      ctx.lineWidth = 1 * this.dpr;
+      ctx.stroke();
+    }
+
+    for (const lake of MAP.lakes) {
+      path(lake.points, true);
+      ctx.fillStyle = withAlpha(p.friendly, 0.09);
+      ctx.fill();
+      ctx.strokeStyle = withAlpha(p.friendly, 0.24);
+      ctx.stroke();
+    }
+
+    for (const river of MAP.rivers) {
+      path(river.points);
+      ctx.strokeStyle = withAlpha(p.friendly, 0.19);
+      ctx.lineWidth = 1.2 * this.dpr;
+      ctx.stroke();
+    }
+
+    ctx.setLineDash([6 * this.dpr, 5 * this.dpr]);
+    for (const road of MAP.roads) {
+      path(road.points);
+      ctx.strokeStyle = withAlpha(p.inkDim, 0.3);
+      ctx.lineWidth = 1.1 * this.dpr;
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // The frontier. Everything that has happened to this sector came over it.
+    path(MAP.frontier);
+    ctx.setLineDash([10 * this.dpr, 4 * this.dpr, 2 * this.dpr, 4 * this.dpr]);
+    ctx.strokeStyle = withAlpha(p.hostile, 0.32);
+    ctx.lineWidth = 1.5 * this.dpr;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Place names go through the same declutter pass as everything else, at the
+    // lowest priority on the board: geography gives way to anything flying.
+    if (s > 1.1) {
+      for (const town of MAP.settlements) {
+        const q = this.toScreen(town.pos);
+        ctx.fillStyle = withAlpha(p.inkDim, town.capital ? 0.55 : 0.36);
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, (town.capital ? 3 : 2) * this.dpr, 0, TAU);
+        ctx.fill();
+        this.queueLabel({
+          text: town.name,
+          x: q.x, y: q.y,
+          colour: withAlpha(p.inkDim, town.capital ? 0.7 : 0.5),
+          priority: town.capital ? 8 : 4,
+          offset: 5,
+        });
+      }
+    }
+    ctx.restore();
   }
 
   drawGrid(world) {

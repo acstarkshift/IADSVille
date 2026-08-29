@@ -8,7 +8,7 @@
  * expensive, while the canvas underneath stays at full rate.
  */
 
-import { SAM_TYPES, ASSET_TYPES, AIR_TYPES, COMMAND } from '../engine/config.js';
+import { SAM_TYPES, ASSET_TYPES, AIR_TYPES, COMMAND, DEFENCE_CLASSES } from '../engine/config.js';
 import { bearing, dist, len, clockString, clamp01 } from '../engine/math.js';
 import { sortedTracks } from '../engine/threat.js';
 import { trackProfile } from '../engine/detection.js';
@@ -214,7 +214,15 @@ export function renderBatteries(world, ui, els) {
 
       <div class="unit-row">
         <span class="rail" title="${site.readyRounds} ready of ${site.magazine} stored">${rail}</span>
-        <span class="unit-type">${site.readyRounds}/${site.magazine} · ${STATUS.channels.tm} ${site.engagements.length}/${channelsFor(site)} · ${type.maxRangeKm} КМ</span>
+        <span class="unit-type" title="${esc(DEFENCE_CLASSES[type.class].en)} — ${esc(DEFENCE_CLASSES[type.class].blurb)}">
+          ${esc(DEFENCE_CLASSES[type.class].tm)}
+        </span>
+      </div>
+      <div class="unit-row">
+        <span class="unit-type" style="max-width:none">${site.readyRounds}/${site.magazine}
+          · ${STATUS.channels.tm} ${site.engagements.length}/${channelsFor(site)}
+          · ${type.minRangeKm}–${type.maxRangeKm} КМ
+          · ${Math.round(type.minAltM)}–${Math.round(type.maxAltM / 1000)}К М</span>
       </div>
       ${busyLabel ? `<div class="unit-row">
         <span class="unit-type">${esc(busyLabel.entry.tm)}</span>
