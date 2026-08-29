@@ -62,7 +62,7 @@ export const DIRECTIVES = {
     once: true,
     text: () => 'SECTOR ACTUAL: No leakers past the river line. You are accountable for every aircraft that reaches the town. Acknowledge.',
     plain: () => 'SECTOR: Priority is preventing weapons release on the town. Acknowledge.',
-    trigger: (w) => w.t > 40 && w.hostileTrackCount() > 0,
+    trigger: (w) => !w.scenario.finale && w.t > 40 && w.hostileTrackCount() > 0,
     onAccept: (w) => { w.command.constraints.leakerAccount = true; },
   },
 
@@ -108,6 +108,33 @@ export const DIRECTIVES = {
     plain: (w, civ) => `AIR TRAFFIC: Civil transit on bearing ${civ ? Math.round(bearing(w.centre, civ.pos)) : '---'}. Weapons tight in that sector. Acknowledge.`,
     trigger: (w) => w.aircraft.some((a) => a.alive && a.type === 'civil'),
     onAccept: (w, civ) => { w.command.constraints.civilCorridorId = civ?.id ?? null; },
+  },
+
+  /**
+   * The last watch's order, and the hinge the campaign turns on.
+   *
+   * It arrives before the western axis is anywhere near detection range, so it
+   * is accepted — or refused — without knowing yet what it will cost. That is
+   * deliberate, and it is how these orders actually work.
+   */
+  palacePriority: {
+    id: 'palacePriority',
+    label: 'the priority of fires to the palace',
+    priority: 'high',
+    once: true,
+    text: () => 'SECTOR ACTUAL: Priority of fires is the presidential palace, Mostrograd. '
+      + 'All batteries. Nothing in the western valley is a designated defended place. '
+      + 'Acknowledge on the net.',
+    plain: () => 'SECTOR: Priority of fires is the presidential palace, Mostrograd. '
+      + 'All batteries. Acknowledge.',
+    trigger: (w) => w.scenario.finale === true && w.t > 35,
+    onAccept: (w) => {
+      const palace = w.assets.find((a) => a.type === 'palace');
+      w.command.constraints.priorityOfFiresId = palace?.id ?? null;
+      w.command.constraints.priorityAssetId = palace?.id ?? null;
+      w.command.constraints.palaceOrderAccepted = true;
+    },
+    onRefuse: (w) => { w.command.constraints.palaceOrderRefused = true; },
   },
 
   explain: {
@@ -231,8 +258,14 @@ function timeoutDirective(world) {
   const directive = world.command.pending;
   directive.state = 'ignored';
   world.command.pending = null;
-  standingDelta(world, COMMAND.standing.directiveIgnored,
-    `no reply to ${DIRECTIVES[directive.id].label}`);
+  const template = DIRECTIVES[directive.id];
+
+  // Silence is an answer to any of these. Silence on the priority of fires,
+  // with two raids in the air and the log running, is a louder one.
+  const cost = template === DIRECTIVES.palacePriority
+    ? COMMAND.standing.directiveIgnored * 2
+    : COMMAND.standing.directiveIgnored;
+  standingDelta(world, cost, `no reply to ${template.label}`);
   world.log('warn', world.narrativePressure
     ? 'NO REPLY RECEIVED. THE OMISSION IS RECORDED.'
     : 'NO REPLY LOGGED.', { severity: 'high' });
@@ -265,6 +298,21 @@ export function stepCommand(world, dt) {
     return;
   }
 
+  /*
+   * The priority of fires jumps the queue, and holds it.
+   *
+   * On the last watch nothing else may go out until this has been sent and
+   * answered — partly because a routine order about leakers would sit oddly
+   * beside an instruction that the village is not a defended place, and partly
+   * because the whole point is that you commit to this one before you know
+   * what it will cost.
+   */
+  const hinge = DIRECTIVES.palacePriority;
+  if (world.scenario.finale === true && !world.command.issuedOnce[hinge.id]) {
+    if (hinge.trigger(world)) issueDirective(world, hinge);
+    return;
+  }
+
   world.command.thinkTimerS = (world.command.thinkTimerS ?? 0) - dt;
   if (world.command.thinkTimerS > 0) return;
   world.command.thinkTimerS = 6;
@@ -273,6 +321,7 @@ export function stepCommand(world, dt) {
   if (rate <= 0) return;
 
   for (const template of Object.values(DIRECTIVES)) {
+    if (template === hinge) continue;
     if (template.once && world.command.issuedOnce[template.id]) continue;
     const last = world.command.issuedAtS[template.id];
     if (last !== undefined && world.t - last < (template.cooldownS ?? 9999) / rate) continue;

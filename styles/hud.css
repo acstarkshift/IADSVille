@@ -423,3 +423,11 @@ table.ledger .down { color: var(--hostile); }
 
 .choice[disabled] { opacity: .45; }
 .choice.is-active { border-color: var(--accent); background: var(--bg-raised); }
+
+/* The last watch's outcome, set apart from the arithmetic that follows it. */
+.ending-card {
+  border-left: 3px solid var(--hostile);
+  background: color-mix(in srgb, var(--hostile) 6%, var(--bg-panel));
+}
+.ending-card p { line-height: 1.8; margin-bottom: 12px; }
+.ending-card p:first-child { color: var(--ink-bright); }

@@ -367,9 +367,38 @@ export const ASSET_TYPES = {
   depot: { id: 'depot', label: 'DEPOT', name: 'Munitions depot', value: 14, hp: 75 },
   bridge: { id: 'bridge', label: 'BRIDGE', name: 'River crossing', value: 10, hp: 60 },
   town: {
-    id: 'town', label: 'THE VILLE', name: 'The Ville', value: 26, hp: 220,
+    /*
+     * A village spread along a valley, not a single building. It takes a great
+     * deal of killing, which is what makes defending it a real proposition
+     * rather than a foregone loss — and what makes the damage figure a measure
+     * of how much of it is left rather than a hit counter.
+     */
+    id: 'town', label: 'THE VILLE', name: 'The Ville', value: 26, hp: 420,
     /** Civilian: damage here is reported in people, not percentages. */
     civilian: true,
+    /** And it is where the operator is from, which the debrief does not forget. */
+    home: true,
+  },
+  /**
+   * The seat of the state, in Mostrograd. Worth more to sector command than
+   * everything else on the board combined — which is the entire problem with it.
+   */
+  palace: {
+    /*
+     * A palace complex rather than a single roof — hard enough that a committed
+     * defence holds it, soft enough that an absent one does not. Both cities
+     * have to be genuinely defensible for the choice between them to mean
+     * anything; if either were doomed regardless, this would be a cutscene.
+     */
+    id: 'palace', label: 'PRESIDENTIAL PALACE', name: 'Presidential palace',
+    value: 70, hp: 340,
+    critical: false,
+    /** Losing it is not survivable for the person who was on watch. */
+    regime: true,
+  },
+  ministry: {
+    id: 'ministry', label: 'STATE MINISTRY', name: 'Ministry building',
+    value: 22, hp: 95,
   },
 };
 

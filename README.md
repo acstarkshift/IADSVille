@@ -7,6 +7,10 @@ a pilot and not a gun, but the person reading the scope. The job is triage:
 sixteen contacts, four batteries, ninety seconds, and a command that reads your
 log afterwards.
 
+You are also from the Ville. It is the village at the centre of every scope you
+will ever sit at, and your family is still in it. That is not set dressing; it
+is the whole shape of the campaign.
+
 Trans Mordovia is invented, and so is everything in it: the state, the service,
 its equipment, its ranks, its decorations, and the Slavic language stencilled on
 the panels. No real country, service or hardware is depicted.
@@ -47,7 +51,8 @@ into numbers the simulation uses:
 
 | | |
 |---|---|
-| **Backgrounds** | A factory town works its machinery faster. A border village identifies aircraft sooner, because you grew up watching them cross your roof. The capital academy starts you with standing and a family name the ministry recognises — and both of those cut in two directions. A penal transfer starts you in disgrace and lets you climb faster. |
+| **Backgrounds** | The works at Kubin taught you machinery, so you reload and displace faster. Never leaving the valley taught you to identify aircraft lying in a field. Two years at the academy in Mostrograd start you with standing — and with people who watch you more closely for losing it. A penal transfer starts you in disgrace and lets you climb faster. |
+| **Home** | Fixed: the Ville. At enlistment you choose which household is still there — your mother, your sister and her children, your grandmother, your brother who failed the medical — and which quarter of the village they live in. Damage to the town is reported by quarter, and one of those quarters is theirs. |
 | **Rank** | Eleven grades from Стрелец to Капитан. Promotion needs experience *and* standing: the army will not promote someone it does not trust. A catastrophic watch can reduce you, and it keeps the training you were given. |
 | **Training** | One point per promotion. A steady hand gets rounds off the rail sooner; signal discipline slows enemy direction finding against your sets; a cool head shortens the blackout after a hit; a drilled crew holds an extra engagement channel. Qualifications apply in full at your own battery and at half strength across the sector — you drilled those crews, but you are not sitting in them. |
 | **Decorations** | Awarded for things that are hard to do, including one for losing your position and holding the sector anyway. |
@@ -125,6 +130,34 @@ escalates.
 | 4 | Weasel Hour | amber phosphor | Emissions control — blink to survive, and pay for it in guidance |
 | 5 | White Noise | amber phosphor | Jamming, burnthrough, decoys, ammunition discipline |
 | 6 | Ville Under Fire | tactical display | All of it, and then the centre goes down |
+| 7 | The Two Cities | tactical display | That the equipment was never the constraint |
+
+### The last watch
+
+Two formations cross the frontier eleven minutes apart on divergent axes. One is
+tracking Mostrograd and the presidential palace. The other is tracking the
+valley, and there is nothing in the valley but the river crossing and your
+village.
+
+The two are 117 kilometres apart. No medium battery covers both. Exactly one
+does — the long-range battalion sitting halfway between them — and it has four
+channels and eight rounds against eighteen aircraft, which is the point of it
+being there. There is no resupply: the depots are committed to the capital, so
+every battery fights with what is on its rails.
+
+Before either raid is close enough to detect, sector command transmits its
+priority of fires and asks you to acknowledge it on the net, in the clear, with
+the log running. The capital's raid arrives first, so if you obey you will have
+spent your rounds before you learn what the western axis is for.
+
+Nothing ever asks you to choose. The game reads your choice off what you
+actually shot at — rounds are attributed to a side of the sector as they leave
+the rails — and there are five endings, **none of which is clean**. Obedience is
+rewarded, decorated, and costs you the village. Defiance saves it and ends
+everything else. Splitting your fires does neither well. And the near-impossible
+outcome where both cities are held is not a victory either: there is no
+decoration for it, because a citation would have to name what you defended, and
+one of those two things does not officially exist.
 
 ## The console
 
@@ -177,6 +210,7 @@ src/engine/           the simulation — pure JS, no DOM, runs under node --test
   doctrine.js           engagement state machine + the AI in the other seat
   command.js            directives, constraints, standing
   character.js          ranks, training, decorations, injury — the service record
+  endings.js            how the last watch ends, and what it costs either way
   campaign.js           the file that follows you between missions
   world.js              the fixed-step tick that orders all of it
 src/ui/                scope, battery console, panels, dossier, themes, audio
@@ -209,12 +243,17 @@ A few decisions worth knowing about if you read the source:
 - **The RPG layer is measured, not asserted.** The character tests build a real
   `World` and check that a qualification changed a number in it — a channel
   count, a reaction multiplier, a blackout duration.
+- **The last watch is geometry, not scripting.** Its tests assert the properties
+  that make the choice real: that the cities are more than 100 km apart, that no
+  medium battery covers both, that exactly one battery does and cannot hold both,
+  that point defence is sited forward of the release ring, and that every one of
+  the five endings is reachable.
 
 ## Credits
 
 Everything here is invented: Trans Mordovia, its air defence forces, their ranks
-and decorations, the equipment designations, the language on the panels, and the
-Ville itself. The physics is deliberately simplified — the goal is a system that
+and decorations, the equipment designations, the language on the panels,
+Mostrograd, and the Ville itself. The physics is deliberately simplified — the goal is a system that
 *behaves* like an air defence problem, not a fidelity claim about any real
 equipment, and nothing here corresponds to a real state or service.
 

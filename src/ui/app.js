@@ -175,11 +175,18 @@ function showEnlistment() {
     state.pendingName = null;
     showEnlistment();
   };
+  const remember = () => { state.pendingName = nameInput.value; };
   host.querySelectorAll('[data-background]').forEach((btn) => {
     btn.onclick = () => {
-      state.pendingName = nameInput.value;
-      state.pendingHome = host.querySelector('#enlist-home').value;
+      remember();
       state.pendingBackground = btn.dataset.background;
+      showEnlistment();
+    };
+  });
+  host.querySelectorAll('[data-household]').forEach((btn) => {
+    btn.onclick = () => {
+      remember();
+      state.pendingHousehold = btn.dataset.household;
       showEnlistment();
     };
   });
@@ -187,7 +194,7 @@ function showEnlistment() {
     enlist(state.campaign, {
       name: nameInput.value,
       background: state.pendingBackground,
-      home: host.querySelector('#enlist-home').value,
+      household: state.pendingHousehold,
     });
     saveCampaign(store, state.campaign);
     showMenu();

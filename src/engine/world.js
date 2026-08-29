@@ -35,6 +35,7 @@ import {
 import {
   createCommandState, stepCommand, standingDelta, settleDirectives, answerDirective, tierFor,
 } from './command.js';
+import { composeEnding } from './endings.js';
 
 export class World {
   constructor(scenario, options = {}) {
@@ -63,6 +64,17 @@ export class World {
       extraChannels: 0,
       ...(options.modifiers ?? {}),
     };
+
+    /*
+     * A scenario may impose its own supply situation on top of everything the
+     * campaign and the operator bring. It only ever tightens: a watch fought
+     * with the depots committed elsewhere is fought with what is on the rails,
+     * however well the quartermaster likes you.
+     */
+    if (scenario.supply) {
+      this.modifiers.roundsMult *= scenario.supply.roundsMult ?? 1;
+      if (scenario.supply.reloadsAllowed === false) this.modifiers.reloadsAllowed = false;
+    }
     /** The service record of whoever is sitting in the chair, if there is one. */
     this.character = options.character ?? null;
 
@@ -103,6 +115,19 @@ export class World {
       radarsLost: 0, civilianCasualties: 0, abortedSorties: 0, armsIncoming: 0,
       civilianAircraftShot: 0, displacements: 0, decoysEngaged: 0, sortiesTotal: 0,
       turnedBack: 0,
+      /** Set once a round lands on the quarter the operator's family lives in. */
+      homeDistrictHit: false,
+      /**
+       * Rounds expended, attributed to the defended place the target appeared to
+       * be going for. On the last watch this is the record of what you chose,
+       * and it is compiled from what you shot at rather than from anything you
+       * were asked to declare.
+       */
+      roundsByAsset: {},
+      /** The same figures gathered by side of the sector. */
+      roundsByCluster: {},
+      /** Rounds fired at targets the priority of fires told you to ignore. */
+      roundsAgainstOrder: 0,
     };
 
     this.control = {
@@ -144,6 +169,8 @@ export class World {
         id: spec.id ?? `asset_${spec.type}`,
         type: spec.type,
         label: spec.label ?? type.label,
+        /** Which side of the sector this belongs to, where that matters. */
+        cluster: spec.cluster ?? null,
         pos: { ...spec.pos },
         damage: 0,
         destroyed: false,
@@ -386,6 +413,41 @@ export class World {
 
   warnTargetOfLaunch(target) { target.threatenedAtS = this.t; }
 
+  /**
+   * Attribute a salvo to whatever the track was heading for.
+   *
+   * This is how the game finds out what you decided, without ever asking you.
+   * A priority-of-fires order you accepted is enforced against the same figures.
+   */
+  registerRoundsSpent(track, count) {
+    const assetId = track.predictedAssetId;
+    if (!assetId) return;
+    this.stats.roundsByAsset[assetId] = (this.stats.roundsByAsset[assetId] ?? 0) + count;
+
+    const cluster = this.assetById.get(assetId)?.cluster;
+    if (cluster) {
+      this.stats.roundsByCluster[cluster] = (this.stats.roundsByCluster[cluster] ?? 0) + count;
+    }
+
+    const priority = this.command.constraints.priorityOfFiresId;
+    if (!priority) return;
+    // The order names a place, but it means a side: firing at something bound
+    // for the capital's power station is not a breach of a palace priority.
+    const priorityCluster = this.assetById.get(priority)?.cluster;
+    if (assetId === priority) return;
+    if (priorityCluster && cluster === priorityCluster) return;
+
+    // Firing outside an accepted priority of fires. It is recorded either way;
+    // the first time, sector command says so out loud.
+    this.stats.roundsAgainstOrder += count;
+    if (!this.command.constraints.priorityBreachLogged) {
+      this.command.constraints.priorityBreachLogged = true;
+      this.log('alert', this.narrativePressure
+        ? 'SECTOR ACTUAL: YOU ARE FIRING OUTSIDE THE PRIORITY OF FIRES. THE LOG IS RUNNING.'
+        : 'ORDER VIOLATION: FIRES OUTSIDE DESIGNATED PRIORITY.', { severity: 'high' });
+    }
+  }
+
   nearestThreatTo(aircraft) {
     let best = null;
     let bestDist = Infinity;
@@ -595,6 +657,22 @@ export class World {
   finish(reason) {
     this.phase = 'complete';
     settleDirectives(this);
+
+    /*
+     * The last watch is scored twice: once by the rules that score every watch,
+     * and once by what it actually cost. The ending is read off what was
+     * defended, and its standing effect lands before the result is composed so
+     * the debrief shows the figure the file will carry.
+     */
+    if (this.scenario.finale) {
+      const provisional = this.result(reason);
+      const ending = composeEnding(provisional, this.character,
+        { narrativePressure: this.narrativePressure });
+      standingDelta(this, ending.standing,
+        this.narrativePressure ? ending.subtitle.toLowerCase() : ending.title.toLowerCase());
+      this.endingId = ending.id;
+    }
+
     this.outcome = this.result(reason);
     this.log(this.outcome.success ? 'good' : 'alert',
       `WATCH ENDS — ${this.outcome.headline}`, { severity: 'high' });
@@ -657,11 +735,18 @@ export class World {
       },
       stats: { ...this.stats },
       ledger: [...this.command.ledger],
+      /** Orders accepted or refused, for the endings to read. */
+      constraints: { ...this.command.constraints },
+      finale: this.scenario.finale === true,
+      endingId: this.endingId ?? null,
       assets: this.assets.map((a) => ({
+        id: a.id,
+        type: a.type,
         label: a.label,
         destroyed: a.destroyed,
         damagePct: Math.round(100 * clamp01(a.damage / ASSET_TYPES[a.type].hp)),
         casualties: a.casualties ?? 0,
+        districtsHit: a.districtsHit ?? [],
       })),
       battery: this.control.crewedBatteryId ? this.batteryReport(this.control.crewedBatteryId) : null,
     };

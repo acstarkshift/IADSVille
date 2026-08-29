@@ -57,12 +57,14 @@ export function emptyCampaign(character = null) {
     /** Escalating pressure on the personal thread, 0 upward. */
     fileMarks: 0,
     commendations: 0,
+    /** Set once the last watch has been stood, whichever way it went. */
+    ending: null,
   };
 }
 
 /** Enlist: build the soldier and set the campaign's opening standing from them. */
-export function enlist(campaign, { name, background, home }) {
-  campaign.character = createCharacter({ name, background, home });
+export function enlist(campaign, { name, background, household }) {
+  campaign.character = createCharacter({ name, background, household });
   const mods = characterModifiers(campaign.character);
   campaign.standing = mods.startingStanding ?? COMMAND.startingStanding;
   return campaign.character;
@@ -125,6 +127,8 @@ export function recordMission(campaign, result) {
     at: Date.now(),
   };
   campaign.history.push(entry);
+
+  if (result.finale && result.endingId) campaign.ending = result.endingId;
 
   const previous = campaign.completed[result.missionId];
   if (!previous || result.score > previous.score) {

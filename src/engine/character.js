@@ -46,15 +46,15 @@ export const BACKGROUNDS = {
     id: 'factory',
     tm: 'ЗАВОДСКОЙ',
     en: 'Factory town',
-    blurb: 'Kubin, in the smoke. You were turning shell casings at sixteen and you know what a machine sounds like before it fails.',
+    blurb: 'The works at Kubin, two hours down the valley from the Ville. You were turning shell casings at sixteen and you know what a machine sounds like before it fails.',
     effect: 'Reloads and displacements 18% quicker at your own console, half that across the sector.',
     modifiers: { reloadMult: 0.82, scootMult: 0.82 },
   },
   border: {
     id: 'border',
     tm: 'ПОГРАНИЧНЫЙ',
-    en: 'Border village',
-    blurb: 'Lozan, close enough to the frontier that aircraft crossed your roof for a decade. You learned to identify them lying in a field.',
+    en: 'Frontier valley',
+    blurb: 'You never left the Ville. Aircraft crossed the valley for a decade and you learned to identify them lying in the field above the mill.',
     effect: 'Identification resolves 30% faster.',
     modifiers: { idSpeedMult: 1.3 },
   },
@@ -62,7 +62,7 @@ export const BACKGROUNDS = {
     id: 'academy',
     tm: 'АКАДЕМИЯ',
     en: 'Capital academy',
-    blurb: 'Two years of theory in the capital, and a family name that people in the ministry recognise. Both of those cut in two directions.',
+    blurb: 'Two years of theory in Mostrograd, and a village name that people in the ministry find quaint. Both of those cut in two directions.',
     effect: 'Start with higher standing — and be watched more closely for losing it.',
     modifiers: { startingStanding: 64, standingLossMult: 1.3 },
   },
@@ -70,7 +70,7 @@ export const BACKGROUNDS = {
     id: 'penal',
     tm: 'ШТРАФНОЙ',
     en: 'Penal transfer',
-    blurb: 'You are not told which of the things in your file put you here, and asking is itself in the file. You have something to prove and everyone knows it.',
+    blurb: 'Something in your file put you back within sight of your own village, and nobody will say which thing. You have something to prove and everyone knows it.',
     effect: 'Start in disgrace, but earn experience 30% faster.',
     modifiers: { startingStanding: 22, xpMult: 1.3 },
   },
@@ -209,25 +209,81 @@ const GIVEN_NAMES = ['Драган', 'Милан', 'Вук', 'Радо', 'Ири
   'Огнян', 'Тихомир', 'Данко', 'Лада', 'Веся', 'Боян', 'Сава', 'Нада'];
 const FAMILY_NAMES = ['Ковач', 'Мирчев', 'Дулов', 'Ясень', 'Брасов', 'Гарин', 'Ленко',
   'Тавров', 'Матич', 'Волох', 'Стрельник', 'Кубин', 'Лозан', 'Раду'];
-/** Towns of Trans Mordovia, for where the letters go. */
-export const HOME_TOWNS = ['Кубин', 'Лозан', 'Брасов', 'Тавров', 'Ясень', 'Мирча'];
+
+/**
+ * The quarters of the Ville.
+ *
+ * You are from this village. It is the town at the centre of every scope you
+ * will ever sit at, which is not a coincidence — the sector was drawn around
+ * the crossing, and the crossing is why the village is there. Damage to the
+ * town is reported by quarter, and one of these quarters is where your people
+ * live, so a hit on the Ville is never an abstraction.
+ */
+export const DISTRICTS = [
+  { id: 'east', tm: 'ВОСТОЧНЫЙ', en: 'the eastern quarter' },
+  { id: 'mill', tm: 'МЕЛЬНИЧНЫЙ', en: 'the mill quarter' },
+  { id: 'high', tm: 'ВЕРХНИЙ', en: 'the high street' },
+  { id: 'river', tm: 'РЕЧНОЙ', en: 'the river road' },
+];
+
+/**
+ * Who is still in the Ville. Chosen once, at enlistment, and referred to for the
+ * rest of the campaign — in the letters that do or do not arrive, and in what
+ * the sector reports after the town is struck.
+ */
+export const HOUSEHOLDS = {
+  mother: {
+    id: 'mother',
+    en: 'Your mother, Ксения',
+    district: 'east',
+    blurb: 'She writes every fortnight about the weather and the queue at the dispensary, and never about anything else. You understand why.',
+  },
+  sister: {
+    id: 'sister',
+    en: 'Your sister Ната, and her two children',
+    district: 'mill',
+    blurb: 'The children were born after you enlisted. You have met the younger one twice.',
+  },
+  grandmother: {
+    id: 'grandmother',
+    en: 'Your grandmother Вера',
+    district: 'high',
+    blurb: 'She remembers the last war and refuses to discuss it, which is its own kind of account.',
+  },
+  brother: {
+    id: 'brother',
+    en: 'Your brother Илья, who failed the medical',
+    district: 'river',
+    blurb: 'He was kept back from service for a heart murmur and has never entirely forgiven the board, or you.',
+  },
+};
+
+/** Where the state is run from, and where the palace stands. */
+export const CAPITAL = { tm: 'МОСТРОГРАД', en: 'Mostrograd' };
 
 export function suggestName(rng = Math.random) {
   const pick = (list) => list[Math.floor(rng() * list.length)];
   return `${pick(GIVEN_NAMES)} ${pick(FAMILY_NAMES)}`;
 }
 
-export function suggestHome(rng = Math.random) {
-  return HOME_TOWNS[Math.floor(rng() * HOME_TOWNS.length)];
+export function householdOf(character) {
+  return HOUSEHOLDS[character.household] ?? HOUSEHOLDS.mother;
 }
 
-/** A fresh service record. */
-export function createCharacter({ name, background = 'factory', home } = {}) {
+export function districtOf(character) {
+  const household = householdOf(character);
+  return DISTRICTS.find((d) => d.id === household.district) ?? DISTRICTS[0];
+}
+
+/** A fresh service record. Everyone in this army comes from somewhere; you come from the Ville. */
+export function createCharacter({ name, background = 'factory', household = 'mother' } = {}) {
   const bg = BACKGROUNDS[background] ?? BACKGROUNDS.factory;
   return {
     name: name?.trim() || suggestName(),
     background: bg.id,
-    home: home || suggestHome(),
+    /** Fixed. The village under your scope is the village you are from. */
+    home: 'ВИЛЛА',
+    household: HOUSEHOLDS[household] ? household : 'mother',
     rankIndex: 0,
     xp: 0,
     /** Unspent promotion points. */

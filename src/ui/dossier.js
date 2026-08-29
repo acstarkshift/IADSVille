@@ -8,9 +8,10 @@
  */
 
 import {
-  RANKS, BACKGROUNDS, SKILLS, DECORATIONS, HOME_TOWNS,
-  rankOf, backgroundOf, nextRank, canLearn, suggestName,
+  RANKS, BACKGROUNDS, SKILLS, DECORATIONS, HOUSEHOLDS,
+  rankOf, backgroundOf, householdOf, districtOf, nextRank, canLearn, suggestName,
 } from '../engine/character.js';
+import { ENDINGS } from '../engine/endings.js';
 import { tierFor } from '../engine/command.js';
 import { STATE, PLATES } from './lexicon.js';
 
@@ -31,6 +32,8 @@ export function renderEnlistment(host, state) {
   state.pendingName = suggested;
   const background = state.pendingBackground ?? 'factory';
   state.pendingBackground = background;
+  const household = state.pendingHousehold ?? 'mother';
+  state.pendingHousehold = household;
 
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title" style="font-size:30px">ЛИЧНОЕ ДЕЛО</h1>
@@ -39,8 +42,9 @@ export function renderEnlistment(host, state) {
     <div class="card record-card">
       <div class="record-stamp">${esc(PLATES.standard)}</div>
       <h3>Enlistment</h3>
-      <p style="color:var(--ink-dim)">You are being posted to an air defence sector outside
-      ${esc(STATE.town.en)}. Sector command keeps a file on you from today. It is never closed.</p>
+      <p style="color:var(--ink-dim)">You are being posted to the air defence sector covering the valley
+      of ${esc(STATE.town.en)} — the village you are from. The scope you will sit at is centred on your
+      own roof. Sector command keeps a file on you from today, and it is never closed.</p>
 
       <div class="field-row">
         <label class="field">
@@ -49,11 +53,22 @@ export function renderEnlistment(host, state) {
         </label>
         <button class="btn" id="enlist-reroll" title="Another name">↻</button>
         <label class="field">
-          <span>РОДНОЙ ГОРОД · HOME TOWN</span>
-          <select id="enlist-home">
-            ${HOME_TOWNS.map((t) => `<option ${state.pendingHome === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}
-          </select>
+          <span>РОДНОЙ ГОРОД · HOME</span>
+          <input type="text" value="ВИЛЛА · THE VILLE" readonly disabled>
         </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Who is still there</h3>
+      <p style="color:var(--ink-dim)">The Ville is on every scope in this campaign, and it is where the
+      people below live. That is not a coincidence and it does not become one.</p>
+      <div class="choice-row" id="household-row">
+        ${Object.values(HOUSEHOLDS).map((h) => `<button class="choice ${h.id === household ? 'is-active' : ''}"
+          data-household="${h.id}">
+          <b>${esc(h.en)}</b>
+          <small>${esc(h.blurb)}</small>
+        </button>`).join('')}
       </div>
     </div>
 
@@ -148,13 +163,15 @@ export function renderDossier(host, state) {
       <h3>Particulars</h3>
       <table class="ledger">
         <tr><td>Origin</td><td>${esc(bg.tm)} · ${esc(bg.en)}</td></tr>
-        <tr><td>Home town</td><td>${esc(character.home)}, ${esc(STATE.country.en)}</td></tr>
+        <tr><td>Home</td><td>${esc(character.home)} · ${esc(STATE.town.en)}, ${esc(STATE.country.en)}</td></tr>
+        <tr><td>Household</td><td>${esc(householdOf(character).en)}</td></tr>
+        <tr><td>Quarter</td><td>${esc(districtOf(character).tm)} · ${esc(districtOf(character).en)}</td></tr>
         <tr><td>Watches stood</td><td>${character.watches}</td></tr>
         <tr><td>Assessment</td><td>${esc(tier.label)}</td></tr>
       </table>
       ${state.narrativePressure ? `<p style="color:var(--ink-dim);margin-top:8px">
-        Correspondence to and from ${esc(character.home)} passes through the sector political section.
-        This is described as routine.</p>` : ''}
+        Correspondence to and from the Ville passes through the sector political section. This is
+        described as routine. The village is fourteen kilometres from this console.</p>` : ''}
     </div>
 
     ${character.record.length ? `<div class="card">

@@ -10,6 +10,7 @@
 
 import { DAMAGE, ASSET_TYPES, COMMAND } from './config.js';
 import { bearing, clamp, wrapDeg } from './math.js';
+import { DISTRICTS, districtOf } from './character.js';
 
 /** Queue a screen effect for the UI to pick up. Purely cosmetic; the sim ignores it. */
 export function addEffect(world, effect) {
@@ -116,14 +117,28 @@ export function damageAsset(world, asset, amount, source) {
   const type = ASSET_TYPES[asset.type];
 
   if (type.civilian) {
-    // Reported in people, because that is how it would be reported.
+    // Reported in people and by quarter, because that is how it would be
+    // reported — and because one of those quarters is where your people live.
     const casualties = Math.round(amount * world.rng.range(0.8, 2.4));
     asset.casualties = (asset.casualties ?? 0) + casualties;
     world.stats.civilianCasualties += casualties;
+
+    const district = DISTRICTS[world.rng.int(0, DISTRICTS.length - 1)];
+    asset.districtsHit = asset.districtsHit ?? [];
+    if (!asset.districtsHit.includes(district.id)) asset.districtsHit.push(district.id);
+
+    const home = type.home && world.character ? districtOf(world.character) : null;
+    if (home && home.id === district.id) {
+      world.stats.homeDistrictHit = true;
+      world.log('alert',
+        `${asset.label} — ${district.tm} КВАРТАЛ СТРУЧЁН. ${casualties} CASUALTIES`,
+        { assetId: asset.id, severity: 'high', personal: true });
+    } else {
+      world.log('alert', `${asset.label} — ${district.tm} STRUCK. ${casualties} CASUALTIES REPORTED`, {
+        assetId: asset.id, severity: 'high',
+      });
+    }
     world.standingDelta(COMMAND.standing.perCivilianHit, 'civilian area struck');
-    world.log('alert', `${asset.label} — STRUCK. ${casualties} CASUALTIES REPORTED`, {
-      assetId: asset.id, severity: 'high',
-    });
   } else {
     const pct = Math.min(100, Math.round(100 * asset.damage / type.hp));
     world.log('alert', `${asset.label} — STRUCK (${pct}%)`, {

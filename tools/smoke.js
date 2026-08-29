@@ -25,6 +25,7 @@ const RUNS = [
   { mission: 'solo-battery', role: 'crew', theme: 'crt-green', background: 'border' },
   { mission: 'weasel-hour', role: 'net', theme: 'crt-amber', background: 'academy' },
   { mission: 'ville-under-fire', role: 'both', theme: 'ops-modern', background: 'penal' },
+  { mission: 'two-cities', role: 'net', theme: 'ops-modern', background: 'border' },
 ];
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -76,6 +77,7 @@ async function main() {
     // enlistment. Sign on before anything else is reachable.
     if (await page.isVisible('#enlist-confirm')) {
       await page.click(`[data-background="${run.background ?? 'factory'}"]`);
+      await page.click(`[data-household="${run.household ?? 'mother'}"]`);
       await page.click('#enlist-confirm');
       await page.waitForSelector('[data-mission]');
     }

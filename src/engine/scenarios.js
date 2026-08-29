@@ -21,6 +21,21 @@ const GROUND = {
   bridge: { id: 'a_bridge', type: 'bridge', pos: { x: 23, y: -9 } },
 };
 
+/**
+ * Mostrograd, 117 km north-east of the Ville, and the palace in it.
+ *
+ * The distance is the whole design of the final watch: far enough that a
+ * medium battery covering one city is useless over the other, close enough that
+ * a single long-range battalion placed exactly between them can *just* reach
+ * both — and, with four channels and eight rounds, still cannot stop two raids.
+ * The tool that can technically do both is the tool that proves you cannot.
+ */
+const CAPITAL_GROUND = {
+  palace: { id: 'a_palace', type: 'palace', label: 'PRESIDENTIAL PALACE', pos: { x: 100, y: 60 }, cluster: 'capital' },
+  ministry: { id: 'a_ministry', type: 'ministry', label: 'STATE MINISTRY', pos: { x: 108, y: 52 }, cluster: 'capital' },
+  capitalPower: { id: 'a_cap_power', type: 'power', label: 'MOSTROGRAD POWER', pos: { x: 92, y: 70 }, cluster: 'capital' },
+};
+
 const SITES = {
   bastion: { id: 's_bastion', type: 'bastion', name: 'BASTION', pos: { x: 2, y: 28 } },
   lanceWest: { id: 's_lance_w', type: 'lance', name: 'LANCE WEST', pos: { x: -24, y: 6 } },
@@ -28,6 +43,23 @@ const SITES = {
   thistleTown: { id: 's_thistle_t', type: 'thistle', name: 'THISTLE TOWN', pos: { x: -2, y: 3 } },
   thistleBase: { id: 's_thistle_b', type: 'thistle', name: 'THISTLE FIELD', pos: { x: 14, y: 9 } },
   hammer: { id: 's_hammer', type: 'hammer', name: 'HAMMER', pos: { x: 1, y: -2 } },
+
+  /*
+   * Positions used only on the last watch.
+   *
+   * The point-defence sections are sited *forward, on the threat axis*, not on
+   * top of what they protect. A strike aircraft releases eighteen kilometres
+   * out; a twelve-kilometre section sitting on the target covers to sixteen and
+   * therefore never gets a shot at anything before it has already dropped. Push
+   * it up the axis and it covers the release point instead, which is the whole
+   * job of point defence and the difference between a battery that fights and a
+   * battery that watches.
+   */
+  bastionCentre: { id: 's_bastion', type: 'bastion', name: 'BASTION', pos: { x: 50, y: 30 } },
+  lanceVille: { id: 's_lance_w', type: 'lance', name: 'LANCE VALLEY', pos: { x: -16, y: 10 } },
+  lanceCapital: { id: 's_lance_e', type: 'lance', name: 'LANCE CAPITAL', pos: { x: 108, y: 74 } },
+  thistleVille: { id: 's_thistle_t', type: 'thistle', name: 'THISTLE VALLEY', pos: { x: -15, y: 6 } },
+  thistlePalace: { id: 's_thistle_b', type: 'thistle', name: 'THISTLE NORTH', pos: { x: 106, y: 74 } },
 };
 
 const RADARS = {
@@ -211,6 +243,94 @@ export const SCENARIOS = [
       { atS: 360, type: 'striker', count: 5, bearingDeg: 5, spreadDeg: 40, spacingS: 16, altM: 160 },
     ],
   },
+
+  {
+    id: 'two-cities',
+    name: 'The Two Cities',
+    subtitle: 'Two raids, one sector, and an order about which one matters.',
+    theme: 'ops-modern',
+    roles: ['net', 'crew', 'both'],
+    seed: 'two-cities-final',
+    leakerTolerance: 6,
+    playerBatteryId: 's_bastion',
+    roundAllowance: 26,
+    /**
+     * The depots are committed to the capital. There is no resupply and the
+     * rails are short, which is what turns "defend both" from a matter of
+     * attention into a matter of arithmetic.
+     */
+    supply: { roundsMult: 1, reloadsAllowed: false },
+    /** The watch the whole campaign has been walking toward. */
+    finale: true,
+    brief: [
+      'Two formations crossed the frontier eleven minutes apart on divergent axes.',
+      'The northern one is tracking Mostrograd and the presidential palace. The western one is'
+        + ' tracking the valley, and there is nothing in the valley but the crossing and your village.',
+      'Sector command has already transmitted its priority of fires. You will receive it shortly and'
+        + ' you will be asked to acknowledge it on the net, in the clear, with the log running.',
+      'BASTION sits between the two cities and can reach either. There is no resupply tonight — the'
+        + ' depots are committed to the capital — so every battery fights with what is on its rails and'
+        + ' nothing more. Nine aircraft on each axis. Every strike aircraft carries two weapons.',
+    ],
+    teaches: 'That the equipment was never the constraint.',
+    /*
+     * Clustered, because the sector operations centre sits eleven kilometres
+     * from the village and a track bound for one passes close to the other. On
+     * this watch the question is never "which building" but "which valley", so
+     * rounds are attributed to a side rather than to an address.
+     */
+    assets: [
+      { ...GROUND.town, cluster: 'ville' },
+      { ...GROUND.c2, cluster: 'ville' },
+      { ...GROUND.bridge, cluster: 'ville' },
+      CAPITAL_GROUND.palace, CAPITAL_GROUND.ministry, CAPITAL_GROUND.capitalPower,
+    ],
+    sites: [
+      SITES.bastionCentre,
+      SITES.lanceVille, SITES.lanceCapital,
+      SITES.thistleVille, SITES.thistlePalace,
+      SITES.hammer,
+    ],
+    radars: [
+      { type: 'ewr', pos: { x: 40, y: 78 }, on: true },
+      { type: 'gapfiller', pos: { x: -22, y: 30 }, on: true },
+    ],
+    waves: [
+      /*
+       * Northern axis: the capital. Suppression first, as it always is.
+       *
+       * Nine aircraft a side is the number the whole watch is balanced on: a
+       * committed defence with everything on one side's rails can just about
+       * stop nine, and cannot come close to stopping eighteen. Remember that a
+       * strike aircraft carries two weapons, so nine aircraft is closer to
+       * fifteen impacts than to nine.
+       */
+      { atS: 20, type: 'sead', count: 2, bearingDeg: 20, spreadDeg: 26, spacingS: 28, distanceKm: 165 },
+      { atS: 110, type: 'striker', count: 4, bearingDeg: 25, spreadDeg: 22, spacingS: 20, altM: 6400,
+        targetAssetId: 'a_palace' },
+      { atS: 250, type: 'cruise', count: 3, bearingDeg: 30, spreadDeg: 20, spacingS: 14, altM: 90,
+        targetAssetId: 'a_palace' },
+      { atS: 350, type: 'striker', count: 2, bearingDeg: 15, spreadDeg: 24, spacingS: 22, altM: 180,
+        targetAssetId: 'a_ministry' },
+
+      /*
+       * Western axis: the valley, and the village in it. Deliberately smaller
+       * than the northern one and spread over four minutes, so a battery
+       * committed to the Ville can cycle its channels and genuinely hold —
+       * the choice has to be a choice, not a foregone loss dressed up as one.
+       */
+      { atS: 175, type: 'striker', count: 3, bearingDeg: 285, spreadDeg: 24, spacingS: 26, altM: 5800,
+        targetAssetId: 'a_town' },
+      { atS: 295, type: 'cruise', count: 3, bearingDeg: 292, spreadDeg: 26, spacingS: 18, altM: 85,
+        targetAssetId: 'a_town' },
+      { atS: 415, type: 'striker', count: 3, bearingDeg: 300, spreadDeg: 22, spacingS: 24, altM: 160,
+        targetAssetId: 'a_town' },
+    ],
+  },
 ];
 
 export const scenarioById = (id) => SCENARIOS.find((s) => s.id === id) ?? SCENARIOS[0];
+
+/** The watch the campaign is built toward. */
+export const FINALE_ID = 'two-cities';
+export const isFinale = (scenario) => scenario?.id === FINALE_ID;

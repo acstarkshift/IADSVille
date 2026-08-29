@@ -15,9 +15,10 @@ import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor } from '../engine/command.js';
 import { THEMES, applyTheme } from './themes.js';
 import { clockString } from '../engine/math.js';
-import { rankOf, backgroundOf } from '../engine/character.js';
+import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/character.js';
 import { serviceSummary } from './dossier.js';
 import { STATE } from './lexicon.js';
+import { composeEnding, ENDINGS, endingSummary } from '../engine/endings.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -55,8 +56,10 @@ export function renderMenu(host, state, actions) {
         <div class="score-cell ${character?.wounded ? 'is-bad' : ''}"><label>СОСТОЯНИЕ · CONDITION</label>
           <b style="font-size:13px">${character?.wounded ? 'РАНЕН' : 'ГОДЕН'}</b></div>
       </div>
+      ${campaign.ending ? `<p style="margin-top:9px;color:var(--hostile)">
+        <b>${esc(endingSummary(campaign.ending) ?? '')}</b> — the last watch has been stood.</p>` : ''}
       ${character ? `<p style="color:var(--ink-dim);margin-top:9px">
-        ${esc(backgroundOf(character).en)}, of ${esc(character.home)}.
+        ${esc(backgroundOf(character).en)}, of the Ville · ${esc(householdOf(character).en)}.
         ${character.decorations.length ? `${character.decorations.length} decoration${character.decorations.length > 1 ? 's' : ''} on file.` : ''}
         ${character.points ? '<b style="color:var(--accent)"> Training points unspent.</b>' : ''}</p>` : ''}
     </div>
@@ -149,8 +152,8 @@ export function renderBriefing(host, state) {
     <p class="subtitle">${esc(mission.subtitle)}</p>
     ${character ? `<div class="card record-card" style="padding:9px 14px">
       <div class="record-stamp">${esc(STATE.serviceShort.tm)}</div>
-      <p style="margin:0">Posting order for <b>${esc(rank.tm)} ${esc(character.name)}</b>,
-      ${esc(backgroundOf(character).en)}, of ${esc(character.home)}.
+      <p style="margin:0">Posting order for <b>${esc(rank.tm)} ${esc(character.name)}</b>.
+      Origin: ${esc(backgroundOf(character).en)}. Home: ${esc(STATE.town.en)}, ${esc(STATE.country.en)}.
       ${character.wounded ? '<span style="color:var(--hostile)">Returned to duty against medical advice.</span>' : ''}</p>
     </div>` : ''}
 
@@ -186,6 +189,15 @@ export function renderBriefing(host, state) {
 
 export function renderDebrief(host, state, result, entry) {
   const consequence = consequenceFor(state.campaign, { narrativePressure: state.narrativePressure });
+
+  /*
+   * The last watch does not get a debrief so much as an outcome. The ending is
+   * read off what was actually defended and is placed above the arithmetic,
+   * because on this one night the arithmetic is not the point.
+   */
+  const ending = result.finale
+    ? composeEnding(result, state.campaign.character, { narrativePressure: state.narrativePressure })
+    : null;
   const b = result.breakdown;
   const s = result.stats;
 
@@ -199,8 +211,17 @@ export function renderDebrief(host, state, result, entry) {
     .join('');
 
   host.innerHTML = `<div class="screen-inner">
-    <h1 class="title" style="font-size:32px;color:${result.success ? 'var(--good)' : 'var(--hostile)'}">${esc(result.headline)}</h1>
-    <p class="subtitle">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
+    ${ending ? `
+      <h1 class="title" style="font-size:30px">${esc(ending.title)}</h1>
+      <p class="subtitle">${esc(ending.subtitle ?? '')}</p>
+      <div class="card ending-card">
+        ${ending.lines.map((line) => `<p>${esc(line)}</p>`).join('')}
+      </div>
+      <p class="subtitle" style="margin-top:18px">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
+    ` : `
+      <h1 class="title" style="font-size:32px;color:${result.success ? 'var(--good)' : 'var(--hostile)'}">${esc(result.headline)}</h1>
+      <p class="subtitle">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
+    `}
 
     <div class="card">
       <h3>Score</h3>
@@ -217,11 +238,17 @@ export function renderDebrief(host, state, result, entry) {
     <div class="card">
       <h3>Ground</h3>
       <table class="ledger">
-        ${result.assets.map((a) => `<tr><td>${esc(a.label)}</td>
+        ${result.assets.map((a) => {
+    const home = a.type === 'town' && state.campaign.character;
+    const quarter = home ? districtOf(state.campaign.character) : null;
+    const struck = home && a.districtsHit?.includes(quarter.id);
+    return `<tr><td>${esc(a.label)}${home ? ' <span style="color:var(--ink-dim)">— home</span>' : ''}</td>
           <td class="${a.destroyed ? 'down' : a.damagePct ? '' : 'up'}">
             ${a.destroyed ? 'DESTROYED' : a.damagePct ? `${a.damagePct}% damage` : 'intact'}
             ${a.casualties ? ` · ${a.casualties} casualties` : ''}
-          </td></tr>`).join('')}
+            ${struck ? `<br><span style="color:var(--hostile)">${esc(quarter.tm)} — ${esc(quarter.en)}, where your people live, is on the returns.</span>` : ''}
+          </td></tr>`;
+  }).join('')}
       </table>
       ${result.battery ? `<p style="margin-top:8px;color:var(--ink-dim)">
         Your battery: <b>${esc(result.battery.name)}</b> —

@@ -209,7 +209,13 @@ function stepMissile(world, missile, dt) {
   missile.aimPos = aim;
 
   const desired = bearing(missile.pos, aim);
-  missile.hdg = turnToward(missile.hdg, desired, TURN_RATE[missile.kind] * dt);
+  // Rounds against a fixed point stop flying a turn-limited course once they are
+  // close, for the same reason a cruise missile does: a turn radius larger than
+  // the lethal radius lets a round orbit what it is supposed to hit.
+  const terminal = missile.targetKind !== 'aircraft' && dist(missile.pos, aim) < 3;
+  missile.hdg = terminal
+    ? desired
+    : turnToward(missile.hdg, desired, TURN_RATE[missile.kind] * dt);
 
   const before = { ...missile.pos };
   const step = scale(headingVec(missile.hdg), missile.speed * dt);
@@ -337,6 +343,7 @@ export function launchSalvo(world, site, track, count) {
       siteId: site.id, trackId: track.id,
     });
     world.warnTargetOfLaunch(target);
+    world.registerRoundsSpent(track, launched);
   }
   return launched;
 }

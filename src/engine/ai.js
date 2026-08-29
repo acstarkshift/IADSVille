@@ -178,10 +178,28 @@ function stepCruise(world, aircraft, dt) {
     const next = world.pickAssetForRaid(aircraft.pos);
     if (!next) { egress(aircraft, dt); return; }
     aircraft.targetAssetId = next.id;
-    return;
+    // Re-targeting is instant; it does not cost the round a tick of flight.
   }
-  flyToward(aircraft, asset.pos, dt);
-  if (dist(aircraft.pos, asset.pos) < 0.5) {
+  /*
+   * Terminal dive.
+   *
+   * A cruise missile turns at four degrees a second, which is a turn radius of
+   * about three and a half kilometres — larger than the radius at which it
+   * counts as having arrived. One that overshoots by a few hundred metres can
+   * therefore enter a stable orbit around its own target and fly it forever.
+   * Inside five kilometres it stops flying a turn-rate-limited course and points
+   * itself at the target, which is both what actually happens and what stops the
+   * simulation waiting on an aircraft that will never land.
+   */
+  const range = dist(aircraft.pos, asset.pos);
+  if (range < 5) {
+    aircraft.hdg = bearing(aircraft.pos, asset.pos);
+    advance(aircraft, dt);
+  } else {
+    flyToward(aircraft, asset.pos, dt);
+  }
+
+  if (dist(aircraft.pos, asset.pos) < 0.6) {
     world.damageAsset(asset, AIR_TYPES.cruise.weaponDamage, aircraft);
     aircraft.alive = false;
     aircraft.impacted = true;
