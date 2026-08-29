@@ -45,6 +45,8 @@ kbd {
 .readout { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
 .readout label { color: var(--ink-dim); font-size: 10px; letter-spacing: .12em; }
 .readout b { color: var(--ink-bright); font-variant-numeric: tabular-nums; }
+/* Expenditure past the allocation is something sector command will ask about. */
+.readout.is-over b { color: var(--warn); }
 
 .standing-bar {
   display: inline-block; width: 62px; height: 6px; margin-left: 4px;

@@ -213,7 +213,10 @@ function stepSead(world, aircraft, dt) {
     return;
   }
 
-  // Pick the juiciest emitter it has a solution on: exposure, then reach.
+  // Pick the juiciest emitter it has a solution on: exposure, then reach — but
+  // deconflicted. A package that puts every round onto the same early-warning
+  // set wastes most of them, so a radar already under attack is heavily
+  // discounted and the flight spreads across the sector's emitters instead.
   let best = null;
   let bestScore = -Infinity;
   for (const radar of world.radars) {
@@ -221,7 +224,11 @@ function stepSead(world, aircraft, dt) {
     const heard = aircraft.elint.get(radar.id) ?? 0;
     if (heard < type.elintNeededS) continue;
     const d = dist(aircraft.pos, radar.pos);
-    const score = radar.elintGain * 10 - d * 0.08 + (radar.state === 'radiating' ? 25 : 0);
+    const alreadyTargeted = world.missiles.some(
+      (m) => m.alive && m.kind === 'arm' && m.targetId === radar.id);
+    const score = radar.elintGain * 10 - d * 0.08
+      + (radar.state === 'radiating' ? 25 : 0)
+      - (alreadyTargeted ? 60 : 0);
     if (score > bestScore) { bestScore = score; best = radar; }
   }
 

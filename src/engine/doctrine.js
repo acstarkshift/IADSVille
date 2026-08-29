@@ -317,16 +317,25 @@ export function runBatteryCrews(world, dt) {
       startReload(world, site);
     }
 
-    // Without a central picture, a battery fights only what it can see itself.
-    if (!world.fusionOnline && site.weaponsState === 'free') {
-      const localTracks = [...world.tracks.values()]
+    /*
+     * Weapons free means what it says: the battery engages firm hostiles inside
+     * its envelope on its own authority. Weapons tight means it shoots only what
+     * it is given. That distinction is the battle manager's delegation dial —
+     * set a flank free and stop thinking about it, or hold it tight and spend
+     * your attention there.
+     *
+     * With the centre gone a battery can only act on what its own radar holds,
+     * which is what makes losing fusion so expensive even for a free battery.
+     */
+    if (site.weaponsState === 'free') {
+      const available = [...world.tracks.values()]
         .filter((t) => t.hostility === 'hostile'
-          && t.sources.includes(site.radarId)
           && t.quality >= DETECTION.firmQuality
           && t.assignedTo.length === 0
+          && (world.fusionOnline || t.sources.includes(site.radarId))
           && inEnvelope(site, t.pos, t.altM).ok)
         .sort((a, b) => b.threat - a.threat);
-      if (localTracks[0]) beginEngagement(world, site, localTracks[0]);
+      if (available[0]) beginEngagement(world, site, available[0]);
     }
   }
 }

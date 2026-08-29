@@ -210,13 +210,16 @@ export function renderDebrief(host, state, result, entry) {
     <div class="card">
       <h3>Points</h3>
       <table class="ledger">
-        <tr><td>Ground preserved</td><td class="up">+${b.assets}</td></tr>
-        <tr><td>Aircraft destroyed</td><td class="up">+${b.kills}</td></tr>
-        <tr><td>Sorties turned back</td><td class="up">+${b.turnedBack}</td></tr>
-        <tr><td>Leakers</td><td class="down">${b.leakers}</td></tr>
-        <tr><td>Rounds expended</td><td class="down">${b.rounds}</td></tr>
-        <tr><td>Equipment lost</td><td class="down">${b.equipment}</td></tr>
-        ${b.civilian ? `<tr><td>Civilian harm</td><td class="down">${b.civilian}</td></tr>` : ''}
+        ${[
+    ['Ground preserved', b.assets],
+    ['Aircraft destroyed', b.kills],
+    ['Sorties turned back', b.turnedBack],
+    ['Leakers', b.leakers],
+    ['Rounds expended', b.rounds],
+    ['Equipment lost', b.equipment],
+    ['Civilian harm', b.civilian],
+  ].filter(([, v]) => v !== 0).map(([label, value]) =>
+    `<tr><td>${esc(label)}</td><td class="${value > 0 ? 'up' : 'down'}">${value > 0 ? '+' : ''}${value}</td></tr>`).join('')}
       </table>
     </div>
 

@@ -28,6 +28,8 @@ import { radiating } from './detection.js';
 export const DIRECTIVES = {
   radiate: {
     id: 'radiate',
+    /** How the order is named in the after-action ledger. */
+    label: 'the order to keep radiating',
     priority: 'high',
     cooldownS: 180,
     text: (w) => `SECTOR ACTUAL: Emissions log shows ${Math.round(w.command.darkTimeS)}s dark with hostiles inbound. All sets will radiate. Acknowledge.`,
@@ -54,6 +56,8 @@ export const DIRECTIVES = {
 
   noLeakers: {
     id: 'noLeakers',
+    /** How the order is named in the after-action ledger. */
+    label: 'the no-leakers order',
     priority: 'normal',
     once: true,
     text: () => 'SECTOR ACTUAL: No leakers past the river line. You are accountable for every aircraft that reaches the town. Acknowledge.',
@@ -64,6 +68,8 @@ export const DIRECTIVES = {
 
   conserve: {
     id: 'conserve',
+    /** How the order is named in the after-action ledger. */
+    label: 'the expenditure restriction',
     priority: 'normal',
     cooldownS: 240,
     text: (w) => `LOGISTICS: Expenditure is ${w.stats.roundsFired} rounds against an allocation of ${w.roundAllowance}. Single rounds only until further notice. Acknowledge.`,
@@ -77,6 +83,8 @@ export const DIRECTIVES = {
 
   priority: {
     id: 'priority',
+    /** How the order is named in the after-action ledger. */
+    label: 'the priority of fires',
     priority: 'normal',
     cooldownS: 300,
     pick: (w) => {
@@ -91,6 +99,8 @@ export const DIRECTIVES = {
 
   civilCorridor: {
     id: 'civilCorridor',
+    /** How the order is named in the after-action ledger. */
+    label: 'the civil corridor',
     priority: 'high',
     cooldownS: 200,
     pick: (w) => w.aircraft.find((a) => a.alive && a.type === 'civil'),
@@ -102,6 +112,8 @@ export const DIRECTIVES = {
 
   explain: {
     id: 'explain',
+    /** How the order is named in the after-action ledger. */
+    label: 'the request for confirmation',
     priority: 'low',
     cooldownS: 150,
     text: (w) => `POLITICAL SECTION: Your expenditure and your emissions are both being reviewed. Confirm you are reading this transmission.`,
@@ -113,6 +125,8 @@ export const DIRECTIVES = {
 
   displaced: {
     id: 'displaced',
+    /** How the order is named in the after-action ledger. */
+    label: 'the displacement query',
     priority: 'high',
     cooldownS: 260,
     text: () => 'SECTOR ACTUAL: You displaced a battery without authority. That decision is noted against your name. Acknowledge.',
@@ -196,11 +210,11 @@ export function answerDirective(world, answer) {
 
   if (answer === 'accepted') {
     template.onAccept?.(world, subject);
-    standingDelta(world, COMMAND.standing.directiveObeyed, `complied: ${directive.id}`);
+    standingDelta(world, COMMAND.standing.directiveObeyed, `complied with ${template.label}`);
     world.log('info', 'ACKNOWLEDGED', {});
   } else if (answer === 'refused') {
     template.onRefuse?.(world, subject);
-    standingDelta(world, COMMAND.standing.directiveRefused, `refused: ${directive.id}`);
+    standingDelta(world, COMMAND.standing.directiveRefused, `refused ${template.label}`);
     world.log('warn', world.narrativePressure
       ? 'REFUSAL LOGGED. SECTOR ACTUAL ACKNOWLEDGES.'
       : 'DECLINED.', { severity: 'high' });
@@ -213,7 +227,8 @@ function timeoutDirective(world) {
   const directive = world.command.pending;
   directive.state = 'ignored';
   world.command.pending = null;
-  standingDelta(world, COMMAND.standing.directiveIgnored, `no reply: ${directive.id}`);
+  standingDelta(world, COMMAND.standing.directiveIgnored,
+    `no reply to ${DIRECTIVES[directive.id].label}`);
   world.log('warn', world.narrativePressure
     ? 'NO REPLY RECEIVED. THE OMISSION IS RECORDED.'
     : 'NO REPLY LOGGED.', { severity: 'high' });
