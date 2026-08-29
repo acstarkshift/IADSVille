@@ -1,0 +1,15 @@
+{
+  "name": "iadsville",
+  "version": "1.0.0",
+  "description": "IADSVille — a browser-based integrated air defense simulation. Run the radar picture, assign tracks to shooters, and survive the raid.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node tools/serve.js",
+    "serve": "node tools/serve.js",
+    "test": "node --test test/"
+  },
+  "keywords": ["game", "radar", "air-defense", "simulation", "canvas"],
+  "license": "MIT",
+  "engines": { "node": ">=18" }
+}
