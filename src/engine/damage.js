@@ -19,12 +19,14 @@ export function addEffect(world, effect) {
 
 /** Knock the player's console offline — the scope goes dark and comes back changed. */
 export function interruptConsole(world, seconds, reason) {
-  const until = world.t + seconds;
+  // A cool head gets the standby bus across sooner.
+  const scaled = seconds * (world.modifiers?.rebootMult ?? 1);
+  const until = world.t + scaled;
   if (until > world.console.rebootUntilS) {
     world.console.rebootUntilS = until;
     world.console.rebootReason = reason;
     world.log('alert', `CONSOLE POWER LOST — ${reason}`, { severity: 'high' });
-    addEffect(world, { kind: 'blackout', durationS: seconds });
+    addEffect(world, { kind: 'blackout', durationS: scaled });
   }
 }
 

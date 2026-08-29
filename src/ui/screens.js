@@ -15,6 +15,9 @@ import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor } from '../engine/command.js';
 import { THEMES, applyTheme } from './themes.js';
 import { clockString } from '../engine/math.js';
+import { rankOf, backgroundOf } from '../engine/character.js';
+import { serviceSummary } from './dossier.js';
+import { STATE } from './lexicon.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -26,9 +29,12 @@ export function renderMenu(host, state, actions) {
   const tier = tierFor(campaign.standing);
   const flown = campaign.history.length;
 
+  const character = campaign.character;
+  const rank = character ? rankOf(character) : null;
+
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title">IADSVILLE</h1>
-    <p class="subtitle">Sector air defence · you have the watch</p>
+    <p class="subtitle">${esc(STATE.country.tm)} · ${esc(STATE.service.en)} · sector 4-B</p>
 
     <div class="card">
       <p>A raid is coming for the town you are sitting under. You have radars that can see only
@@ -37,14 +43,22 @@ export function renderMenu(host, state, actions) {
       <p style="color:var(--ink-dim)">Emit to see. Emit to shoot. Emit and they will find you. Pick two.</p>
     </div>
 
-    <div class="card">
-      <h3>Personnel file</h3>
+    <div class="card record-card">
+      <div class="record-stamp">${esc(tier.label)}</div>
+      <h3>Personnel file${character ? ` — ${esc(rank.tm)} ${esc(character.name)}` : ''}</h3>
       <div class="score-grid">
-        <div class="score-cell"><label>STANDING</label><b>${Math.round(campaign.standing)}</b></div>
-        <div class="score-cell"><label>ASSESSMENT</label><b style="font-size:13px">${esc(tier.label)}</b></div>
-        <div class="score-cell"><label>WATCHES STOOD</label><b>${flown}</b></div>
-        <div class="score-cell"><label>COMMENDATIONS</label><b>${campaign.commendations}</b></div>
+        <div class="score-cell"><label>ЗВАНИЕ · RANK</label><b style="font-size:13px">${esc(rank?.en ?? '—')}</b></div>
+        <div class="score-cell"><label>АТТЕСТАЦИЯ · STANDING</label><b>${Math.round(campaign.standing)}</b></div>
+        <div class="score-cell"><label>ОПЫТ · EXPERIENCE</label><b>${character?.xp ?? 0}</b></div>
+        <div class="score-cell"><label>ВАХТ · WATCHES</label><b>${flown}</b></div>
+        <div class="score-cell ${character?.points ? 'is-good' : ''}"><label>ПОДГОТОВКА · TRAINING</label><b>${character?.points ?? 0}</b></div>
+        <div class="score-cell ${character?.wounded ? 'is-bad' : ''}"><label>СОСТОЯНИЕ · CONDITION</label>
+          <b style="font-size:13px">${character?.wounded ? 'РАНЕН' : 'ГОДЕН'}</b></div>
       </div>
+      ${character ? `<p style="color:var(--ink-dim);margin-top:9px">
+        ${esc(backgroundOf(character).en)}, of ${esc(character.home)}.
+        ${character.decorations.length ? `${character.decorations.length} decoration${character.decorations.length > 1 ? 's' : ''} on file.` : ''}
+        ${character.points ? '<b style="color:var(--accent)"> Training points unspent.</b>' : ''}</p>` : ''}
     </div>
 
     <div class="card">
@@ -109,6 +123,7 @@ export function renderMenu(host, state, actions) {
 
     <div class="actions">
       <button class="btn-primary" id="btn-brief">TAKE THE WATCH</button>
+      <button class="btn" id="btn-dossier">ЛИЧНОЕ ДЕЛО · DOSSIER</button>
       <button class="btn" id="btn-keys">CONTROLS</button>
       ${flown ? '<button class="btn is-danger" id="btn-wipe">DESTROY FILE</button>' : ''}
     </div>
@@ -126,9 +141,18 @@ export function renderBriefing(host, state) {
     ? mission.sites.find((s) => s.id === state.batteryId) ?? mission.sites[0]
     : null;
 
+  const character = state.campaign.character;
+  const rank = character ? rankOf(character) : null;
+
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title" style="font-size:34px">${esc(mission.name)}</h1>
     <p class="subtitle">${esc(mission.subtitle)}</p>
+    ${character ? `<div class="card record-card" style="padding:9px 14px">
+      <div class="record-stamp">${esc(STATE.serviceShort.tm)}</div>
+      <p style="margin:0">Posting order for <b>${esc(rank.tm)} ${esc(character.name)}</b>,
+      ${esc(backgroundOf(character).en)}, of ${esc(character.home)}.
+      ${character.wounded ? '<span style="color:var(--hostile)">Returned to duty against medical advice.</span>' : ''}</p>
+    </div>` : ''}
 
     ${note ? `<div class="card"><p style="color:var(--ink-dim);font-style:italic">${esc(note)}</p></div>` : ''}
 
@@ -223,6 +247,8 @@ export function renderDebrief(host, state, result, entry) {
       </table>
     </div>
 
+    ${serviceSummary(state.campaign.character, entry?.service, state.campaign)}
+
     ${ledger ? `<div class="card">
       <h3>Sector command's ledger</h3>
       <table class="ledger">${ledger}</table>
@@ -237,6 +263,7 @@ export function renderDebrief(host, state, result, entry) {
     <div class="actions">
       <button class="btn-primary" id="btn-again">STAND ANOTHER WATCH</button>
       <button class="btn" id="btn-replay">REPLAY THIS ONE</button>
+      ${state.campaign.character ? '<button class="btn" id="btn-dossier-debrief">ЛИЧНОЕ ДЕЛО · DOSSIER</button>' : ''}
     </div>
   </div>`;
 }

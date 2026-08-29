@@ -15,6 +15,7 @@
 
 import { COMMAND } from './config.js';
 import { tierFor } from './command.js';
+import { createCharacter, recordWatch, characterModifiers } from './character.js';
 
 const KEY = 'iadsville.campaign.v1';
 
@@ -44,9 +45,13 @@ export function browserStore() {
   }
 }
 
-export function emptyCampaign() {
+export function emptyCampaign(character = null) {
   return {
-    standing: COMMAND.startingStanding,
+    /** Null until the player has enlisted and chosen who they are. */
+    character,
+    standing: character
+      ? (characterModifiers(character).startingStanding ?? COMMAND.startingStanding)
+      : COMMAND.startingStanding,
     completed: {},        // missionId -> best result summary
     history: [],          // one entry per mission flown
     /** Escalating pressure on the personal thread, 0 upward. */
@@ -55,12 +60,26 @@ export function emptyCampaign() {
   };
 }
 
+/** Enlist: build the soldier and set the campaign's opening standing from them. */
+export function enlist(campaign, { name, background, home }) {
+  campaign.character = createCharacter({ name, background, home });
+  const mods = characterModifiers(campaign.character);
+  campaign.standing = mods.startingStanding ?? COMMAND.startingStanding;
+  return campaign.character;
+}
+
 export function loadCampaign(store) {
   try {
     const raw = store.get(KEY);
     if (!raw) return emptyCampaign();
     const parsed = JSON.parse(raw);
-    return { ...emptyCampaign(), ...parsed };
+    const campaign = { ...emptyCampaign(), ...parsed };
+    // A record saved before the service record existed still loads; the player
+    // is simply asked to enlist.
+    if (campaign.character) {
+      campaign.character = { ...createCharacter({ name: campaign.character.name }), ...campaign.character };
+    }
+    return campaign;
   } catch {
     return emptyCampaign();
   }
@@ -83,6 +102,13 @@ export function recordMission(campaign, result) {
   const carried = Math.round(campaign.standing * 0.25 + result.standing * 0.75);
   campaign.standing = Math.max(COMMAND.minStanding, Math.min(COMMAND.maxStanding, carried));
 
+  // The service record is updated against the standing the watch actually left
+  // you on, so a promotion reflects where you now stand rather than where you
+  // stood when the raid started.
+  const service = campaign.character
+    ? recordWatch(campaign.character, result, campaign.standing)
+    : null;
+
   const tier = tierFor(campaign.standing);
   if (tier.id === 'commended') campaign.commendations++;
   if (tier.id === 'flagged' || tier.id === 'condemned') campaign.fileMarks++;
@@ -104,7 +130,21 @@ export function recordMission(campaign, result) {
   if (!previous || result.score > previous.score) {
     campaign.completed[result.missionId] = { score: result.score, tier: tier.id, role: result.role };
   }
-  return entry;
+  return { ...entry, service };
+}
+
+/** What the simulation should be handed for this campaign: supply plus the soldier. */
+export function missionModifiers(campaign, { narrativePressure = true } = {}) {
+  const supply = consequenceFor(campaign, { narrativePressure }).modifiers;
+  if (!campaign.character) return supply;
+  const personal = characterModifiers(campaign.character);
+  return {
+    ...personal,
+    ...supply,
+    // Supply and training both move the round count; they should compound rather
+    // than one silently overwriting the other.
+    roundsMult: (supply.roundsMult ?? 1) * (personal.roundsMult ?? 1),
+  };
 }
 
 /**

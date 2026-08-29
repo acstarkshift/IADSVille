@@ -5,7 +5,7 @@
 html, body {
   height: 100%;
   margin: 0;
-  background: var(--bg);
+  background: var(--metal-lo);
   color: var(--ink);
   font-family: var(--font-mono);
   font-size: 13px;
@@ -30,27 +30,35 @@ kbd {
 /* ---------------------------------------------------------------- topbar */
 
 .topbar {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 6px 10px;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--edge);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  flex-wrap: wrap; row-gap: 4px;
+  padding: 5px 9px;
+  border-bottom: 1px solid var(--metal-edge);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .45);
 }
+.lamps { display: inline-flex; gap: 10px; align-items: center; margin-left: 4px; }
+.operator .data-plate { line-height: 1.45; }
 .topbar-group { display: flex; align-items: center; gap: 8px; }
 
 .badge {
-  color: var(--ink-bright); letter-spacing: .14em; text-transform: uppercase;
-  font-weight: 700; text-shadow: var(--glow);
+  color: var(--engrave); letter-spacing: .13em; text-transform: uppercase;
+  font-weight: 700; font-size: 12px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .55);
 }
 
 .readout { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
-.readout label { color: var(--ink-dim); font-size: 10px; letter-spacing: .12em; }
-.readout b { color: var(--ink-bright); font-variant-numeric: tabular-nums; }
+.readout label { color: var(--engrave-dim); font-size: 8px; letter-spacing: .1em; }
+.readout b {
+  color: var(--engrave); font-variant-numeric: tabular-nums; font-size: 13px;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+}
 /* Expenditure past the allocation is something sector command will ask about. */
 .readout.is-over b { color: var(--warn); }
 
 .standing-bar {
-  display: inline-block; width: 62px; height: 6px; margin-left: 4px;
-  background: var(--bg-raised); border: 1px solid var(--edge); border-radius: 999px;
+  display: inline-block; width: 62px; height: 7px; margin-left: 4px;
+  background: #0d0f0c; border: 1px solid var(--metal-edge); border-radius: 1px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .8);
   overflow: hidden; vertical-align: middle;
 }
 .standing-bar i { display: block; height: 100%; background: var(--accent); transition: width .4s, background .4s; }
@@ -83,32 +91,45 @@ kbd {
 
 .panel {
   display: flex; flex-direction: column; min-height: 0;
-  background: var(--bg-panel);
-  border-right: 1px solid var(--edge);
+  border-right: 1px solid var(--metal-edge);
+  box-shadow: inset -3px 0 8px rgba(0, 0, 0, .35);
 }
-.panel-right { border-right: none; border-left: 1px solid var(--edge); }
+.panel-right { border-right: none; border-left: 1px solid var(--metal-edge);
+  box-shadow: inset 3px 0 8px rgba(0, 0, 0, .35); }
+.panel { overflow-x: hidden; }
+.battery-list { overflow-x: hidden; }
 
 .panel h2 {
-  margin: 0; padding: 6px 10px;
-  font-size: 11px; letter-spacing: .18em; font-weight: 700;
-  color: var(--ink-dim); text-transform: uppercase;
-  border-bottom: 1px solid var(--edge);
-  display: flex; justify-content: space-between; align-items: center;
+  margin: 0; padding: 5px 9px;
+  border-bottom: 1px solid var(--metal-edge);
+  background: linear-gradient(180deg, rgba(0,0,0,.25), transparent);
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
 }
-.hint { font-size: 10px; letter-spacing: .1em; color: var(--ink-dim); }
+.panel h2 .lg { align-items: flex-start; }
+.panel h2 .lg b { font-size: 10.5px; }
+.hint { font-size: 8.5px; letter-spacing: .1em; color: var(--engrave-dim); }
 .hint.is-bad { color: var(--hostile); animation: blink 1s infinite steps(1); }
 
 /* ------------------------------------------------------------ track list */
 
+.track-head { padding-left: 14px !important; padding-right: 14px !important; }
 .track-head, .track-row {
   display: grid;
   grid-template-columns: 3.7em 5.6em 2.6em 3.2em 2.8em 1fr;
   gap: 4px; padding: 2px 8px;
   font-size: 11px; font-variant-numeric: tabular-nums;
 }
-.track-head { color: var(--ink-dim); font-size: 9.5px; letter-spacing: .08em; padding-top: 5px; padding-bottom: 3px; }
+.track-head {
+  color: var(--engrave-dim); font-size: 8.5px; letter-spacing: .1em;
+  padding-top: 5px; padding-bottom: 3px;
+}
 
-.track-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+.track-list {
+  list-style: none; margin: 5px; padding: 2px 0; overflow-y: auto; flex: 1;
+  background: linear-gradient(180deg, #05070500, rgba(0,0,0,.45)), var(--bg);
+  border: 1px solid var(--metal-edge); border-radius: 2px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .7);
+}
 .track-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-row {
   cursor: pointer; border-left: 3px solid transparent; align-items: center;
@@ -127,10 +148,11 @@ kbd {
 }
 
 .panel-foot {
-  border-top: 1px solid var(--edge); padding: 6px 8px;
-  font-size: 11px; color: var(--ink-dim); min-height: 62px; line-height: 1.5;
+  border-top: 1px solid var(--metal-edge); padding: 6px 8px;
+  font-size: 10.5px; color: var(--engrave-dim); min-height: 62px; line-height: 1.55;
 }
-.panel-foot b { color: var(--ink-bright); }
+.panel-foot b { color: var(--engrave); }
+.panel-foot em { color: var(--warn); }
 
 /* --------------------------------------------------------------- weapons */
 
@@ -181,13 +203,17 @@ kbd {
 
 /* -------------------------------------------------------- crew console */
 
-.crew-console { border-top: 1px solid var(--edge); padding: 8px; }
+.crew-console { border-top: 1px solid var(--metal-edge); padding: 7px 5px; }
 .crew-console h3 {
   margin: 0 0 6px; font-size: 10px; letter-spacing: .16em;
-  color: var(--ink-dim); text-transform: uppercase;
+  color: var(--engrave-dim); text-transform: uppercase;
 }
-.crew-row { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
-.crew-row b { color: var(--ink-bright); font-variant-numeric: tabular-nums; }
+.crew-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  font-size: 11px; padding: 2px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, .35);
+}
+.crew-row b { color: var(--engrave); font-variant-numeric: tabular-nums; font-size: 10.5px; }
 .crew-row.is-hot b { color: var(--hostile); }
 .crew-row.is-good b { color: var(--good); }
 
@@ -204,8 +230,15 @@ kbd {
 
 /* ----------------------------------------------------------------- scope */
 
-.scope-wrap { position: relative; min-width: 0; min-height: 0; background: var(--bg); overflow: hidden; }
+.scope-wrap { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
 #scope { display: block; width: 100%; height: 100%; }
+/* Curved glass over the tube: a highlight across the top-left, nothing more. */
+.tube::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(120% 90% at 22% 8%, rgba(255,255,255,.055), transparent 55%);
+}
+[data-theme="ops-modern"] .tube::after { background: none; }
+.scope-side { display: none; }
 
 .scope-overlay {
   position: absolute; inset: 0; pointer-events: none;
@@ -231,24 +264,30 @@ kbd {
 
 /* ---------------------------------------------------------------- ticker */
 
-.ticker { border-top: 1px solid var(--edge); background: var(--bg-panel); }
+.ticker { border-top: 1px solid var(--metal-edge); box-shadow: 0 -2px 6px rgba(0,0,0,.4); }
 
 .command-net {
   display: flex; align-items: center; gap: 12px; padding: 7px 10px;
-  border-bottom: 1px solid var(--edge);
-  background: color-mix(in srgb, var(--hostile) 9%, var(--bg-panel));
+  border-bottom: 1px solid var(--metal-edge);
+  background: color-mix(in srgb, var(--hostile) 16%, var(--metal-lo));
   animation: alarm-pulse 2s infinite;
 }
 .command-net[hidden] { display: none; }
-.command-text { flex: 1; color: var(--ink-bright); line-height: 1.5; }
-.command-text::before { content: "◈ COMMAND NET  "; color: var(--hostile); letter-spacing: .1em; font-size: 10px; }
+.command-text { flex: 1; color: var(--engrave); line-height: 1.5; font-size: 12px; }
+.command-text::before {
+  content: "◈ СЕТЬ КОМАНДОВАНЬЯ / COMMAND NET  ";
+  color: var(--hostile); letter-spacing: .1em; font-size: 9px;
+}
 .command-actions { display: flex; align-items: center; gap: 6px; }
 .btn-accept { border-color: var(--good); color: var(--good); }
 .btn-refuse { border-color: var(--hostile); color: var(--hostile); }
-.command-timer { font-variant-numeric: tabular-nums; color: var(--hostile); min-width: 3.5em; text-align: right; }
+.command-timer {
+  font-variant-numeric: tabular-nums; color: var(--hostile); min-width: 3.5em;
+  text-align: right; font-size: 15px; font-weight: 700;
+}
 
 .event-log {
-  list-style: none; margin: 0; padding: 4px 10px;
+  list-style: none; margin: 0; padding: 5px 10px;
   height: 92px; overflow-y: auto; font-size: 11px; line-height: 1.55;
 }
 .event-log li { display: flex; gap: 8px; }
@@ -351,3 +390,28 @@ table.ledger .down { color: var(--hostile); }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* ------------------------------------------------------- service record */
+
+/* Paperwork, not a character sheet: a card with a stamp in the corner. */
+.record-card { position: relative; border-left: 3px solid var(--accent); }
+.record-stamp {
+  position: absolute; top: 8px; right: 10px;
+  font-size: 8.5px; letter-spacing: .18em; color: var(--hostile);
+  border: 1.5px solid var(--hostile); border-radius: 2px;
+  padding: 2px 6px; transform: rotate(-4deg); opacity: .75;
+  pointer-events: none;
+}
+
+.field-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px; }
+.field { display: flex; flex-direction: column; gap: 3px; flex: 1 1 210px; }
+.field span { font-size: 9px; letter-spacing: .12em; color: var(--ink-dim); }
+.field input, .field select {
+  font: inherit; font-size: 13px; color: var(--ink-bright);
+  background: var(--bg); border: 1px solid var(--edge); border-radius: var(--radius);
+  padding: 6px 8px;
+}
+.field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.choice[disabled] { opacity: .45; }
+.choice.is-active { border-color: var(--accent); background: var(--bg-raised); }

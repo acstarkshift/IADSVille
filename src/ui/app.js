@@ -11,7 +11,10 @@
 import { World } from '../engine/world.js';
 import { SCENARIOS, scenarioById } from '../engine/scenarios.js';
 import { SIM, SAM_TYPES, ROLES } from '../engine/config.js';
-import { loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign, consequenceFor } from '../engine/campaign.js';
+import {
+  loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign,
+  consequenceFor, missionModifiers, enlist,
+} from '../engine/campaign.js';
 import { armTimeToImpact } from '../engine/doctrine.js';
 import { AIR_TYPES } from '../engine/config.js';
 import { dist, clamp01 } from '../engine/math.js';
@@ -24,6 +27,8 @@ import {
   renderEventLog, renderCommandNet, renderBlackout,
 } from './panels.js';
 import { renderMenu, renderBriefing, renderDebrief, renderControls } from './screens.js';
+import { renderEnlistment, renderDossier } from './dossier.js';
+import { learnSkill } from '../engine/character.js';
 
 const SETTINGS_KEY = 'iadsville.settings.v1';
 const store = browserStore();
@@ -112,12 +117,18 @@ function cacheEls() {
     commandTimer: id('command-timer'),
     speedGroup: id('speed-group'),
     viewToggle: id('view-toggle'),
+    masterLamps: id('master-lamps'),
+    operatorPlate: id('operator-plate'),
+    scopeSide: id('scope-side'),
   });
 }
 
 function boot() {
   cacheEls();
   loadSettings();
+  // Exposed for the headless smoke and integration tests, and genuinely handy
+  // when debugging a campaign state by hand.
+  window.__state = state;
   state.campaign = loadCampaign(store);
   scope = new Scope(els.canvas);
   crew = new CrewConsole(els.canvas);
@@ -149,7 +160,56 @@ function showScreen(render) {
   render(els.screen, state);
 }
 
+/**
+ * Nobody gets a scope until they have a file. Enlistment is the first screen a
+ * new player sees, and it is where the campaign's identity is decided.
+ */
+function showEnlistment() {
+  state.phase = 'enlist';
+  applyTheme(state.themeOverride ?? 'crt-green');
+  showScreen(renderEnlistment);
+  const host = els.screen;
+  const nameInput = host.querySelector('#enlist-name');
+
+  host.querySelector('#enlist-reroll').onclick = () => {
+    state.pendingName = null;
+    showEnlistment();
+  };
+  host.querySelectorAll('[data-background]').forEach((btn) => {
+    btn.onclick = () => {
+      state.pendingName = nameInput.value;
+      state.pendingHome = host.querySelector('#enlist-home').value;
+      state.pendingBackground = btn.dataset.background;
+      showEnlistment();
+    };
+  });
+  host.querySelector('#enlist-confirm').onclick = () => {
+    enlist(state.campaign, {
+      name: nameInput.value,
+      background: state.pendingBackground,
+      home: host.querySelector('#enlist-home').value,
+    });
+    saveCampaign(store, state.campaign);
+    showMenu();
+  };
+}
+
+function showDossier(back) {
+  state.phase = 'dossier';
+  showScreen(renderDossier);
+  els.screen.querySelectorAll('[data-skill]').forEach((btn) => {
+    btn.onclick = () => {
+      if (learnSkill(state.campaign.character, btn.dataset.skill)) {
+        saveCampaign(store, state.campaign);
+        showDossier(back);
+      }
+    };
+  });
+  els.screen.querySelector('#dossier-back').onclick = back;
+}
+
 function showMenu() {
+  if (!state.campaign.character) { showEnlistment(); return; }
   state.phase = 'menu';
   applyTheme(state.themeOverride ?? state.mission.theme);
   scope.setTheme(state.themeOverride ?? state.mission.theme);
@@ -194,12 +254,16 @@ function wireMenu() {
 
   host.querySelector('#btn-brief').onclick = () => { audio.resume(); showBriefing(); };
   host.querySelector('#btn-keys').onclick = () => showHelp(showMenu);
+  host.querySelector('#btn-dossier').onclick = () => showDossier(showMenu);
   const wipe = host.querySelector('#btn-wipe');
   if (wipe) {
     wipe.onclick = () => {
+      // Destroying the file also destroys the soldier: a new campaign starts
+      // with a new enlistment, not with the same person at zero.
       state.campaign = emptyCampaign();
+      state.pendingName = null;
       saveCampaign(store, state.campaign);
-      showMenu();
+      showEnlistment();
     };
   }
 }
@@ -227,13 +291,13 @@ function startMission() {
   scope.setTheme(themeId);
   crew.setTheme(themeId);
 
-  const consequence = consequenceFor(state.campaign, { narrativePressure: state.narrativePressure });
   world = new World(state.mission, {
     role: state.role,
     batteryId: state.batteryId,
     difficulty: state.difficulty,
     narrativePressure: state.narrativePressure,
-    modifiers: consequence.modifiers,
+    modifiers: missionModifiers(state.campaign, { narrativePressure: state.narrativePressure }),
+    character: state.campaign.character,
   });
 
   ui.selectedTrackId = null;
@@ -253,6 +317,7 @@ function startMission() {
   state.phase = 'mission';
   // Handy for debugging and for the headless smoke tests; harmless in play.
   window.__world = world;
+  window.__state = state;
   window.__scope = scope;
   window.__ui = ui;
   scope.rangeKm = 150;
@@ -273,12 +338,27 @@ function endMission() {
   renderDebrief(els.screen, state, result, entry);
   els.screen.querySelector('#btn-again').onclick = showMenu;
   els.screen.querySelector('#btn-replay').onclick = () => { showBriefing(); };
+  const dossier = els.screen.querySelector('#btn-dossier-debrief');
+  if (dossier) dossier.onclick = () => showDossier(() => endMissionScreen(result, entry));
+}
+
+/** Re-show a debrief after a detour through the dossier. */
+function endMissionScreen(result, entry) {
+  state.phase = 'debrief';
+  els.shell.hidden = true;
+  els.screen.hidden = false;
+  renderDebrief(els.screen, state, result, entry);
+  els.screen.querySelector('#btn-again').onclick = showMenu;
+  els.screen.querySelector('#btn-replay').onclick = () => { showBriefing(); };
+  const dossier = els.screen.querySelector('#btn-dossier-debrief');
+  if (dossier) dossier.onclick = () => showDossier(() => endMissionScreen(result, entry));
 }
 
 function setSpeed(speed) {
   state.speed = speed;
+  // The selected speed button stays physically depressed.
   els.speedGroup.querySelectorAll('[data-speed]').forEach((b) => {
-    b.classList.toggle('is-on', Number(b.dataset.speed) === speed);
+    b.classList.toggle('is-down', Number(b.dataset.speed) === speed);
   });
 }
 
@@ -573,6 +653,9 @@ function wireGlobalInput() {
 
     if (state.phase !== 'mission') {
       if (e.key === 'Enter' && state.phase === 'brief') startMission();
+      if (e.key === 'Enter' && state.phase === 'enlist') {
+        els.screen.querySelector('#enlist-confirm')?.click();
+      }
       return;
     }
     const site = ui.selectedSiteId ? world.siteById.get(ui.selectedSiteId) : null;

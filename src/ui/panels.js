@@ -13,10 +13,50 @@ import { bearing, dist, len, clockString, clamp01 } from '../engine/math.js';
 import { sortedTracks } from '../engine/threat.js';
 import { trackProfile } from '../engine/detection.js';
 import { engagementStatus } from './console.js';
-import { armTimeToImpact } from '../engine/doctrine.js';
+import { armTimeToImpact, channelsFor } from '../engine/doctrine.js';
+import { CONTROLS, STATUS, EQUIPMENT, PLATES, legend } from './lexicon.js';
+import { rankOf } from '../engine/character.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* ---------------------------------------------------------------- hardware
+ * Small builders for the physical controls. Keeping them here means a lamp is
+ * a lamp everywhere on the console, and a switch always says what state it is
+ * in by the position of its lever rather than by its colour alone.
+ */
+
+/** A domed indicator with its engraved caption. */
+function lamp(entry, lit, { colour = '', blinking = false, caption = null } = {}) {
+  const classes = ['lamp', lit ? 'is-lit' : '', colour ? `is-${colour}` : '', blinking ? 'blinking' : '']
+    .filter(Boolean).join(' ');
+  return `<span class="${classes}" title="${esc(entry.en)}">
+    <span class="lamp-dome"></span>${esc(caption ?? entry.tm)}</span>`;
+}
+
+/** A bat-handle toggle. Lever up is on, and the position is the state. */
+function toggle(entry, on, { act, site, radar, disabled = false } = {}) {
+  const attrs = [
+    act ? `data-act="${act}"` : '',
+    site ? `data-site="${site}"` : '',
+    radar ? `data-radar="${radar}"` : '',
+    disabled ? 'disabled' : '',
+  ].filter(Boolean).join(' ');
+  return `<button class="sw" aria-pressed="${on}" ${attrs}
+      title="${esc(entry.en)} — ${esc(entry.hint ?? '')}">
+    <span class="sw-body">
+      <span class="sw-marks"><span>I</span><span>O</span></span>
+      <span class="sw-lever"></span>
+    </span>
+    ${legend(entry, { inline: false })}
+  </button>`;
+}
+
+/** A legend-cap pushbutton. */
+function press(entry, { act, site, disabled = false, extra = '' } = {}) {
+  return `<button class="pb ${extra}" data-act="${act}" ${site ? `data-site="${site}"` : ''}
+      ${disabled ? 'disabled' : ''} title="${esc(entry.en)}">${legend(entry)}</button>`;
+}
 
 /* --------------------------------------------------------------- topbar */
 
@@ -36,8 +76,27 @@ export function renderTopbar(world, ui, els) {
   wrap.classList.toggle('is-low', standing < 34);
   wrap.classList.toggle('is-mid', standing >= 34 && standing < 55);
 
-  els.fusionState.textContent = world.fusionOnline ? 'FUSED' : 'LOCAL CONTROL';
+  els.fusionState.textContent = world.fusionOnline ? STATUS.fusion.tm : STATUS.localControl.tm;
+  els.fusionState.title = world.fusionOnline ? STATUS.fusion.en : STATUS.localControl.en;
   els.fusionState.classList.toggle('is-bad', !world.fusionOnline);
+
+  // Master annunciator: the three things that would have someone shouting.
+  const armInbound = world.radars.some((r) => r.alive && Number.isFinite(armTimeToImpact(world, r)));
+  const anyRadiating = world.radars.some((r) => r.state === 'radiating');
+  const faulted = world.radars.some((r) => !r.alive) || world.sites.some((s) => !s.alive);
+  els.masterLamps.innerHTML = [
+    lamp(STATUS.radiating, anyRadiating, { colour: 'green' }),
+    lamp(STATUS.armWarning, armInbound, { colour: 'red', blinking: true }),
+    lamp(STATUS.fault, faulted, { colour: 'amber' }),
+  ].join('');
+
+  if (world.character && els.operatorPlate.dataset.name !== world.character.name) {
+    els.operatorPlate.dataset.name = world.character.name;
+    const rank = rankOf(world.character);
+    els.operatorPlate.innerHTML = `<span class="data-plate">
+      <b>${esc(rank.tm)}</b> ${esc(world.character.name)}<br>${esc(rank.en)}
+    </span>`;
+  }
 }
 
 /* ----------------------------------------------------------- track list */
@@ -116,76 +175,99 @@ function renderTrackDetail(world, ui, els) {
 /* ------------------------------------------------------------- weapons */
 
 export function renderBatteries(world, ui, els) {
-  const html = world.sites.map((site, index) => {
+  const units = world.sites.map((site, index) => {
     const type = SAM_TYPES[site.type];
     const radar = world.radarById.get(site.radarId);
+    const nomenclature = EQUIPMENT[site.type];
+    const mine = world.homeBatteryId === site.id;
     const crewed = world.control.crewedBatteryId === site.id;
-
-    const radarPill = !radar?.alive ? '<span class="pill dark">RADAR LOST</span>'
-      : radar.state === 'radiating' ? '<span class="pill radiating">RADIATING</span>'
-        : radar.state === 'warming' ? `<span class="pill warming">WARMING ${Math.ceil(radar.warmRemainingS)}s</span>`
-          : '<span class="pill dark">DARK</span>';
-
     const armEta = radar?.alive ? armTimeToImpact(world, radar) : Infinity;
-    const armPill = Number.isFinite(armEta)
-      ? `<span class="pill alarm">ARM ${Math.ceil(armEta)}s</span>` : '';
 
-    const rounds = Array.from({ length: Math.min(type.readyRounds, 12) }, (_, i) =>
+    const rail = Array.from({ length: Math.min(type.readyRounds, 14) }, (_, i) =>
       `<i class="${i < site.readyRounds ? '' : 'is-spent'}"></i>`).join('');
 
-    const busy = site.reloadRemainingS > 0
-      ? `<div class="progress"><i style="width:${100 * (1 - site.reloadRemainingS / (type.reloadS * site.reloadMult))}%"></i></div>`
+    const busyLabel = site.reloadRemainingS > 0
+      ? { entry: STATUS.reloading, frac: 1 - site.reloadRemainingS / (type.reloadS * (site.reloadMult ?? 1)) }
       : site.scootRemainingS > 0
-        ? `<div class="progress"><i style="width:${100 * (1 - site.scootRemainingS / (type.scootS * site.reloadMult))}%"></i></div>`
-        : '';
+        ? { entry: STATUS.displacing, frac: 1 - site.scootRemainingS / (type.scootS * (site.scootMult ?? 1) * 1.5) }
+        : null;
 
-    const classes = ['battery',
-      ui.selectedSiteId === site.id ? 'is-selected' : '',
-      !site.alive ? 'is-dead' : '',
-      crewed ? 'is-crewed' : ''].filter(Boolean).join(' ');
+    const weaponsEntry = CONTROLS[site.weaponsState];
 
-    return `<div class="${classes}" data-site="${site.id}">
-      <div class="battery-name">
-        <b>${index + 1}. ${esc(site.name)}</b>
-        <span class="type">${esc(type.label)}${crewed ? ' · YOUR SEAT' : ''}</span>
+    return `<div class="unit ${ui.selectedSiteId === site.id ? 'is-selected' : ''}
+        ${!site.alive ? 'is-dead' : ''} ${mine ? 'is-mine' : ''}" data-site="${site.id}">
+      <span class="screw ${'abcd'[index % 4]}"></span>
+      <div class="unit-head">
+        <span class="unit-name">${index + 1}. ${esc(site.name)}</span>
+        <span class="unit-type">${esc(nomenclature?.tm ?? type.label)}${crewed ? ` · ${STATUS.yourSeat.tm}` : ''}</span>
       </div>
-      <div class="battery-meta">
-        <span>RDY <b>${site.readyRounds}</b>/${site.magazine}</span>
-        <span>CH <b>${site.engagements.length}</b>/${type.channels}</span>
-        <span>RNG <b>${type.maxRangeKm}</b>km</span>
-        <span class="pill ${site.weaponsState}">${site.weaponsState.toUpperCase()}</span>
-        ${radarPill}${armPill}
+
+      <div class="unit-row">
+        ${lamp(STATUS.ready, site.alive && site.readyRounds > 0 && site.scootRemainingS === 0, { colour: 'green' })}
+        ${lamp(radar?.state === 'warming' ? STATUS.warming : STATUS.radiating,
+    radar?.state === 'radiating' || radar?.state === 'warming',
+    { colour: radar?.state === 'warming' ? 'amber' : 'green' })}
+        ${lamp(STATUS.armWarning, Number.isFinite(armEta), { colour: 'red', blinking: true,
+    caption: Number.isFinite(armEta) ? `${STATUS.armWarning.tm} ${Math.ceil(armEta)}s` : STATUS.armWarning.tm })}
+        ${!site.alive ? lamp(STATUS.fault, true, { colour: 'red' }) : ''}
       </div>
-      <div class="rounds-bar">${rounds}</div>
-      ${busy}
-      <div class="battery-actions">
-        <button class="btn" data-act="emcon" data-site="${site.id}">${radar?.on ? 'SHUT DOWN' : 'RADIATE'}</button>
-        <button class="btn" data-act="weapons" data-site="${site.id}">WPN ${site.weaponsState.toUpperCase()}</button>
-        <button class="btn" data-act="salvo" data-site="${site.id}">SALVO ${site.salvoSize}</button>
-        <button class="btn" data-act="reload" data-site="${site.id}" ${site.magazine <= 0 || site.reloadRemainingS > 0 ? 'disabled' : ''}>RELOAD</button>
-        <button class="btn" data-act="scoot" data-site="${site.id}" ${site.scootRemainingS > 0 ? 'disabled' : ''}>SCOOT</button>
+
+      <div class="unit-row">
+        <span class="rail" title="${site.readyRounds} ready of ${site.magazine} stored">${rail}</span>
+        <span class="unit-type">${site.readyRounds}/${site.magazine} · ${STATUS.channels.tm} ${site.engagements.length}/${channelsFor(site)} · ${type.maxRangeKm} КМ</span>
+      </div>
+      ${busyLabel ? `<div class="unit-row">
+        <span class="unit-type">${esc(busyLabel.entry.tm)}</span>
+        <span class="gauge is-warn"><i style="width:${Math.round(busyLabel.frac * 100)}%"></i></span>
+      </div>` : ''}
+
+      <div class="unit-controls">
+        ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
+    { act: 'emcon', site: site.id, disabled: !radar?.alive })}
+        <button class="pb" data-act="weapons" data-site="${site.id}"
+          title="Weapons state — hold, tight or free (Q / W / Shift+E)">
+          <span class="lg"><b>${esc(weaponsEntry.tm)}</b><i>WEAPONS ${esc(weaponsEntry.en)}</i></span>
+        </button>
+        <button class="pb" data-act="salvo" data-site="${site.id}" title="Rounds per engagement">
+          <span class="lg"><b>${esc(CONTROLS.salvo.tm)} ${site.salvoSize}</b><i>SALVO</i></span>
+        </button>
+        ${press(CONTROLS.reload, { act: 'reload', site: site.id,
+    disabled: site.magazine <= 0 || site.reloadRemainingS > 0 })}
+        ${press(CONTROLS.displace, { act: 'scoot', site: site.id, disabled: site.scootRemainingS > 0 })}
       </div>
     </div>`;
   }).join('');
 
-  const standalone = world.radars.filter((r) => !r.siteId).map((radar) => `
-    <div class="battery" data-radar="${radar.id}">
-      <div class="battery-name">
-        <b>${esc(radar.label)}</b><span class="type">${radar.alive ? `${radar.rangeKm}km` : 'DESTROYED'}</span>
+  const surveillance = world.radars.filter((r) => !r.siteId).map((radar, index) => {
+    const nomenclature = Object.values(EQUIPMENT).find((e) => e.en.includes(radar.label));
+    const armEta = radar.alive ? armTimeToImpact(world, radar) : Infinity;
+    return `<div class="unit" data-radar="${radar.id}">
+      <span class="screw ${'abcd'[index % 4]}"></span>
+      <div class="unit-head">
+        <span class="unit-name">${esc(nomenclature?.tm ?? radar.label)}</span>
+        <span class="unit-type">${radar.alive ? `${radar.rangeKm} КМ` : STATUS.destroyed.tm}</span>
       </div>
-      <div class="battery-meta">
-        ${radar.state === 'radiating' ? '<span class="pill radiating">RADIATING</span>'
-      : radar.state === 'warming' ? `<span class="pill warming">WARMING ${Math.ceil(radar.warmRemainingS)}s</span>`
-        : '<span class="pill dark">DARK</span>'}
-        <span>EXPOSURE <b>${Math.round(radar.exposure * 100)}%</b></span>
-        ${Number.isFinite(armTimeToImpact(world, radar)) ? `<span class="pill alarm">ARM ${Math.ceil(armTimeToImpact(world, radar))}s</span>` : ''}
+      <div class="unit-row">
+        ${lamp(radar.state === 'warming' ? STATUS.warming : STATUS.radiating,
+    radar.state === 'radiating' || radar.state === 'warming',
+    { colour: radar.state === 'warming' ? 'amber' : 'green' })}
+        ${lamp(STATUS.armWarning, Number.isFinite(armEta), { colour: 'red', blinking: true,
+    caption: Number.isFinite(armEta) ? `${STATUS.armWarning.tm} ${Math.ceil(armEta)}s` : STATUS.armWarning.tm })}
       </div>
-      <div class="battery-actions">
-        <button class="btn" data-act="emcon-radar" data-radar="${radar.id}" ${radar.alive ? '' : 'disabled'}>${radar.on ? 'SHUT DOWN' : 'RADIATE'}</button>
+      <div class="unit-row">
+        <span class="unit-type">${esc(STATUS.exposure.tm)}</span>
+        <span class="gauge ${radar.exposure > 0.65 ? 'is-hot' : radar.exposure > 0.35 ? 'is-warn' : ''}">
+          <i style="width:${Math.round(radar.exposure * 100)}%"></i></span>
+        <span class="unit-type">${Math.round(radar.exposure * 100)}%</span>
       </div>
-    </div>`).join('');
+      <div class="unit-controls">
+        ${toggle(radar.on ? CONTROLS.silence : CONTROLS.radiate, radar.on,
+    { act: 'emcon-radar', radar: radar.id, disabled: !radar.alive })}
+      </div>
+    </div>`;
+  }).join('');
 
-  els.batteryList.innerHTML = standalone + html;
+  els.batteryList.innerHTML = surveillance + units;
 }
 
 /* -------------------------------------------------------- crew console */
@@ -204,43 +286,69 @@ export function renderCrewConsole(world, ui, els) {
   const radar = world.radarById.get(site.radarId);
   const armEta = radar?.alive ? armTimeToImpact(world, radar) : Infinity;
   const type = SAM_TYPES[site.type];
+  const nomenclature = EQUIPMENT[site.type];
 
-  const stateLabel = {
-    idle: 'STANDBY', reacting: 'PREPARING', ready: 'READY', guiding: 'ROUNDS IN FLIGHT',
-  }[status.state] ?? status.state.toUpperCase();
+  const sequence = {
+    idle: STATUS.standby, reacting: STATUS.preparing, ready: STATUS.ready, guiding: STATUS.inFlight,
+  }[status.state] ?? STATUS.standby;
 
-  const envLine = !status.hasTarget ? 'NO TARGET DESIGNATED'
-    : status.inEnvelope ? `IN ENVELOPE · ${Math.round(status.rangeKm)} km`
-      : status.timeToRangeS !== null
-        ? `${status.envelopeReason} · in range in ${Math.ceil(status.timeToRangeS)}s`
-        : `${status.envelopeReason} · no solution`;
+  const envelope = !status.hasTarget ? STATUS.noTarget
+    : status.inEnvelope ? STATUS.inEnvelope : STATUS.outOfZone;
+
+  const envelopeDetail = !status.hasTarget ? '—'
+    : status.inEnvelope ? `${Math.round(status.rangeKm)} КМ`
+      : status.timeToRangeS !== null ? `+${Math.ceil(status.timeToRangeS)}s`
+        : 'НЕТ РЕШЕНЬЯ';
+
+  const row = (entry, value, mood = '') =>
+    `<div class="crew-row ${mood}">${legend(entry, { inline: true })}<b>${esc(value)}</b></div>`;
 
   els.crewConsole.innerHTML = `
-    <h3>${esc(site.name)} — ${esc(type.label)}</h3>
-    <div class="crew-row" style="color:var(--ink-dim);font-size:10px"><span>dashed ring is your envelope · red curve is your horizon</span></div>
-    <div class="crew-row"><span>TARGET</span><b>${esc(status.trackLabel)}</b></div>
-    <div class="crew-row ${status.inEnvelope ? 'is-good' : ''}"><span>ENVELOPE</span><b>${esc(envLine)}</b></div>
-    <div class="crew-row"><span>SEQUENCE</span><b>${esc(stateLabel)}${status.reactionRemainingS > 0 ? ` ${status.reactionRemainingS.toFixed(1)}s` : ''}</b></div>
-    <div class="crew-row ${status.guidance === 'GUIDING' ? 'is-good' : 'is-hot'}"><span>GUIDANCE</span><b>${esc(status.guidance)}</b></div>
-    <div class="crew-row"><span>CHANNELS</span><b>${status.channelsUsed}/${status.channels}</b></div>
-    <div class="crew-row"><span>ROUNDS</span><b>${site.readyRounds} ready · ${site.magazine} stored</b></div>
+    <div class="unit is-mine" style="margin:0">
+      <span class="screw a"></span>
+      <div class="unit-head">
+        <span class="unit-name">${esc(site.name)}</span>
+        <span class="unit-type">${esc(nomenclature?.tm ?? type.label)}</span>
+      </div>
 
-    <h3 style="margin-top:10px">SURVIVAL</h3>
-    <div class="crew-row ${radar?.exposure > 0.6 ? 'is-hot' : ''}"><span>ELINT EXPOSURE</span><b>${Math.round((radar?.exposure ?? 0) * 100)}%</b></div>
-    <div class="meter ${radar?.exposure > 0.6 ? 'is-hot' : ''}"><i style="width:${Math.round((radar?.exposure ?? 0) * 100)}%"></i></div>
-    ${Number.isFinite(armEta)
-      ? `<div class="crew-row is-hot"><span>ROUND INBOUND</span><b>${Math.ceil(armEta)}s</b></div>`
-      : '<div class="crew-row"><span>THREAT</span><b>NONE TRACKED</b></div>'}
-    ${site.crewLosses ? `<div class="crew-row is-hot"><span>CREW</span><b>${site.crewLosses} CASUALTIES</b></div>` : ''}
+      <div class="unit-row" style="margin-top:7px">
+        ${lamp(STATUS.ready, status.state === 'ready', { colour: 'green' })}
+        ${lamp(STATUS.guiding, status.guidance === 'GUIDING', { colour: 'green' })}
+        ${lamp(STATUS.noGuidance, status.guidance !== 'GUIDING', { colour: 'amber' })}
+        ${lamp(STATUS.armWarning, Number.isFinite(armEta), { colour: 'red', blinking: true })}
+      </div>
 
-    <button class="fire-btn ${status.canFire ? 'is-armed' : ''}" id="btn-fire" ${status.canFire ? '' : 'disabled'}>
-      ${status.state === 'guiding' ? `${status.roundsUp} IN FLIGHT` : 'FIRE  [F]'}
-    </button>
-    <div class="battery-actions" style="margin-top:6px">
-      <button class="btn" data-act="lock" data-site="${site.id}">LOCK [L]</button>
-      <button class="btn" data-act="emcon" data-site="${site.id}">${radar?.on ? 'SHUT DOWN [E]' : 'RADIATE [E]'}</button>
-      <button class="btn" data-act="reload" data-site="${site.id}">RELOAD [R]</button>
-      <button class="btn" data-act="scoot" data-site="${site.id}">SCOOT [X]</button>
+      ${row(STATUS.target, status.trackLabel)}
+      ${row(envelope, envelopeDetail, status.inEnvelope ? 'is-good' : '')}
+      ${row(STATUS.sequence, `${sequence.tm}${status.reactionRemainingS > 0 ? ` ${status.reactionRemainingS.toFixed(1)}s` : ''}`)}
+      ${row(STATUS.channels, `${status.channelsUsed}/${status.channels}`)}
+      ${row(CONTROLS.reload, `${site.readyRounds} / ${site.magazine}`)}
+
+      <button class="pb pb-fire ${status.canFire ? 'is-armed' : ''}" id="btn-fire"
+        ${status.canFire ? '' : 'disabled'}>
+        ${status.state === 'guiding'
+    ? `<span class="lg"><b>${status.roundsUp} В ПОЛЁТЕ</b><i>${status.roundsUp} IN FLIGHT</i></span>`
+    : legend(CONTROLS.launch)}
+      </button>
+
+      <div class="unit-controls" style="margin-top:8px">
+        ${press(CONTROLS.lock, { act: 'lock', site: site.id })}
+        ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
+    { act: 'emcon', site: site.id, disabled: !radar?.alive })}
+        ${press(CONTROLS.reload, { act: 'reload', site: site.id })}
+        ${press(CONTROLS.displace, { act: 'scoot', site: site.id })}
+      </div>
+
+      <div class="unit-row" style="margin-top:9px">
+        ${legend(STATUS.exposure, { inline: true })}
+        <span class="gauge ${(radar?.exposure ?? 0) > 0.65 ? 'is-hot' : (radar?.exposure ?? 0) > 0.35 ? 'is-warn' : ''}">
+          <i style="width:${Math.round((radar?.exposure ?? 0) * 100)}%"></i></span>
+        <span class="unit-type">${Math.round((radar?.exposure ?? 0) * 100)}%</span>
+      </div>
+      ${site.crewLosses ? `<div class="crew-row is-hot">${legend(STATUS.crew, { inline: true })}
+        <b>${site.crewLosses} ПОТЕРЬ</b></div>` : ''}
+
+      <div class="placard" style="margin-top:9px">${esc(PLATES.warning)}<br>${esc(PLATES.warningEn)}</div>
     </div>`;
 }
 

@@ -43,8 +43,28 @@ export class World {
     this.rng = makeRng(this.seed);
     this.difficulty = DIFFICULTY[options.difficulty ?? 'veteran'] ?? DIFFICULTY.veteran;
     this.narrativePressure = options.narrativePressure ?? true;
-    /** Supply and reload limits handed down by the campaign file. */
-    this.modifiers = options.modifiers ?? { roundsMult: 1, reloadsAllowed: true };
+    /**
+     * Everything that bends the equipment to the person operating it: supply and
+     * reload limits handed down by the campaign file, merged with the operator's
+     * own background, training and injuries. One object, read once at
+     * construction and consulted by the detection, damage and command modules.
+     */
+    this.modifiers = {
+      roundsMult: 1,
+      reloadsAllowed: true,
+      reactionMult: 1,
+      reloadMult: 1,
+      scootMult: 1,
+      idSpeedMult: 1,
+      exposureMult: 1,
+      rebootMult: 1,
+      standingLossMult: 1,
+      directiveTimeMult: 1,
+      extraChannels: 0,
+      ...(options.modifiers ?? {}),
+    };
+    /** The service record of whoever is sitting in the chair, if there is one. */
+    this.character = options.character ?? null;
 
     this.t = 0;
     this.dt = SIM.dt;
@@ -90,6 +110,16 @@ export class World {
       netIsHuman: options.role !== 'crew',
       crewedBatteryId: null,
     };
+
+    /**
+     * The battery you belong to, whether or not you are sitting in it. In the
+     * operator's seat this is the console under your hands; in the battle
+     * manager's seat it is still your parent unit, so training you paid for is
+     * never wasted by a change of chair.
+     */
+    this.homeBatteryId = (options.role === 'crew' || options.role === 'both')
+      ? (options.batteryId ?? scenario.playerBatteryId ?? scenario.sites[0]?.id)
+      : (scenario.playerBatteryId ?? scenario.sites[0]?.id);
 
     this.buildAssets();
     this.buildDefences();
@@ -161,12 +191,19 @@ export class World {
   buildDefences() {
     for (const spec of this.scenario.radars ?? []) {
       const type = RADAR_TYPES[spec.type];
-      this.addRadar({ ...type, ...spec, pos: spec.pos, on: spec.on ?? true });
+      const radar = this.addRadar({ ...type, ...spec, pos: spec.pos, on: spec.on ?? true });
+      radar.exposureMult = this.modifiers.exposureMult;
     }
 
     for (const spec of this.scenario.sites) {
       const type = SAM_TYPES[spec.type];
       const readyRounds = Math.max(1, Math.round(type.readyRounds * this.modifiers.roundsMult));
+      // Crew qualifications belong to the crew you are actually with. At your own
+      // console they apply in full; across the rest of the sector you get half,
+      // because you drilled those batteries but you are not sitting in them.
+      const mine = spec.id === this.homeBatteryId;
+      const crewMult = (value) => (mine ? value : 1 + (value - 1) * 0.5);
+      const m = this.modifiers;
       const site = {
         id: spec.id ?? `site_${spec.type}_${this.sites.length + 1}`,
         type: spec.type,
@@ -184,8 +221,12 @@ export class World {
         engagements: [],
         weaponsState: spec.weaponsState ?? 'tight',
         salvoSize: 1,
-        reactionMult: 1,
-        reloadMult: 1,
+        // Crew quality starts at whatever the operator brings to it and is only
+        // ever degraded from there by casualties.
+        reactionMult: crewMult(m.reactionMult),
+        reloadMult: crewMult(m.reloadMult),
+        scootMult: crewMult(m.scootMult),
+        extraChannels: mine ? (m.extraChannels ?? 0) : 0,
         crewLosses: 0,
         blinkUntilS: 0,
         radarId: null,
@@ -197,6 +238,7 @@ export class World {
         hp: 70,
         on: false,
       }, site.id);
+      radar.exposureMult = this.modifiers.exposureMult;
       site.radarId = radar.id;
       this.sites.push(site);
       this.siteById.set(site.id, site);

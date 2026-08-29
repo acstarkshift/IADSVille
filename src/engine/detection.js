@@ -128,7 +128,10 @@ export function stepRadarPower(radar, dt) {
     // ELINT exposure builds while radiating and fades slowly when dark: a set
     // that came up for ten seconds once is not as pinned as one that has been
     // radiating all morning.
-    radar.exposure = Math.min(1, radar.exposure + dt * 0.0055 * radar.elintGain);
+    // A signals-disciplined operator gives their opposite numbers less to work
+    // with: short looks, irregular intervals, nothing to average.
+    radar.exposure = Math.min(
+      1, radar.exposure + dt * 0.0055 * radar.elintGain * (radar.exposureMult ?? 1));
   } else {
     radar.exposure = Math.max(0, radar.exposure - dt * 0.0035);
   }
@@ -297,7 +300,7 @@ function advanceIdentification(world, track, dt) {
   if (!truth) return;
 
   const type = AIR_TYPES[truth.type];
-  const speedMult = type.idSpeedMult ?? 1;
+  const speedMult = (type.idSpeedMult ?? 1) * (world.modifiers?.idSpeedMult ?? 1);
   track.idProgressS += dt * speedMult * (world.fusionOnline ? 1 : 0.55);
 
   if (track.hostility === 'pending' && track.idProgressS > DETECTION.idTimeS * 0.4) {

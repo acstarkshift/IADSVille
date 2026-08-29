@@ -1,0 +1,345 @@
+/*
+ * Console hardware.
+ *
+ * Everything in this file exists to make the page feel like a manufactured
+ * object rather than a web page: painted steel with a grain to it, a screwed
+ * bezel around the tube, bat-handle toggle switches, domed indicator lamps,
+ * rotary selectors with real detents, and engraved legend plates carrying
+ * Trans-Mordovian nomenclature over an English gloss.
+ *
+ * No images are used. The grain is an inline SVG turbulence, the metal is
+ * layered gradients, and the screws are radial gradients — so the whole console
+ * still loads instantly and stays a static site.
+ */
+
+:root {
+  /* Painted steel, as issued. Themes override these. */
+  --metal: #6e7568;
+  --metal-hi: #878e7f;
+  --metal-lo: #4c5248;
+  --metal-edge: #2c3128;
+  --engrave: #f0f4e8;
+  --engrave-dim: #c3cbb6;
+  --plate: #3a4034;
+  --lamp-off: #40463a;
+  --screw: #9aa290;
+}
+
+[data-theme="crt-amber"] {
+  --metal: #756b5c;
+  --metal-hi: #8e8372;
+  --metal-lo: #524a3f;
+  --metal-edge: #322c24;
+  --engrave: #f7ecd8;
+  --engrave-dim: #cdbfa5;
+  --plate: #443c31;
+  --lamp-off: #4a4237;
+  --screw: #a2957f;
+}
+
+[data-theme="ops-modern"] {
+  /* Modern equipment: anodised grey, machined rather than painted. */
+  --metal: #39414d;
+  --metal-hi: #48515f;
+  --metal-lo: #272e38;
+  --metal-edge: #151a21;
+  --engrave: #e8eef6;
+  --engrave-dim: #a6b2c2;
+  --plate: #232a34;
+  --lamp-off: #2d3540;
+  --screw: #626d7d;
+}
+
+/* Paint grain. One inline turbulence, reused by everything metal. */
+.metal,
+.topbar,
+.panel,
+.ticker,
+.bezel {
+  background-color: var(--metal);
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, .10) 0%, rgba(255, 255, 255, .02) 14%,
+      rgba(0, 0, 0, .06) 70%, rgba(0, 0, 0, .16) 100%),
+    url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  background-blend-mode: normal, overlay;
+}
+
+/* ------------------------------------------------------------- engraving */
+
+/*
+ * A legend is stencilled Cyrillic with the export gloss beneath it. The English
+ * is always present, so the panel stays usable for a reader who cannot read the
+ * Cyrillic — and legible if a font without Cyrillic coverage substitutes.
+ */
+.lg { display: inline-flex; flex-direction: column; line-height: 1.05; }
+.lg b {
+  font-weight: 700; letter-spacing: .1em; font-size: 10px;
+  color: var(--engrave);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .65), 0 -1px 0 rgba(255, 255, 255, .07);
+}
+.lg i {
+  font-style: normal; font-size: 7.5px; letter-spacing: .09em;
+  color: var(--engrave-dim);
+}
+.lg-stack { align-items: center; text-align: center; }
+
+/* A screwed-down nomenclature plate. */
+.plate {
+  background: var(--plate);
+  border: 1px solid var(--metal-edge);
+  border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 1px 2px rgba(0, 0, 0, .5);
+  padding: 3px 7px;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+
+.data-plate {
+  font-size: 7.5px; letter-spacing: .08em; line-height: 1.5; white-space: nowrap;
+  color: var(--engrave-dim);
+  border: 1px solid var(--metal-edge);
+  background: linear-gradient(180deg, var(--metal-hi), var(--metal-lo));
+  padding: 3px 6px; border-radius: 1px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04);
+}
+.data-plate b { color: var(--engrave); font-weight: 700; }
+
+.placard {
+  border: 2px solid var(--hostile);
+  color: var(--hostile);
+  font-size: 7.5px; letter-spacing: .12em; text-align: center;
+  padding: 2px 5px; border-radius: 1px; line-height: 1.35;
+  background: rgba(0, 0, 0, .3);
+}
+
+/* Screw heads, dropped into the corners of a panel or bezel. */
+.screw {
+  position: absolute; width: 10px; height: 10px; border-radius: 50%; z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.35), rgba(0,0,0,.45)),
+    radial-gradient(circle at 35% 30%, var(--screw), var(--metal-lo) 70%);
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, .8), 0 1px 1px rgba(0, 0, 0, .5);
+}
+/* The slot. Every screw is driven to a slightly different angle, as they are. */
+.screw::after {
+  content: ''; position: absolute; inset: 0; margin: auto;
+  width: 6px; height: 1.4px; background: var(--metal-edge); border-radius: 1px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .12);
+}
+.screw.a::after { transform: rotate(22deg); }
+.screw.b::after { transform: rotate(-58deg); }
+.screw.c::after { transform: rotate(78deg); }
+.screw.d::after { transform: rotate(-14deg); }
+
+/* ---------------------------------------------------------------- bezel */
+
+/* The tube sits in a frame, recessed behind glass. */
+.bezel {
+  position: relative;
+  padding: 12px;
+  border: 1px solid var(--metal-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 -2px 6px rgba(0, 0, 0, .5);
+  min-height: 0;
+  display: flex;
+}
+.bezel > .screw:nth-of-type(1) { top: 5px; left: 5px; }
+.bezel > .screw:nth-of-type(2) { top: 5px; right: 5px; }
+.bezel > .screw:nth-of-type(3) { bottom: 5px; left: 5px; }
+.bezel > .screw:nth-of-type(4) { bottom: 5px; right: 5px; }
+
+.tube {
+  position: relative; flex: 1; min-width: 0; min-height: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  box-shadow:
+    inset 0 0 0 2px var(--metal-edge),
+    inset 0 0 24px rgba(0, 0, 0, .9),
+    0 0 0 1px rgba(255, 255, 255, .05);
+}
+[data-theme="ops-modern"] .tube { border-radius: 3px; }
+
+/* -------------------------------------------------------------- switches */
+
+/*
+ * A bat-handle toggle. Up is on, and it stays up — the position of the lever is
+ * the state, readable across the room, which is the entire reason real panels
+ * use them instead of buttons.
+ */
+.sw {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; border: 0; padding: 2px; cursor: pointer;
+}
+.sw-body {
+  position: relative; width: 18px; height: 27px; border-radius: 3px;
+  background: linear-gradient(180deg, var(--metal-lo), var(--metal-edge));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .6);
+  border: 1px solid var(--metal-edge);
+}
+.sw-lever {
+  position: absolute; left: 50%; width: 7px; height: 13px;
+  margin-left: -3.5px; border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(180deg, #d9dcd4, #8f958a 60%, #5d635a);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .7);
+  transition: top .09s ease-out, transform .09s ease-out;
+  top: 11px; transform-origin: 50% 100%;
+}
+.sw[aria-pressed="true"] .sw-lever { top: 2px; }
+.sw[aria-pressed="false"] .sw-lever { top: 11px; transform: rotate(180deg); }
+.sw:disabled { opacity: .45; cursor: not-allowed; }
+.sw:focus-visible .sw-body { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sw-marks {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  justify-content: space-between; align-items: center; padding: 1px 0;
+  font-size: 6px; color: var(--engrave-dim); letter-spacing: .06em; pointer-events: none;
+}
+
+/* ----------------------------------------------------------------- lamps */
+
+/* Domed indicator, dark until it has something to say. */
+.lamp {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 8.5px; letter-spacing: .1em; color: var(--engrave-dim);
+}
+.lamp-dome {
+  width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto;
+  background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.28), var(--lamp-off) 62%);
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, .8), 0 1px 1px rgba(0, 0, 0, .4);
+  border: 1px solid var(--metal-edge);
+}
+.lamp.is-lit .lamp-dome {
+  background: radial-gradient(circle at 34% 30%, #fff, var(--lamp-colour, var(--accent)) 55%);
+  box-shadow: 0 0 9px var(--lamp-colour, var(--accent)), inset 0 0 3px rgba(255, 255, 255, .6);
+}
+.lamp.is-lit { color: var(--engrave); }
+.lamp.is-red { --lamp-colour: var(--hostile); }
+.lamp.is-amber { --lamp-colour: var(--warn); }
+.lamp.is-green { --lamp-colour: var(--good); }
+.lamp.blinking.is-lit .lamp-dome { animation: lamp-blink .55s steps(1) infinite; }
+@keyframes lamp-blink { 50% { box-shadow: none; background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.2), var(--lamp-off) 62%); } }
+
+/* --------------------------------------------------------------- buttons */
+
+/* Legend-cap pushbutton: a moulded cap on a metal shroud. */
+.pb {
+  position: relative; cursor: pointer;
+  padding: 5px 7px 4px; min-width: 48px;
+  border: 1px solid var(--metal-edge); border-radius: 3px;
+  background: linear-gradient(180deg, var(--metal-hi), var(--metal-lo));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 2px 0 var(--metal-edge), 0 3px 4px rgba(0, 0, 0, .45);
+  transition: transform .05s, box-shadow .05s;
+}
+.pb:hover { filter: brightness(1.1); }
+.pb:active, .pb.is-down {
+  transform: translateY(2px);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .55), 0 0 0 var(--metal-edge);
+}
+.pb:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.pb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* The launch button is red, guarded, and larger than everything near it. */
+.pb-fire {
+  width: 100%; padding: 10px 8px 9px; margin-top: 7px;
+  background: linear-gradient(180deg, #8d2b22, #5e1b16);
+  border-color: #2a0d0a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 3px 0 #2a0d0a, 0 4px 6px rgba(0, 0, 0, .5);
+}
+.pb-fire .lg b { color: #ffd9d2; font-size: 13px; letter-spacing: .22em; }
+.pb-fire .lg i { color: #e8a79e; }
+.pb-fire.is-armed { animation: fire-ready 1.05s infinite; }
+.pb-fire:disabled { filter: grayscale(.65); }
+@keyframes fire-ready {
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 0 #2a0d0a, 0 0 0 rgba(255,80,60,0); }
+  50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 0 #2a0d0a, 0 0 22px rgba(255, 80, 60, .75); }
+}
+
+.pb-accept { background: linear-gradient(180deg, #2f6a3a, #1d4526); border-color: #0f2415; }
+.pb-refuse { background: linear-gradient(180deg, #7a3a1e, #4a2211); border-color: #241007; }
+
+/* ------------------------------------------------------------------ knob */
+
+/* Rotary selector with a machined pointer and a detent ring. */
+.knob-group { display: inline-flex; align-items: center; gap: 7px; }
+.knob {
+  position: relative; width: 40px; height: 40px; border-radius: 50%;
+  cursor: pointer; border: 1px solid var(--metal-edge); padding: 0;
+  background:
+    radial-gradient(circle at 38% 30%, var(--metal-hi), var(--metal-lo) 68%, var(--metal-edge));
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+.knob::before {
+  /* Knurling. */
+  content: ''; position: absolute; inset: 3px; border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255,255,255,.09) 0 3deg, rgba(0,0,0,.16) 3deg 6deg);
+  mask: radial-gradient(circle, transparent 55%, #000 57%);
+  -webkit-mask: radial-gradient(circle, transparent 55%, #000 57%);
+}
+.knob-pointer {
+  position: absolute; left: 50%; top: 5px; width: 2.5px; height: 13px;
+  margin-left: -1.25px; border-radius: 2px;
+  background: var(--engrave); box-shadow: 0 0 3px rgba(0, 0, 0, .6);
+  transform-origin: 50% 15px;
+  transition: transform .12s ease-out;
+}
+.knob:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.knob-readout { font-size: 9px; letter-spacing: .1em; color: var(--engrave); min-width: 4.4em; }
+
+/* ------------------------------------------------------------ unit strip */
+
+/* One battery: its own sub-panel, screwed to the rack. */
+.unit {
+  position: relative;
+  border: 1px solid var(--metal-edge);
+  border-radius: 3px;
+  margin: 6px 5px;
+  padding: 6px 8px 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(0,0,0,.16));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 1px 3px rgba(0, 0, 0, .4);
+}
+.unit > .screw { width: 7px; height: 7px; top: 4px; right: 4px; }
+.unit > .screw::after { width: 4.5px; }
+.unit.is-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), inset 0 1px 0 rgba(255,255,255,.07); }
+.unit.is-mine { border-left: 3px solid var(--friendly); }
+.unit.is-dead { filter: grayscale(.7); opacity: .55; }
+
+.unit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.unit-name { font-size: 11px; letter-spacing: .1em; color: var(--engrave); font-weight: 700; }
+.unit-type { font-size: 7.5px; letter-spacing: .1em; color: var(--engrave-dim); }
+.unit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+.unit-controls {
+  display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap; margin-top: 7px;
+  padding-top: 6px; border-top: 1px solid rgba(0, 0, 0, .3);
+}
+.unit-controls .sw { min-width: 42px; }
+.unit-controls .pb { align-self: stretch; min-width: 0; }
+/* The rack is a fixed width; nothing in a unit strip may push past it. */
+.unit { overflow: hidden; }
+.unit-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 52%; }
+.unit-head { min-width: 0; }
+.unit-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Ammunition, shown as rounds on a rail rather than as a number. */
+.rail { display: flex; gap: 2px; align-items: flex-end; }
+.rail i {
+  display: block; width: 5px; height: 13px; border-radius: 1px 1px 0 0;
+  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #000));
+  box-shadow: 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.rail i.is-spent { background: var(--lamp-off); box-shadow: none; height: 6px; }
+
+/* A meter with a needle-ish fill, for exposure and timers. */
+.gauge {
+  height: 7px; border-radius: 1px; overflow: hidden; flex: 1; min-width: 60px;
+  background: linear-gradient(180deg, #000, #12140f);
+  border: 1px solid var(--metal-edge);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .8);
+}
+.gauge i { display: block; height: 100%; background: var(--good); transition: width .25s; }
+.gauge.is-warn i { background: var(--warn); }
+.gauge.is-hot i { background: var(--hostile); }
+
+/* Punched paper strip for the log — the console prints, it does not scroll. */
+.strip {
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 14px), #0d0f0c;
+  border-top: 1px solid var(--metal-edge);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, .7);
+}

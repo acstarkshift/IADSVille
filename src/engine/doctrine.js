@@ -23,11 +23,23 @@ import { engagementValue, sortedTracks } from './threat.js';
 const SEARCH_DWELL_S = 18;
 const SEARCH_GAP_S = 40;
 
+/**
+ * How many simultaneous engagements this battery can actually hold.
+ *
+ * The type sets the baseline; a well-drilled crew adds one, which is why the
+ * Trained Crew qualification is worth two promotion points. Every caller goes
+ * through here so the display, the AI and the rules can never disagree about
+ * whether a channel is free.
+ */
+export function channelsFor(site) {
+  return SAM_TYPES[site.type].channels + (site.extraChannels ?? 0);
+}
+
 /** Start an engagement if the battery has a channel free. Returns it, or null. */
 export function beginEngagement(world, site, track, { manual = false, salvo = null } = {}) {
   const type = SAM_TYPES[site.type];
   if (!site.alive) return null;
-  if (site.engagements.length >= type.channels) return null;
+  if (site.engagements.length >= channelsFor(site)) return null;
   if (site.engagements.some((e) => e.trackId === track.id)) return null;
   if (site.readyRounds <= 0) return null;
 
@@ -352,7 +364,7 @@ export function startReload(world, site) {
 export function startScoot(world, site) {
   if (site.scootRemainingS > 0 || !site.alive) return false;
   const type = SAM_TYPES[site.type];
-  site.scootRemainingS = type.scootS * (site.reloadMult ?? 1);
+  site.scootRemainingS = type.scootS * (site.scootMult ?? 1) * (site.crewLosses ? 1.5 : 1);
   site.displaced = true;
   site.engagements = [];
   const radar = world.radarById.get(site.radarId);

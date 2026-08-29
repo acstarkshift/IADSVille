@@ -165,6 +165,9 @@ describe('sweeping', () => {
 function fakeWorld(over = {}) {
   return {
     t: 0, nextTn: 1, tracks: new Map(), fusionOnline: true,
+    // A real World always carries these; the stub mirrors it so the tests are
+    // exercising the same code path the game does.
+    modifiers: { idSpeedMult: 1 },
     aircraftById: new Map([['a1', { id: 'a1', type: 'striker' }]]),
     dropped: [],
     dropTrack(id, reason) { this.dropped.push(reason); this.tracks.delete(id); },

@@ -11,6 +11,7 @@
 import { AIR_TYPES, ASSET_TYPES, SAM_TYPES } from './config.js';
 import { dist, timeToGo, len, clamp, clamp01, invLerp } from './math.js';
 import { inEnvelope, timeToInRangeS } from './weapons.js';
+import { channelsFor } from './doctrine.js';
 
 /**
  * Which asset does this track appear to be going for?
@@ -107,7 +108,7 @@ export function sortedTracks(world) {
 export function engagementValue(world, site, track) {
   if (!site.alive || site.weaponsState === 'hold') return null;
   if (site.readyRounds <= 0) return null;
-  if (site.engagements.length >= SAM_TYPES[site.type].channels) return null;
+  if (site.engagements.length >= channelsFor(site)) return null;
 
   const type = SAM_TYPES[site.type];
   const env = inEnvelope(site, track.pos, track.altM);

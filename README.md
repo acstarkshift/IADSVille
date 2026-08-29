@@ -2,9 +2,14 @@
 
 A browser game about running the air defence of a town called the Ville.
 
-You are not a pilot and you are not a gun. You are the person reading the scope,
-and the job is triage: sixteen contacts, four batteries, ninety seconds, and a
-command that reads your log afterwards.
+You are a conscript of the **Trans-Mordovian People's Air Defence Forces** — not
+a pilot and not a gun, but the person reading the scope. The job is triage:
+sixteen contacts, four batteries, ninety seconds, and a command that reads your
+log afterwards.
+
+Trans Mordovia is invented, and so is everything in it: the state, the service,
+its equipment, its ranks, its decorations, and the Slavic language stencilled on
+the panels. No real country, service or hardware is depicted.
 
 **No dependencies, no build step.** Open `index.html` from any static server and
 play.
@@ -29,6 +34,24 @@ Every mechanic hangs off that trade. Most sharply: a surface-to-air round is
 guided by the radar that launched it. Shut that radar down to dodge an incoming
 anti-radiation missile and the round you already have in the air goes stupid and
 falls in a field. Leave it up and you may not be there when the round arrives.
+
+## The soldier
+
+The campaign is a service record, not a score table. You enlist once — a name, a
+home town, and where you were before the army had you — and that person persists:
+rank, experience, decorations, qualifications, and whether you are currently
+carrying an injury.
+
+Nothing in it is decorative. Every background and every qualification resolves
+into numbers the simulation uses:
+
+| | |
+|---|---|
+| **Backgrounds** | A factory town works its machinery faster. A border village identifies aircraft sooner, because you grew up watching them cross your roof. The capital academy starts you with standing and a family name the ministry recognises — and both of those cut in two directions. A penal transfer starts you in disgrace and lets you climb faster. |
+| **Rank** | Eleven grades from Стрелец to Капитан. Promotion needs experience *and* standing: the army will not promote someone it does not trust. A catastrophic watch can reduce you, and it keeps the training you were given. |
+| **Training** | One point per promotion. A steady hand gets rounds off the rail sooner; signal discipline slows enemy direction finding against your sets; a cool head shortens the blackout after a hit; a drilled crew holds an extra engagement channel. Qualifications apply in full at your own battery and at half strength across the sector — you drilled those crews, but you are not sitting in them. |
+| **Decorations** | Awarded for things that are hard to do, including one for losing your position and holding the sector anyway. |
+| **Injury** | If your battery is overrun you are wounded, and everything takes you longer until one more watch is behind you. |
 
 ## Two seats
 
@@ -103,6 +126,27 @@ escalates.
 | 5 | White Noise | amber phosphor | Jamming, burnthrough, decoys, ammunition discipline |
 | 6 | Ville Under Fire | tactical display | All of it, and then the centre goes down |
 
+## The console
+
+The equipment is Trans-Mordovian and it is stencilled accordingly: bat-handle
+toggle switches whose lever position *is* the state, domed indicator lamps,
+legend-cap pushbuttons, a screwed bezel around the tube, riveted data plates
+carrying a type and a works number, and a high-voltage placard nobody reads.
+
+Every legend is bilingual — the Cyrillic is what is stamped on the panel, with
+the export gloss etched underneath, the way export-marked equipment genuinely is.
+That is also why the console stays playable if you cannot read the Cyrillic, and
+legible if your system substitutes a font without it.
+
+```
+ИЗЛУЧЕНЬ / RADIATE      ЗАТИХ / SILENCE      ПУСК / LAUNCH
+ЗАХВАТ / LOCK           ГОТОВ / READY        ОБЛУЧЕНЬЕ / INBOUND ARM
+ЗАСВЕТКА / ELINT EXPOSURE                    СМЕНА МЕСТА / DISPLACE
+```
+
+None of it is decoration either: the switch you throw to go dark is the same
+decision the whole game is built on, and it should feel like throwing a switch.
+
 ## Controls
 
 | Key | Action |
@@ -125,16 +169,18 @@ shut down — that last one is the whole game.
 
 ```
 index.html            the page; everything below is loaded as ES modules
-styles/               theme.css (palettes) + hud.css (chrome)
+styles/               theme.css (palettes) + panel.css (hardware) + hud.css
 src/engine/           the simulation — pure JS, no DOM, runs under node --test
   detection.js          radar physics, sweeps, plot-to-track fusion
   weapons.js            envelopes, guidance dependency, kill probability
   ai.js                 how the raid behaves, per type
   doctrine.js           engagement state machine + the AI in the other seat
   command.js            directives, constraints, standing
+  character.js          ranks, training, decorations, injury — the service record
   campaign.js           the file that follows you between missions
   world.js              the fixed-step tick that orders all of it
-src/ui/                scope, battery console, panels, themes, audio
+src/ui/                scope, battery console, panels, dossier, themes, audio
+  lexicon.js            every legend on the equipment, in both languages
 test/                  node:test suites over the engine
 tools/                 zero-dependency static server and browser smoke test
 ```
@@ -158,12 +204,18 @@ A few decisions worth knowing about if you read the source:
 - **Only returns persist.** The phosphor layer holds radar echoes; the sweep is
   redrawn each frame. Painting the sweep into the persistence buffer saturates
   the tube in about four seconds, which is a mistake this code made once.
+- **One lexicon.** Every legend on the console comes from `src/ui/lexicon.js`, so
+  a switch can never end up labelled differently from the thing it does.
+- **The RPG layer is measured, not asserted.** The character tests build a real
+  `World` and check that a qualification changed a number in it — a channel
+  count, a reaction multiplier, a blackout duration.
 
 ## Credits
 
-Everything here is invented. The designations, the systems, the state, and the
-Ville are fictional, and the physics is deliberately simplified — the goal is a
-system that *behaves* like an air defence problem, not a fidelity claim about any
-real equipment.
+Everything here is invented: Trans Mordovia, its air defence forces, their ranks
+and decorations, the equipment designations, the language on the panels, and the
+Ville itself. The physics is deliberately simplified — the goal is a system that
+*behaves* like an air defence problem, not a fidelity claim about any real
+equipment, and nothing here corresponds to a real state or service.
 
 MIT licensed.

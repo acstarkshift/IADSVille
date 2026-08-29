@@ -21,10 +21,10 @@ const ORIGIN = `http://127.0.0.1:${PORT}/`;
 
 /** Missions to play, and the seat to play them from. */
 const RUNS = [
-  { mission: 'first-light', role: 'net', theme: 'crt-green' },
-  { mission: 'solo-battery', role: 'crew', theme: 'crt-green' },
-  { mission: 'weasel-hour', role: 'net', theme: 'crt-amber' },
-  { mission: 'ville-under-fire', role: 'both', theme: 'ops-modern' },
+  { mission: 'first-light', role: 'net', theme: 'crt-green', background: 'factory' },
+  { mission: 'solo-battery', role: 'crew', theme: 'crt-green', background: 'border' },
+  { mission: 'weasel-hour', role: 'net', theme: 'crt-amber', background: 'academy' },
+  { mission: 'ville-under-fire', role: 'both', theme: 'ops-modern', background: 'penal' },
 ];
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -71,6 +71,15 @@ async function main() {
     page.on('pageerror', (e) => errors.push(`PAGEERROR: ${e.message}`));
 
     await page.goto(ORIGIN, { waitUntil: 'networkidle' });
+
+    // A fresh browser profile has no service record, so the first screen is
+    // enlistment. Sign on before anything else is reachable.
+    if (await page.isVisible('#enlist-confirm')) {
+      await page.click(`[data-background="${run.background ?? 'factory'}"]`);
+      await page.click('#enlist-confirm');
+      await page.waitForSelector('[data-mission]');
+    }
+
     await page.click(`[data-mission="${run.mission}"]`);
     await page.click(`[data-role="${run.role}"]`);
     await page.click('#btn-brief');
@@ -105,15 +114,24 @@ async function main() {
 
     const state = await page.evaluate(() => {
       const w = window.__world;
-      return { t: Math.round(w.t), tracks: w.tracks.size, events: w.events.length, phase: w.phase };
+      return {
+        t: Math.round(w.t), tracks: w.tracks.size, events: w.events.length, phase: w.phase,
+        // The operator's record has to reach the simulation, or the whole RPG
+        // layer is cosmetic.
+        operator: w.character?.name ?? null,
+        reaction: w.siteById.get(w.homeBatteryId)?.reactionMult ?? null,
+      };
     });
+
+    if (!state.operator) failures.push(`${run.mission}/${run.role}: no service record reached the simulation`);
 
     if (!detected) failures.push(`${run.mission}/${run.role}: no contacts detected in 60 s`);
     if (state.t < 10) failures.push(`${run.mission}/${run.role}: clock did not advance (${state.t}s)`);
     if (errors.length) failures.push(`${run.mission}/${run.role}: ${errors.slice(0, 3).join(' | ')}`);
 
     console.log(`${failures.length ? '·' : '✓'} ${run.mission}/${run.role} `
-      + `(${run.theme}) — ${state.t}s simulated, ${state.tracks} tracks, ${state.events} events`);
+      + `(${run.theme}, ${run.background}) — ${state.t}s simulated, ${state.tracks} tracks, `
+      + `${state.events} events, operator ${state.operator}`);
     await page.close();
   }
 

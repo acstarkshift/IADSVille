@@ -156,7 +156,11 @@ export function createCommandState() {
 }
 
 export function standingDelta(world, amount, reason) {
-  const scaled = amount < 0 ? amount * (world.difficulty?.standingLossMult ?? 1) : amount;
+  // Losses are amplified by difficulty and by who is reading your file; gains
+  // are not, so an easy setting never inflates a record.
+  const lossMult = (world.difficulty?.standingLossMult ?? 1)
+    * (world.modifiers?.standingLossMult ?? 1);
+  const scaled = amount < 0 ? amount * lossMult : amount;
   const before = world.command.standing;
   // Kept to one decimal so the ledger reads as a tally rather than as floating
   // point noise.
@@ -184,7 +188,7 @@ export function issueDirective(world, template) {
     priority: template.priority,
     subjectId: subject?.id ?? null,
     issuedS: world.t,
-    deadlineS: world.t + COMMAND.directiveTimeoutS,
+    deadlineS: world.t + COMMAND.directiveTimeoutS * (world.modifiers?.directiveTimeMult ?? 1),
     state: 'pending',
   };
   world.command.pending = directive;
