@@ -261,8 +261,11 @@ export class Scope {
     const start = (az - tail - 90) * Math.PI / 180;
     const end = (az - 90) * Math.PI / 180;
     const gradient = ctx.createRadialGradient(origin.x, origin.y, 0, origin.x, origin.y, reach);
-    gradient.addColorStop(0, withAlpha(p.accent, 0.16));
-    gradient.addColorStop(1, withAlpha(p.accent, 0.02));
+    // Kept deliberately faint: a sector can have four or five sets up at once
+    // and the wedges stack, so anything heavier drowns the contacts underneath.
+    gradient.addColorStop(0, withAlpha(p.accent, 0.11));
+    gradient.addColorStop(0.7, withAlpha(p.accent, 0.03));
+    gradient.addColorStop(1, withAlpha(p.accent, 0.01));
 
     ctx.beginPath();
     ctx.moveTo(origin.x, origin.y);

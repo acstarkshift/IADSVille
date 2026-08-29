@@ -341,11 +341,45 @@ function clearCanvas() {
   ctx.fillRect(0, 0, els.canvas.width, els.canvas.height);
 }
 
-/** Screen shake and flashes, driven by the engine's effect queue. */
+/**
+ * Screen shake, impact flashes and the power flicker, driven by the engine's
+ * effect queue. Nothing here changes the simulation — but a hit that does not
+ * register physically reads as a log line rather than as something that just
+ * happened to you.
+ */
 function applyEffects() {
-  const shaking = world.effects.some((e) =>
-    e.kind === 'shake' && world.t - e.startedS < (e.durationS ?? 1));
+  let shaking = false;
+  let flash = 0;
+  for (const effect of world.effects) {
+    const age = world.t - effect.startedS;
+    const life = effect.durationS ?? 1;
+    if (age > life) continue;
+    if (effect.kind === 'shake') shaking = true;
+    if (effect.kind === 'flash' || effect.kind === 'blackout') {
+      flash = Math.max(flash, (effect.magnitude ?? 1) * (1 - age / life));
+    }
+  }
+
   els.shell.classList.toggle('is-shaking', shaking);
+
+  // A brief wash of light over the scope, fading with the effect.
+  if (flash > 0.01) {
+    els.scopeOverlay.style.backgroundColor = `rgba(255, 236, 200, ${Math.min(0.35, flash * 0.3)})`;
+  } else if (els.scopeOverlay.style.backgroundColor) {
+    els.scopeOverlay.style.backgroundColor = '';
+  }
+
+  // One-shot flicker on the whole console the moment something lands.
+  const struck = world.effects.some((e) =>
+    e.kind === 'shake' && world.t - e.startedS < 0.2);
+  if (struck && !ui.flickering) {
+    ui.flickering = true;
+    els.shell.classList.add('is-hit');
+    setTimeout(() => {
+      els.shell.classList.remove('is-hit');
+      ui.flickering = false;
+    }, 500);
+  }
 }
 
 /**
