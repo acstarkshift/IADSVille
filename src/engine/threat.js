@@ -111,8 +111,11 @@ export function engagementValue(world, site, track) {
 
   const type = SAM_TYPES[site.type];
   const env = inEnvelope(site, track.pos, track.altM);
-  const timeToRange = env.ok ? 0 : timeToInRangeS(site, track);
-  if (!Number.isFinite(timeToRange)) return null;
+  const rawTimeToRange = env.ok ? 0 : timeToInRangeS(site, track);
+  if (rawTimeToRange === Infinity) return null;
+  // NaN means the track's course is not established yet; assume it is worth
+  // taking rather than declining a target that has only been seen once.
+  const timeToRange = Number.isNaN(rawTimeToRange) ? 90 : rawTimeToRange;
   if (track.altM > type.maxAltM || track.altM < type.minAltM) return null;
 
   // Prefer the smallest system that can do the job: spending a long-range round

@@ -114,8 +114,21 @@ export function stepEngagements(world, dt) {
         const firm = track.quality >= DETECTION.firmQuality;
         if (!engagement.manual && env.ok && firm && site.weaponsState !== 'hold') {
           fireEngagement(world, site, engagement);
-        } else if (!engagement.manual && !Number.isFinite(timeToInRangeS(site, track))) {
-          endEngagement(world, site, engagement, 'out of reach');
+          engagement.unreachableS = 0;
+        } else {
+          /*
+           * Give up on a target only once it is persistently unreachable.
+           * timeToInRangeS returns NaN while the velocity estimate is still
+           * settling, and a single bad look should never throw away an
+           * assignment the operator just made — so the channel is held until
+           * the target has been clearly out of reach for a while.
+           */
+          const eta = timeToInRangeS(site, track);
+          const unreachable = eta === Infinity;
+          engagement.unreachableS = unreachable ? (engagement.unreachableS ?? 0) + dt : 0;
+          if (engagement.unreachableS > 12) {
+            endEngagement(world, site, engagement, 'out of reach');
+          }
         }
       }
 

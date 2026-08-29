@@ -53,8 +53,12 @@ export function inEnvelope(site, pos, altM) {
 export function timeToInRangeS(site, track, horizonS = 600) {
   const type = SAM_TYPES[site.type];
   if (inEnvelope(site, track.pos, track.altM).ok) return 0;
+
+  // A track detected once has no velocity estimate yet. That is "we do not know",
+  // not "it will never get here" — answering Infinity here would have batteries
+  // abandoning fresh assignments a few seconds after receiving them.
   const speed = len(track.vel);
-  if (speed < 1e-6) return Infinity;
+  if (speed < 1e-6) return NaN;
 
   // Walk the track forward on its current course. Cheap, and honest about the
   // fact that a manoeuvring target invalidates the answer anyway.

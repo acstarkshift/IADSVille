@@ -141,7 +141,10 @@ export function createCommandState() {
 export function standingDelta(world, amount, reason) {
   const scaled = amount < 0 ? amount * (world.difficulty?.standingLossMult ?? 1) : amount;
   const before = world.command.standing;
-  world.command.standing = clamp(before + scaled, COMMAND.minStanding, COMMAND.maxStanding);
+  // Kept to one decimal so the ledger reads as a tally rather than as floating
+  // point noise.
+  world.command.standing = Math.round(
+    clamp(before + scaled, COMMAND.minStanding, COMMAND.maxStanding) * 10) / 10;
   world.command.ledger.push({ t: world.t, delta: world.command.standing - before, reason });
 }
 

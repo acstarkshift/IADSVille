@@ -128,9 +128,9 @@ export function stepRadarPower(radar, dt) {
     // ELINT exposure builds while radiating and fades slowly when dark: a set
     // that came up for ten seconds once is not as pinned as one that has been
     // radiating all morning.
-    radar.exposure = Math.min(1, radar.exposure + dt * 0.018 * radar.elintGain);
+    radar.exposure = Math.min(1, radar.exposure + dt * 0.0055 * radar.elintGain);
   } else {
-    radar.exposure = Math.max(0, radar.exposure - dt * 0.004);
+    radar.exposure = Math.max(0, radar.exposure - dt * 0.0035);
   }
 }
 
