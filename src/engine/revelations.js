@@ -38,6 +38,26 @@ export const REVELATIONS = {
     ],
   },
 
+  border: {
+    id: 'border',
+    after: 'across-the-line',
+    tm: 'КООРДИНАТЫ',
+    title: 'THE GRID REFERENCE',
+    lines: [
+      'The strays were logged as strays. Two rounds, both malfunctioning in the same way, both'
+        + ' malfunctioning onto the same grid reference eleven kilometres beyond a national border,'
+        + ' four hours apart.',
+      'You looked the grid reference up. Not in an intelligence product — in the sector target folder,'
+        + ' which is on an open shelf because everything in it is our own territory and there is'
+        + ' nothing in there to protect.',
+      'It is in there. Handwritten, on the inside back cover, under no heading, in a folder that has'
+        + ' no business containing a point in Listonia at all.',
+      'Somebody wrote those coordinates down before the war. The word for what happened over Gorna is'
+        + ' not "stray", and the order you were given about not engaging across the border was not'
+        + ' about a border incident.',
+    ],
+  },
+
   ledger: {
     id: 'ledger',
     after: 'ville-under-fire',
@@ -102,6 +122,10 @@ export function standing(campaign) {
   if (known.includes('ledger')) {
     return 'You know the depot returns do not reconcile. You have not worked out what that means yet,'
       + ' or you have and would rather not have.';
+  }
+  if (known.includes('border')) {
+    return 'You know the strays over Gorna were not strays, and that the order about the border was'
+      + ' not about the border.';
   }
   if (known.includes('freeze')) {
     return 'You were ordered not to defend a hospital, and the order cost you almost nothing. That'

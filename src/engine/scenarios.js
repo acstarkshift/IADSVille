@@ -48,6 +48,14 @@ const CAPITAL_GROUND = {
  */
 const HOSPITAL = { id: 'a_hospital', type: 'hospital', label: 'DISTRICT HOSPITAL', pos: { x: -40, y: 20 } };
 
+/**
+ * The encampment, over the Listonian border beyond the Kubin ridge.
+ *
+ * Sited so that LANCE WEST can reach it comfortably — the whole watch turns on
+ * the fact that you can save these people, not on whether you can.
+ */
+const CAMP = { id: 'a_camp', type: 'camp', label: 'REFUGEE ENCAMPMENT', pos: { x: -58, y: 20 } };
+
 const SITES = {
   bastion: { id: 's_bastion', type: 'bastion', name: 'BASTION', pos: { x: 2, y: 28 } },
   lanceWest: { id: 's_lance_w', type: 'lance', name: 'LANCE WEST', pos: { x: -24, y: 6 } },
@@ -265,17 +273,65 @@ export const SCENARIOS = [
   },
 
   {
+    id: 'across-the-line',
+    name: 'Across the Line',
+    subtitle: 'A round has gone wrong, and it is going to come down somewhere that is not our concern.',
+    theme: 'crt-amber',
+    roles: ['net', 'crew', 'both'],
+    seed: 'across-11',
+    leakerTolerance: 2,
+    playerBatteryId: 's_lance_w',
+    roundAllowance: 14,
+    brief: [
+      'One of tonight\'s cruise missiles is not tracking anything in this sector. Its course takes it'
+        + ' west, over the ridge, across the Listonian border, and down near Gorna. A second one will'
+        + ' do the same thing later, which tells you something about the first.',
+      'There is a camp at Gorna. Four hundred people who left Trans Mordovia and have been living in'
+        + ' tents on the far side of that line for two years, and whose continued existence is a'
+        + ' subject the ministry does not enjoy.',
+      'LANCE WEST holds it at thirty-seven kilometres, five inside its envelope, and BASTION reaches'
+        + ' it with sixty to spare. It is a straight, slow, unmanoeuvring target and you have rounds'
+        + ' on the rails. There is no version of this where you could not have stopped it.',
+      'Sector will transmit its position on this. You already know what it is going to be.',
+    ],
+    teaches: 'What the schedule of defended places is really a schedule of.',
+    assets: [
+      GROUND.town, GROUND.c2, GROUND.power, GROUND.bridge, CAMP,
+    ],
+    sites: [SITES.bastion, SITES.lanceWest, SITES.thistleTown, SITES.hammer],
+    radars: [RADARS.ewrNorth, RADARS.gapSouth],
+    waves: [
+      { atS: 20, type: 'striker', count: 3, bearingDeg: 355, spreadDeg: 24, spacingS: 26, altM: 6000,
+        targetAssetId: 'a_power' },
+      // The stray. It comes in on the northern axis with the rest and then turns
+      // west, which is why it reads as an ordinary contact until it does not.
+      { atS: 120, type: 'cruise', count: 1, bearingDeg: 340, spreadDeg: 0, altM: 110,
+        targetAssetId: 'a_camp', scalable: false, name: 'VAMPIRE STRAY' },
+      { atS: 240, type: 'striker', count: 3, bearingDeg: 15, spreadDeg: 22, spacingS: 24, altM: 240,
+        targetAssetId: 'a_bridge' },
+      // A second one goes the same way later. By then you have already decided
+      // what you are, and the only question is whether you do it twice.
+      { atS: 330, type: 'cruise', count: 1, bearingDeg: 345, spreadDeg: 0, altM: 95,
+        targetAssetId: 'a_camp', scalable: false, name: 'VAMPIRE STRAY 2' },
+    ],
+  },
+
+  {
     id: 'ville-under-fire',
     name: 'Ville Under Fire',
     subtitle: 'Everything at once, and then the lights go out.',
     theme: 'ops-modern',
     roles: ['net', 'crew', 'both'],
     seed: 'ville-under-fire-11',
+    /** The political section has an interest in tonight's scheduled transit. */
+    civilOrder: true,
     leakerTolerance: 4,
     playerBatteryId: 's_thistle_t',
     roundAllowance: 30,
     brief: [
       'This is the main effort. Suppression first, then jamming, then decoys, then everything they have.',
+      'There is also a scheduled civil transit crossing the sector tonight, and the political section'
+        + ' has taken an interest in one of its passengers. You will hear about it.',
       'They know where sector operations is. When it goes, the picture stops being one picture — every set',
       'reports for itself and nobody reconciles them. Cueing stops. Anything you delegated becomes nobody\'s job.',
       'Finish the watch anyway.',

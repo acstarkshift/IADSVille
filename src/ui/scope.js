@@ -354,6 +354,12 @@ export class Scope {
     ctx.strokeStyle = withAlpha(p.hostile, 0.32);
     ctx.lineWidth = 1.5 * this.dpr;
     ctx.stroke();
+
+    // The Listonian border. A different kind of line: nothing comes over it, and
+    // on one watch that is exactly the problem.
+    path(MAP.border);
+    ctx.strokeStyle = withAlpha(p.unknown, 0.3);
+    ctx.stroke();
     ctx.setLineDash([]);
 
     // Place names go through the same declutter pass as everything else, at the

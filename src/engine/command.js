@@ -106,7 +106,10 @@ export const DIRECTIVES = {
     pick: (w) => w.aircraft.find((a) => a.alive && a.type === 'civil'),
     text: (w, civ) => `AIR TRAFFIC: Scheduled transit on bearing ${civ ? Math.round(bearing(w.centre, civ.pos)) : '---'}. It is carrying people who matter. Weapons tight in that sector. Acknowledge.`,
     plain: (w, civ) => `AIR TRAFFIC: Civil transit on bearing ${civ ? Math.round(bearing(w.centre, civ.pos)) : '---'}. Weapons tight in that sector. Acknowledge.`,
-    trigger: (w) => w.aircraft.some((a) => a.alive && a.type === 'civil'),
+    // Once the political section has ordered that aircraft engaged, an order to
+    // keep weapons tight around it would be sector command arguing with itself.
+    trigger: (w) => w.aircraft.some((a) => a.alive && a.type === 'civil')
+      && !w.command.issuedOnce.engageCivil,
     onAccept: (w, civ) => { w.command.constraints.civilCorridorId = civ?.id ?? null; },
   },
 
@@ -142,6 +145,72 @@ export const DIRECTIVES = {
       w.command.constraints.freezeAccepted = true;
     },
     onRefuse: (w) => { w.command.constraints.freezeRefused = true; },
+  },
+
+  /**
+   * The order to engage civil traffic.
+   *
+   * The game has spent nine watches teaching that destroying a civil aircraft is
+   * the one thing no amount of otherwise-good work offsets. This is the watch
+   * where they tell you to do it.
+   *
+   * Note what happens to the arithmetic if you comply: the ceiling that caps a
+   * shoot-down at a referral is lifted, because you were ordered to, and the
+   * file records it as an engagement conducted under instruction. The score does
+   * not move an inch. The rule was never a principle. It was an exposure.
+   */
+  engageCivil: {
+    id: 'engageCivil',
+    label: 'the order to engage the civil transit',
+    priority: 'high',
+    once: true,
+    pick: (w) => w.aircraft.find((a) => a.alive && a.type === 'civil'),
+    text: (w, civ) => `POLITICAL SECTION: ${civ?.name ?? 'The civil transit'} has departed its filed `
+      + 'corridor and is not answering the civil authority. There is a person aboard who is subject to '
+      + 'a detention order and that aircraft is not to leave this airspace. You will engage it. '
+      + 'Acknowledge.',
+    plain: (w, civ) => `SECTOR: ${civ?.name ?? 'The civil transit'} is off its filed corridor and not `
+      + 'responding. You are directed to engage it. Acknowledge.',
+    trigger: (w) => w.scenario.civilOrder === true
+      && w.aircraft.some((a) => a.alive && a.type === 'civil')
+      && [...w.tracks.values()].some((t) => t.hostility === 'friendly'),
+    onAccept: (w, civ) => {
+      w.command.constraints.civilOrderAccepted = true;
+      w.command.constraints.civilOrderTargetId = civ?.id ?? null;
+      // An ordered engagement needs the batteries released against a track the
+      // system has already identified as friendly.
+      w.log('warn', 'WEAPONS RELEASED AGAINST CIVIL TRANSIT BY DIRECTION OF THE POLITICAL SECTION.',
+        { severity: 'high' });
+    },
+    onRefuse: (w) => { w.command.constraints.civilOrderRefused = true; },
+  },
+
+  /**
+   * The border order.
+   *
+   * Where the expenditure freeze was the state being indifferent, this is the
+   * state being specific. The camp is not an oversight in the schedule of
+   * defended places; it is a camp full of people who left, and the ministry
+   * would rather the round arrived. Nobody says that on the net. What they say
+   * is that engaging outside national territory is a border incident.
+   */
+  borderRestriction: {
+    id: 'borderRestriction',
+    label: 'the restriction on firing across the border',
+    priority: 'high',
+    once: true,
+    text: () => 'SECTOR ACTUAL: The stray is tracking outside national territory. No engagement will '
+      + 'be made across the Listonian border. An engagement outside national territory is a border '
+      + 'incident and will be treated as one. There is nothing at that grid we are responsible for. '
+      + 'Acknowledge.',
+    plain: () => 'SECTOR: No engagement across the Listonian border. Acknowledge.',
+    trigger: (w) => w.assets.some((a) => a.type === 'camp') && w.t > 50,
+    onAccept: (w) => {
+      const camp = w.assets.find((a) => a.type === 'camp');
+      w.command.constraints.borderExcludedId = camp?.id ?? null;
+      w.command.constraints.borderAccepted = true;
+    },
+    onRefuse: (w) => { w.command.constraints.borderRefused = true; },
   },
 
   /**
@@ -209,6 +278,16 @@ const HINGE_DIRECTIVES = [
   {
     ...DIRECTIVES.expenditureFreeze,
     pendingOn: (w) => w.assets.some((a) => a.type === 'hospital'),
+  },
+  {
+    ...DIRECTIVES.borderRestriction,
+    pendingOn: (w) => w.assets.some((a) => a.type === 'camp'),
+  },
+  {
+    ...DIRECTIVES.engageCivil,
+    // Only holds the net once the aircraft is actually up and identified.
+    pendingOn: (w) => w.scenario.civilOrder === true
+      && w.aircraft.some((a) => a.alive && a.type === 'civil'),
   },
   {
     ...DIRECTIVES.palacePriority,
@@ -452,13 +531,37 @@ export function settleDirectives(world) {
       `${world.stats.roundsAgainstFreeze} rounds expended outside the freeze`);
   }
 
+  /*
+   * Firing across the border is a border incident, and is charged as one — but
+   * charged to the person who fired, and only if they were seen to. Note again
+   * how modest the figure is beside what it bought.
+   */
+  if (c.borderAccepted && world.stats.roundsAcrossBorder > 0) {
+    standingDelta(world, -3 * world.stats.roundsAcrossBorder,
+      `${world.stats.roundsAcrossBorder} rounds fired across the Listonian border`);
+  }
+
   // Last, and decisive. A civil shoot-down is the one outcome no amount of
   // otherwise-good work offsets, and it caps the assessment outright.
   if (world.stats.civilianAircraftShot > 0) {
-    standingDelta(world, -30 * world.stats.civilianAircraftShot, 'engaged a civil aircraft');
-    if (world.command.standing > CIVIL_SHOOTDOWN_CEILING) {
-      const drop = CIVIL_SHOOTDOWN_CEILING - world.command.standing;
-      standingDelta(world, drop, 'assessment capped: civil aircraft destroyed');
+    if (c.civilOrderAccepted) {
+      /*
+       * You were told to. The ceiling does not apply, the referral does not
+       * happen, and the file records a lawful engagement conducted under
+       * instruction. The score in the debrief will disagree by four hundred
+       * points and several hundred people, and nothing in this ledger will
+       * acknowledge that it has.
+       */
+      standingDelta(world, 2, 'civil transit engaged as ordered');
+    } else {
+      standingDelta(world, -30 * world.stats.civilianAircraftShot, 'engaged a civil aircraft');
+      if (world.command.standing > CIVIL_SHOOTDOWN_CEILING) {
+        const drop = CIVIL_SHOOTDOWN_CEILING - world.command.standing;
+        standingDelta(world, drop, 'assessment capped: civil aircraft destroyed');
+      }
     }
+  } else if (c.civilOrderAccepted) {
+    // Acknowledged and then quietly not done. Sector command notices eventually.
+    standingDelta(world, -14, 'acknowledged the engagement order and did not carry it out');
   }
 }

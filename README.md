@@ -92,6 +92,31 @@ points of actual value. Refusing costs eighty. Sector command does not punish
 what you did — it punishes having said no. The hospital was never on their books
 at all, and that is the whole lesson.
 
+**Across the Line** goes further. A cruise missile has strayed off course, west
+over the ridge and across the Listonian border, and it is going to come down on a
+camp at Gorna — four hundred Trans-Mordovians who left, living in tents, whose
+continued existence the ministry does not enjoy. Two batteries hold it
+comfortably. Sector command's position is that engaging outside national
+territory is a border incident.
+
+Firing anyway costs nine points of standing and saves the camp. Refusing the
+order on the net costs eighty-two. Afterwards you look the grid reference up and
+find it handwritten inside the back cover of the sector target folder, in a
+folder that has no business containing a point in Listonia at all. The word for
+what happened over Gorna is not "stray".
+
+And in the chaos of **Ville Under Fire**, the political section comes on the net
+about the scheduled civil transit. There is a passenger aboard subject to a
+detention order. You will engage it.
+
+The game has spent eight watches teaching that destroying a civil aircraft is the
+one thing no amount of otherwise-good work offsets — a hard ceiling that drops
+your assessment to a referral however well the night went. Comply with this order
+and the ceiling is lifted, the referral does not happen, and your standing goes
+*up*, from 18 to 31. The score does not move an inch: four hundred points and
+several hundred people. The rule was never a principle. It was an exposure, and
+the order removes the exposure.
+
 After that the documents start turning up: an allocation spent before the quarter
 began, a depot return properly countersigned at three levels showing four hundred
 rounds that are not in the magazines, and finally the transfer manifests, filed
@@ -201,8 +226,9 @@ escalates.
 | 4 | Weasel Hour | amber phosphor | Emissions control — blink to survive, and pay for it in guidance |
 | 5 | White Noise | amber phosphor | Jamming, burnthrough, decoys, ammunition discipline |
 | 6 | Economy of Force | amber phosphor | What the allocation is actually for |
-| 7 | Ville Under Fire | tactical display | All of it, and then the centre goes down |
-| 8 | The Two Cities | tactical display | That the equipment was never the constraint |
+| 7 | Across the Line | amber phosphor | What the schedule of defended places is really a schedule of |
+| 8 | Ville Under Fire | tactical display | All of it, and then the centre goes down |
+| 9 | The Two Cities | tactical display | That the equipment was never the constraint |
 
 ### The last watch
 

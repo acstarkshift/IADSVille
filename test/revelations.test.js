@@ -218,3 +218,124 @@ describe('the revelations', () => {
     assert.match(finale.briefIfKnown.ledger.join(' '), /depot returns/);
   });
 });
+
+describe('the border order', () => {
+  const world = () => new World(scenarioById('across-the-line'), { role: 'net' });
+
+  test('the camp is inside a battery envelope, so refusing is a real option', () => {
+    // The brief says you could have stopped it. That has to be true, or the
+    // watch is asking the player to feel bad about a foregone conclusion.
+    const scenario = scenarioById('across-the-line');
+    const camp = scenario.assets.find((a) => a.type === 'camp');
+    const canReach = scenario.sites.filter((s) =>
+      dist(s.pos, camp.pos) <= SAM_TYPES[s.type].maxRangeKm);
+    assert.ok(canReach.length >= 2, `expected at least two batteries to hold it, got ${canReach.length}`);
+  });
+
+  test('the camp is on the far side of the border', () => {
+    const camp = scenarioById('across-the-line').assets.find((a) => a.type === 'camp');
+    const nearest = MAP.border.reduce((best, b) =>
+      Math.abs(b.y - camp.pos.y) < Math.abs(best.y - camp.pos.y) ? b : best);
+    assert.ok(camp.pos.x < nearest.x, 'the whole watch depends on it being outside the country');
+  });
+
+  test('sector command values it at nothing and the score values it most', () => {
+    assert.equal(ASSET_TYPES.camp.value, 0, 'the ledger does not recognise it at all');
+    assert.ok(ASSET_TYPES.camp.scoreValue >= ASSET_TYPES.palace.value,
+      'and it is worth as much as anything on the board');
+  });
+
+  test('firing across the border costs less than refusing to be told not to', () => {
+    const fired = world();
+    issueDirective(fired, DIRECTIVES.borderRestriction);
+    answerDirective(fired, 'accepted');
+    fired.registerRoundsSpent({ predictedAssetId: 'a_camp' }, 4);
+    const beforeSettle = fired.command.standing;
+    settleDirectives(fired);
+    const costOfFiring = beforeSettle - fired.command.standing;
+
+    const refused = world();
+    issueDirective(refused, DIRECTIVES.borderRestriction);
+    const beforeRefusal = refused.command.standing;
+    answerDirective(refused, 'refused');
+    assert.ok(beforeRefusal - refused.command.standing > costOfFiring,
+      'again: they punish saying no, not doing it');
+  });
+
+  test('the engagement across the border is announced exactly once', () => {
+    const w = world();
+    issueDirective(w, DIRECTIVES.borderRestriction);
+    answerDirective(w, 'accepted');
+    w.registerRoundsSpent({ predictedAssetId: 'a_camp' }, 2);
+    w.registerRoundsSpent({ predictedAssetId: 'a_camp' }, 2);
+    assert.equal(w.stats.roundsAcrossBorder, 4);
+    assert.equal(w.events.filter((e) => /NATIONAL TERRITORY/.test(e.text)).length, 1);
+  });
+});
+
+describe('the order to engage the civil transit', () => {
+  /** Get a world with the transit airborne and identified. */
+  function withTransit() {
+    const w = new World(scenarioById('ville-under-fire'), { role: 'net' });
+    for (const radar of w.radars) radar.on = true;
+    for (let i = 0; i < 3000; i++) w.step(0.1);
+    return { w, civ: w.aircraft.find((a) => a.alive && a.type === 'civil') };
+  }
+
+  test('it only exists on a watch that declares it', () => {
+    assert.equal(scenarioById('ville-under-fire').civilOrder, true);
+    assert.notEqual(scenarioById('first-light').civilOrder, true);
+  });
+
+  test('sector command stops telling you to keep clear of it once it has told you to shoot it', () => {
+    const w = new World(scenarioById('ville-under-fire'), { role: 'net' });
+    w.command.issuedOnce.engageCivil = true;
+    assert.equal(DIRECTIVES.civilCorridor.trigger(w), false,
+      'an order to hold fire around an aircraft you were told to destroy is command arguing with itself');
+  });
+
+  test('complying raises your standing and wrecks the score', () => {
+    const { w, civ } = withTransit();
+    assert.ok(civ, 'the transit is airborne');
+    issueDirective(w, DIRECTIVES.engageCivil);
+    answerDirective(w, 'accepted');
+    const before = w.command.standing;
+    w.killAircraft(civ, null);
+    w.finish('raid-spent');
+
+    assert.ok(w.command.standing >= before,
+      'the file does not merely forgive it, it approves');
+    assert.notEqual(w.outcome.tierLabel, 'REFERRED', 'no referral, because you were told to');
+    assert.ok(w.outcome.breakdown.civilian <= -400, 'the score is unmoved by any of that');
+  });
+
+  test('refusing costs standing and nothing else', () => {
+    const { w } = withTransit();
+    issueDirective(w, DIRECTIVES.engageCivil);
+    const before = w.command.standing;
+    answerDirective(w, 'refused');
+    assert.ok(w.command.standing < before);
+    w.finish('raid-spent');
+    assert.equal(w.outcome.breakdown.civilian, 0);
+    assert.equal(w.stats.civilianAircraftShot, 0);
+  });
+
+  test('acknowledging and then not doing it is noticed', () => {
+    const { w } = withTransit();
+    issueDirective(w, DIRECTIVES.engageCivil);
+    answerDirective(w, 'accepted');
+    const before = w.command.standing;
+    w.finish('raid-spent');
+    assert.ok(w.command.standing < before,
+      'saying yes and quietly not doing it is its own entry');
+  });
+
+  test('an unordered shoot-down is still unforgivable', () => {
+    // The rule has not been softened. It has been shown to be conditional.
+    const { w, civ } = withTransit();
+    w.command.standing = 95;
+    w.killAircraft(civ, null);
+    w.finish('raid-spent');
+    assert.ok(w.command.standing <= 12, 'without the order, the ceiling still falls');
+  });
+});

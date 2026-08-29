@@ -134,6 +134,8 @@ export class World {
       roundsAgainstOrder: 0,
       /** Rounds spent defending something the expenditure freeze excluded. */
       roundsAgainstFreeze: 0,
+      /** Rounds fired at something on the far side of the Listonian border. */
+      roundsAcrossBorder: 0,
     };
 
     this.control = {
@@ -450,6 +452,17 @@ export class World {
         this.log('warn', this.narrativePressure
           ? 'SECTOR ACTUAL: THAT EXPENDITURE IS OUTSIDE THE FREEZE. IT WILL BE QUERIED.'
           : 'EXPENDITURE OUTSIDE FREEZE.', { severity: 'high' });
+      }
+    }
+
+    const excludedBorder = this.command.constraints.borderExcludedId;
+    if (excludedBorder && assetId === excludedBorder) {
+      this.stats.roundsAcrossBorder += count;
+      if (!this.command.constraints.borderBreachLogged) {
+        this.command.constraints.borderBreachLogged = true;
+        this.log('warn', this.narrativePressure
+          ? 'SECTOR ACTUAL: THAT ENGAGEMENT IS OUTSIDE NATIONAL TERRITORY. IT IS ON THE TAPE.'
+          : 'ENGAGEMENT OUTSIDE NATIONAL TERRITORY.', { severity: 'high' });
       }
     }
 
@@ -819,14 +832,19 @@ export class World {
       standing: this.command.standing,
       tier: tier.id,
       tierLabel: tier.label,
+      /*
+       * Negated terms are normalised through `|| 0`: negating a zero penalty
+       * yields -0, which is a real value that renders as "−0" in a debrief and
+       * compares unequal to 0 under strict equality.
+       */
       breakdown: {
         assets: Math.round(assetScore),
         kills: killScore,
         turnedBack: turnedBackScore,
-        leakers: -leakerPenalty,
-        rounds: -roundCost,
-        civilian: -civilPenalty,
-        equipment: -equipmentPenalty,
+        leakers: -leakerPenalty || 0,
+        rounds: -roundCost || 0,
+        civilian: -civilPenalty || 0,
+        equipment: -equipmentPenalty || 0,
       },
       stats: { ...this.stats },
       ledger: [...this.command.ledger],

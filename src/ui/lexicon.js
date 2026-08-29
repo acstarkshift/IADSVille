@@ -28,6 +28,9 @@ export const STATE = {
   ministry: { tm: 'МИНИСТЕРСТВО ОБОРОНЫ', en: 'MINISTRY OF DEFENCE' },
   politicalSection: { tm: 'ПОЛИТИЧЕСКИЙ ОТДЕЛ', en: 'POLITICAL SECTION' },
   town: { tm: 'ВИЛЛА', en: 'THE VILLE' },
+  neighbour: { tm: 'ЛИСТОНИЯ', en: 'LISTONIA' },
+  camp: { tm: 'ЛАГЕРЬ ПЕРЕМЕЩЁННЫХ', en: 'DISPLACED PERSONS CAMP' },
+  airport: { tm: 'ДЕМОБОДЕДОВО', en: 'DEMOBODEDOVO' },
 };
 
 /** Controls the operator physically touches. */

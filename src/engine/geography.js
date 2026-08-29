@@ -17,6 +17,19 @@
  * it competes with the tracks.
  */
 
+/**
+ * The Listonian border, running down the west beyond the Kubin ridge.
+ *
+ * Listonia is a neighbouring state and not a party to any of this. What is on
+ * the far side of that line is, according to every schedule sector command
+ * issues, none of your concern — which becomes a specific and terrible thing to
+ * be told on the watch where something is falling on it.
+ */
+export const BORDER = [
+  { x: -40, y: 118 }, { x: -48, y: 74 }, { x: -52, y: 30 },
+  { x: -52, y: -20 }, { x: -48, y: -70 }, { x: -44, y: -118 },
+];
+
 /** National frontier, running across the north and west. The raids cross this. */
 export const FRONTIER = [
   { x: -190, y: 40 }, { x: -150, y: 92 }, { x: -96, y: 126 }, { x: -40, y: 148 },
@@ -117,6 +130,7 @@ export const ROADS = [
  */
 export const SETTLEMENTS = [
   { name: 'МОСТРОГРАД', en: 'Mostrograd', pos: { x: 100, y: 60 }, capital: true },
+  { name: 'ГОРНА', en: 'Gorna', pos: { x: -64, y: 14 }, foreign: true },
   { name: 'КУБИН', en: 'Kubin', pos: { x: -74, y: 18 } },
   { name: 'ЛОЗАН', en: 'Lozan', pos: { x: 62, y: 88 } },
   { name: 'БРАСОВ', en: 'Brasov', pos: { x: 30, y: -92 } },
@@ -133,6 +147,7 @@ export const MAP = {
   name: 'ТРАНС-МОРДОВИЯ',
   en: 'Trans Mordovia',
   frontier: FRONTIER,
+  border: BORDER,
   highGround: HIGH_GROUND,
   lakes: LAKES,
   rivers: RIVERS,

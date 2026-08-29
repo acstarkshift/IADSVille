@@ -438,6 +438,24 @@ export const ASSET_TYPES = {
     civilian: true,
   },
   /**
+   * A refugee encampment across the Listonian border.
+   *
+   * Trans-Mordovian dissidents who left, and who the state would rather were
+   * not there to be pointed at. Its `value` is zero — sector command's ledger
+   * does not merely undervalue this place, it does not recognise it — and its
+   * `scoreValue` is the highest of anything on the board. There is no clearer
+   * statement of the gap between the two arithmetics anywhere in the game.
+   */
+  camp: {
+    id: 'camp', label: 'REFUGEE ENCAMPMENT', name: 'Refugee encampment',
+    value: 0,
+    scoreValue: 70,
+    hp: 90,
+    civilian: true,
+    /** Outside national territory, which is the whole of the argument. */
+    foreign: true,
+  },
+  /**
    * The seat of the state, in Mostrograd. Worth more to sector command than
    * everything else on the board combined — which is the entire problem with it.
    */
