@@ -232,6 +232,28 @@ describe('reading the outcome', () => {
     assert.equal(plain.id, 'escorted');
   });
 
+  test('the freight is priced in seats, and the state grieves the hold', () => {
+    // The president is never named and never speaks. What makes him what he is
+    // must therefore be carried entirely by material: a weight figure, a freight
+    // class, a seating plan, and the order in which a board asks its questions.
+    const escorted = FLIGHT_ENDINGS.escorted
+      .lines(readFlight(outcome({ vipEscaped: true })), null).join(' ');
+    assert.match(escorted, /forty-one seats/);
+    assert.match(escorted, /household and administrative effects/);
+    assert.match(escorted, /assigns it no frequency/);
+
+    const abandoned = FLIGHT_ENDINGS.abandoned
+      .lines(readFlight(outcome({ vipDown: true, vipDownedBy: 'enemy' })), null).join(' ');
+    assert.match(abandoned, /recovery of the freight/);
+    assert.match(abandoned, /no third question/);
+
+    const judgement = FLIGHT_ENDINGS.judgement
+      .lines(readFlight(outcome({ vipDown: true, vipDownedBy: 'operator', vipRoundsFired: 1 })), null)
+      .join(' ');
+    assert.match(judgement, /freight manifest/);
+    assert.match(judgement, /There had never been one/);
+  });
+
   test('none of them is a victory', () => {
     for (const [id, ending] of Object.entries(FLIGHT_ENDINGS)) {
       const text = ending.lines(readFlight(outcome({ vipEscaped: id === 'escorted' })), null).join(' ');

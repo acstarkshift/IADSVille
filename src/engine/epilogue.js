@@ -135,9 +135,13 @@ export const FLIGHT_ENDINGS = {
       // firing at all, and the file notices even when the outcome is identical.
       tapeLine(r),
       'The state broadcast at 0600 described the President as continuing to direct the defence of the'
-        + ' nation from a forward headquarters. It did not say where the forward headquarters is.',
-      'The aircraft was loaded through the night of the fourteenth. The loading manifest is held by the'
-        + ' ministry and is not a sector document, so no part of it appears in this file.',
+        + ' nation from a forward headquarters. It did not say where the forward headquarters is, and'
+        + " the sector's own signals annex assigns it no frequency.",
+      'The hold was loaded through the night of the fourteenth by a crane detail found from this'
+        + ' sector, which is why the manifest the ministry holds is not the only copy. Nine and a half'
+        + ' tonnes at freight class four — household and administrative effects. The load is entered'
+        + ' against the seating it displaced: forty-one seats. The passenger list that was never'
+        + ' transmitted was a list of empty seats.',
       'Sector command records your conduct as exemplary and has recommended a decoration. The citation'
         + ' describes the protection of a state aircraft in transit. It does not describe the transit.',
       `${householdPhrase(character)} — the ration category has been revised upward by one grade. The`
@@ -170,6 +174,8 @@ export const FLIGHT_ENDINGS = {
       `A board of inquiry has been convened to establish what this sector's batteries were doing at`
         + ' 0431. It has been convened by the political section, which is the part of the ministry'
         + ' still answering its telephone.',
+      "The board's first written question, circulated to every battery on the corridor, concerns the"
+        + ' recovery of the freight. Its second concerns the batteries. There is no third question.',
       'The state broadcast said nothing for two days and then described an accident during a routine'
         + ' inspection flight. Nobody in the sector has repeated this and nobody has contradicted it.',
       `${householdPhrase(character)} — no notification has been received either way, and the office`
@@ -202,6 +208,9 @@ export const FLIGHT_ENDINGS = {
           + ' launch are eleven seconds apart on the tape.',
       'No board of inquiry has been convened. The political section has not been reached since 0500 and'
         + ' the sector office has been open all morning with nobody in it.',
+      'The last entry the ministry logged before it stopped logging is an amendment to the freight'
+        + ' manifest of an aircraft that no longer existed. The passenger list was not amended. There'
+        + ' had never been one.',
       'There was no state broadcast at 0600. There was no state broadcast at 1200. At 1800 a man who'
         + ' did not give a rank read a list of ministries that would be answering telephones from'
         + ' Monday, and the political section was not among them.',

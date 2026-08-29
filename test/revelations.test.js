@@ -192,13 +192,17 @@ describe('the revelations', () => {
     const early = standing(campaign);
     learn(campaign, 'ville-under-fire');
     const later = standing(campaign);
+    learn(campaign, 'reinforce-the-capital');
+    const district = standing(campaign);
     learn(campaign, 'two-cities');
     const final = standing(campaign);
 
     assert.notEqual(early, later);
-    assert.notEqual(later, final);
+    assert.notEqual(later, district);
+    assert.notEqual(district, final);
+    assert.match(district, /household effects/);
     assert.match(final, /where the rounds went/);
-    assert.equal(knownRevelations(campaign).length, 3);
+    assert.equal(knownRevelations(campaign).length, 4);
   });
 
   test('the arc lands through the campaign, not beside it', () => {
@@ -216,6 +220,18 @@ describe('the revelations', () => {
     const finale = scenarioById('two-cities');
     assert.ok(finale.briefIfKnown.ledger, 'the depots line has a second reading');
     assert.match(finale.briefIfKnown.ledger.join(' '), /depot returns/);
+  });
+
+  test('the movement order re-reads both watches about the capital', () => {
+    // The freight left before the threat was written down. An operator who has
+    // read that order hears "priority of fires: the palace" as an address, and
+    // watches the loading at Demobodedovo as the completion of paperwork.
+    const movement = REVELATIONS.movement;
+    assert.equal(movement.after, 'reinforce-the-capital',
+      'it is learned on the watch that took the battalion');
+    assert.match(movement.lines.join(' '), /dated two days after the freight left/);
+    assert.match(scenarioById('two-cities').briefIfKnown.movement.join(' '), /the address/);
+    assert.match(scenarioById('presidents-flight').briefIfKnown.movement.join(' '), /schedule/);
   });
 });
 

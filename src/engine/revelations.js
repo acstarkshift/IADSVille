@@ -77,6 +77,27 @@ export const REVELATIONS = {
     ],
   },
 
+  movement: {
+    id: 'movement',
+    after: 'reinforce-the-capital',
+    tm: 'ПЕРЕМЕЩЕНИЕ',
+    title: 'THE MOVEMENT ORDER',
+    lines: [
+      'The order that took your battalion is numbered, and orders in that series are numbered'
+        + ' consecutively, which means the ones on either side of it exist. A movement order is not'
+        + ' an intelligence product. It is freight paperwork, and freight paperwork is filed where'
+        + ' freight is handled, which is a room with no lock on it.',
+      'Same series, same week: road movement, palace annexe to Demobodedovo, freight class four —'
+        + ' household and administrative effects. Eleven vehicles. The escort was found from the'
+        + ' capital garrison, which is the garrison your battalion was sent to reinforce.',
+      'The assessed threat to the capital — the stated grounds for taking the battalion — is dated'
+        + ' two days after the freight left.',
+      'You have read the two documents in both orders and the sequence does not change: first the'
+        + ' household effects, then the threat, then the guns. The air defence of this country was'
+        + ' rearranged around a departure schedule, and the departure schedule came first.',
+    ],
+  },
+
   buyer: {
     id: 'buyer',
     after: 'two-cities',
@@ -90,7 +111,9 @@ export const REVELATIONS = {
         + ' frontier within a week of the redistribution being recorded.',
       'They were sold. Not diverted, not lost, not misallocated — sold, at a price that is written on'
         + ' the manifest in a column headed ADMINISTRATIVE RECOVERY, and the sum recovered has been'
-        + ' administratively recovered by somebody with an office in Mostrograd.',
+        + ' administratively recovered by an office in Mostrograd that does not appear on the'
+        + " ministry's establishment. Its address does. It is the point of origin on a freight"
+        + ' movement order you have also read.',
       'This is what the expenditure freeze was for. Not the war. The freeze exists so that the'
         + ' magazines are never opened and counted while there is still someone to count them in'
         + ' front of.',
@@ -118,6 +141,10 @@ export function standing(campaign) {
   const known = knownRevelations(campaign).map((r) => r.id);
   if (known.includes('buyer')) {
     return 'You know where the rounds went, who signed for them, and what the freeze was protecting.';
+  }
+  if (known.includes('movement')) {
+    return 'You know the household effects left the palace before the threat that justified guarding'
+      + ' it was written down.';
   }
   if (known.includes('ledger')) {
     return 'You know the depot returns do not reconcile. You have not worked out what that means yet,'

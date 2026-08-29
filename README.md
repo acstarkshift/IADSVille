@@ -191,6 +191,11 @@ Then you are promoted, and the arc changes register. At district command the
 orders stop being about your conscience and start being about equipment: the
 directorate takes your long-range battalion for a capital that is not under
 attack, and you watch a district town burn in a sector that battalion covered.
+Afterwards the movement order turns up where freight paperwork is filed: same
+numbered series, same week, road movement from the palace annexe to Demobodedovo,
+freight class four — household and administrative effects — dated two days
+*before* the assessed threat that took your guns. The air defence of the country
+was rearranged around a departure schedule, and the schedule came first.
 And at national command you find that the officer holding one of your two
 sectors is a colonel of the political section who will not expend a round on
 anything the priority of fires does not name — which means the thing you spent
@@ -410,6 +415,10 @@ flying it does not lock it again.
 
 Two days later, a state aircraft lifts from Demobodedovo, the state field
 south-east of Mostrograd, and routes for the frontier with the hold loaded. The
+hold was loaded overnight by a crane detail found from the sector — nine and a
+half tonnes at freight class four, household and administrative effects, entered
+against the forty-one seats it displaced. The passenger list is not being
+transmitted, and by now you can work out why: it is a list of empty seats. The
 same sector command that told you which city was allowed to matter now tells you
 that this aircraft is protected **at all cost**, and asks you to acknowledge it
 on the net.
@@ -426,7 +435,7 @@ There are three ways it ends, and the game does not favour any of them. Hold the
 corridor open and watch him go. Defend the city instead and let the fighters do
 what fighters do. Or select a track your own system has already identified as
 friendly and give a fire order against it — which is a thing the interface will
-let you do, without comment, exactly once.
+let you do, without comment.
 
 Nothing asks you which you meant. The tape only records what left the rails, and
 whose battery it left from.

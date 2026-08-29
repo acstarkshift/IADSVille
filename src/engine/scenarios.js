@@ -695,6 +695,8 @@ export const SCENARIOS = [
         + ' can no longer hear the way it is meant.'],
       freeze: ['Nothing in the western valley is a designated defended place. You have been told'
         + ' that before, about a building with people in it.'],
+      movement: ['The household effects left the palace for Demobodedovo under a movement order you'
+        + ' have read. What the priority of fires will protect tonight is the address.'],
     },
     /*
      * Clustered, because the sector operations centre sits eleven kilometres
@@ -875,6 +877,9 @@ export const SCENARIOS = [
         + ' at Demobodedovo has been loading since yesterday afternoon. Nobody has asked you to know it.'],
       ledger: ['The depot returns you saw are the returns for a sector that no longer has a government'
         + ' to account to. Nothing was ever going to be resupplied.'],
+      movement: ['The loading at Demobodedovo completes a movement order you have read. Freight class'
+        + ' four does not board an aircraft in an emergency. It boards on a schedule, and the schedule'
+        + ' is older than the threat.'],
     },
     assets: [
       CAPITAL_GROUND.palace, CAPITAL_GROUND.ministry, CAPITAL_GROUND.capitalPower, AIRPORT,
