@@ -52,9 +52,11 @@ the earliest shot there is, taken at the edge of the envelope where kill
 probability is worst, at whatever is nearest — including the decoys. A net
 assignment holds for a sweet-spot shot when there is time to spend, skips the
 contact whose impossibly steady flight a well-held track has already given away,
-and spends a third fewer rounds for the same defence. Measured across 24 seeded
-watches, a commander who works the picture beats one who sets everything free
-and walks away by about 14% — and beats one who does nothing at all by a
+and spends a third fewer rounds and engages a third fewer decoys for the same
+defence. Measured across seeded watches, a commander who works the picture at
+least matches one who sets everything free and walks away — the margin by raw
+score runs from parity to a few percent depending on the night, the saving in
+rounds and decoys is consistent — and beats one who does nothing at all by a
 thousand points. Delegation is viable. Absence is not.
 
 ## The four appointments
@@ -143,18 +145,23 @@ You do not know where a contact is going until it commits — so obeying is not
 declining to assign. It is calling a battery off a target it is already tracking.
 
 Then the debrief shows you two numbers that have agreed all campaign and now do
-not:
+not (means over eight seeded watches, competently fought):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **87** | 1181 |
-| Defend it anyway | **85** | **1576** |
-| Refuse the order outright | **7** | 1576 |
+| Obey the freeze | 88 | 850 |
+| Defend it anyway | 90 | **1250** |
+| Refuse the order outright | **73** | 1250 |
 
-Defending the hospital costs two points of standing and is worth four hundred
-points of actual value. Refusing costs eighty. Sector command does not punish
-what you did — it punishes having said no. The hospital was never on their books
-at all, and that is the whole lesson.
+Defending the hospital is worth four hundred points of actual value and costs
+the file nothing it can name — the query for rounds expended outside the freeze
+is worth less than a single leaker, and a weapon that arrives at the struck-off
+place is billed at exactly nothing, because the ledger cannot simultaneously
+declare a building undesignated and grieve for it. On the state's own books the
+obeyer and the quiet insubordinate are indistinguishable. Only the third row
+moves: refusing on the net, for the identical night, costs seventeen points and
+a referral. Sector command does not punish what you did — it cannot even see
+what you did. It punishes having said no, and that is the whole lesson.
 
 **Across the Line** goes further. A cruise missile has strayed off course, west
 over the ridge and across the Listonian border, and it is going to come down on a
@@ -163,8 +170,9 @@ continued existence the ministry does not enjoy. Two batteries hold it
 comfortably. Sector command's position is that engaging outside national
 territory is a border incident.
 
-Firing anyway costs nine points of standing and saves the camp. Refusing the
-order on the net costs eighty-two. Afterwards you look the grid reference up and
+Firing anyway costs about eight points of standing and saves the camp. Refusing
+the order on the net costs about twenty-seven, and the referral it triggers
+stays in the file. Afterwards you look the grid reference up and
 find it handwritten inside the back cover of the sector target folder, in a
 folder that has no business containing a point in Listonia at all. The word for
 what happened over Gorna is not "stray".

@@ -333,7 +333,7 @@ export function stepMissiles(world, dt) {
  * Put rounds in the air against a track. Returns the number actually launched,
  * which can be fewer than requested when the ready rack runs dry mid-salvo.
  */
-export function launchSalvo(world, site, track, count) {
+export function launchSalvo(world, site, track, count, origin = null) {
   const type = SAM_TYPES[site.type];
   const target = world.aircraftById.get(track.truthId);
   if (!target || !target.alive) return 0;
@@ -383,7 +383,7 @@ export function launchSalvo(world, site, track, count) {
     const launchQuality = computeSamPk(site, target,
       { launchRangeKm: dist(site.pos, target.pos) }, world.difficulty);
     world.warnTargetOfLaunch(target, launchQuality >= ENGAGEMENT.crediblePk);
-    world.registerRoundsSpent(track, launched);
+    world.registerRoundsSpent(track, launched, origin);
     // Firing on the state aircraft is recorded whether or not it works. The act
     // is the fire order, not the result of it.
     if (AIR_TYPES[target.type].isVip) world.registerVipFires(site, launched);

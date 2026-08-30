@@ -433,6 +433,27 @@ describe('the file, afterwards', () => {
     assert.equal(campaign.ending, 'obedient', 'the unlock must survive being used');
     assert.ok(isUnlocked(epilogue, campaign), 'and the watch stays replayable');
   });
+
+  test('the flight opens on the fact of the palace, not the name of the finding', () => {
+    // The premise is a building still standing to leave from. A divided night
+    // that held both cities has one; an ending-id allowlist said otherwise and
+    // contradicted the fiction it was gating.
+    const divided = servedRecord('divided');
+    divided.endingFacts = { palaceHeld: true, villeHeld: true };
+    assert.ok(isUnlocked(epilogue, divided),
+      'a divided night that held the palace still has a palace to leave from');
+
+    const paper = servedRecord('obedient');
+    paper.endingFacts = { palaceHeld: false, villeHeld: false };
+    assert.ok(!isUnlocked(epilogue, paper), 'the facts outrank the finding');
+
+    const oldObedient = servedRecord('obedient');
+    assert.ok(isUnlocked(epilogue, oldObedient),
+      'records from before the facts fall back to the ending list');
+    const oldDivided = servedRecord('divided');
+    assert.ok(!isUnlocked(epilogue, oldDivided),
+      'and the old list still applies to them');
+  });
 });
 
 describe('the order', () => {

@@ -250,6 +250,49 @@ export function renderBriefing(host, state) {
 
 /* ----------------------------------------------------------- debrief */
 
+/**
+ * The night's side of a divergence row: one factual sentence about what the
+ * decision the file priced actually was. The card promised pairs and rendered
+ * only the file column — half a thesis. This is the other half, read straight
+ * off the result, never off the ledger.
+ */
+function nightSideFor(reason, result) {
+  const s = result.stats ?? {};
+  const asset = (type) => result.assets?.find((a) => a.type === type);
+  const fate = (a, name) => {
+    if (!a) return null;
+    if (a.destroyed) return `${name} was lost.`;
+    if ((a.damagePct ?? 0) > 0) return `${name} stands, struck to ${Math.round(a.damagePct)}%.`;
+    return `${name} stands untouched.`;
+  };
+  if (/freeze|hospital/i.test(reason)) {
+    return fate(asset('hospital'), 'The hospital') ?? 'The hospital was not on this watch.';
+  }
+  if (/border|encampment|Listonian/i.test(reason)) {
+    return fate(asset('camp'), 'The camp at Gorna') ?? 'The camp was not on this watch.';
+  }
+  if (/civil/i.test(reason)) {
+    return s.civilianAircraftShot
+      ? 'A civil aircraft with people aboard was destroyed.'
+      : 'The transit crossed the sector and left it.';
+  }
+  if (/state aircraft|relayed/i.test(reason)) {
+    if (/no reply/i.test(reason)) return 'The attention went to the corridor instead.';
+    if (s.vipDown) return 'STATE 01 came down in the Tavrov district.';
+    if (s.vipEscaped) return 'STATE 01 cleared national airspace.';
+    return 'STATE 01 left the picture unresolved.';
+  }
+  if (/movement order/i.test(reason)) {
+    return /refused/i.test(reason)
+      ? 'The battalion stayed. So did its coverage.'
+      : 'The only battalion that reaches Kubin and Lozan moved that night.';
+  }
+  if (/priority/i.test(reason)) {
+    return `${s.civilianCasualties ?? 0} casualties are on the returns.`;
+  }
+  return `${s.civilianCasualties ?? 0} casualties are on the returns.`;
+}
+
 export function renderDebrief(host, state, result, entry) {
   const consequence = consequenceFor(state.campaign, { narrativePressure: state.narrativePressure });
 
@@ -374,11 +417,13 @@ export function renderDebrief(host, state, result, entry) {
       what the night actually was. When these two columns agree, this table is empty.</p>
       <table class="ledger">
         <tr><th style="text-align:left;color:var(--ink-dim)">decision</th>
-          <th style="color:var(--ink-dim)">the file</th></tr>
+          <th style="color:var(--ink-dim)">the file</th>
+          <th style="text-align:left;color:var(--ink-dim)">the night</th></tr>
         ${divergences.map((l) => {
     const charged = l.charged ?? l.delta;
     return `<tr><td>${esc(l.reason)}</td>
-          <td class="${charged > 0 ? 'up' : 'down'}">${charged > 0 ? '+' : ''}${charged.toFixed(1)}</td></tr>`;
+          <td class="${charged > 0 ? 'up' : 'down'}">${charged > 0 ? '+' : ''}${charged.toFixed(1)}</td>
+          <td style="text-align:left;color:var(--ink-dim)">${esc(nightSideFor(l.reason, result))}</td></tr>`;
   }).join('')}
       </table>
       <p style="margin-top:8px;color:var(--ink-dim)">The night itself is the score above: ${result.score}.

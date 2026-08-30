@@ -45,6 +45,12 @@ export function readFinale(result) {
   const spent = result.stats.roundsByCluster ?? {};
   const forVille = spent.ville ?? 0;
   const forCapital = spent.capital ?? 0;
+  // The rounds that were personally this operator's: manual fire orders and
+  // human assignments, never a free crew's own snap shot. The endings that
+  // assert agency — "you transmitted the acknowledgement yourself" — are
+  // gated on these, so a delegated sector cannot hand you a verdict on
+  // choices your subordinates made.
+  const yours = result.stats.yourRoundsByCluster ?? {};
 
   const postHarm = harm(result, 'post');
 
@@ -66,6 +72,8 @@ export function readFinale(result) {
     palaceLost: palaceHarm >= 0.75,
     forVille,
     forCapital,
+    yourForVille: yours.ville ?? 0,
+    yourForCapital: yours.capital ?? 0,
     casualties: result.stats.civilianCasualties,
     homeDistrictHit: result.stats.homeDistrictHit,
     againstOrder: result.stats.roundsAgainstOrder ?? 0,
@@ -100,7 +108,19 @@ export function endingFor(result) {
   if (r.villeHeld && r.palaceHeld && r.displaced) return ENDINGS.divided;
   if (r.villeLost && r.palaceLost) return r.displaced ? ENDINGS.survivor : ENDINGS.collapse;
   if (r.palaceHeld && !r.villeHeld) return ENDINGS.obedient;
-  if (r.villeHeld && !r.palaceHeld) return ENDINGS.defiant;
+  /*
+   * "Departure from the order" is a personal act or it is nothing. It takes
+   * either the word "no" on the net, or an acknowledged order followed by
+   * rounds this operator personally put on the valley. A sector whose free
+   * crews saved the village on their own initiative while the commander
+   * acknowledged everything and touched nothing gets the divided finding —
+   * the ending that asserts "you knew what you were doing" must not be
+   * handed to somebody whose subordinates did the knowing.
+   */
+  if (r.villeHeld && !r.palaceHeld) {
+    const personal = r.orderRefused || (r.orderAccepted && r.yourForVille > 0);
+    return personal ? ENDINGS.defiant : ENDINGS.divided;
+  }
   return ENDINGS.divided;
 }
 
@@ -202,10 +222,12 @@ export const ENDINGS = {
         + ' destroyed. The state broadcast has not yet described this.',
       `The Ville is standing. ${r.casualties ? `${r.casualties} casualties are recorded` : 'No casualties are recorded'}`
         + ' in the valley, against a raid of nine aircraft.',
-      r.againstOrder
-        ? `The sector log shows ${r.againstOrder} rounds expended on tracks outside the designated priority`
-          + ' of fires. The log is not in dispute; you transmitted the acknowledgement yourself.'
-        : 'The sector log shows no acknowledgement of the priority of fires, and the transmission is on the tape.',
+      r.orderRefused
+        ? 'The priority of fires was refused, on the net, in the clear. The refusal is on the tape,'
+          + ' and so is everything after it.'
+        : `The sector log shows ${Math.max(r.yourForVille, 1)} rounds put on the valley by your own`
+          + ' order after the priority of fires was acknowledged. The log is not in dispute; you'
+          + ' transmitted the acknowledgement yourself.',
       'You are relieved of the watch and detained pending a hearing before a military tribunal of the'
         + ' political section. Your equipment has been signed for by your relief.',
       `${householdPhrase(character)} — reached by telephone from the crossing at first light. Everybody`

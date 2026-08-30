@@ -214,7 +214,7 @@ export function fireEngagement(world, site, engagement) {
   const env = inEnvelope(site, track.pos, track.altM);
   if (!env.ok) return 0;
 
-  const launched = launchSalvo(world, site, track, engagement.salvo);
+  const launched = launchSalvo(world, site, track, engagement.salvo, engagement.origin);
   if (launched === 0) {
     endEngagement(world, site, engagement, 'no rounds');
     return 0;
@@ -323,10 +323,23 @@ function runFormationCommander(world, formation, dt) {
  * of fires — not because he is a coward but because he has read the same order
  * you have and, unlike you, has never once considered not obeying it.
  */
-function commanderWillEngage(world, formation, track) {
+export function commanderWillEngage(world, formation, track) {
+  // Any officer on this net has read the freeze the commander acknowledged.
+  // Expenditure against the struck-off place is nobody's initiative but yours.
+  const struckOff = world.command?.constraints?.freezeExcludedId;
+  if (struckOff && track.predictedAssetId === struckOff) return false;
   if (formation.commander?.political) {
     const priority = world.command?.constraints?.priorityOfFiresId;
-    if (priority && track.predictedAssetId && track.predictedAssetId !== priority) return false;
+    if (priority && track.predictedAssetId && track.predictedAssetId !== priority) {
+      // The order names a place, but it means a side — the same reading the
+      // breach accounting applies. The colonel holds the priority's whole
+      // cluster, not one address in it: an officer this reliable does not
+      // watch the ministry burn across the street from the palace he is
+      // defending and call it obedience.
+      const priorityCluster = world.assetById.get(priority)?.cluster;
+      const trackCluster = world.assetById.get(track.predictedAssetId)?.cluster;
+      if (!priorityCluster || priorityCluster !== trackCluster) return false;
+    }
   }
   if (formation.posture !== 'tight') return true;
   const sites = world.sitesOf(formation);
@@ -465,11 +478,20 @@ export function runBatteryCrews(world, dt) {
      * which is what makes losing fusion so expensive even for a free battery.
      */
     if (site.weaponsState === 'free') {
+      /*
+       * An accepted expenditure freeze binds the crews too: the order went to
+       * every battery on the net, and a crew on its own authority still reads
+       * its traffic. Rounds against the struck-off place can therefore only be
+       * a decision taken at the net seat — which is what the settle accounting
+       * assumes when it bills them.
+       */
+      const struckOff = world.command.constraints.freezeExcludedId ?? null;
       const available = [...world.tracks.values()]
         .filter((t) => t.hostility === 'hostile'
           && !t.destroyed
           && t.quality >= DETECTION.firmQuality
           && t.assignedTo.length === 0
+          && (struckOff === null || t.predictedAssetId !== struckOff)
           && (world.fusionOnline || t.sources.includes(site.radarId))
           && inEnvelope(site, t.pos, t.altM).ok)
         /*

@@ -1013,7 +1013,20 @@ export const isEpilogue = (scenario) => scenario?.id === EPILOGUE_ID;
  * version of events where the palace was still standing to leave from.
  */
 export function isUnlocked(scenario, campaign) {
-  if (scenario?.requiresEnding && !scenario.requiresEnding.includes(campaign?.ending)) return false;
+  if (scenario?.requiresEnding) {
+    /*
+     * The flight needs a palace that was still standing to leave from — a fact
+     * about the building, not about which finding the review reached. Records
+     * that carry the fact are gated on it (so a divided night that held both
+     * cities still opens the watch); older records fall back to the ending
+     * list they were saved with.
+     */
+    const facts = campaign?.endingFacts;
+    const unlocked = facts
+      ? !!facts.palaceHeld
+      : scenario.requiresEnding.includes(campaign?.ending);
+    if (!unlocked) return false;
+  }
   return withinAppointment(scenario, campaign, SCENARIOS);
 }
 

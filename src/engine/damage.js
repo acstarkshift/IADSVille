@@ -163,9 +163,17 @@ export function damageAsset(world, asset, amount, source) {
      * campaign's central document and quietly correlated the two arithmetics
      * the whole design keeps apart. The SCORE still counts every casualty in
      * full; that is the other arithmetic, and it is yours.
+     *
+     * The same schedule prices every hit: full rate at the town's 26, a
+     * fraction for the hospital the state rates below a river crossing, and
+     * nothing at all once the freeze has struck a place off — obeying the
+     * order to abandon it must cost the file nothing, or the file would be
+     * arguing with its own order.
      */
-    if (type.value > 0) {
-      world.standingDelta(COMMAND.standing.perCivilianHit, 'civilian area struck');
+    const excludedByFreeze = world.command?.constraints?.freezeExcludedId === asset.id;
+    const weight = excludedByFreeze ? 0 : Math.min(1, type.value / 26);
+    if (weight > 0) {
+      world.standingDelta(COMMAND.standing.perCivilianHit * weight, 'civilian area struck');
     }
   } else {
     const pct = Math.min(100, Math.round(100 * asset.damage / type.hp));
@@ -195,7 +203,13 @@ export function damageAsset(world, asset, amount, source) {
      * the divergence the campaign turns on is a lie the code tells about
      * itself.
      */
-    const weight = type.critical ? 1 : Math.min(1, type.value / 26);
+    /*
+     * And a place the expenditure freeze has declared undesignated is priced
+     * accordingly: losing it cannot cost the file anything, or the order to
+     * abandon it would be a trap rather than a corruption.
+     */
+    const excludedByFreeze = world.command?.constraints?.freezeExcludedId === asset.id;
+    const weight = excludedByFreeze ? 0 : type.critical ? 1 : Math.min(1, type.value / 26);
     if (weight > 0) {
       world.standingDelta(
         (type.critical ? COMMAND.standing.perCriticalAssetLost : COMMAND.standing.perAssetLost)

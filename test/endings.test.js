@@ -12,6 +12,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
+import { commanderWillEngage } from '../src/engine/doctrine.js';
 import { scenarioById, SCENARIOS, FINALE_ID, isFinale } from '../src/engine/scenarios.js';
 import { ENDINGS, endingFor, readFinale, composeEnding, endingSummary } from '../src/engine/endings.js';
 import { createCharacter, districtOf, householdOf } from '../src/engine/character.js';
@@ -187,10 +188,53 @@ describe('the order', () => {
 describe('the endings', () => {
   test('each outcome maps to its ending', () => {
     assert.equal(endingFor(outcome(90, 5)).id, 'obedient');
-    assert.equal(endingFor(outcome(5, 90)).id, 'defiant');
+    // Departure from the order is a personal act: the word "no" on the net, or
+    // rounds this operator personally put on the valley after acknowledging.
+    assert.equal(endingFor(outcome(5, 90, {
+      stats: { yourRoundsByCluster: { ville: 6 } },
+    })).id, 'defiant');
+    assert.equal(endingFor(outcome(5, 90, {
+      constraints: { palaceOrderRefused: true },
+    })).id, 'defiant');
     assert.equal(endingFor(outcome(55, 55)).id, 'divided');
     assert.equal(endingFor(outcome(10, 10)).id, 'exemplary');
     assert.equal(endingFor(outcome(95, 95)).id, 'collapse');
+  });
+
+  test("the political officer holds the priority's side, not one address in it", () => {
+    // Measured before the fix: accepting the palace priority locked STRELNIK
+    // off same-cluster assets like the ministry, because his gate compared the
+    // asset id while the breach accounting compared clusters. The order names
+    // a place; it means a side. Both readers now read it the same way.
+    const world = new World(scenarioById(FINALE_ID), { role: 'net' });
+    const strelnik = world.formations.find((f) => f.commander?.political);
+    assert.ok(strelnik, 'the capital is held by the political colonel');
+    world.setPosture(strelnik.id, 'free');
+    const palace = world.assets.find((a) => a.type === 'palace');
+    world.command.constraints.priorityOfFiresId = palace.id;
+
+    const sameSide = world.assets.find((a) => a.cluster === palace.cluster && a.id !== palace.id);
+    const otherSide = world.assets.find((a) => a.cluster && a.cluster !== palace.cluster);
+    assert.ok(sameSide && otherSide, 'the finale is clustered by side');
+
+    assert.equal(commanderWillEngage(world, strelnik, { predictedAssetId: palace.id }), true);
+    assert.equal(commanderWillEngage(world, strelnik, { predictedAssetId: sameSide.id }), true,
+      'the building across the street is inside the order');
+    assert.equal(commanderWillEngage(world, strelnik, { predictedAssetId: otherSide.id }), false,
+      'the valley is not');
+  });
+
+  test('a delegated sector cannot hand you the tribunal', () => {
+    // Measured before the fix: accept-everything AI play, free crews spending
+    // valley rounds on their own initiative, produced the defiant ending —
+    // whose text asserts "you transmitted the acknowledgement yourself" about
+    // choices the subordinates made. Agency is read off the operator's own
+    // rounds now; the state's ledger still reads the whole tape.
+    assert.equal(endingFor(outcome(5, 90)).id, 'divided',
+      'ville saved by free crews under an acknowledged order is the divided finding');
+    assert.equal(readFinale(outcome(5, 90, {
+      stats: { yourRoundsByCluster: { ville: 3, capital: 2 } },
+    })).yourForVille, 3);
   });
 
   test('you cannot displace to survive and still be credited with both cities', () => {
@@ -227,7 +271,8 @@ describe('the endings', () => {
     for (const ending of Object.values(ENDINGS)) {
       const composed = composeEnding(
         outcome(ending.id === 'defiant' || ending.id === 'exemplary' ? 5 : 90,
-          ending.id === 'obedient' || ending.id === 'exemplary' ? 5 : 90),
+          ending.id === 'obedient' || ending.id === 'exemplary' ? 5 : 90,
+          ending.id === 'defiant' ? { constraints: { palaceOrderRefused: true } } : {}),
         character,
       );
       assert.ok(composed.lines.length >= 4, `${composed.id} says enough`);

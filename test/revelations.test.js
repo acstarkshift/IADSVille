@@ -118,6 +118,71 @@ describe('the expenditure freeze', () => {
     assert.equal(w.events.filter((e) => /FREEZE/.test(e.text)).length, 1);
   });
 
+  test('the ledger does not grieve for a place the freeze has struck off', () => {
+    /*
+     * The inversion this guards against, measured before the fix: obeying the
+     * freeze scored WORSE standing than defending, because every weapon that
+     * arrived at the hospital was billed at the full leaker rate — the state
+     * charging its own ledger for a place it had just declared undesignated.
+     * A leaker now bills in proportion to the state's valuation, and a
+     * freeze-excluded place bills nothing at all, loss included.
+     */
+    const w = world();
+    issueDirective(w, DIRECTIVES.expenditureFreeze);
+    answerDirective(w, 'accepted');
+    const hospital = w.assets.find((a) => a.type === 'hospital');
+    const before = w.command.standing;
+    w.registerLeaker({ name: 'R-101' }, hospital);
+    w.registerLeaker({ name: 'R-102' }, hospital);
+    assert.equal(w.command.standing, before, 'weapons on the struck-off place cost the file nothing');
+    assert.equal(w.stats.leakers, 2, 'the score still counts every one of them');
+
+    w.damageAsset(hospital, ASSET_TYPES.hospital.hp + 1, null);
+    assert.equal(w.command.standing, before, 'and losing it outright costs the file nothing either');
+
+    // The bridge is a designated place; releasing on it still costs full rate.
+    const bridge = w.assets.find((a) => a.type === 'bridge');
+    if (bridge) {
+      w.registerLeaker({ name: 'R-103' }, bridge);
+      assert.ok(w.command.standing < before, 'a designated place is still billed');
+    }
+  });
+
+  test('the freeze prices the three roads with the right signs', () => {
+    // The campaign's central table depends on these signs: obeying must be
+    // free, quiet defence billed, and the word "no" billed hardest. Settle
+    // credits are the same night-to-night noise on every road, so this pins
+    // the road-specific charges themselves; the full-sim margin is measured
+    // separately and written into the README table.
+    const charges = (w, keep) => w.command.ledger
+      .filter((l) => keep(l.reason)).reduce((n, l) => n + l.charged, 0);
+
+    const obeyed = world();
+    issueDirective(obeyed, DIRECTIVES.expenditureFreeze);
+    answerDirective(obeyed, 'accepted');
+    const hospital = obeyed.assets.find((a) => a.type === 'hospital');
+    for (let i = 0; i < 4; i++) obeyed.registerLeaker({ name: `R-${i}` }, hospital);
+    obeyed.damageAsset(hospital, 500, null);
+    settleDirectives(obeyed);
+    assert.equal(charges(obeyed, (r) => /hospital|released on|civilian area/i.test(r)), 0,
+      'obedience costs the file nothing at all');
+
+    const defended = world();
+    issueDirective(defended, DIRECTIVES.expenditureFreeze);
+    answerDirective(defended, 'accepted');
+    defended.registerRoundsSpent({ predictedAssetId: 'a_hospital' }, 6);
+    settleDirectives(defended);
+    const breach = charges(defended, (r) => /outside the freeze/i.test(r));
+    assert.ok(breach < 0, 'quiet defence is billed');
+
+    const refused = world();
+    issueDirective(refused, DIRECTIVES.expenditureFreeze);
+    answerDirective(refused, 'refused');
+    settleDirectives(refused);
+    const refusal = charges(refused, (r) => /refus/i.test(r) && /freeze/i.test(r));
+    assert.ok(refusal < breach, 'and the word "no" costs more than the deed');
+  });
+
   test('defending the hospital is nearly free, and refusing the order is not', () => {
     // This asymmetry is the entire watch: the state does not punish what you
     // did, it punishes having said no.

@@ -64,6 +64,13 @@ export function emptyCampaign(character = null) {
     /** Set once the last watch has been stood, whichever way it went. */
     ending: null,
     /**
+     * What was actually standing when it ended — recorded beside the ending id
+     * because the epilogue's premise is a fact about a building, not about
+     * which finding the review reached. A record with facts is gated on the
+     * facts; older records fall back to the ending list.
+     */
+    endingFacts: null,
+    /**
      * And once the watch after it has been, which only some records ever have.
      * Kept separate from `ending` because `ending` is what unlocks the
      * epilogue: folding one into the other would make flying it lock it.
@@ -164,6 +171,16 @@ export function recordMission(campaign, result) {
   campaign.history.push(entry);
 
   if (result.finale && result.endingId) campaign.ending = result.endingId;
+  if (result.finale) {
+    const fraction = (type) => {
+      const asset = result.assets?.find((a) => a.type === type);
+      return asset ? (asset.destroyed ? 1 : (asset.damagePct ?? 0) / 100) : 0;
+    };
+    campaign.endingFacts = {
+      palaceHeld: fraction('palace') < 0.75,
+      villeHeld: fraction('town') < 0.35,
+    };
+  }
   if (result.epilogue && result.endingId) campaign.epilogue = result.endingId;
 
   // Some watches teach you something about the people giving the orders.

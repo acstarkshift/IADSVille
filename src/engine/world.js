@@ -150,6 +150,13 @@ export class World {
       roundsByAsset: {},
       /** The same figures gathered by side of the sector. */
       roundsByCluster: {},
+      /**
+       * The subset of those that were somebody's decision at THIS console — a
+       * manual fire order, or an assignment made by a human on the net. The
+       * finale reads personal agency off this ledger; the state's ledger keeps
+       * reading the whole tape, because the file never cared who fired.
+       */
+      yourRoundsByCluster: {},
       /** Rounds fired at targets the priority of fires told you to ignore. */
       roundsAgainstOrder: 0,
       /** Rounds spent defending something the expenditure freeze excluded. */
@@ -849,7 +856,24 @@ export class World {
 
   registerLeaker(aircraft, asset) {
     this.stats.leakers++;
-    this.standingDelta(COMMAND.standing.perLeaker, `${aircraft.name} released on ${asset.label}`);
+    /*
+     * The state bills a leaker in proportion to its own valuation of the place
+     * the weapon arrived at — the same schedule the asset-loss charge uses. A
+     * release on the crossing is a failure; a release on a place the freeze
+     * has just declared undesignated is, on this ledger, nothing at all; a
+     * release on the encampment it refuses to recognise likewise. The score
+     * counts every one of them in full. Billing the full rate here regardless
+     * was the arithmetic that quietly made obeying the freeze WORSE for the
+     * file than defending the hospital — the campaign's central lesson,
+     * inverted by a constant.
+     */
+    const type = ASSET_TYPES[asset.type];
+    const excluded = this.command.constraints.freezeExcludedId === asset.id;
+    const weight = excluded ? 0 : type.critical ? 1 : Math.min(1, (type.value ?? 0) / 26);
+    if (weight > 0) {
+      this.standingDelta(COMMAND.standing.perLeaker * weight,
+        `${aircraft.name} released on ${asset.label}`);
+    }
   }
 
   /**
@@ -869,7 +893,7 @@ export class World {
    * This is how the game finds out what you decided, without ever asking you.
    * A priority-of-fires order you accepted is enforced against the same figures.
    */
-  registerRoundsSpent(track, count) {
+  registerRoundsSpent(track, count, origin = null) {
     const assetId = track.predictedAssetId;
     if (!assetId) return;
     this.stats.roundsByAsset[assetId] = (this.stats.roundsByAsset[assetId] ?? 0) + count;
@@ -877,6 +901,11 @@ export class World {
     const cluster = this.assetById.get(assetId)?.cluster;
     if (cluster) {
       this.stats.roundsByCluster[cluster] = (this.stats.roundsByCluster[cluster] ?? 0) + count;
+      // Free crews' snap shots are the sector fighting; a manual order or a
+      // human assignment is you choosing. Only the choosing lands here.
+      if (origin && origin !== 'free' && this.control.netIsHuman) {
+        this.stats.yourRoundsByCluster[cluster] = (this.stats.yourRoundsByCluster[cluster] ?? 0) + count;
+      }
     }
 
     /*

@@ -719,6 +719,11 @@ export function settleDirectives(world) {
    * this file nothing at all, because a hospital is not a designated defended
    * place — and the score the operator is shown alongside this ledger will
    * disagree with it violently. That disagreement is the point of the watch.
+   *
+   * Every round on this tally is a deliberate act at the net seat: an accepted
+   * freeze stands the sector's own crews and officers down off the excluded
+   * axis, so nothing lands here by delegation. Quiet insubordination stays an
+   * order of magnitude cheaper than the word "no".
    */
   if (c.freezeAccepted && world.stats.roundsAgainstFreeze > 0) {
     standingDelta(world, -0.8 * world.stats.roundsAgainstFreeze,
