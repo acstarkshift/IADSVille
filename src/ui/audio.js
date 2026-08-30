@@ -120,6 +120,39 @@ export class Audio {
     this.tone({ freq: 340, dur: 0.07, type: 'square', gain: 0.11 });
     this.tone({ freq: 250, dur: 0.11, type: 'square', gain: 0.11, delay: 0.09 });
   }
+  /*
+   * The hardware. The whole console is bat-handle toggles, legend-cap buttons
+   * and a rotary range knob, drawn with real care and — measured — completely
+   * mute: not one of them made a sound, including the RADIATE switch the game
+   * is built around. Three noises, kept small enough to live under everything
+   * else, because a console you can hear yourself operating is most of what
+   * "hardware" means.
+   */
+  /** A bat-handle toggle thrown: a hard, short mechanical click. */
+  toggleSwitch(on = true) {
+    this.tone({ freq: on ? 1900 : 1500, to: on ? 900 : 700, dur: 0.035, type: 'square', gain: 0.055 });
+    this.noise({ dur: 0.03, gain: 0.05, freq: 3200 });
+  }
+  /** A legend-cap button pressed: softer, with a little travel. */
+  press() {
+    this.tone({ freq: 1150, to: 640, dur: 0.045, type: 'triangle', gain: 0.05 });
+  }
+  /** The range knob: one detent. */
+  detent() {
+    this.tone({ freq: 2400, dur: 0.02, type: 'square', gain: 0.035 });
+  }
+
+  /*
+   * A round whose radar went off the air under it. This is what the whole
+   * game's central trade actually sounds like when you take the other side of
+   * it, and it had no sound at all: a quarter to a third of every round fired
+   * on the suppression watches ended this way, silently. A falling tone that
+   * gives out — the guidance going, rather than a bang.
+   */
+  guidanceLost() {
+    this.tone({ freq: 700, to: 120, dur: 0.55, type: 'sawtooth', gain: 0.1 });
+    this.noise({ dur: 0.2, gain: 0.07, freq: 900 });
+  }
   /** Weapons seen leaving an attacking aircraft — the bad kind of launch. */
   release() {
     this.tone({ freq: 980, to: 620, dur: 0.18, type: 'square', gain: 0.1 });

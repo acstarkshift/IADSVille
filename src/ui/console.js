@@ -255,6 +255,35 @@ export class CrewConsole {
       const selected = ui.selectedTrackId === track.id;
       const env = inEnvelope(site, track.pos, track.altM);
 
+      /*
+       * The kill, in the cabin. The seat with the FIRE button in it had no
+       * bloom, no cross, and no drop: a target you had just splashed kept
+       * flying its symbol along its old velocity for five seconds, which is
+       * the one moment this seat exists for, rendered as nothing.
+       */
+      if (track.destroyed) {
+        const s = this.toScreen(site, track.pos);
+        const age = clamp01((world.t - (track.destroyedAtS ?? world.t)) / 4.5);
+        const bloom = 6 * this.dpr * (1.4 + age * 2.4);
+        ctx.save();
+        ctx.globalAlpha = 0.9 * (1 - age);
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = 1.6 * this.dpr;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, bloom, 0, TAU);
+        ctx.stroke();
+        const arm = 5 * this.dpr;
+        ctx.beginPath();
+        ctx.moveTo(s.x - arm, s.y - arm); ctx.lineTo(s.x + arm, s.y + arm);
+        ctx.moveTo(s.x - arm, s.y + arm); ctx.lineTo(s.x + arm, s.y - arm);
+        ctx.stroke();
+        ctx.fillStyle = colour;
+        ctx.font = `${8.5 * this.dpr}px ${FONT}`;
+        ctx.fillText(`${track.tn} ✕`, s.x + bloom + 3 * this.dpr, s.y + 3 * this.dpr);
+        ctx.restore();
+        continue;
+      }
+
       // A cue you cannot reach yet still has to be findable, so contacts beyond
       // the display are pinned to the edge on their true bearing with the range
       // written next to them. That is what a cue over the net actually gives you:

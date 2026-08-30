@@ -192,7 +192,7 @@ export class Scope {
     this.updatePaint(world, frameDtS);
     // Drawn before the grid so the country sits under everything, but its
     // labels are queued and placed with the rest at the end of the frame.
-    if (ui.showMap !== false) this.drawMap();
+    if (ui.showMap !== false) this.drawMap(world);
     this.drawGrid(world);
 
     // The beam itself is redrawn every frame rather than painted into the
@@ -308,10 +308,21 @@ export class Scope {
    *
    * Drawn dim on purpose. If it ever competes with a track symbol it is wrong.
    */
-  drawMap() {
+  drawMap(world) {
     const { ctx } = this;
     const p = this.palette;
     const s = this.scale;
+    /*
+     * "No leakers past the river line." The order names a feature on the map,
+     * so the map says which one from the moment you acknowledge it: red, and
+     * red for the rest of the watch. It flashes for the first ten seconds,
+     * once a second, and then holds — an order about a line you must not let
+     * anything cross should be visible on the line, not only in the ticker.
+     */
+    const riverAtS = world?.command?.constraints?.riverLineAtS ?? null;
+    const sinceRiver = riverAtS === null ? Infinity : world.t - riverAtS;
+    const riverMarked = Number.isFinite(sinceRiver);
+    const riverFlashing = sinceRiver < 10 && Math.floor(sinceRiver * 2) % 2 === 0;
     const path = (points, close = false) => {
       ctx.beginPath();
       points.forEach((point, i) => {
@@ -343,8 +354,10 @@ export class Scope {
 
     for (const river of MAP.rivers) {
       path(river.points);
-      ctx.strokeStyle = withAlpha(p.friendly, 0.19);
-      ctx.lineWidth = 1.2 * this.dpr;
+      ctx.strokeStyle = riverMarked
+        ? withAlpha(p.hostile, riverFlashing ? 0.85 : 0.45)
+        : withAlpha(p.friendly, 0.19);
+      ctx.lineWidth = (riverMarked ? (riverFlashing ? 2.4 : 1.8) : 1.2) * this.dpr;
       ctx.stroke();
     }
 
@@ -547,16 +560,45 @@ export class Scope {
     const p = this.palette;
     const size = 5 * this.dpr;
 
+    /*
+     * A place sector command has named is a place on the map, not a line in a
+     * ticker that scrolls away in five events. The asset a priority of fires
+     * designates flashes for the first ten seconds — so you look at it — and
+     * then stays marked in red, with its name held at the top of the label
+     * priorities, for the rest of the watch. You are never again in doubt
+     * about which building the order was about.
+     */
+    const designatedId = world.command?.constraints?.priorityOfFiresId ?? null;
+    const designatedAtS = world.command?.constraints?.priorityDesignatedAtS ?? null;
+    const sinceDesignation = designatedAtS === null ? Infinity : world.t - designatedAtS;
+    const flashing = sinceDesignation < 10 && Math.floor(sinceDesignation * 2) % 2 === 0;
+
     for (const asset of world.assets) {
       const s = this.toScreen(asset.pos);
       const type = ASSET_TYPES[asset.type];
       const hurt = clamp01(asset.damage / type.hp);
-      const colour = asset.destroyed ? p.hostile : type.critical ? p.friendly : p.ink;
+      const designated = asset.id === designatedId;
+      const colour = asset.destroyed ? p.hostile
+        : designated ? p.hostile
+          : type.critical ? p.friendly : p.ink;
 
       ctx.save();
       ctx.strokeStyle = colour;
-      ctx.fillStyle = withAlpha(colour, 0.15);
-      ctx.lineWidth = 1.4 * this.dpr;
+      ctx.fillStyle = withAlpha(colour, designated ? 0.3 : 0.15);
+      ctx.lineWidth = (designated ? 2.2 : 1.4) * this.dpr;
+
+      if (designated && !asset.destroyed) {
+        // A ring around the designated place, breathing while it is new.
+        ctx.save();
+        ctx.globalAlpha = flashing ? 0.95 : 0.5;
+        ctx.strokeStyle = p.hostile;
+        ctx.lineWidth = 1.6 * this.dpr;
+        ctx.setLineDash([3 * this.dpr, 3 * this.dpr]);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, size * (flashing ? 3.4 : 2.4), 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       if (asset.destroyed) {
         ctx.beginPath();
@@ -576,12 +618,15 @@ export class Scope {
       }
 
       this.queueLabel({
-        text: asset.label,
+        text: designated ? `${asset.label} · PRIORITY` : asset.label,
         x: s.x, y: s.y,
-        colour: asset.destroyed ? p.hostile : p.inkDim,
-        // A destroyed or burning asset is worth the space; an intact one gives way.
-        priority: asset.destroyed ? 60 : hurt > 0 ? 50 : 20,
-        offset: size + 3,
+        colour: asset.destroyed || designated ? p.hostile : p.inkDim,
+        // A destroyed or burning asset is worth the space; an intact one gives
+        // way. A designated one outranks both — it is the only place on this
+        // map the file will ask you about by name.
+        priority: designated ? 90 : asset.destroyed ? 60 : hurt > 0 ? 50 : 20,
+        force: designated,
+        offset: designated ? size * 3 : size + 3,
       });
       ctx.restore();
     }
@@ -772,9 +817,22 @@ export class Scope {
     const { ctx } = this;
     const p = this.palette;
     const standard = this.theme.symbology === 'standard';
+    /*
+     * Contacts the plot cannot reach get a caret on the rim pointing at them,
+     * the way the cabin's plan view has always done it. Without this a track
+     * outside the range simply is not there, and the tube tells you the sky is
+     * empty when it means "the sky is empty within this circle" — which on a
+     * watch whose batteries outreach its default scale is a different claim.
+     */
+    const edge = [];
 
     for (const track of world.tracks.values()) {
       const s = this.toScreen(track.pos);
+      if (!track.destroyed
+        && (s.x < 0 || s.y < 0 || s.x > this.w || s.y > this.h)) {
+        edge.push({ track, colour: hostilityColour(p, track) });
+        continue;
+      }
       const colour = hostilityColour(p, track);
       const selected = ui.selectedTrackId === track.id;
       const size = 5 * this.dpr;
@@ -912,6 +970,75 @@ export class Scope {
       }
       ctx.restore();
     }
+
+    this.drawOffScale(edge);
+  }
+
+  /**
+   * Contacts outside the plot, as carets on the rim.
+   *
+   * Each sits where the line from the centre to the contact leaves the canvas,
+   * points outward, and carries the track number and how far out it is. It is
+   * the difference between "nothing is out there" and "nothing is out there
+   * that I have room to draw" — and on a battalion watch, where the batteries
+   * outreach the picture, that difference is most of the watch.
+   */
+  drawOffScale(edge) {
+    if (!edge.length) return;
+    const { ctx } = this;
+    const cx = this.w / 2;
+    const cy = this.h / 2;
+    // The top inset clears the two readouts the tube draws at y=16 and y=30;
+    // a caret printed over RANGE 140 KM is worse than no caret.
+    const inset = { top: 46 * this.dpr, side: 30 * this.dpr, bottom: 18 * this.dpr };
+    ctx.save();
+    ctx.font = `${8.5 * this.dpr}px ${FONT}`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    for (const { track, colour } of edge) {
+      const s = this.toScreen(track.pos);
+      const dx = s.x - cx;
+      const dy = s.y - cy;
+      if (!dx && !dy) continue;
+      // Where the ray leaves the inset rectangle: the smaller of the two
+      // axis crossings is the side it actually exits through.
+      const vertical = dy < 0 ? cy - inset.top : cy - inset.bottom;
+      const scale = Math.min(
+        Math.abs(dx) > 1e-6 ? (cx - inset.side) / Math.abs(dx) : Infinity,
+        Math.abs(dy) > 1e-6 ? vertical / Math.abs(dy) : Infinity,
+      );
+      const x = cx + dx * scale;
+      const y = cy + dy * scale;
+      const angle = Math.atan2(dy, dx);
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.globalAlpha = 0.75;
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = 1.4 * this.dpr;
+      ctx.beginPath();
+      ctx.moveTo(-4 * this.dpr, -4 * this.dpr);
+      ctx.lineTo(2 * this.dpr, 0);
+      ctx.lineTo(-4 * this.dpr, 4 * this.dpr);
+      ctx.stroke();
+      ctx.restore();
+
+      /*
+       * The caption goes inboard along whichever edge the caret sits on: below
+       * a top caret, beside a side one. Placed by `dx` alone it ran back over
+       * the caret for anything near the top or bottom centre.
+       */
+      const onSide = Math.abs(x - cx) > cx - inset.side - 1;
+      const inward = 11 * this.dpr;
+      ctx.globalAlpha = 0.6;
+      ctx.fillStyle = colour;
+      ctx.textAlign = onSide ? (x > cx ? 'right' : 'left') : 'center';
+      ctx.fillText(`${track.tn} ${Math.round(len(track.pos))}`,
+        onSide ? x - Math.sign(dx) * inward : x,
+        onSide ? y : y + Math.sign(-dy) * inward);
+    }
+    ctx.restore();
   }
 
   /** The rubber band while the player drags a track onto a battery. */

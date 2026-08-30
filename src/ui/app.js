@@ -574,15 +574,25 @@ function applyEffects() {
       shakeMag = Math.max(shakeMag, effect.magnitude ?? 1);
     }
     if (effect.kind === 'alarm') alarm = true;
-    if (effect.kind === 'flash' || effect.kind === 'blackout') {
+    /*
+     * A flash is light. A blackout is the opposite of light, and it was being
+     * consumed by this branch at the default magnitude of one — so a power
+     * failure washed the tube CREAM at a third alpha for the whole six-to-ten
+     * second reboot. The console going dark is already drawn, by the class
+     * below; the effect needs nothing here but to stop pretending it is a
+     * muzzle flash.
+     */
+    if (effect.kind === 'flash') {
       flash = Math.max(flash, (effect.magnitude ?? 1) * (1 - age / life));
     }
   }
 
   els.shell.classList.toggle('is-shaking', shaking);
   // A near miss and a direct hit used to produce the same fixed two-pixel
-  // wiggle; the amplitude now carries the difference.
-  if (shaking) els.shell.style.setProperty('--shake-px', `${(1 + shakeMag * 2.2).toFixed(1)}px`);
+  // wiggle; the amplitude now carries the difference, over a range wide
+  // enough to read: your own rail at 2.0px, a bomb that nearly had you at
+  // 3.4px, a direct hit at 6.2px.
+  if (shaking) els.shell.style.setProperty('--shake-px', `${(0.8 + shakeMag * 3.4).toFixed(1)}px`);
 
   // A launch aimed at one of your own sets: a red breath at the edges of the
   // tube. The engine has queued this effect since the first build; nothing
@@ -637,7 +647,20 @@ function handleAudio() {
     // round going wide.
     else if (e.kind === 'warn' && e.text.includes('NEAR MISS')) audio.thud();
     else if (e.kind === 'warn' && e.text.includes('MISS')) audio.miss();
+    // The other way a round ends. Measured silent on a quarter to a third of
+    // every round fired on the suppression watches — the direct consequence of
+    // the trade the whole game is built on, and it made no sound.
+    else if (e.kind === 'warn' && e.text.includes('NO GUIDANCE')) audio.guidanceLost();
     else if (e.kind === 'warn' && e.text.startsWith('NEW CONTACT')) audio.newTrack();
+    /*
+     * Contact reports moved onto the radio net when the crews got a voice, and
+     * took the new-contact tick with them: measured, eighteen contact reports
+     * in a watch of White Noise and exactly ONE of them still matched this
+     * map, because the other seventeen now read "WIDE EYE: NEW CONTACT, …".
+     * Only this one line sounds — the rest of the radio traffic accompanies
+     * events that already have their own noise.
+     */
+    else if (e.kind === 'comms' && e.text.includes('NEW CONTACT')) audio.newTrack();
     else if (e.kind === 'alert' && e.text.includes('WEAPONS RELEASE')) audio.release();
     else if (e.kind === 'alert' && e.text.includes('— HIT (')) audio.clank();
     else if (e.kind === 'alert' && /IMPACT|STRUCK|DESTROYED/.test(e.text)) audio.impact();
@@ -942,6 +965,7 @@ function wirePanelInput() {
     const current = RANGE_SCALES.findIndex((r) => r >= scope.rangeKm - 1);
     const next = RANGE_SCALES[(current + 1 + RANGE_SCALES.length) % RANGE_SCALES.length];
     scope.rangeKm = next;
+    audio.detent();
   });
 
   els.viewToggle.onclick = toggleView;
@@ -969,6 +993,23 @@ function runAction(act, siteId, radarId, formationId) {
    * that is a formation-level control, not a battery-level one.
    */
   if (site && !world.commandable(site.id) && act !== 'lock') return;
+
+  /*
+   * The console makes a noise when you operate it. Everything here was silent,
+   * on a panel whose entire aesthetic is switches you throw and caps you press
+   * — the emissions switch the game's one idea hangs off included. Toggles get
+   * the switch, everything else the button; the state after the action decides
+   * which way a switch sounds.
+   */
+  const THROWN = new Set(['emcon', 'emcon-radar', 'weapons', 'posture', 'ride', 'direct']);
+  if (THROWN.has(act)) {
+    const wasRadiating = act === 'emcon' ? !!world.radarById?.get(site?.radarId)?.on
+      : act === 'emcon-radar' ? !!world.radarById?.get(radarId)?.on : null;
+    queueMicrotask(() => audio.toggleSwitch(wasRadiating === null ? true : !wasRadiating));
+  } else {
+    audio.press();
+  }
+
   switch (act) {
     case 'direct':
       if (formation) {

@@ -43,7 +43,12 @@ export function damageRadar(world, radar, amount, cause) {
   if (!radar.alive) return;
   radar.damage += amount;
   world.log('alert', `${radar.label} — HIT (${cause})`, { radarId: radar.id, severity: 'high' });
-  addEffect(world, { kind: 'shake', magnitude: 1, durationS: 2.2 });
+  // A direct hit on your own position. Measured against a near miss and your
+  // own rail firing, these three used to span 0.9 of a pixel — a hit, a bomb
+  // that nearly had you, and a round leaving the launcher all felt the same,
+  // and the launcher shook HARDER than the near miss. The spread is the
+  // information; this is the top of it.
+  addEffect(world, { kind: 'shake', magnitude: 1.6, durationS: 2.2 });
 
   if (radar.damage >= radar.hp) {
     radar.alive = false;
@@ -105,7 +110,7 @@ export function nearMiss(world, radar, missKm) {
   if (missKm > DAMAGE.nearMissKm) return;
   radar.noiseFactor = Math.max(0.5, radar.noiseFactor * 0.9);
   world.log('warn', `${radar.label} — NEAR MISS, POWER INTERRUPTED`, { radarId: radar.id });
-  addEffect(world, { kind: 'shake', magnitude: 0.6, durationS: 1.6 });
+  addEffect(world, { kind: 'shake', magnitude: 0.75, durationS: 1.6 });
   if (isPlayersEquipment(world, radar) || radar.kind === 'ewr') {
     interruptConsole(world, world.rng.range(DAMAGE.rebootMinS, DAMAGE.rebootMaxS), 'NEAR MISS');
   }

@@ -503,7 +503,7 @@ export function launchSalvo(world, site, track, count, origin = null) {
      * three sectors away is a line on the net, not a jolt through the floor.
      */
     if (world.control.crewedBatteryId === site.id) {
-      addEffect(world, { kind: 'shake', magnitude: 0.75, durationS: 0.9 });
+      addEffect(world, { kind: 'shake', magnitude: 0.35, durationS: 0.9 });
     }
     /*
      * Whether this launch can break the target's nerve depends on how good a

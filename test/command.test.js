@@ -166,6 +166,20 @@ describe('directives', () => {
       'the officers, the reserve and the round accounting all read this one key');
   });
 
+  test('an order that names a place stamps when it named it, so the map can say so', () => {
+    const w = world();
+    w.t = 210;
+    issueDirective(w, DIRECTIVES.priority);
+    answerDirective(w, 'accepted');
+    assert.equal(w.command.constraints.priorityDesignatedAtS, 210,
+      'the scope flashes the designated place for ten seconds from here, then holds it red');
+
+    issueDirective(w, DIRECTIVES.noLeakers);
+    answerDirective(w, 'accepted');
+    assert.equal(w.command.constraints.riverLineAtS, 210,
+      'and the river line the order names is marked on the map from the same moment');
+  });
+
   test('an accepted border restriction stands the subordinates down, not just the tally', () => {
     const w = new World(scenarioById('across-the-line'), { role: 'net' });
     const camp = w.assets.find((a) => a.type === 'camp');

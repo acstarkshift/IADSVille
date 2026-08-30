@@ -66,7 +66,11 @@ export const DIRECTIVES = {
     // makes no sense over a watch whose entire question is one aircraft
     // getting OUT.
     trigger: (w) => !w.scenario.finale && !w.scenario.epilogue && w.t > 40 && w.hostileTrackCount() > 0,
-    onAccept: (w) => { w.command.constraints.leakerAccount = true; },
+    onAccept: (w) => {
+      w.command.constraints.leakerAccount = true;
+      // The order names a line on the map. The scope marks it from here on.
+      w.command.constraints.riverLineAtS = w.t;
+    },
   },
 
   conserve: {
@@ -118,6 +122,11 @@ export const DIRECTIVES = {
       // ever wrote. Measured: zero declines in ninety thousand probes on the
       // two watches that field a political commander. The order was a banner.
       w.command.constraints.priorityOfFiresId = target?.id ?? null;
+      // When the designation was made. The scope flashes the named place for
+      // a few seconds and then holds it marked for the rest of the watch: an
+      // order about a place should put that place on the map, not only in the
+      // ticker where it scrolls away in five lines.
+      w.command.constraints.priorityDesignatedAtS = w.t;
     },
   },
 
@@ -323,6 +332,7 @@ export const DIRECTIVES = {
     onAccept: (w) => {
       const palace = w.assets.find((a) => a.type === 'palace');
       w.command.constraints.priorityOfFiresId = palace?.id ?? null;
+      w.command.constraints.priorityDesignatedAtS = w.t;
       // A hinge designation is final for the watch; routine traffic may not
       // redesignate over it.
       w.command.constraints.priorityIsHinge = true;

@@ -38,7 +38,19 @@ export const ECHELONS = {
     /** Everything on the board is yours, personally. */
     directLimit: Infinity,
     handoverS: 0,
-    scopeRangeKm: 100,
+    /*
+     * A hundred and forty, not a hundred, because a battalion holding a
+     * long-range battery reaches a hundred and twenty and its early-warning
+     * set sees a hundred and fifty. At a hundred the tube was smaller than the
+     * battalion's own envelope, and the consequence was a reward inversion
+     * nobody would have predicted: measured on the teaching watch, a player
+     * who hands every contact to a battery the moment it goes firm kills or
+     * turns back all four beyond the rim, and sees an aircraft drawn on their
+     * radar screen for ONE PER CENT of the watch. Playing well emptied the
+     * screen. A spectator, whose contacts fly all the way in, saw them 80% of
+     * the time. The scope has to be at least as big as the fight it is for.
+     */
+    scopeRangeKm: 140,
     /** Rounds you may release that nobody below you can. */
     reserveRounds: 0,
     /** The rank the appointment carries; you are gazetted to it on taking it. */
