@@ -378,6 +378,8 @@ export function launchSalvo(world, site, track, count, origin = null) {
     world.log('launch', `${site.name} — ${launched} AWAY ON ${track.tn}`, {
       siteId: site.id, trackId: track.id,
     });
+    // The rail flares on the scope — see drawMissiles. Cosmetic.
+    addEffect(world, { kind: 'launchflash', pos: { ...site.pos }, durationS: 0.5 });
     /*
      * Whether this launch can break the target's nerve depends on how good a
      * shot it actually was. A snap launch from the very edge of the envelope

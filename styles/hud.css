@@ -522,3 +522,16 @@ table.ledger .down { color: var(--hostile); }
 }
 .letter-card h3 { color: var(--ink-bright); }
 .letter-card p { line-height: 1.75; }
+
+/* A dark console blanks its panels along with the scope, and the controls
+   under them go dead (the input handlers hold the other brace). The topbar
+   stays — the room still exists, and so do the clock and the handbook. */
+.is-console-dark #panel-tracks,
+.is-console-dark #panel-batteries,
+.is-console-dark #command-net,
+.is-console-dark #scope-side,
+.is-console-dark #scope-legend,
+.is-console-dark #event-log {
+  visibility: hidden;
+  pointer-events: none;
+}

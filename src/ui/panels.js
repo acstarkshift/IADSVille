@@ -27,6 +27,19 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
  */
 
 /** A domed indicator with its engraved caption. */
+/** Seconds until this site's nearest round in flight arrives, or null. */
+function roundEtaFor(world, site) {
+  let soonest = null;
+  for (const missile of world.missiles) {
+    if (!missile.alive || missile.siteId !== site.id || missile.kind !== 'sam') continue;
+    const target = world.aircraftById.get(missile.targetId);
+    if (!target?.alive || !missile.speed) continue;
+    const eta = dist(missile.pos, target.pos) / missile.speed;
+    if (soonest === null || eta < soonest) soonest = eta;
+  }
+  return soonest;
+}
+
 function lamp(entry, lit, { colour = '', blinking = false, caption = null } = {}) {
   const classes = ['lamp', lit ? 'is-lit' : '', colour ? `is-${colour}` : '', blinking ? 'blinking' : '']
     .filter(Boolean).join(' ');
@@ -407,9 +420,14 @@ export function renderBatteries(world, ui, els) {
       </div>
       <div class="unit-row">
         <span class="unit-type wrap">${site.readyRounds}/${site.magazine} ROUNDS
-          · ${esc(pair(STATUS.channels))} ${site.engagements.length}/${channelsFor(site)}
-          · ${type.minRangeKm}–${type.maxRangeKm} КМ/KM
-          · ${Math.round(type.minAltM)}–${Math.round(type.maxAltM / 1000)}К М/M</span>
+          · ${esc(pair(STATUS.channels))} ${site.engagements.length}/${channelsFor(site)}${(() => {
+    // The battery's own most anxious number, on the net side too: seconds
+    // until its nearest round in flight arrives. The crew console had this;
+    // the commander watching four batteries did not.
+    const eta = roundEtaFor(world, site);
+    return eta !== null ? ` · ${esc(pair(STATUS.inFlight))} ${Math.ceil(eta)}s` : '';
+  })()}
+          <span class="lo">· ${type.minRangeKm}–${type.maxRangeKm} KM · ${Math.round(type.minAltM)}–${Math.round(type.maxAltM).toLocaleString('en-US')} M</span></span>
       </div>
       ${busyLabel ? `<div class="unit-row">
         <span class="unit-type">${esc(pair(busyLabel.entry))}</span>

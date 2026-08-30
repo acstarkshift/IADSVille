@@ -643,22 +643,44 @@ export class Scope {
      * purely cosmetic.
      */
     for (const effect of world.effects) {
-      if (effect.kind !== 'puff') continue;
-      const age = (world.t - effect.startedS) / (effect.durationS ?? 1.8);
-      if (age < 0 || age > 1) continue;
-      const s = this.toScreen(effect.pos);
-      ctx.save();
-      ctx.globalAlpha = 0.45 * (1 - age);
-      ctx.strokeStyle = p.warn;
-      ctx.lineWidth = 1.2 * this.dpr;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, (2 + age * 9) * this.dpr, 0, TAU);
-      ctx.stroke();
-      ctx.globalAlpha = 0.25 * (1 - age);
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, (1 + age * 4.5) * this.dpr, 0, TAU);
-      ctx.stroke();
-      ctx.restore();
+      if (effect.kind === 'puff') {
+        const age = (world.t - effect.startedS) / (effect.durationS ?? 1.8);
+        if (age < 0 || age > 1) continue;
+        const s = this.toScreen(effect.pos);
+        ctx.save();
+        ctx.globalAlpha = 0.45 * (1 - age);
+        ctx.strokeStyle = p.warn;
+        ctx.lineWidth = 1.2 * this.dpr;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, (2 + age * 9) * this.dpr, 0, TAU);
+        ctx.stroke();
+        ctx.globalAlpha = 0.25 * (1 - age);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, (1 + age * 4.5) * this.dpr, 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+      } else if (effect.kind === 'launchflash') {
+        // The rail lights the site for half a second. The launch used to be a
+        // log line and a dot appearing somewhere along the vector; now the
+        // place it left FROM flares, which is where the operator's eye goes
+        // when a battery answers an order.
+        const age = (world.t - effect.startedS) / (effect.durationS ?? 0.5);
+        if (age < 0 || age > 1) continue;
+        const s = this.toScreen(effect.pos);
+        ctx.save();
+        ctx.globalAlpha = 0.7 * (1 - age);
+        ctx.fillStyle = p.accent;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, (2.5 + age * 6) * this.dpr, 0, TAU);
+        ctx.fill();
+        ctx.globalAlpha = 0.35 * (1 - age);
+        ctx.strokeStyle = p.accent;
+        ctx.lineWidth = 1.4 * this.dpr;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, (4 + age * 12) * this.dpr, 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
 
     for (const missile of world.missiles) {

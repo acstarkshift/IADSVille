@@ -100,8 +100,18 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
   const subordinate = wide && site.formation && !(world.isDirect?.(site.formation) ?? true);
   world._fmnEngageLogAtS = world._fmnEngageLogAtS ?? {};
   const lastLogged = world._fmnEngageLogAtS[site.formation] ?? -99;
-  if (!subordinate || world.t - lastLogged >= 6) {
+  /*
+   * And the same battery re-announcing the same track is not news twice. A
+   * shoot-look-shoot cycle or a broken-and-retaken claim used to print a
+   * fresh ENGAGING every round trip; measured, the ticker's most common line
+   * was a repeat, and a reader trained on repeats stops reading.
+   */
+  world._engageSaidAtS = world._engageSaidAtS ?? {};
+  const pairKey = `${site.id}:${track.id}`;
+  const saidAt = world._engageSaidAtS[pairKey] ?? -99;
+  if ((!subordinate || world.t - lastLogged >= 6) && world.t - saidAt >= 30) {
     if (subordinate) world._fmnEngageLogAtS[site.formation] = world.t;
+    world._engageSaidAtS[pairKey] = world.t;
     world.log('info', `${site.name} — ENGAGING ${track.tn}`, { siteId: site.id, trackId: track.id });
   }
   return engagement;
@@ -112,7 +122,10 @@ export function endEngagement(world, site, engagement, reason) {
   site.engagements = site.engagements.filter((e) => e !== engagement);
   const track = world.tracks.get(engagement.trackId);
   if (track) track.assignedTo = track.assignedTo.filter((id) => id !== site.id);
-  if (reason && reason !== 'complete') {
+  // An out-of-reach release is housekeeping, not an event: the claim ended
+  // because the geometry did. It stays out of the ticker; the operator's
+  // answer arrives as the refusal at assignment time instead.
+  if (reason && reason !== 'complete' && reason !== 'out of reach') {
     world.log('info', `${site.name} — BREAK OFF ${track?.tn ?? ''} (${reason})`, { siteId: site.id });
   }
 }
@@ -386,6 +399,15 @@ function runFormationCommander(world, formation, dt) {
       const manual = world.control.crewedBatteryId === site.id;
       const evaluation = engagementValue(world, site, track);
       if (!evaluation) continue;
+      // An officer does not bookmark: a claim the battery cannot act on for
+      // most of a minute sits in a channel, prints an ENGAGING it cannot
+      // honour yet, and usually breaks off when the geometry moves. The
+      // track is re-looked every think cycle; nothing is lost by waiting
+      // until a battery can actually take it. Same horizon the assignment
+      // refusal uses (cannotEngageReason): forty-five seconds plus what the
+      // battery's reach entitles it to plan ahead — a flat bar here was
+      // measured to erase the district battalion's forward coverage.
+      if (evaluation.timeToRangeS > 45 + SAM_TYPES[site.type].maxRangeKm * 0.4) continue;
       if (evaluation.value > bestValue) {
         bestValue = evaluation.value;
         best = { site, manual };

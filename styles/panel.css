@@ -351,3 +351,7 @@
   border-top: 1px solid var(--metal-edge);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, .7);
 }
+
+/* Envelope constants on the battery card: true all night, so they defer to
+   the numbers that change. */
+.unit-row .lo { opacity: .62; }

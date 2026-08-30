@@ -503,19 +503,32 @@ function render(now, frameDtS = 1 / 60) {
   applyEffects();
   handleAudio();
 
+  /*
+   * A dark console is DARK: the panels blank with the scope and the commands
+   * go with them (see the input handlers), because a blackout that only
+   * dimmed the map while the track list kept scrolling and the buttons kept
+   * working was a screen effect, not an event. Speed and the handbook stay —
+   * the room still exists — and the log catches up on restore, which is what
+   * a recovering track store would do.
+   */
+  document.body.classList.toggle('is-console-dark', dark);
   if (now - ui.lastPanelAt > 120) {
     ui.lastPanelAt = now;
     renderTopbar(world, ui, els);
-    renderTrackList(world, ui, els);
-    renderFlightStrip(world, els);
-    renderFormations(world, ui, els);
-    renderBatteries(world, ui, els);
-    renderScopeSide(world, ui, els, ui.view === 'crew' ? crew.rangeKm : scope.rangeKm);
-    if (world.control.crewedBatteryId && ui.view === 'crew') renderCrewConsole(world, ui, els);
-    else els.crewConsole.hidden = true;
+    if (!dark) {
+      renderTrackList(world, ui, els);
+      renderFlightStrip(world, els);
+      renderFormations(world, ui, els);
+      renderBatteries(world, ui, els);
+      renderScopeSide(world, ui, els, ui.view === 'crew' ? crew.rangeKm : scope.rangeKm);
+      if (world.control.crewedBatteryId && ui.view === 'crew') renderCrewConsole(world, ui, els);
+      else els.crewConsole.hidden = true;
+    }
   }
-  renderEventLog(world, els, ui);
-  renderCommandNet(world, els);
+  if (!dark) {
+    renderEventLog(world, els, ui);
+    renderCommandNet(world, els);
+  }
   renderBlackout(world, els);
 }
 
@@ -613,16 +626,21 @@ function handleAudio() {
     else if (e.kind === 'alert' && e.text.includes('— HIT (')) audio.clank();
     else if (e.kind === 'alert' && /IMPACT|STRUCK|DESTROYED/.test(e.text)) audio.impact();
     else if (e.kind === 'command') audio.command();
-    else if (e.kind === 'info' && e.text.includes('ENGAGING')) audio.tick();
   }
   ui.seenEventSeq = world.events.length
     ? world.events[world.events.length - 1].seq : ui.seenEventSeq;
 
-  // The warble runs while any set is under attack, and quickens with the
-  // soonest arrival — a two-minute monotone decays into wallpaper.
+  /*
+   * The warble is the sound of a set holding an anti-radiation round on its
+   * own nose: it runs only while a TARGETED radar is RADIATING, and quickens
+   * with the soonest arrival. A round homing on a set that has shut down is
+   * a different dread — the silence after the switch is the reward for
+   * having thrown it, and the old any-alive-radar rule kept the warble at
+   * half the watch's runtime, which is how an alarm becomes wallpaper.
+   */
   let soonestArm = Infinity;
   for (const r of world.radars) {
-    if (!r.alive) continue;
+    if (!r.alive || r.state !== 'radiating') continue;
     const eta = armTimeToImpact(world, r);
     if (eta < soonestArm) soonestArm = eta;
   }
@@ -633,7 +651,10 @@ function handleAudio() {
     audio.stopArmWarning();
   }
 
-  // Tension rises with the nearest inbound striker's time to its release point.
+  // Tension rises with the nearest inbound striker's time to its release
+  // point — and only when it is genuinely close. The bed used to swell from
+  // a minute out and idle around a sixth of full, which reads as texture,
+  // not threat; below the floor it is simply off.
   let worst = 0;
   for (const aircraft of world.aircraft) {
     if (!aircraft.alive || aircraft.released || aircraft.type === 'civil') continue;
@@ -641,9 +662,9 @@ function handleAudio() {
     if (!asset || asset.destroyed) continue;
     const releaseKm = AIR_TYPES[aircraft.type].releaseRangeKm;
     const toGo = Math.max(0, dist(aircraft.pos, asset.pos) - releaseKm);
-    worst = Math.max(worst, 1 - clamp01(toGo / 60));
+    worst = Math.max(worst, 1 - clamp01(toGo / 45));
   }
-  audio.pulse(worst);
+  audio.pulse(worst < 0.15 ? 0 : worst);
 }
 
 function updateLegend() {
@@ -743,6 +764,11 @@ function assignSelected(siteId) {
       world.log('warn', `${site.name} — CANNOT TAKE ${track.tn}: ${reason.toUpperCase()}`,
         { siteId, trackId: track.id });
     }
+  } else {
+    // The tick belongs to the player's own act of assigning, not to every
+    // ENGAGING line in the sector — a sound that fires for other people's
+    // decisions teaches the ear to ignore it.
+    audio.tick();
   }
 }
 
@@ -755,6 +781,9 @@ function wirePanelInput() {
   });
 
   const panelAction = (e) => {
+    // A dark console takes no orders — the buttons under a blanked panel are
+    // as dead as the display (belt to the CSS pointer-events braces).
+    if (world?.dark) return;
     const btn = e.target.closest('[data-act]');
     if (btn) {
       e.stopPropagation();
@@ -795,8 +824,8 @@ function wirePanelInput() {
   document.getElementById('btn-abort').onclick = () => {
     if (world) { world.finish('aborted'); }
   };
-  document.getElementById('btn-accept').onclick = () => world.answer('accepted');
-  document.getElementById('btn-refuse').onclick = () => world.answer('refused');
+  document.getElementById('btn-accept').onclick = () => { if (!world.dark) world.answer('accepted'); };
+  document.getElementById('btn-refuse').onclick = () => { if (!world.dark) world.answer('refused'); };
 }
 
 function runAction(act, siteId, radarId, formationId) {
@@ -862,6 +891,15 @@ function wireGlobalInput() {
       }
       return;
     }
+    // A dark console takes no orders. Only the clock and the handbook still
+    // answer — and the net, notably, keeps its own time regardless.
+    if (world.dark) {
+      const k = e.key.toLowerCase();
+      const speedKey = k === ' '
+        || (['1', '2', '3', '4'].includes(k) && !e.shiftKey && !e.altKey);
+      if (!speedKey && k !== 'h') return;
+    }
+
     // Same rule as the panel: the keys act on the selected battery only while it
     // is on your net.
     const selected = ui.selectedSiteId ? world.siteById.get(ui.selectedSiteId) : null;
