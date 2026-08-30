@@ -210,7 +210,20 @@ export function cannotEngageReason(world, site, track) {
   if (track.altM < type.minAltM) return `below its floor (${type.minAltM}m)`;
   if (site.readyRounds <= 0) return 'no rounds on the rails';
   if (site.engagements.length >= channelsFor(site)) return 'all channels engaged';
-  if (timeToInRangeS(site, track) === Infinity) return 'will never be in reach';
+  const toRange = timeToInRangeS(site, track);
+  if (toRange === Infinity) return 'will never be in reach';
+  // A target the battery could only reach in minutes is not an assignment,
+  // it is a bookmark — the crew would sit on the claim while nearer
+  // batteries watched "their" track sail past. The horizon scales with the
+  // battery's reach: a point-defence section plans forty-five seconds ahead,
+  // a long-range battalion is EXPECTED to set up an intercept a minute and a
+  // half out, and refusing it that was measured to erase most of what
+  // keeping a battalion is worth. NaN is a course not yet established, and
+  // that one the crew will take on faith.
+  const claimHorizonS = 45 + type.maxRangeKm * 0.4;
+  if (Number.isFinite(toRange) && toRange > claimHorizonS) {
+    return `out of reach for ${Math.round(toRange)}s`;
+  }
   return null;
 }
 

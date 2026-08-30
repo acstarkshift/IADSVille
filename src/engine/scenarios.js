@@ -254,7 +254,13 @@ export const SCENARIOS = [
     echelon: 'battalion',
     roles: ['net', 'crew', 'both'],
     seed: 'first-light-01',
-    leakerTolerance: 1,
+    /*
+     * Two, not one. On the teaching watch a single leaker was the difference
+     * between SECTOR HELD and SECTOR PENETRATED, and the most common way to
+     * concede it was reading the interface for ninety seconds — the watch
+     * that exists to teach the controls failed you for learning them.
+     */
+    leakerTolerance: 2,
     /**
      * Sector command stays off the net for the first minute and a half. The
      * player's first interactive decision on the teaching watch should be an
@@ -263,6 +269,25 @@ export const SCENARIOS = [
      * before the first contact had even classified hostile.
      */
     directiveGraceS: 95,
+    /*
+     * The brief promises "a radar has to be radiating to see", and then the
+     * early-warning set used to come up lit and the lesson never happened.
+     * WIDE EYE starts cold; the net talks the player to the switch; and if
+     * nobody touches it, sector brings the set up remotely at one minute —
+     * a safety, logged as exactly what it is.
+     */
+    radarSafetyAtS: 60,
+    /*
+     * And the seat itself is simplified: displacement, salvo policy, riding
+     * an ARM and the exposure gauge belong to watches where somebody shoots
+     * back. On this one they are eight extra controls between a new operator
+     * and the two that matter — the radar switch and the assignment.
+     */
+    basicConsole: true,
+    chatter: [
+      { atS: 12, text: 'WIDE EYE REPORTS READY. THE SET IS NOT RADIATING — NOTHING WILL PAINT UNTIL IT IS.' },
+      { atS: 30, text: 'SELECT THE RADAR PANEL AND BRING THE SET UP. THE BORDER POSTS CAN HEAR THEM COMING.' },
+    ],
     /*
      * The crew seat sits at BASTION, because BASTION is the battery this
      * raid is actually for. It used to sit at LANCE WEST — measured: across
@@ -279,7 +304,7 @@ export const SCENARIOS = [
     teaches: 'Tracking, assignment, and the fact that a radar has to be radiating to see.',
     assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power],
     sites: [SITES.bastion, SITES.lanceWest, SITES.thistleTown],
-    radars: [RADARS.ewrNorth],
+    radars: [{ ...RADARS.ewrNorth, on: false }],
     waves: [
       { atS: 20, type: 'striker', count: 4, bearingDeg: 355, spreadDeg: 26, spacingS: 22, altM: 7600 },
     ],

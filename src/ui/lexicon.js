@@ -96,6 +96,10 @@ export const STATUS = {
   clock: { tm: 'ВРЕМЯ', en: 'TIME' },
   channels: { tm: 'КАНАЛЫ', en: 'CHANNELS' },
   exposure: { tm: 'ЗАСВЕТКА', en: 'ELINT EXPOSURE', hint: 'how well they have you pinned' },
+  shotQuality: {
+    tm: 'ВЕР. ПОРАЖЕНИЯ', en: 'EST. KILL PROB',
+    hint: 'what the firing tables say this shot is worth right now',
+  },
   target: { tm: 'ЦЕЛЬ', en: 'TARGET' },
   survival: { tm: 'ЖИВУЧЕСТЬ', en: 'SURVIVAL' },
   sequence: { tm: 'ЦИКЛ', en: 'SEQUENCE' },

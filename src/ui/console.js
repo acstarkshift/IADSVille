@@ -15,7 +15,7 @@
 import { THEMES, readPalette, hostilityColour } from './themes.js';
 import { SAM_TYPES, AIR_TYPES } from '../engine/config.js';
 import { bearing, dist, headingVec, len, radarHorizonKm, clamp01, clamp } from '../engine/math.js';
-import { inEnvelope, timeToInRangeS } from '../engine/weapons.js';
+import { inEnvelope, timeToInRangeS, computeSamPk } from '../engine/weapons.js';
 import { withAlpha } from './scope.js';
 
 const TAU = Math.PI * 2;
@@ -476,12 +476,29 @@ export function engagementStatus(world, site, track) {
     }
   }
 
+  /*
+   * What the crew's own firing tables say the shot is worth, from the picture
+   * this console actually has: range, altitude, and whatever the
+   * classification says about the target — an unclassified contact is priced
+   * as a strike profile, which is what a crew assumes too. An estimate, not
+   * the roll: the roll also knows about evasion and launch discipline. It
+   * exists because "FIRE is lit" and "this is a good shot" were the same
+   * lamp, and the difference between them is the entire skill of the seat.
+   */
+  let pkEstimate = null;
+  if (track && env?.ok) {
+    const known = AIR_TYPES[track.classification] ? track.classification : 'striker';
+    pkEstimate = computeSamPk(site, { pos: track.pos, altM: track.altM, type: known },
+      null, world.difficulty);
+  }
+
   return {
     hasTarget: !!track,
     trackLabel: track?.tn ?? '—',
     rangeKm: env?.rangeKm ?? 0,
     inEnvelope: env?.ok ?? false,
     envelopeReason: env?.reason ?? 'NO TARGET',
+    pkEstimate,
     timeToRangeS: Number.isFinite(toRange) ? toRange : null,
     state: engagement?.state ?? 'idle',
     /** Deliberately waiting for the target to close before releasing. */

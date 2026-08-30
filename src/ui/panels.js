@@ -419,23 +419,23 @@ export function renderBatteries(world, ui, els) {
       <div class="unit-controls">
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
     { act: 'emcon', site: site.id, disabled: detached || !radar?.alive })}
-        <button class="pb ${site.emconOrder === 'ride' ? 'is-down' : ''}"
+        ${world.scenario.basicConsole ? '' : `<button class="pb ${site.emconOrder === 'ride' ? 'is-down' : ''}"
           data-act="ride" data-site="${site.id}" ${detached || !radar?.alive ? 'disabled' : ''}
           title="${esc(site.emconOrder === 'ride' ? CONTROLS.ride.hint : CONTROLS.perDoctrine.hint)} (G)">
           <span class="lg"><b>${esc(CONTROLS.ride.tm)}</b><i>${esc(
     site.emconOrder === 'ride' ? 'RIDING' : 'RIDE')}</i></span>
-        </button>
+        </button>`}
         <button class="pb" data-act="weapons" data-site="${site.id}" ${detached ? 'disabled' : ''}
           title="Weapons state — hold, tight or free (Q / W / Shift+E)">
           <span class="lg"><b>${esc(weaponsEntry.tm)}</b><i>WEAPONS ${esc(weaponsEntry.en)}</i></span>
         </button>
-        <button class="pb" data-act="salvo" data-site="${site.id}" ${detached ? 'disabled' : ''}
+        ${world.scenario.basicConsole ? '' : `<button class="pb" data-act="salvo" data-site="${site.id}" ${detached ? 'disabled' : ''}
           title="Rounds per engagement">
           <span class="lg"><b>${esc(CONTROLS.salvo.tm)} ${site.salvoSize}</b><i>SALVO</i></span>
-        </button>
+        </button>`}
         ${press(CONTROLS.reload, { act: 'reload', site: site.id,
     disabled: detached || site.magazine <= 0 || site.reloadRemainingS > 0 })}
-        ${press(CONTROLS.displace, { act: 'scoot', site: site.id,
+        ${world.scenario.basicConsole ? '' : press(CONTROLS.displace, { act: 'scoot', site: site.id,
     disabled: detached || site.scootRemainingS > 0 })}
       </div>
     </div>`;
@@ -490,6 +490,9 @@ export function renderCrewConsole(world, ui, els) {
   const armEta = radar?.alive ? armTimeToImpact(world, radar) : Infinity;
   const type = SAM_TYPES[site.type];
   const nomenclature = EQUIPMENT[site.type];
+  // The teaching watch shows the seat, not the trade: displacement and the
+  // ELINT game wait until a watch where somebody is actually shooting back.
+  const basic = !!world.scenario.basicConsole;
 
   const sequence = status.holding ? STATUS.holding : {
     idle: STATUS.standby, reacting: STATUS.preparing, ready: STATUS.ready, guiding: STATUS.inFlight,
@@ -524,11 +527,15 @@ export function renderCrewConsole(world, ui, els) {
 
       ${row(STATUS.target, status.trackLabel)}
       ${row(envelope, envelopeDetail, status.inEnvelope ? 'is-good' : '')}
+      ${status.pkEstimate !== null
+    ? row(STATUS.shotQuality, `${Math.round(status.pkEstimate * 100)}%`,
+      status.pkEstimate >= 0.5 ? 'is-good' : '')
+    : ''}
       ${row(STATUS.sequence, `${pair(sequence)}${status.reactionRemainingS > 0 ? ` ${status.reactionRemainingS.toFixed(1)}s` : ''}`)}
       ${row(STATUS.channels, `${status.channelsUsed}/${status.channels}`)}
       ${row(CONTROLS.reload, `${site.readyRounds} / ${site.magazine}`)}
 
-      <button class="pb pb-fire ${status.canFire ? 'is-armed' : ''}" id="btn-fire"
+      <button class="pb pb-fire ${status.canFire && (status.pkEstimate === null || status.pkEstimate >= 0.5) ? 'is-armed' : ''}" id="btn-fire"
         ${status.canFire ? '' : 'disabled'}>
         ${status.state === 'guiding'
     ? `<span class="lg"><b>${status.roundsUp} В ПОЛЁТЕ${status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}С` : ''}</b><i>${status.roundsUp} IN FLIGHT${status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}s TO INTERCEPT` : ''}</i></span>`
@@ -540,15 +547,15 @@ export function renderCrewConsole(world, ui, els) {
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
     { act: 'emcon', site: site.id, disabled: !radar?.alive })}
         ${press(CONTROLS.reload, { act: 'reload', site: site.id })}
-        ${press(CONTROLS.displace, { act: 'scoot', site: site.id })}
+        ${basic ? '' : press(CONTROLS.displace, { act: 'scoot', site: site.id })}
       </div>
 
-      <div class="unit-row" style="margin-top:9px">
+      ${basic ? '' : `<div class="unit-row" style="margin-top:9px">
         ${legend(STATUS.exposure, { inline: true })}
         <span class="gauge ${(radar?.exposure ?? 0) > 0.65 ? 'is-hot' : (radar?.exposure ?? 0) > 0.35 ? 'is-warn' : ''}">
           <i style="width:${Math.round((radar?.exposure ?? 0) * 100)}%"></i></span>
         <span class="unit-type">${Math.round((radar?.exposure ?? 0) * 100)}%</span>
-      </div>
+      </div>`}
       ${site.crewLosses ? `<div class="crew-row is-hot">${legend(STATUS.crew, { inline: true })}
         <b>${site.crewLosses} ПОТЕРЬ / CASUALTIES</b></div>` : ''}
 

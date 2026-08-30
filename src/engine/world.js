@@ -24,7 +24,7 @@ import { dist, len, bearing, polar, wrapDeg, clamp, clamp01 } from './math.js';
 import { stepDetection } from './detection.js';
 import { stepMissiles, inEnvelope } from './weapons.js';
 import { stepAircraft, createAircraft } from './ai.js';
-import { scoreAllTracks } from './threat.js';
+import { scoreAllTracks, cannotEngageReason } from './threat.js';
 import {
   stepEngagements, runAiBattleManager, runBatteryCrews, runAiEmcon,
   beginEngagement, endEngagement, fireEngagement, startReload, startScoot,
@@ -841,18 +841,25 @@ export class World {
        * before the debrief admitted it.
        */
       const targeted = this.missiles.some((m) => m.alive && m.targetId === aircraft.id);
-      if (!targeted && !this.anySiteReaches(aircraft)) return false;
+      /*
+       * And the reach that matters is the reach doctrine will use: free crews
+       * refuse a runner beyond six tenths of their envelope, so a watch held
+       * open for that shot is waiting for something forbidden. Measured, the
+       * rule at full envelope left five silent minutes of egressors crawling
+       * across the outer rings of batteries that had already declined them.
+       */
+      if (!targeted && !this.anySiteReaches(aircraft, 0.6)) return false;
     }
     return true;
   }
 
   /** Can any surviving battery still put a round on this aircraft? */
-  anySiteReaches(aircraft) {
+  anySiteReaches(aircraft, rangeFraction = 1.05) {
     return this.sites.some((site) => {
       if (!site.alive || site.scootRemainingS > 0) return false;
       if (site.readyRounds <= 0 && site.magazine <= 0) return false;
       const type = SAM_TYPES[site.type];
-      return dist(site.pos, aircraft.pos) <= type.maxRangeKm * 1.05
+      return dist(site.pos, aircraft.pos) <= type.maxRangeKm * rangeFraction
         && aircraft.altM <= type.maxAltM && aircraft.altM >= type.minAltM;
     });
   }
@@ -1039,6 +1046,10 @@ export class World {
     // A battery in a formation you are not commanding does not take your orders.
     // It is not being insubordinate; you are simply not on its net.
     if (!this.commandable(siteId)) return null;
+    // The battery says no at the moment of the order, not as a break-off
+    // fifteen seconds into a cheerful ENGAGING. Callers surface the reason
+    // via cannotEngageReason, which is the same test this refusal runs.
+    if (cannotEngageReason(this, site, track)) return null;
     const manual = this.control.crewedBatteryId === siteId;
     return beginEngagement(this, site, track, { manual, ...opts });
   }
@@ -1306,7 +1317,52 @@ export class World {
     stepDamage(this, dt);
     stepCommand(this, dt);
     this.stepReserve();
+    this.stepAdvisories();
     this.checkEnd();
+  }
+
+  /**
+   * The net talking to a human operator: the safety on the teaching watch's
+   * cold radar, and the warning that a firm inbound is going unanswered.
+   * Neither changes the fight — the AI needs no telling — they exist so that
+   * failure arrives announced instead of as a debrief surprise.
+   */
+  stepAdvisories() {
+    // The teaching-watch safety: a scenario that starts its surveillance set
+    // cold names the moment sector stops waiting for you.
+    if (this.scenario.radarSafetyAtS && !this._radarSafetyDone
+      && this.t >= this.scenario.radarSafetyAtS) {
+      this._radarSafetyDone = true;
+      let flipped = false;
+      for (const radar of this.radars) {
+        if (radar.alive && !radar.siteId && !radar.on) { radar.on = true; flipped = true; }
+      }
+      if (flipped) {
+        this.log('warn', 'SECTOR HAS BROUGHT THE SURVEILLANCE SET UP REMOTELY. THE SWITCH IS YOURS TO KEEP.',
+          { severity: 'high' });
+      }
+    }
+
+    if (!this.control.netIsHuman) return;
+    this._advisoryScanAtS = this._advisoryScanAtS ?? 0;
+    if (this.t - this._advisoryScanAtS < 5) return;
+    this._advisoryScanAtS = this.t;
+    this._inboundWarnedAtS = this._inboundWarnedAtS ?? {};
+    for (const track of this.tracks.values()) {
+      if (track.destroyed || track.hostility !== 'hostile') continue;
+      if (track.classification === 'decoy') continue;
+      if (track.quality < 0.5) continue;
+      if (track.assignedTo.length > 0 || track.engagedBy.length > 0) continue;
+      if (!Number.isFinite(track.ttiS) || track.ttiS > 120) continue;
+      const asset = track.predictedAssetId ? this.assetById.get(track.predictedAssetId) : null;
+      if (!asset || asset.destroyed) continue;
+      const last = this._inboundWarnedAtS[track.id] ?? -999;
+      if (this.t - last < 45) continue;
+      this._inboundWarnedAtS[track.id] = this.t;
+      this.log('warn', `${track.tn} INBOUND ${asset.label} — UNENGAGED`, {
+        trackId: track.id, severity: 'high',
+      });
+    }
   }
 
   /** The raid is over when there is nothing left to spawn, fly, or resolve. */

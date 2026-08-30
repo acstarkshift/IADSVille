@@ -158,23 +158,23 @@ declining to assign. It is calling a battery off a target it is already tracking
 Then the debrief shows you two numbers that have agreed all campaign and now do
 not (means over eight seeded watches, competently fought — reproduce them with
 `node tools/measure-moral.mjs`; the hospital package comes in on the deck, down
-the Kubin road, and obedience loses the building on six nights of the eight
+the Kubin road, and obedience loses the building on seven nights of the eight
 while a deliberate defence saves it on seven):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **92** | 374 |
-| Defend it anyway | 82 | **795** |
-| Refuse the order outright | 56 | 795 |
+| Obey the freeze | **92** | 423 |
+| Defend it anyway | 88 | **873** |
+| Refuse the order outright | 61 | 873 |
 
-Defending the hospital is worth over four hundred points of actual value, and
-the file prices the whole transgression at ten: a query for rounds expended
-outside the freeze, worth about three leakers. A weapon that arrives at the
-struck-off place is billed at exactly nothing — the ledger cannot
-simultaneously declare a building undesignated and grieve for it — and the
-building's own loss appears on the state's books at nothing at all. Only the
-third row really moves. Refusing on the net, for the identical night's
-fighting, costs twenty-six points more than quietly disobeying, plus a
+Defending the hospital is worth four hundred and fifty points of actual value,
+and the file prices the whole transgression at four: a query for rounds
+expended outside the freeze, worth rather less than two leakers. A weapon that
+arrives at the struck-off place is billed at exactly nothing — the ledger
+cannot simultaneously declare a building undesignated and grieve for it — and
+the building's own loss appears on the state's books at nothing at all. Only
+the third row really moves. Refusing on the net, for the identical night's
+fighting, costs twenty-seven points more than quietly disobeying, plus a
 referral that stays in the file. Sector command barely prices what you did.
 It punishes having said no, and that is the whole lesson.
 

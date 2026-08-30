@@ -12,9 +12,10 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
 import { scenarioById } from '../src/engine/scenarios.js';
-import { sortedTracks, engagementValue, predictedTarget } from '../src/engine/threat.js';
+import { sortedTracks, engagementValue, predictedTarget, cannotEngageReason } from '../src/engine/threat.js';
 import { dist } from '../src/engine/math.js';
-import { DETECTION, ENGAGEMENT, COMMAND } from '../src/engine/config.js';
+import { DETECTION, ENGAGEMENT, COMMAND, SAM_TYPES } from '../src/engine/config.js';
+import { timeToInRangeS } from '../src/engine/weapons.js';
 import { DIRECTIVES } from '../src/engine/command.js';
 
 /** Drive a watch with the AI's radars up and directives answered. */
@@ -485,5 +486,94 @@ describe('the file bills what you decided', () => {
     assert.ok((yours.ville ?? 0) > 0, 'the valley rounds are yours');
     assert.equal(yours.capital ?? 0, 0,
       `subordinate officers' capital rounds were filed as yours: ${JSON.stringify(yours)}`);
+  });
+});
+
+describe('the teaching watch teaches', () => {
+  /*
+   * Round-4 onboarding findings. The brief promised "a radar has to be
+   * radiating to see" over an early-warning set that started lit; one leaker
+   * failed the watch while the player was still reading the interface; an
+   * assignment a battery could not honour printed a cheerful ENGAGING; and
+   * nothing ever said a firm inbound was going unanswered.
+   */
+
+  test('WIDE EYE starts cold, and sector brings it up at one minute', () => {
+    const w = new World(scenarioById('first-light'), { role: 'net', seed: 'cold-1' });
+    const ewr = w.radars.find((r) => !r.siteId);
+    assert.equal(ewr.on, false, 'the lesson requires a cold set');
+    // Nobody touches anything.
+    let n = 0;
+    while (w.t < 70 && n < 800) { w.step(0.1); n++; }
+    assert.equal(ewr.on, true, 'the safety must bring the set up');
+    assert.ok(w.events.some((e) => /SURVEILLANCE SET UP REMOTELY/.test(e.text)),
+      'and say that it did');
+  });
+
+  test('a slow reader still holds the sector', () => {
+    // Ninety-plus seconds of reading the interface, then ordinary play on
+    // the safety-lit picture. Tolerance two exists for exactly this player.
+    const w = new World(scenarioById('first-light'), { role: 'net', seed: 'slow-1' });
+    drive(w, {
+      onTick: (world) => {
+        if (world.t < 110) return;
+        for (const t of world.tracks.values()) {
+          if (t.destroyed || t.hostility !== 'hostile') continue;
+          if ((t.quality ?? 0) < DETECTION.firmQuality || t.assignedTo.length) continue;
+          let best = null;
+          let bestValue = -Infinity;
+          for (const site of world.sites) {
+            const evaluation = engagementValue(world, site, t);
+            if (evaluation && evaluation.value > bestValue) {
+              bestValue = evaluation.value;
+              best = site;
+            }
+          }
+          if (best) world.assign(t.id, best.id);
+        }
+      },
+    });
+    assert.equal(w.outcome.success, true,
+      `the teaching watch must forgive a slow start (leakers ${w.outcome.stats.leakers})`);
+  });
+
+  test('an order a battery cannot honour is refused at the moment it is given', () => {
+    const w = new World(scenarioById('first-light'), { role: 'net', seed: 'refuse-1' });
+    let checked = false;
+    drive(w, {
+      onTick: (world) => {
+        if (checked) return;
+        for (const t of world.tracks.values()) {
+          if (t.destroyed || t.hostility !== 'hostile' || t.quality < 0.5) continue;
+          for (const site of world.sites) {
+            // Beyond any battery's claim horizon (45 s + 0.4 s per km of reach).
+            const toRange = timeToInRangeS(site, t);
+            if (Number.isFinite(toRange) && toRange > 150) {
+              assert.match(cannotEngageReason(world, site, t) ?? '', /out of reach/);
+              assert.equal(world.assign(t.id, site.id), null,
+                'the assignment must be declined, not accepted and abandoned');
+              checked = true;
+              return;
+            }
+          }
+        }
+      },
+    });
+    assert.ok(checked, 'the watch must have offered a far shot to refuse');
+  });
+
+  test('an egressor doctrine has declined no longer holds the watch open', () => {
+    const w = new World(scenarioById('first-light'), { role: 'net', seed: 'egress-1' });
+    const longest = w.sites.map((s) => SAM_TYPES[s.type].maxRangeKm).sort((a, b) => b - a)[0];
+    const site = w.sites.find((s) => SAM_TYPES[s.type].maxRangeKm === longest);
+    const aircraft = {
+      alive: true, type: 'striker', state: 'egress', altM: 6000,
+      pos: { x: site.pos.x + longest * 0.8, y: site.pos.y },
+    };
+    assert.equal(w.holdsWatchOpen(aircraft), false,
+      'inside the envelope but beyond the shot any crew would take — released');
+    aircraft.pos = { x: site.pos.x + longest * 0.5, y: site.pos.y };
+    assert.equal(w.holdsWatchOpen(aircraft), true,
+      'still inside six tenths of an armed envelope — somebody may yet shoot');
   });
 });
