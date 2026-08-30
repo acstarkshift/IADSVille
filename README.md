@@ -52,12 +52,23 @@ the earliest shot there is, taken at the edge of the envelope where kill
 probability is worst, at whatever is nearest — including the decoys. A net
 assignment holds for a sweet-spot shot when there is time to spend, skips the
 contact whose impossibly steady flight a well-held track has already given away,
-and spends a third fewer rounds and engages a third fewer decoys for the same
-defence. Measured across seeded watches, a commander who works the picture at
-least matches one who sets everything free and walks away — the margin by raw
-score runs from parity to a few percent depending on the night, the saving in
-rounds and decoys is consistent — and beats one who does nothing at all by a
-thousand points. Delegation is viable. Absence is not.
+re-engages after a miss while the shot is still its own, and hands a runner off
+to the next layer in when it is not. Measured over sixteen seeded watches of
+White Noise, a commander who works the picture beats one who sets everything
+free and walks away by **14% on the mean, winning 14 of 16 seeds, on a third
+fewer rounds and a third the decoys** — and beats one who does nothing at all
+by a thousand points.
+
+And then Ville Under Fire kills the operations centre mid-watch, cueing dies
+with it, and the same sixteen seeds run the other way: the released crews take
+the mean and the two postures trade per-seed wins, exactly as the brief warns —
+*anything you delegated becomes nobody's job*. There is no posture that is
+right twice. Working out which lever each watch answers to is the job, and both
+shapes are measured into the regression tests so neither can quietly rot.
+Delegation is viable — the AI net over free crews now adds value instead of
+taxing them — and one more thing about it is true: crews follow the orders you
+acknowledged. Accept the expenditure freeze and no battery on free will defend
+the hospital for you. Quiet insubordination requires the pen.
 
 ## The four appointments
 
@@ -145,23 +156,27 @@ You do not know where a contact is going until it commits — so obeying is not
 declining to assign. It is calling a battery off a target it is already tracking.
 
 Then the debrief shows you two numbers that have agreed all campaign and now do
-not (means over eight seeded watches, competently fought):
+not (means over eight seeded watches, competently fought; the hospital package
+comes in on the deck, down the Kubin road, and obedience loses the building on
+seven nights of the eight):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | 88 | 850 |
-| Defend it anyway | 90 | **1250** |
-| Refuse the order outright | **73** | 1250 |
+| Obey the freeze | 83 | 700 |
+| Defend it anyway | 88 | **1127** |
+| Refuse the order outright | **70** | 1127 |
 
-Defending the hospital is worth four hundred points of actual value and costs
-the file nothing it can name — the query for rounds expended outside the freeze
-is worth less than a single leaker, and a weapon that arrives at the struck-off
-place is billed at exactly nothing, because the ledger cannot simultaneously
-declare a building undesignated and grieve for it. On the state's own books the
-obeyer and the quiet insubordinate are indistinguishable. Only the third row
-moves: refusing on the net, for the identical night, costs seventeen points and
-a referral. Sector command does not punish what you did — it cannot even see
-what you did. It punishes having said no, and that is the whole lesson.
+Defending the hospital is worth over four hundred points of actual value and
+costs the file nothing it can name — the query for rounds expended outside the
+freeze is worth less than a single leaker, and a weapon that arrives at the
+struck-off place is billed at exactly nothing, because the ledger cannot
+simultaneously declare a building undesignated and grieve for it. On the
+state's own books the obeyer and the quiet insubordinate are indistinguishable:
+the few points between the first two rows are the night, not the decision, and
+the ledger's own line items say so. Only the third row moves. Refusing on the
+net, for the identical night, costs eighteen points and a referral. Sector
+command does not punish what you did — it cannot even see what you did. It
+punishes having said no, and that is the whole lesson.
 
 **Across the Line** goes further. A cruise missile has strayed off course, west
 over the ridge and across the Listonian border, and it is going to come down on a

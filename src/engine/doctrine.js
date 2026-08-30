@@ -67,6 +67,16 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
     missileIds: [],
     startedS: world.t,
   };
+  /*
+   * A crew whose own set already holds the track is not starting from a cold
+   * plot: the assignment confirms the picture they are looking at, and the
+   * sequence runs correspondingly quicker. Without this, every assignment
+   * re-paid the full reaction time a free crew's shoot-look-shoot skips —
+   * which quietly made supervision a tax and delegation a dominant strategy.
+   */
+  if ((origin ?? 'assigned') !== 'free' && track.sources?.includes(site.radarId)) {
+    engagement.timerS *= 0.55;
+  }
   site.engagements.push(engagement);
   if (!track.assignedTo.includes(site.id)) track.assignedTo.push(site.id);
   /*
@@ -196,16 +206,24 @@ export function stepEngagements(world, dt) {
           }
         } else {
           /*
-           * Give up on a target only once it is persistently unreachable.
-           * timeToInRangeS returns NaN while the velocity estimate is still
-           * settling, and a single bad look should never throw away an
-           * assignment the operator just made — so the channel is held until
-           * the target has been clearly out of reach for a while.
+           * Give up on a target once it is persistently unreachable — and
+           * read "unreachable" honestly. The old test counted only a hard
+           * Infinity, so a track skirting the envelope at a tangent, or one
+           * whose velocity solution kept flickering to NaN, pinned this
+           * channel indefinitely: measured on the climax watch, a C2-bound
+           * striker sat assigned to a battery it would never enter, unshot
+           * and claiming the track, while batteries with full racks had no
+           * right to it and the jamming quietly ate the picture. A settling
+           * solution still gets its grace; a receding target, or a shot more
+           * than a minute away, does not.
            */
           const eta = timeToInRangeS(site, track);
-          const unreachable = eta === Infinity;
-          engagement.unreachableS = unreachable ? (engagement.unreachableS ?? 0) + dt : 0;
-          if (engagement.unreachableS > 12) {
+          const settling = Number.isNaN(eta) && world.t - engagement.startedS < 8;
+          const hopeless = eta === Infinity || eta > 60
+            || (Number.isNaN(eta) && !settling)
+            || closureRate(track.pos, track.vel, site.pos) < -0.002;
+          engagement.unreachableS = hopeless ? (engagement.unreachableS ?? 0) + dt : 0;
+          if (engagement.unreachableS > 6) {
             endEngagement(world, site, engagement, 'out of reach');
           }
         }
@@ -220,10 +238,30 @@ export function stepEngagements(world, dt) {
           // channel re-engages rather than releasing a target still inbound.
           const stillAlive = target && target.alive;
           const env = stillAlive ? inEnvelope(site, track.pos, track.altM) : { ok: false };
-          if (stillAlive && env.ok && site.readyRounds > 0 && !engagement.manual
-              && site.weaponsState === 'free' && world.t - engagement.startedS < 180) {
-            engagement.state = 'ready';
-            engagement.timerS = 0;
+          /*
+           * Re-engage only while this battery still owns the shot. A target
+           * that survived the salvo and is now running deep past this
+           * envelope's edge belongs to the next layer in — holding the claim
+           * and lobbing again from the rim is how an outer battery starves
+           * the guns under the target of their terminal shot.
+           */
+          const stillOurs = env.ok
+            && env.rangeKm <= SAM_TYPES[site.type].maxRangeKm * 0.8;
+          if (stillAlive && stillOurs && site.readyRounds > 0 && !engagement.manual
+              && world.t - engagement.startedS < 180) {
+            /*
+             * Shoot-look-shoot for everyone. A free crew re-engages the
+             * instant the miss resolves; a netted battery confirms with the
+             * net first — quick, because the solution is still on the tube,
+             * but not free. The old rule let ONLY free crews re-engage, so
+             * an assigned battery dropped its target after every miss and
+             * re-paid the whole assignment cycle: most of the measured gap
+             * between supervision and delegation was this line.
+             */
+            const free = site.weaponsState === 'free';
+            engagement.state = free ? 'ready' : 'reacting';
+            engagement.timerS = free ? 0 : 2.5;
+            engagement.holding = false;
           } else {
             endEngagement(world, site, engagement, 'complete');
           }
@@ -318,6 +356,15 @@ function runFormationCommander(world, formation, dt) {
     && t.quality >= DETECTION.firmQuality
     && t.threat > worthARound
     && t.assignedTo.length === 0
+    /*
+     * Don't steal the shot a crew already has. An assignment claims the
+     * track, replacing a free crew's imminent deep-envelope self-engagement
+     * with a held one that re-pays the reaction sequence — measured, an AI
+     * net laid over free crews SUBTRACTED value from its own sector that
+     * way. A commander adds coordination where the crews have nothing, not
+     * supervision where they are already aiming.
+     */
+    && !freeCrewCovers(world, t)
     && commanderWillEngage(world, formation, t));
 
   for (const track of candidates) {
@@ -338,6 +385,23 @@ function runFormationCommander(world, formation, dt) {
 
     if (best) beginEngagement(world, best.site, track, { manual: best.manual });
   }
+}
+
+/**
+ * A free-posture crew can and will take this track on its own — now, or
+ * within the next few seconds as it closes. The near-future window matters:
+ * an assignment made twenty seconds before a crew's own snap shot is not
+ * coordination, it is queue-jumping with a slower sequence.
+ */
+export function freeCrewCovers(world, track) {
+  return world.sites.some((site) => {
+    if (!site.alive || site.weaponsState !== 'free') return false;
+    if (site.readyRounds <= 0 || site.engagements.length >= channelsFor(site)) return false;
+    if (!world.fusionOnline && !track.sources.includes(site.radarId)) return false;
+    if (inEnvelope(site, track.pos, track.altM).ok) return true;
+    const toRange = timeToInRangeS(site, track);
+    return Number.isFinite(toRange) && toRange < 20;
+  });
 }
 
 /**

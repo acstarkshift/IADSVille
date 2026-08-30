@@ -437,7 +437,12 @@ export const SCENARIOS = [
         targetAssetId: 'a_airbase' },
       // The hospital package and the power station package arrive together, so
       // the rounds genuinely compete and the freeze is not a free order to obey.
-      { atS: 150, type: 'striker', count: 3, bearingDeg: 288, spreadDeg: 14, spacingS: 24, altM: 5400,
+      // On the deck, down the Kubin road: the horizon hides it until it is
+      // nearly there, and only a battery deliberately watching the west takes
+      // it in time. That deliberateness is the whole moral geometry of the
+      // watch — a defence that saved the hospital by accident was answering
+      // the order with a shrug instead of a decision.
+      { atS: 150, type: 'striker', count: 3, bearingDeg: 288, spreadDeg: 14, spacingS: 24, altM: 320,
         targetAssetId: 'a_hospital' },
       { atS: 195, type: 'striker', count: 3, bearingDeg: 20, spreadDeg: 20, spacingS: 24, altM: 260,
         targetAssetId: 'a_power' },

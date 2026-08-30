@@ -9,7 +9,7 @@
  */
 
 import { AIR_TYPES, ASSET_TYPES, SAM_TYPES } from './config.js';
-import { dist, timeToGo, len, clamp, clamp01, invLerp } from './math.js';
+import { dist, timeToGo, len, clamp, clamp01, invLerp, closureRate } from './math.js';
 import { inEnvelope, timeToInRangeS } from './weapons.js';
 import { channelsFor } from './doctrine.js';
 
@@ -207,6 +207,11 @@ export function engagementValue(world, site, track) {
   // taking rather than declining a target that has only been seen once.
   const timeToRange = Number.isNaN(rawTimeToRange) ? 90 : rawTimeToRange;
   if (track.altM > type.maxAltM || track.altM < type.minAltM) return null;
+  // A target opening the range with no shot on the board is not this site's
+  // target, whatever it is worth. Claiming it pins the track — measured, a
+  // C2-bound striker spent fifty seconds assigned to a battery it was flying
+  // away from while the batteries that could reach it had no right to it.
+  if (!env.ok && closureRate(track.pos, track.vel, site.pos) < -0.002) return null;
 
   // Prefer the smallest system that can do the job: spending a long-range round
   // on a light aircraft at 20 km is how you run out before the second wave.
@@ -218,6 +223,43 @@ export function engagementValue(world, site, track) {
   value -= Math.max(0, overkill - 3) * 6;
   value += site.readyRounds * 0.4;      // spread the load across full racks
   if (!env.ok) value -= 20;
+
+  /*
+   * And what the shot is FOR. Two identical firing solutions are not equal
+   * when one defends the sector operations centre and the other a bridge —
+   * yet this function scored only the shot's sweetness, so every chooser
+   * built on it (the AI net, the scripted measurement players, the console's
+   * own best-battery hint) routed fire by geometry and let the C2 burn
+   * behind a beautiful launch. Measured: SECTOR OPS died in six of six
+   * hand-played climax watches. Weighted by the night's own valuation
+   * (scoreValue), because that is the arithmetic a defence answers to.
+   */
+  const threatened = track.predictedAssetId ? world.assetById.get(track.predictedAssetId) : null;
+  if (threatened && !threatened.destroyed) {
+    const assetType = ASSET_TYPES[threatened.type];
+    let worth = assetType.scoreValue ?? assetType.value ?? 0;
+    // A civilian area's worth to the night is counted in people, not in the
+    // structure figure. Measured without this line, the hint priced the town
+    // below a depot and value-led play traded the village — double the
+    // casualties — for the paperwork buildings.
+    if (assetType.civilian) worth = Math.max(worth, 55);
+    value += worth * 1.1;
+    if (assetType.critical) value += 25;
+  }
+
+  /*
+   * Urgency reshapes the whole calculus. With the target's arrival imminent
+   * there is no second shot and no luxury of sweetness: the right battery is
+   * the closest one that can fire soonest — which is what a crew does by
+   * instinct, and what this hint therefore has to say too. Measured before
+   * this term: assignment-led play on the climax watch routed terminal cruise
+   * missiles to distant sites with prettier geometry and lost the sector
+   * operations centre more often than crews left alone.
+   */
+  if (Number.isFinite(track.ttiS) && track.ttiS < 75) {
+    value += 45 * (1 - clamp01(env.rangeKm / type.maxRangeKm));
+    value -= timeToRange * 2.2;
+  }
 
   return { value, timeToRangeS: timeToRange, rangeKm: env.rangeKm, inEnvelope: env.ok };
 }

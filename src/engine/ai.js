@@ -259,6 +259,18 @@ function stepCruise(world, aircraft, dt) {
  * enough for a firing solution, which is precisely why blinking works and why
  * leaving the early-warning radar up all mission does not.
  */
+/**
+ * True while any strike aircraft — anything that is not an escort — remains
+ * flying or still to come. Escorts read this to know when the war they are
+ * escorting is over.
+ */
+function strikersRemain(world) {
+  const support = (t) => t === 'sead' || t === 'jammer';
+  return world.pendingWaves.some((w) => !AIR_TYPES[w.type].friendly && !support(w.type))
+    || world.aircraft.some((a) => a.alive && !AIR_TYPES[a.type].friendly
+      && !support(a.type) && a.state !== 'egress');
+}
+
 function stepSead(world, aircraft, dt) {
   const type = AIR_TYPES.sead;
 
@@ -273,6 +285,19 @@ function stepSead(world, aircraft, dt) {
   if (aircraft.evadingUntilS > world.t && evasiveStep(world, aircraft, dt)) return;
 
   if (aircraft.armsLeft <= 0 || aircraft.state === 'egress') {
+    aircraft.state = 'egress';
+    egress(aircraft, dt);
+    return;
+  }
+
+  /*
+   * Suppression exists to open a corridor for the strike aircraft. With the
+   * package gone and nothing still to come, loitering at standoff over a
+   * defended sector is how a war fails to end: measured, a weapons-hold
+   * sector left SEAD and jammers each waiting on the other in 'ingress'
+   * until the simulation's own step cap — the watch literally never closed.
+   */
+  if (!strikersRemain(world) && aircraft.lifeS > 90) {
     aircraft.state = 'egress';
     egress(aircraft, dt);
     return;
@@ -333,8 +358,10 @@ function stepJammer(world, aircraft, dt) {
 
   // A jammer screens a raid. With the raid spent it has no reason to loiter
   // over hostile ground, and it is far too expensive to lose for nothing.
-  const raidStillRunning = world.pendingWaves.length > 0 || world.aircraft.some(
-    (a) => a.alive && a !== aircraft && a.type !== 'civil' && a.type !== 'jammer' && a.state !== 'egress');
+  // "Raid" means the strike aircraft: counting the SEAD escort here while the
+  // SEAD counted the jammers was the deadlock that held hold-posture watches
+  // open forever.
+  const raidStillRunning = strikersRemain(world);
   if (!raidStillRunning && aircraft.lifeS > 90) {
     aircraft.jamming = false;
     aircraft.state = 'egress';

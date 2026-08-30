@@ -78,18 +78,73 @@ describe('attention matters at sector level', () => {
     return agg;
   }
 
-  test('hand play defends as well as delegation on far fewer rounds', () => {
+  test('hand play beats delegation where the net lives, on far fewer rounds', () => {
     totals.free = playAll('free');
     totals.hand = playAll('hand');
 
     assert.ok(totals.hand.leak <= totals.free.leak, 'no more leakers than the walk-away');
     assert.ok(totals.hand.assetsLost <= totals.free.assetsLost, 'no more ground lost');
-    assert.ok(totals.hand.rounds < totals.free.rounds * 0.8,
-      `a fifth fewer rounds at least (${totals.hand.rounds} vs ${totals.free.rounds})`);
-    assert.ok(totals.hand.decoys < totals.free.decoys * 0.6,
+    assert.ok(totals.hand.rounds < totals.free.rounds * 0.75,
+      `a quarter fewer rounds at least (${totals.hand.rounds} vs ${totals.free.rounds})`);
+    assert.ok(totals.hand.decoys < totals.free.decoys * 0.55,
       `discrimination is real (${totals.hand.decoys} vs ${totals.free.decoys} decoys engaged)`);
-    assert.ok(totals.hand.score > totals.free.score * 0.95,
-      `and the score is at worst a wash on a small sample (${totals.hand.score} vs ${totals.free.score})`);
+    // Measured +14% mean over 16 seeds with 14 per-seed wins; asserted at +5%
+    // so seed noise cannot flap the build while a real regression still fails.
+    assert.ok(totals.hand.score > totals.free.score * 1.05,
+      `working the picture must clearly beat walking away (${totals.hand.score} vs ${totals.free.score})`);
+  });
+
+  test('the ladder is monotone: an AI net over free crews adds value, never drag', () => {
+    // Measured before the fix: laying the AI battle manager over free crews
+    // SUBTRACTED ~12% — assignments stole tracks crews already had and
+    // re-paid the reaction each time. Now the net assigns only what no crew
+    // covers, and a netted battery re-engages after a miss.
+    let aiScore = 0;
+    for (const seed of seeds) {
+      const w = new World(scenarioById('white-noise'), { role: 'net', seed });
+      w.control.netIsHuman = false;
+      for (const f of w.formations) w.setPosture(f.id, 'free');
+      drive(w);
+      aiScore += w.outcome.score;
+    }
+    assert.ok(aiScore > totals.free.score * 0.95,
+      `the AI net must not tax its own crews (${aiScore} vs crews alone ${totals.free.score})`);
+  });
+
+  test('the decapitation watch is nobody\'s dominant strategy — by design', () => {
+    /*
+     * Ville Under Fire kills the sector operations centre mid-watch, and its
+     * brief says the lesson out loud: cueing stops, anything you delegated
+     * becomes nobody's job, only sets on weapons free keep fighting. Measured
+     * over sixteen seeds the released crews take the mean and the two
+     * postures trade per-seed wins — the opposite shape from White Noise,
+     * which is the point: no posture is right twice. Guarded two-sided,
+     * because the fun defect this pins is COLLAPSE — the state where one
+     * arm is simply wrong (hand play once lost this watch by half, its
+     * assignments pinning C2-bound tracks to batteries that could never
+     * reach them).
+     */
+    let free = 0;
+    let hand = 0;
+    for (const seed of ['g1', 'g2', 'g3', 'g4']) {
+      for (const arm of ['free', 'hand']) {
+        const w = new World(scenarioById('ville-under-fire'), { role: 'net', seed });
+        for (const site of w.sites) w.setWeaponsState(site.id, arm === 'free' ? 'free' : 'tight');
+        drive(w, { onTick: arm === 'hand' ? handTick : null });
+        if (arm === 'free') free += w.outcome.score; else hand += w.outcome.score;
+      }
+    }
+    assert.ok(free > hand * 0.6 && hand > free * 0.6,
+      `neither posture may collapse on the climax (free ${free} vs hand ${hand})`);
+  });
+
+  test('a weapons-hold watch still ends: loitering escorts go home', () => {
+    // The soft-lock, pinned: jammers waited on the SEAD and the SEAD waited
+    // on the jammers, and a hold-posture sector ran to the step cap forever.
+    const w = new World(scenarioById('ville-under-fire'), { role: 'net', seed: 'lock1' });
+    for (const site of w.sites) w.setWeaponsState(site.id, 'hold');
+    drive(w, { maxTicks: 60000 });
+    assert.equal(w.phase, 'complete', 'the watch must end even if nobody fires');
   });
 
   test('doing nothing at all is still ruinous — delegation stays viable, absence does not', () => {

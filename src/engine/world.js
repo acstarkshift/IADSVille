@@ -1416,7 +1416,15 @@ export class World {
       + this.stats.decoysEngaged * 4;
     const turnedBackScore = this.stats.turnedBack * 18;
     const leakerPenalty = this.stats.leakers * 45;
-    const roundCost = this.stats.roundsFired * 3;
+    /*
+     * Five a round, up from three. At three, a kill paid for seven rounds and
+     * ammunition discipline — the stated lesson of an entire watch — had no
+     * score teeth: the walk-away fired 75% over allocation for a rounding
+     * error. At five, the hand player's measured one-third round saving is a
+     * real slice of the night, and spraying the edge of the envelope is
+     * priced like the habit it is.
+     */
+    const roundCost = this.stats.roundsFired * 5;
     const civilPenalty = this.stats.civilianAircraftShot * 400
       + this.stats.civilianCasualties * 2;
     const equipmentPenalty = this.stats.sitesLost * 60 + this.stats.radarsLost * 35;
