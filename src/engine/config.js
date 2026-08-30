@@ -351,7 +351,7 @@ export const SAM_TYPES = {
     readyRounds: 8,
     magazine: 16,
     reloadS: 95,
-    pkBase: 0.74,
+    pkBase: 0.8,
     /** Displacement time if the crew relocates, seconds. */
     scootS: 210,
     /**
@@ -401,7 +401,7 @@ export const SAM_TYPES = {
     readyRounds: 8,
     magazine: 16,
     reloadS: 62,
-    pkBase: 0.7,
+    pkBase: 0.8,
     scootS: 130,
     radar: {
       kind: 'fc', label: 'LANCE FC',
@@ -426,7 +426,7 @@ export const SAM_TYPES = {
     readyRounds: 8,
     magazine: 24,
     reloadS: 34,
-    pkBase: 0.66,
+    pkBase: 0.78,
     scootS: 55,
     radar: {
       kind: 'fc', label: 'THISTLE FC',
@@ -451,7 +451,7 @@ export const SAM_TYPES = {
     readyRounds: 12,      // bursts
     magazine: 40,
     reloadS: 18,
-    pkBase: 0.24,
+    pkBase: 0.3,
     scootS: 40,
     radar: {
       kind: 'fc', label: 'HAMMER DIR',
@@ -575,8 +575,13 @@ export const ENGAGEMENT = {
    * kind of attack anyone jettisons a war load over.
    */
   crediblePk: 0.3,
-  /** Pk multiplier when the target is below 2x the system's minimum altitude. */
-  lowAltPk: 0.6,
+  /*
+   * Pk multiplier at a system's own altitude floor, sloping back to 1 at three
+   * times it (or 200 m, whichever is higher). Was a flat 0.6 applied as a
+   * cliff at a fixed 250 m for every class; a slope charges the difficulty of
+   * a low engagement in proportion to how low it actually is.
+   */
+  lowAltPk: 0.7,
   /** Pk multiplier against a cruise-missile-sized target. */
   smallTargetPk: 0.68,
   /**

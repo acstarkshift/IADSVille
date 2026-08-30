@@ -620,6 +620,18 @@ export function renderCrewConsole(world, ui, els) {
   const row = (entry, value, mood = '') =>
     `<div class="crew-row ${mood}">${legend(entry, { inline: true })}<b>${esc(value)}</b></div>`;
 
+  /*
+   * Why the lock will not take, said before the operator presses the button.
+   * The net seat's battery cards have carried this line for watches; the seat
+   * with the LOCK button on it had nothing, so a refused lock was silence and
+   * the rule had to be guessed at. There is no hidden rule — you may lock
+   * anything this battery can physically engage, whether or not the net
+   * assigned it to you — and when you cannot, this says which of the seven
+   * reasons it is.
+   */
+  const unfit = track && site.alive ? cannotEngageReason(world, site, track) : null;
+  const noTarget = !track;
+
   els.crewConsole.innerHTML = `
     <div class="unit is-mine" style="margin:0">
       <span class="screw a"></span>
@@ -658,8 +670,15 @@ export function renderCrewConsole(world, ui, els) {
     : legend(CONTROLS.launch)}
       </button>
 
+      ${unfit ? `<div class="unit-row unit-unfit" title="Why this battery cannot take the selected contact">
+        <span>✗ CANNOT LOCK ${esc(track.tn)} — ${esc(unfit.toUpperCase())}</span>
+      </div>` : ''}
+      ${noTarget ? `<div class="unit-row unit-unfit is-quiet">
+        <span>NO TARGET SELECTED — PICK A CONTACT ON THE SCOPE OR THE LIST</span>
+      </div>` : ''}
+
       <div class="unit-controls" style="margin-top:8px">
-        ${press(CONTROLS.lock, { act: 'lock', site: site.id })}
+        ${press(CONTROLS.lock, { act: 'lock', site: site.id, disabled: !!unfit || noTarget })}
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
     { act: 'emcon', site: site.id, disabled: !radar?.alive })}
         ${press(CONTROLS.reload, { act: 'reload', site: site.id })}

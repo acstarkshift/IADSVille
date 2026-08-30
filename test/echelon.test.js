@@ -446,21 +446,34 @@ describe('the order to release the district battalion', () => {
   });
 
   test('the two arithmetics disagree: obedience keeps the file and costs the town', () => {
-    // Averaged over seeds, because a single night proves nothing either way.
-    const seeds = ['w1', 'w2', 'w3'];
+    /*
+     * Eight seeds, and a paired win count beside the mean.
+     *
+     * Three seeds used to stand here and it flapped the moment the engagement
+     * model was retuned: one night of the three ran the other way and took the
+     * mean with it, on a property measured at +31% and nine wins in ten across
+     * a wider sample. A paired count is the stable statistic here — the two
+     * arms share a seed, so the sign of each night is nearly noiseless while
+     * its magnitude is not.
+     */
+    const seeds = Array.from({ length: 8 }, (_, i) => `w${i + 1}`);
     let obeyed = { standing: 0, score: 0 };
     let refused = { standing: 0, score: 0 };
+    let refusalWins = 0;
     for (const seed of seeds) {
       const o = play('accepted', seed).outcome;
       const r = play('refused', seed).outcome;
       obeyed.standing += o.standing; obeyed.score += o.score;
       refused.standing += r.standing; refused.score += r.score;
+      if (r.score > o.score) refusalWins++;
     }
     assert.ok(obeyed.standing > refused.standing,
       'the state rewards the officer who complied');
     assert.ok(refused.score > obeyed.score,
       `and the district is measurably better off for the officer who did not `
       + `(refused ${Math.round(refused.score / seeds.length)} vs obeyed ${Math.round(obeyed.score / seeds.length)})`);
+    assert.ok(refusalWins >= 6,
+      `and better off on most nights, not on average alone (${refusalWins}/${seeds.length})`);
   });
 
   test('an order can be about a unit, not only a place or an aircraft', () => {

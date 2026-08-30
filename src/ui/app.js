@@ -1038,7 +1038,25 @@ function runAction(act, siteId, radarId, formationId) {
       break;
     case 'reload': if (site) world.reload(site.id); break;
     case 'scoot': if (site) world.scoot(site.id); break;
-    case 'lock': if (site && ui.selectedTrackId) world.assign(ui.selectedTrackId, site.id); break;
+    /*
+     * LOCK is the cabin's assignment. It used to call world.assign directly
+     * and drop the null on the floor, so a refused lock in the SAM seat did
+     * NOTHING AT ALL — no line, no sound, no reason — while the same refusal
+     * from the net seat has printed its reason since the first watch. That
+     * silence read as a broken button, and left the operator guessing at a
+     * rule ("can I only lock what is assigned to me?" — no: you can lock
+     * anything your battery can physically take). It goes through the same
+     * path as every other assignment now, reason and all.
+     */
+    case 'lock':
+      if (!site) break;
+      if (!ui.selectedTrackId) {
+        world.log('warn', `${site.name} — NO TARGET SELECTED. PICK A CONTACT FIRST.`,
+          { siteId: site.id });
+        break;
+      }
+      assignSelected(site.id);
+      break;
     default: break;
   }
 }

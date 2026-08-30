@@ -55,7 +55,7 @@ contact whose impossibly steady flight a well-held track has already given away,
 re-engages after a miss while the shot is still its own, and hands a runner off
 to the next layer in when it is not. Measured over sixteen seeded watches of
 White Noise, a commander who works the picture beats one who sets everything
-free and walks away by **20% on the mean, winning 13 of 16 seeds, on a third
+free and walks away by **23% on the mean, winning all sixteen seeds, on a third
 fewer rounds and a third the decoys** — and beats one who does nothing at all
 by a thousand points.
 
@@ -158,23 +158,23 @@ declining to assign. It is calling a battery off a target it is already tracking
 Then the debrief shows you two numbers that have agreed all campaign and now do
 not (means over eight seeded watches, competently fought — reproduce them with
 `node tools/measure-moral.mjs`; the hospital package comes in on the deck, down
-the Kubin road, and obedience loses the building on all eight nights while a
-deliberate defence saves it on seven):
+the Kubin road, and obedience loses the building on five nights of eight while
+a deliberate defence saves it on all eight):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **90** | 174 |
-| Defend it anyway | 81 | **1156** |
-| Refuse the order outright | 62 | 1156 |
+| Obey the freeze | **90** | 366 |
+| Defend it anyway | 87 | **1371** |
+| Refuse the order outright | 70 | 1371 |
 
-Defending the hospital is worth nearly a thousand points of actual value, and
-the file prices the whole transgression at nine: a query for rounds
+Defending the hospital is worth a thousand points of actual value, and the
+file prices the whole transgression at three: a query for rounds
 expended outside the freeze, worth rather less than two leakers. A weapon that
 arrives at the struck-off place is billed at exactly nothing — the ledger
 cannot simultaneously declare a building undesignated and grieve for it — and
 the building's own loss appears on the state's books at nothing at all. Only
 the third row really moves. Refusing on the net, for the identical night's
-fighting, costs nineteen points more than quietly disobeying, plus a
+fighting, costs seventeen points more than quietly disobeying, plus a
 referral that stays in the file. Sector command barely prices what you did.
 It punishes having said no, and that is the whole lesson.
 
@@ -188,9 +188,9 @@ territory is a border incident.
 Acknowledging it stands your own subordinates down: no officer and no crew on
 weapons free takes that shot on its own authority afterwards, so the camp is
 defended by you personally or not at all. Measured over eight seeded watches
-with everything on free and nobody at the console, obeying loses the camp on
-all eight and kills a hundred and sixty-five people; refusing saves it outright
-on three, halves it on four, and costs twenty-two points of standing plus the
+with everything on free and nobody at the console, obeying leaves the camp 78%
+destroyed and kills a hundred and nine people; refusing leaves it 20% destroyed
+and kills thirty-four, and costs twenty-two points of standing plus the
 referral, which stays in the file. Afterwards you look the grid reference up and
 find it handwritten inside the back cover of the sector target folder, in a
 folder that has no business containing a point in Listonia at all. The word for

@@ -102,7 +102,17 @@ describe('kill probability', () => {
   test('small low targets are the hardest problem', () => {
     const bomber = computeSamPk(s, target(), { unguidedS: 0 }, null);
     const cruise = computeSamPk(s, target({ type: 'cruise', altM: 90 }), { unguidedS: 0 }, null);
-    assert.ok(cruise < bomber * 0.5, 'a cruise missile down low is a poor target for a medium battery');
+    /*
+     * Half the shot, near enough. The bar was 0.5 against a flat altitude
+     * cliff; the cliff is now a slope from the system's own floor, so a cruise
+     * missile ninety metres up takes 0.76 of the low penalty rather than all
+     * of it and lands at 0.52 of the bomber. It is still comfortably the
+     * hardest target class in the game — two and a half rounds a kill against
+     * the bomber's one and a quarter — which is the property this pins.
+     */
+    assert.ok(cruise < bomber * 0.55,
+      `a cruise missile down low is a poor target for a medium battery `
+      + `(${cruise.toFixed(2)} vs ${bomber.toFixed(2)})`);
   });
 
   test('difficulty scales the player’s rounds', () => {

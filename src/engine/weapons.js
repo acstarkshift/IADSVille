@@ -85,29 +85,51 @@ export function computeSamPk(site, target, missile, difficulty) {
   const type = SAM_TYPES[site.type];
   let pk = type.pkBase * (difficulty?.friendlyPkMult ?? 1);
 
-  // Range: full value out to the sweet spot, decaying to the envelope edge.
+  /*
+   * Geometry: where the round was fired from, and where it caught up.
+   *
+   * These were two separate multipliers and they were charged one after the
+   * other, which double-billed a single fact. A shot taken at the edge of the
+   * envelope usually intercepts near the edge too — the two terms are
+   * measuring the same bad geometry, and multiplying them took a medium
+   * battery's realised kill probability from a stated 0.70 to a measured
+   * 0.367 across five watches. Four independent terms each shaving a fifth,
+   * none of them obviously wrong on its own, is how a battery ends up needing
+   * three rounds a kill while its data plate claims seven in ten.
+   *
+   * A shot is now as bad as its worst aspect rather than the product of its
+   * aspects. Launch discipline still bites — firing from the edge caps the
+   * shot however nicely it converges, which is the whole craft of the
+   * assignment — but it is no longer charged twice.
+   */
   const r = dist(site.pos, target.pos);
   const sweet = type.maxRangeKm * ENGAGEMENT.sweetSpotFraction;
+  let geometry = 1;
   if (r > sweet) {
-    pk *= lerp(1, ENGAGEMENT.edgeRangePk, invLerp(sweet, type.maxRangeKm, r));
+    geometry = Math.min(geometry,
+      lerp(1, ENGAGEMENT.edgeRangePk, invLerp(sweet, type.maxRangeKm, r)));
   }
-
-  // Launch discipline: a round fired at the edge of the envelope pays for it
-  // at intercept whatever the target did in between — no energy left, worst
-  // opening basket. This is the term that makes holding for a proper shot a
-  // skill rather than a superstition.
   if (missile?.launchRangeKm > sweet) {
-    pk *= lerp(1, ENGAGEMENT.edgeLaunchPk,
-      invLerp(sweet, type.maxRangeKm, missile.launchRangeKm));
+    geometry = Math.min(geometry,
+      lerp(1, ENGAGEMENT.edgeLaunchPk, invLerp(sweet, type.maxRangeKm, missile.launchRangeKm)));
   }
   if (r < type.minRangeKm * 1.6) {
     // Snapped off inside the minimum range: the round has no time to settle.
-    pk *= lerp(ENGAGEMENT.edgeRangePk, 1, invLerp(type.minRangeKm, type.minRangeKm * 1.6, r));
+    geometry = Math.min(geometry,
+      lerp(ENGAGEMENT.edgeRangePk, 1, invLerp(type.minRangeKm, type.minRangeKm * 1.6, r)));
   }
+  pk *= geometry;
 
-  // Altitude: engaging down low is genuinely hard.
-  if (target.altM < Math.max(type.minAltM * 2, 250)) {
-    pk *= ENGAGEMENT.lowAltPk;
+  /*
+   * Altitude: engaging down low is genuinely hard — but it was a cliff, not a
+   * slope. A target at 251 metres paid nothing and one at 249 paid the full
+   * penalty, and the band was the same 250 metres for a point-defence section
+   * built for low work as for a battalion built for high. It is now a slope,
+   * from the system's own floor up to a band scaled to that floor.
+   */
+  const lowBand = Math.max(type.minAltM * 3, 200);
+  if (target.altM < lowBand) {
+    pk *= lerp(ENGAGEMENT.lowAltPk, 1, invLerp(type.minAltM, lowBand, target.altM));
   }
 
   const airType = AIR_TYPES[target.type];

@@ -406,6 +406,8 @@ kbd {
 .fmn-controls { display: flex; gap: 5px; flex-wrap: wrap; }
 /* The selected contact is outside this battery's envelope, said up front. */
 .unit-unfit span { color: var(--warn); font-size: 10px; letter-spacing: .05em; }
+/* "Nothing is selected yet" is guidance, not a fault: same row, quieter ink. */
+.unit-unfit.is-quiet span { color: var(--engrave-dim); }
 
 /* A battery in somebody else's command: on the board, not on your net. */
 .unit.is-detached { opacity: .6; }
