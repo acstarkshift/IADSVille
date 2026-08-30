@@ -512,6 +512,33 @@ function ownRoundsTimeToImpact(world, site) {
  * which case it holds the beam and takes the hit. That last judgement is exactly
  * the one the player has to make in the SAM operator seat.
  */
+/**
+ * Emissions discipline for the surveillance sets nobody crews.
+ *
+ * Site radars blink by their crew's arithmetic below; the early-warning and
+ * gapfiller sets had no such instinct, and an AI-run sector would hold them
+ * radiating straight into an anti-radiation shot the fire-control sets had
+ * already learned to duck. Runs only when the AI has the net — a human
+ * commander owns these switches otherwise, and the suppression game with
+ * them.
+ */
+export function runSurveillanceEmcon(world) {
+  if (world.control.netIsHuman) return;
+  for (const radar of world.radars) {
+    if (radar.siteId || !radar.alive) continue;
+    const armEta = armTimeToImpact(world, radar);
+    if (armEta < 18) {
+      if (radar.on) {
+        world.log('warn', `${radar.label} — SHUTTING DOWN, ROUND INBOUND`, { radarId: radar.id });
+      }
+      radar.on = false;
+      radar.blinkUntilS = world.t + 25;
+    } else if (!radar.on && world.t >= (radar.blinkUntilS ?? 0)) {
+      radar.on = true;
+    }
+  }
+}
+
 export function runAiEmcon(world, dt, site) {
   const radar = world.radarById.get(site.radarId);
   if (!radar || !radar.alive) return;

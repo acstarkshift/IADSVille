@@ -758,6 +758,17 @@ export const SCENARIOS = [
         + ' have read. What the priority of fires will protect tonight is the address.'],
     },
     /*
+     * The night's long tail. After the last packages commit, the watch used
+     * to run its final four minutes in silence while survivors straggled out
+     * — but a sector that has just spent its magazines is the opposite of a
+     * quiet room: the accounting starts before the firing stops.
+     */
+    chatter: [
+      { atS: 745, text: 'FORMATIONS REPORT ROUNDS REMAINING BY SECTION. THE FIGURES GO TO THE MINISTRY AS TRANSMITTED.' },
+      { atS: 850, text: 'DISTRICT EXCHANGE REQUESTS LINE CAPACITY FOR CASUALTY TRAFFIC. GRANTED ON THE SECOND REQUEST.', pressureOnly: true },
+      { atS: 930, text: 'THE 0600 BROADCAST IS IN PREPARATION. SECTOR IS ASKED FOR ONE FIGURE, CHECKED TWICE.' },
+    ],
+    /*
      * Clustered, because the sector operations centre sits eleven kilometres
      * from the village and a track bound for one passes close to the other. On
      * this watch the question is never "which building" but "which valley", so

@@ -26,7 +26,7 @@ import { stepMissiles, inEnvelope } from './weapons.js';
 import { stepAircraft, createAircraft } from './ai.js';
 import { scoreAllTracks, cannotEngageReason } from './threat.js';
 import {
-  stepEngagements, runAiBattleManager, runBatteryCrews, runAiEmcon,
+  stepEngagements, runAiBattleManager, runBatteryCrews, runAiEmcon, runSurveillanceEmcon,
   beginEngagement, endEngagement, fireEngagement, startReload, startScoot,
 } from './doctrine.js';
 import {
@@ -1303,6 +1303,7 @@ export class World {
     // nearly the whole country.
     runAiBattleManager(this, dt);
     runBatteryCrews(this, dt);
+    runSurveillanceEmcon(this);
     // The player's own battery still needs its radar handled if they are running
     // the net rather than sitting in it.
     if (this.control.role === 'net') {

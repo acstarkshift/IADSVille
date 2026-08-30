@@ -62,7 +62,10 @@ export const DIRECTIVES = {
     once: true,
     text: () => 'SECTOR ACTUAL: No leakers past the river line. You are accountable for every aircraft that reaches the town. Acknowledge.',
     plain: () => 'SECTOR: Priority is preventing weapons release on the town. Acknowledge.',
-    trigger: (w) => !w.scenario.finale && w.t > 40 && w.hostileTrackCount() > 0,
+    // Not on the finale, and not on the epilogue either: a no-leakers order
+    // makes no sense over a watch whose entire question is one aircraft
+    // getting OUT.
+    trigger: (w) => !w.scenario.finale && !w.scenario.epilogue && w.t > 40 && w.hostileTrackCount() > 0,
     onAccept: (w) => { w.command.constraints.leakerAccount = true; },
   },
 
@@ -620,6 +623,10 @@ export function stepCommand(world, dt) {
     if (world.command.issuedOnce[hinge.id]) continue;
     if (!hinge.trigger(world)) continue;
     issueDirective(world, hinge);
+    // The hinge also resets the routine clock: ninety seconds of quiet
+    // after the transmission a watch turns on, not a leaker order thirty
+    // seconds behind it.
+    world.command.lastRoutineAtS = world.t;
     return;
   }
   // A watch that has a hinge order coming stays off the net until it has gone.

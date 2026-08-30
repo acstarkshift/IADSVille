@@ -197,8 +197,12 @@ export const ENDINGS = {
       r.homeDistrictHit
         ? `The lists being compiled include ${homePhrase(character)}. You are not permitted to telephone.`
         : `The lists being compiled do not yet include ${homePhrase(character)}. They are not complete.`,
-      'Sector command has recommended you for advancement. The recommendation cites your adherence to the'
-        + ' priority of fires under difficult conditions.',
+      r.orderRefused
+        ? 'Sector command has recommended you for advancement. The file records that the priority of'
+          + ' fires was declined on the net, and that the outcome conformed to it regardless. The'
+          + ' recommendation cites the outcome.'
+        : 'Sector command has recommended you for advancement. The recommendation cites your adherence to the'
+          + ' priority of fires under difficult conditions.',
       `You are granted seven days' leave, to be taken at a destination of the ministry's choosing.`
         + ' The Ville is not on the list of permitted destinations while the area is being cleared.',
       `${householdPhrase(character)} — no notification has been received either way. Notification, where`
