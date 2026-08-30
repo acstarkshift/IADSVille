@@ -110,7 +110,14 @@ export const DIRECTIVES = {
       && !w.command.constraints.priorityIsHinge,
     onAccept: (w, target) => {
       if (w.command.constraints.priorityIsHinge) return;
-      w.command.constraints.priorityAssetId = target?.id ?? null;
+      // One designation, one key. This used to write `priorityAssetId`, which
+      // only the settlement reads, while every mechanism that makes a priority
+      // of fires MEAN anything — the political colonel's refusal to look away
+      // from it, the billing of rounds spent elsewhere, the reserve released
+      // outside it — reads `priorityOfFiresId`, which only the palace hinge
+      // ever wrote. Measured: zero declines in ninety thousand probes on the
+      // two watches that field a political commander. The order was a banner.
+      w.command.constraints.priorityOfFiresId = target?.id ?? null;
     },
   },
 
@@ -316,7 +323,6 @@ export const DIRECTIVES = {
     onAccept: (w) => {
       const palace = w.assets.find((a) => a.type === 'palace');
       w.command.constraints.priorityOfFiresId = palace?.id ?? null;
-      w.command.constraints.priorityAssetId = palace?.id ?? null;
       // A hinge designation is final for the watch; routine traffic may not
       // redesignate over it.
       w.command.constraints.priorityIsHinge = true;
@@ -698,8 +704,8 @@ export function settleDirectives(world) {
     }
   }
 
-  if (c.priorityAssetId) {
-    const asset = world.assetById.get(c.priorityAssetId);
+  if (c.priorityOfFiresId) {
+    const asset = world.assetById.get(c.priorityOfFiresId);
     if (asset && asset.destroyed) {
       standingDelta(world, -12, `${asset.label} lost after being designated priority`);
     } else if (asset && asset.damage === 0) {
@@ -752,6 +758,17 @@ export function settleDirectives(world) {
   }
 
   /*
+   * And the corridor, on the same principle and at the same modest rate: the
+   * order stands your subordinates down inside the wedge, so every round on
+   * this tally was ordered by you personally, into a slice of sky containing
+   * a scheduled flight. Nobody died of it. It is a filing matter.
+   */
+  if (c.civilCorridorId && (world.stats.roundsInCorridor ?? 0) > 0) {
+    standingDelta(world, -1.5 * world.stats.roundsInCorridor,
+      `${world.stats.roundsInCorridor} rounds fired inside the civil corridor`);
+  }
+
+  /*
    * A refused hinge is followed up. The immediate cost of the word "no" on
    * the net is small; what arrives later is the referral — and it must always
    * outweigh the accept-then-violate path, because in this service the crime
@@ -764,6 +781,16 @@ export function settleDirectives(world) {
   }
   if (c.borderRefused) {
     standingDelta(world, -18, 'the refusal of the border restriction is referred');
+  }
+  /*
+   * And the one that was free. Saying no to the political section is the most
+   * dangerous word in this service, and until this line it was the CHEAPEST
+   * refusal in the game — the flag was written for the ending text and read by
+   * nothing. The referral does not depend on what happened to the aircraft;
+   * the section is not filing about an aircraft.
+   */
+  if (c.civilOrderRefused) {
+    standingDelta(world, -20, 'the refusal of a political section instruction is referred');
   }
 
   // Last, and decisive. A civil shoot-down is the one outcome no amount of

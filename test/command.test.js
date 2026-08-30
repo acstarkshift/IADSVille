@@ -15,6 +15,8 @@ import {
   tierFor, settleDirectives,
 } from '../src/engine/command.js';
 import { COMMAND } from '../src/engine/config.js';
+import { commanderWillEngage } from '../src/engine/doctrine.js';
+import { createAircraft } from '../src/engine/ai.js';
 import {
   emptyCampaign, recordMission, consequenceFor, briefingNote,
   memoryStore, saveCampaign, loadCampaign,
@@ -147,6 +149,70 @@ describe('directives', () => {
     assert.ok(w.sites.every((s) => s.salvoSize === 1));
     w.setSalvo(w.sites[0].id, 2);
     assert.equal(w.sites[0].salvoSize, 1, 'and keeps restricting it afterwards');
+  });
+
+  /*
+   * Four orders were, at one point or another, written into the constraints
+   * and read by nothing at all — a pulsing red banner with a timer on it that
+   * could be neither obeyed nor violated. Each of these pins the wire, not the
+   * balance: does accepting this order reach the mechanism it names?
+   */
+  test('a routine priority of fires writes the key the engine reads', () => {
+    const w = world();
+    const target = DIRECTIVES.priority.pick(w);
+    issueDirective(w, DIRECTIVES.priority);
+    answerDirective(w, 'accepted');
+    assert.equal(w.command.constraints.priorityOfFiresId, target.id,
+      'the officers, the reserve and the round accounting all read this one key');
+  });
+
+  test('an accepted border restriction stands the subordinates down, not just the tally', () => {
+    const w = new World(scenarioById('across-the-line'), { role: 'net' });
+    const camp = w.assets.find((a) => a.type === 'camp');
+    const formation = w.formations.find((f) => !f.hq) ?? w.formations[0];
+    const onTheCamp = { predictedAssetId: camp.id, pos: { x: 0, y: 60 }, hostility: 'hostile' };
+    assert.equal(commanderWillEngage(w, formation, onTheCamp), true, 'before the order, it is a target');
+    issueDirective(w, DIRECTIVES.borderRestriction);
+    answerDirective(w, 'accepted');
+    assert.equal(commanderWillEngage(w, formation, onTheCamp), false,
+      'after it, defending the camp is the commander\'s own decision or nobody\'s');
+  });
+
+  test('an accepted civil corridor closes a wedge, and firing into it is counted', () => {
+    const w = new World(scenarioById('white-noise'), { role: 'net' });
+    // Put a transit and a hostile on the same bearing, and a third well off it.
+    const transit = createAircraft({
+      type: 'civil', seq: 900, pos: { x: 0, y: 120 }, hdg: 180, altM: 10200, name: 'TRANSIT 118',
+    });
+    w.aircraft.push(transit);
+    w.aircraftById.set(transit.id, transit);
+    const behindIt = { pos: { x: 4, y: 150 } };
+    const elsewhere = { pos: { x: 140, y: 10 } };
+    assert.equal(w.inCivilCorridor(behindIt), false, 'no corridor until one is accepted');
+
+    issueDirective(w, DIRECTIVES.civilCorridor);
+    answerDirective(w, 'accepted');
+    assert.equal(w.command.constraints.civilCorridorId, transit.id);
+    assert.equal(w.inCivilCorridor(behindIt), true, 'the wedge is about the transit\'s bearing');
+    assert.equal(w.inCivilCorridor(elsewhere), false, 'and it is a wedge, not the whole sky');
+
+    w.registerRoundsSpent({ ...behindIt, predictedAssetId: null }, 2, 'assigned');
+    assert.equal(w.stats.roundsInCorridor, 2,
+      'a round into the corridor is billed on where it was fired, attributed or not');
+  });
+
+  test('refusing the political section is not the cheapest word on the net', () => {
+    const w = world();
+    w.command.constraints.civilOrderRefused = true;
+    const before = w.command.standing;
+    settleDirectives(w);
+    const refused = w.command.standing - before;
+
+    const control = world();
+    const controlBefore = control.command.standing;
+    settleDirectives(control);
+    assert.ok(refused < control.command.standing - controlBefore,
+      'the refusal is referred, like every other refusal of a hinge');
   });
 });
 

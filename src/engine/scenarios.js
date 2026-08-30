@@ -237,12 +237,32 @@ const DISTRICT_FORMATIONS = [
   },
 ];
 
-/** A civil airliner crossing the sector, oblivious. */
+/*
+ * A civil airliner crossing the sector, oblivious.
+ *
+ * It comes down the same corridor the raid uses, because that is where the
+ * airway is and the airway was drawn before anybody was shooting. It used to
+ * enter on 290 and leave to the south-east, nowhere near any threat axis in
+ * the campaign — which made the corridor order sector command transmits about
+ * it ("weapons tight in that sector") an instruction that had never once, on
+ * any watch, forbidden a shot anybody wanted to take. Now the wedge it closes
+ * lies across the bearings the strikers arrive on, and accepting the order is
+ * a decision with a price — measured at about 6% of the watch's score, against
+ * the standing a refusal costs. The package behind the transit is yours to
+ * answer personally or not at all. Ten thousand metres keeps it distinguishable
+ * from everything else on that bearing, for an operator who is looking.
+ *
+ * The bearing is 325 and not closer: routed straight down the threat axis it
+ * flies THROUGH the raid rather than beside it, the correlator starts swapping
+ * its plots with a striker's, and the picture reports one track as CIVIL and
+ * HOSTILE at once. Measured at 325, minimum separation is six to eight
+ * kilometres and that pathology does not occur on any seed.
+ */
 const civilTransit = (atS) => ({
   atS, type: 'civil', count: 1, scalable: false,
-  bearingDeg: 290, distanceKm: 200, altM: 10200,
+  bearingDeg: 325, distanceKm: 200, altM: 10200,
   name: 'TRANSIT 118',
-  waypoints: [{ x: 40, y: -60 }, { x: 180, y: -150 }],
+  waypoints: [{ x: 60, y: 25 }, { x: 175, y: -140 }],
 });
 
 export const SCENARIOS = [
@@ -619,6 +639,9 @@ export const SCENARIOS = [
         + ' cannot see, about a raid that has not happened yet.',
       'Two axes are crossing the frontier tonight, on Lozan and on Kubin. There is a third smaller one'
         + ' and it is going down the valley. You know the valley.',
+      'Nothing is forecast against Brasov. Nothing has been forecast against Brasov in eleven months,'
+        + ' which is why it has a commander the political section chose and an order you will not be'
+        + ' asked to review. The forecast is a forecast.',
     ],
     teaches: 'That a standing order given to somebody you cannot see is a real weapon, and usually the only one you have.',
     assets: [
@@ -652,6 +675,22 @@ export const SCENARIOS = [
         distanceKm: 140, targetAssetId: 'a_bridge' },
       { atS: 320, type: 'cruise', count: 3, bearingDeg: 350, spreadDeg: 24, spacingS: 16, altM: 85,
         distanceKm: 140, targetAssetId: 'a_town' },
+
+      /*
+       * Brasov, last, from the south, and not in the brief.
+       *
+       * Measured, this sector had never once been attacked: every axis above
+       * arrives between 288° and 22°, Brasov sits at 162°, and its three
+       * batteries spent zero rounds across four watches. A quarter of the
+       * order of battle was scenery — which also made the political colonel
+       * who commands it, the district act's whole device, a man with nothing
+       * to decline. Late, so the fourth sector is a reason for the back half
+       * to exist rather than a fourth thing to watch in the first eight
+       * minutes, and small, because it is a raid of opportunity on the flank
+       * everyone had written off.
+       */
+      { atS: 430, type: 'striker', count: 3, bearingDeg: 162, spreadDeg: 20, spacingS: 20, altM: 4800,
+        distanceKm: 150, targetAssetId: 'a_brasov_depot' },
     ],
   },
 
@@ -713,6 +752,10 @@ export const SCENARIOS = [
         distanceKm: 145, targetAssetId: 'a_lozan_power' },
       { atS: 380, type: 'striker', count: 3, bearingDeg: 348, spreadDeg: 22, spacingS: 22, altM: 5000,
         distanceKm: 140, targetAssetId: 'a_c2' },
+      // Brasov again, and on this watch it is the sector the withdrawn
+      // battalion used to reach. See the note on the district watch.
+      { atS: 455, type: 'striker', count: 3, bearingDeg: 165, spreadDeg: 20, spacingS: 20, altM: 4600,
+        distanceKm: 150, targetAssetId: 'a_brasov' },
     ],
   },
 

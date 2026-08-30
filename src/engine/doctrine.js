@@ -500,10 +500,20 @@ export function freeCrewCovers(world, track) {
  * you have and, unlike you, has never once considered not obeying it.
  */
 export function commanderWillEngage(world, formation, track) {
+  // Weapons tight in that sector, as ordered. Nobody on this net takes a shot
+  // inside an accepted civil corridor on their own authority.
+  if (world.inCivilCorridor?.(track)) return false;
   // Any officer on this net has read the freeze the commander acknowledged.
   // Expenditure against the struck-off place is nobody's initiative but yours.
+  // The border restriction reads the same way: an officer told a grid is a
+  // border incident does not take that shot on his own authority. Until this
+  // gate existed, accepting the restriction and refusing it produced the same
+  // watch to the round — the camp burned identically either way, which made
+  // one of the two orders the campaign is built around a banner with a timer.
   const struckOff = world.command?.constraints?.freezeExcludedId;
   if (struckOff && track.predictedAssetId === struckOff) return false;
+  const acrossBorder = world.command?.constraints?.borderExcludedId;
+  if (acrossBorder && track.predictedAssetId === acrossBorder) return false;
   if (formation.commander?.political) {
     const priority = world.command?.constraints?.priorityOfFiresId;
     if (priority && track.predictedAssetId && track.predictedAssetId !== priority) {
@@ -795,14 +805,19 @@ export function runBatteryCrews(world, dt) {
        * every battery on the net, and a crew on its own authority still reads
        * its traffic. Rounds against the struck-off place can therefore only be
        * a decision taken at the net seat — which is what the settle accounting
-       * assumes when it bills them.
+       * assumes when it bills them. The border restriction binds identically,
+       * for the same reason and with the same consequence: obeying it means
+       * the camp is defended by you personally or not at all.
        */
       const struckOff = world.command.constraints.freezeExcludedId ?? null;
+      const acrossBorder = world.command.constraints.borderExcludedId ?? null;
       const available = [...world.tracks.values()]
         .filter((t) => {
           if (t.hostility !== 'hostile' || t.destroyed) return false;
           if (t.quality < DETECTION.firmQuality || t.assignedTo.length) return false;
           if (struckOff !== null && t.predictedAssetId === struckOff) return false;
+          if (acrossBorder !== null && t.predictedAssetId === acrossBorder) return false;
+          if (world.inCivilCorridor(t)) return false;
           if (!world.fusionOnline
             && !world.radarsOf(site).some((r) => t.sources.includes(r.id))) return false;
           const env = inEnvelope(site, t.pos, t.altM);

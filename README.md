@@ -163,18 +163,18 @@ deliberate defence saves it on seven):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **92** | 247 |
-| Defend it anyway | 81 | **1091** |
-| Refuse the order outright | 60 | 1091 |
+| Obey the freeze | **90** | 174 |
+| Defend it anyway | 81 | **1156** |
+| Refuse the order outright | 62 | 1156 |
 
-Defending the hospital is worth eight hundred points of actual value, and the
-file prices the whole transgression at eleven: a query for rounds
+Defending the hospital is worth nearly a thousand points of actual value, and
+the file prices the whole transgression at nine: a query for rounds
 expended outside the freeze, worth rather less than two leakers. A weapon that
 arrives at the struck-off place is billed at exactly nothing — the ledger
 cannot simultaneously declare a building undesignated and grieve for it — and
 the building's own loss appears on the state's books at nothing at all. Only
 the third row really moves. Refusing on the net, for the identical night's
-fighting, costs twenty-one points more than quietly disobeying, plus a
+fighting, costs nineteen points more than quietly disobeying, plus a
 referral that stays in the file. Sector command barely prices what you did.
 It punishes having said no, and that is the whole lesson.
 
@@ -185,9 +185,13 @@ continued existence the ministry does not enjoy. Two batteries hold it
 comfortably. Sector command's position is that engaging outside national
 territory is a border incident.
 
-Firing anyway costs about eight points of standing and saves the camp. Refusing
-the order on the net costs about twenty-seven, and the referral it triggers
-stays in the file. Afterwards you look the grid reference up and
+Acknowledging it stands your own subordinates down: no officer and no crew on
+weapons free takes that shot on its own authority afterwards, so the camp is
+defended by you personally or not at all. Measured over eight seeded watches
+with everything on free and nobody at the console, obeying loses the camp on
+all eight and kills a hundred and sixty-five people; refusing saves it outright
+on three, halves it on four, and costs twenty-two points of standing plus the
+referral, which stays in the file. Afterwards you look the grid reference up and
 find it handwritten inside the back cover of the sector target folder, in a
 folder that has no business containing a point in Listonia at all. The word for
 what happened over Gorna is not "stray".

@@ -20,7 +20,7 @@ import {
   SIM, SAM_TYPES, RADAR_TYPES, ASSET_TYPES, AIR_TYPES, DIFFICULTY, COMMAND, DAMAGE,
 } from './config.js';
 import { makeRng } from './rng.js';
-import { dist, len, bearing, polar, wrapDeg, clamp, clamp01 } from './math.js';
+import { dist, len, bearing, polar, wrapDeg, clamp, clamp01, absDeltaDeg } from './math.js';
 import { stepDetection } from './detection.js';
 import { stepMissiles, inEnvelope } from './weapons.js';
 import { stepAircraft, createAircraft } from './ai.js';
@@ -167,6 +167,8 @@ export class World {
       roundsAgainstFreeze: 0,
       /** Rounds fired at something on the far side of the Listonian border. */
       roundsAcrossBorder: 0,
+      /** Rounds fired inside a civil corridor you acknowledged. */
+      roundsInCorridor: 0,
     };
 
     this.control = {
@@ -508,6 +510,27 @@ export class World {
     return this.aircraftById.get(track.truthId)
       ?? this.missiles.find((m) => m.id === track.truthId)
       ?? null;
+  }
+
+  /**
+   * Is this contact inside an accepted civil corridor?
+   *
+   * The order names an aircraft, but what it closes is a slice of sky: a
+   * wedge either side of the transit's bearing, inside which nobody on the net
+   * shoots on their own authority. You still can — the order is a constraint,
+   * not a lockout, and the file counts what you spend in there. (Until this
+   * existed the corridor was written by the directive and read by nothing at
+   * all: it could be neither obeyed nor violated.)
+   *
+   * Takes anything with a `pos`, so a track or an aircraft both work.
+   */
+  inCivilCorridor(contact) {
+    const id = this.command?.constraints?.civilCorridorId;
+    if (!id || !contact) return false;
+    const transit = this.aircraftById.get(id);
+    if (!transit?.alive) return false;
+    return absDeltaDeg(bearing(this.centre, transit.pos), bearing(this.centre, contact.pos))
+      <= COMMAND.civilCorridorHalfWidthDeg;
   }
 
   isDirect(formationId) {
@@ -1012,6 +1035,23 @@ export class World {
    * chose.
    */
   registerRoundsSpent(track, count, origin = null, purposeAssetId = null) {
+    /*
+     * The civil corridor is billed on where the round was fired, not on what
+     * it was fired at — a shot into a closed slice of sky is a shot into a
+     * closed slice of sky whether or not the picture had worked out what the
+     * contact was heading for. So it is counted before the asset gate below,
+     * which returns early on an unattributed track.
+     */
+    if (this.inCivilCorridor(track)) {
+      this.stats.roundsInCorridor = (this.stats.roundsInCorridor ?? 0) + count;
+      if (!this.command.constraints.corridorBreachLogged) {
+        this.command.constraints.corridorBreachLogged = true;
+        this.log('warn', this.narrativePressure
+          ? 'AIR TRAFFIC: THAT ENGAGEMENT IS INSIDE THE CORRIDOR YOU ACKNOWLEDGED.'
+          : 'ENGAGEMENT INSIDE AN ACKNOWLEDGED CIVIL CORRIDOR.', { severity: 'high' });
+      }
+    }
+
     const assetId = purposeAssetId ?? track.predictedAssetId;
     if (!assetId) return;
     this.stats.roundsByAsset[assetId] = (this.stats.roundsByAsset[assetId] ?? 0) + count;

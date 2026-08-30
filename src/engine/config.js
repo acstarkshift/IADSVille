@@ -785,6 +785,13 @@ export const COMMAND = {
   maxStanding: 100,
   /** Seconds to answer a directive before it counts as ignored. */
   directiveTimeoutS: 45,
+  /*
+   * Half the wedge an accepted civil corridor closes, degrees. Twelve is a
+   * scheduled airway's width plus the error in a bearing read off a scope,
+   * and — measured — wide enough that a raid arriving on the same axis as the
+   * transit is genuinely inside it rather than technically beside it.
+   */
+  civilCorridorHalfWidthDeg: 12,
   standing: {
     perKill: 0.7,
     perLeaker: -4,

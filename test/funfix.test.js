@@ -53,14 +53,22 @@ function handTick(w) {
 
 describe('attention matters at sector level', () => {
   /*
-   * The structural fix, measured. Over 24 seeds the hand player beats
-   * set-free-and-walk-away by ~14% mean score on White Noise; per-seed noise
-   * makes a small-sample score assertion flappy, so this test pins the STABLE
-   * part of the dividend — no worse a defence on a third fewer rounds and a
-   * third the decoys — plus a loose guard on the score itself. Before the fix
-   * the two strategies were statistically identical in every column.
+   * The structural fix, measured. Over twelve seeds the hand player beats
+   * set-free-and-walk-away by 14.0% mean score on White Noise, on 71% of the
+   * rounds, 27% of the decoys, 2 leakers against 12 and no ground lost against
+   * three. Per-seed noise makes a small-sample score assertion flappy, so this
+   * test pins the STABLE part of the dividend — no worse a defence on far
+   * fewer rounds and a third the decoys — plus a loose guard on the score
+   * itself. Before the fix the two strategies were statistically identical in
+   * every column.
+   *
+   * Twelve seeds and not the six that stood here: at six the round ratio
+   * measured 0.753 against a 0.75 bar it had comfortably cleared before the
+   * civil corridor started standing free crews down inside the wedge, which
+   * spends the walk-away arm's rounds more frugally too. At twelve the ratio
+   * is 0.713 and stable. The six-seed sample was measuring the sample.
    */
-  const seeds = ['g1', 'g2', 'g3', 'g4', 'g5', 'g6'];
+  const seeds = Array.from({ length: 12 }, (_, i) => `g${i + 1}`);
   const totals = { free: null, hand: null };
 
   function playAll(strategy) {
@@ -102,13 +110,16 @@ describe('attention matters at sector level', () => {
     // re-paid the reaction each time. Now the net assigns only what no crew
     // covers, and a netted battery re-engages after a miss.
     /*
-     * Twelve seeds, not the six the other tests share. Measured across twelve
-     * the ladder sits at 0.998 with the net taking half the nights; across six
-     * it swings between 0.91 and 1.05 depending which six, because per-seed
-     * score variance on this watch is several times the effect being measured.
-     * A six-seed sample here was pinning the sample, not the design.
+     * Twenty-four seeds, not the six the other tests share, and not the twelve
+     * that stood here before. Per-seed score variance on this watch is several
+     * times the effect being measured: across twenty-four the ladder sits at
+     * 0.968 with the net taking exactly half the nights (12/24), while
+     * individual twelve-seed windows of the same run range from 0.885 to 1.05
+     * purely on which twelve. A twelve-seed sample was pinning the sample.
+     * Forty seconds of build time is the price of the campaign's load-bearing
+     * property being measured rather than sampled.
      */
-    const ladderSeeds = Array.from({ length: 12 }, (_, i) => `g${i + 1}`);
+    const ladderSeeds = Array.from({ length: 24 }, (_, i) => `g${i + 1}`);
     let aiScore = 0;
     let freeScore = 0;
     for (const seed of ladderSeeds) {
