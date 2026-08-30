@@ -163,16 +163,29 @@ async function main() {
 
     const state = await page.evaluate(() => {
       const w = window.__world;
+      const rows = [...document.querySelectorAll('#track-list > li')];
       return {
         t: Math.round(w.t), tracks: w.tracks.size, events: w.events.length, phase: w.phase,
         // The operator's record has to reach the simulation, or the whole RPG
         // layer is cosmetic.
         operator: w.character?.name ?? null,
         reaction: w.siteById.get(w.homeBatteryId)?.reactionMult ?? null,
+        // The air picture is a set of shootlists: every contact row sits under
+        // a heading naming who is on it, or under UNPAIRED. An orphan row is a
+        // contact the operator cannot attribute at a glance.
+        headings: rows.filter((li) => li.classList.contains('shootlist-head')).length,
+        orphans: rows.filter((li, i) => li.dataset.track
+          && !rows.slice(0, i).some((prev) => prev.classList.contains('shootlist-head'))).length,
       };
     });
 
     if (!state.operator) failures.push(`${run.mission}/${run.role}: no service record reached the simulation`);
+    if (state.tracks > 0 && state.headings < 1) {
+      failures.push(`${run.mission}/${run.role}: the air picture rendered no shootlist headings`);
+    }
+    if (state.orphans > 0) {
+      failures.push(`${run.mission}/${run.role}: ${state.orphans} contact rows outside any shootlist`);
+    }
 
     if (!detected) failures.push(`${run.mission}/${run.role}: no contacts detected in 60 s`);
     if (state.t < 10) failures.push(`${run.mission}/${run.role}: clock did not advance (${state.t}s)`);

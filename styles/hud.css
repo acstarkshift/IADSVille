@@ -146,6 +146,29 @@ kbd {
   display: inline-block; width: 4px; height: 4px; border-radius: 50%;
   background: var(--hostile); margin-right: 3px; vertical-align: middle;
 }
+.track-row.is-empty { opacity: .5; cursor: default; }
+.track-row.is-empty:hover { background: none; }
+
+/* Shootlist headings: the battery a run of rows belongs to, and whether it
+   can take another one. Sticky so the battery stays named while you scroll
+   its list. */
+.shootlist-head {
+  position: sticky; top: 0; z-index: 1;
+  display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+  padding: 4px 8px 2px; margin-top: 3px;
+  font-size: 8.5px; letter-spacing: .11em;
+  color: var(--engrave-dim);
+  background: linear-gradient(180deg, var(--bg-raised), color-mix(in srgb, var(--bg-raised) 70%, transparent));
+  border-top: 1px solid var(--metal-edge);
+  border-bottom: 1px solid color-mix(in srgb, var(--edge) 55%, transparent);
+}
+.shootlist-head:first-child { margin-top: 0; border-top: 0; }
+.shootlist-head .sl-name { color: var(--engrave); font-weight: 700; }
+.shootlist-head .sl-note { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shootlist-head.is-urgent .sl-name, .shootlist-head.is-urgent .sl-note { color: var(--hostile); }
+.shootlist-head.is-busy .sl-note { color: var(--warn); }
+.shootlist-head.is-down .sl-note { color: var(--hostile); }
+.shootlist-head.is-idle { opacity: .6; }
 
 .panel-foot {
   border-top: 1px solid var(--metal-edge); padding: 6px 8px;

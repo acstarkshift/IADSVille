@@ -184,6 +184,24 @@ export function renderFlightStrip(world, els) {
 
 /* ----------------------------------------------------------- track list */
 
+/**
+ * One battery's line above its shootlist: what it is and whether it can shoot.
+ * The shootlist board is only worth reading if the heading answers "can this
+ * one take another one?" without a trip to the battery cards.
+ */
+function shootlistState(world, site) {
+  if (!site.alive) return { text: 'DESTROYED', cls: 'is-down' };
+  if (site.reloadRemainingS > 0) {
+    return { text: `RELOADING ${Math.ceil(site.reloadRemainingS)}s`, cls: 'is-busy' };
+  }
+  if (site.scootRemainingS > 0) {
+    return { text: `DISPLACING ${Math.ceil(site.scootRemainingS)}s`, cls: 'is-busy' };
+  }
+  if (site.weaponsState === 'hold') return { text: 'WEAPONS HOLD', cls: 'is-busy' };
+  if (site.readyRounds <= 0) return { text: 'RAILS EMPTY', cls: 'is-down' };
+  return { text: `${site.readyRounds} RDY`, cls: '' };
+}
+
 export function renderTrackList(world, ui, els) {
   let tracks = sortedTracks(world);
 
@@ -195,7 +213,7 @@ export function renderTrackList(world, ui, els) {
     tracks = tracks.filter((t) => world.radarsOf(site).some((r) => t.sources.includes(r.id))
       || t.assignedTo.includes(site.id));
   }
-  const rows = tracks.map((track) => {
+  const rowFor = (track, ownerId = null) => {
     const brg = Math.round(bearing({ x: 0, y: 0 }, track.pos));
     const rng = Math.round(len(track.pos));
     // Metres, plainly. The ×100M code needed a hover tooltip to decode and a
@@ -206,7 +224,10 @@ export function renderTrackList(world, ui, els) {
       ? (AIR_TYPES[track.classification]?.label ?? '—')
       : trackProfile(track);
 
+    // Under a battery's own heading the column says who ELSE is on the track;
+    // repeating the name of the list you are reading tells you nothing.
     const assigned = track.assignedTo
+      .filter((id) => id !== ownerId)
       .map((id) => world.siteById.get(id)?.name?.split(' ')[0] ?? '')
       .join(',');
     const engaged = track.engagedBy.length > 0;
@@ -230,11 +251,60 @@ export function renderTrackList(world, ui, els) {
       <span>${alt}</span>
       <span class="asgn">${engaged ? '◆' : ''}${esc(assigned)} <em style="color:var(--hostile)">${pips}</em></span>
     </li>`;
-  });
+  };
 
-  els.trackList.innerHTML = rows.join('')
-    || `<li class="track-row" style="opacity:.5"><span>—</span><span>${
-      ui.view === 'crew' ? 'nothing held' : 'no contacts'}</span></li>`;
+  /*
+   * Shootlists, not one long list. A flat picture sorted by threat answers
+   * "what is out there" and hides the question the seat actually exists to
+   * answer: which of these has nobody on it, and what is each battery already
+   * holding. So: everything unpaired at the top — that section IS the work —
+   * and beneath it one list per battery, in the fixed order the battery cards
+   * use so a row keeps its place on the panel between ticks.
+   *
+   * A track paired to two batteries appears under both. That is not a
+   * duplicate; it is the fact.
+   */
+  const head = (label, note, cls = '') => `<li class="shootlist-head ${cls}" role="presentation">
+      <span class="sl-name">${esc(label)}</span><span class="sl-note" title="${esc(note)}">${esc(note)}</span>
+    </li>`;
+
+  const unpaired = tracks.filter((t) => t.assignedTo.length === 0);
+  const sections = [];
+  if (unpaired.length || !tracks.length) {
+    sections.push(head('UNPAIRED', unpaired.length ? `${unpaired.length} WITH NOBODY ON THEM` : 'NOTHING WAITING',
+      unpaired.some((t) => t.hostility === 'hostile') ? 'is-urgent' : ''));
+    sections.push(unpaired.length
+      ? unpaired.map(rowFor).join('')
+      : `<li class="track-row is-empty" role="presentation"><span>—</span><span>${
+        ui.view === 'crew' ? 'nothing held' : 'no contacts'}</span></li>`);
+  }
+
+  // In the cabin the board is your own battery's; the net's other shootlists
+  // are not yours to read from that seat.
+  const boards = ui.view === 'crew' && world.control.crewedBatteryId
+    ? world.sites.filter((s) => s.id === world.control.crewedBatteryId)
+    : world.sites;
+  const idle = [];
+  for (const site of boards) {
+    const held = tracks.filter((t) => t.assignedTo.includes(site.id));
+    const state = shootlistState(world, site);
+    // Your own cabin's board is always drawn, empty or not: an operator wants
+    // to see that the answer is nothing, not have the question disappear.
+    const own = site.id === world.control.crewedBatteryId && ui.view === 'crew';
+    if (!held.length && !own) {
+      if (site.alive && world.commandable(site.id)) idle.push(site);
+      continue;
+    }
+    sections.push(head(site.name, state.text, state.cls));
+    sections.push(held.length
+      ? held.map((t) => rowFor(t, site.id)).join('')
+      : '<li class="track-row is-empty" role="presentation"><span>—</span><span>nothing paired</span></li>');
+  }
+  if (idle.length && ui.view !== 'crew') {
+    sections.push(head('UNCOMMITTED', idle.map((s) => s.name).join(' · '), 'is-idle'));
+  }
+
+  els.trackList.innerHTML = sections.join('');
 
   renderTrackDetail(world, ui, els);
 }

@@ -240,6 +240,14 @@ fills whichever seat you are not sitting in.
 | **SAM Operator** | One battery. Your own radar's coverage, cues over the net, and the acquire → lock → launch → guide loop by hand. | Tight and personal. The rounds come at *you*. |
 | **Commander** | Both — run the picture, and take a console yourself when a shot matters. | Delegate, then grab the one that counts. |
 
+The air picture down the left is not one list. It is a set of shootlists:
+everything nobody is on, at the top, under a heading that turns red while any of
+it is hostile — that section *is* the job — and beneath it one list per battery,
+each headed with whether that battery can take another one (rounds ready,
+reloading, displacing, empty) and closed off by a line naming the batteries with
+nothing to do. A contact two batteries are both on appears under both. From the
+cabin you see your own board and nothing else, which is all you would have.
+
 Which seats are available is decided by the appointment you hold. A battalion or
 sector commander may sit anywhere. A district commander may not: there is no
 console at that level, and losing it is part of what the promotion costs. At
@@ -324,6 +332,12 @@ orders about an actual line. `M` toggles it.
 - **Nerve.** A striker that has a round go past its nose may jettison and turn for
   home. It never bombs anything. A miss can win the fight, and the log will tell
   you when it happens.
+- **What they launch is a target too.** An anti-radiation round or a released
+  weapon is an air object like any other — small, low, and fast, so the horizon
+  hides it until late, and the net calls it out on its own line the moment it goes
+  firm rather than burying it among the aircraft. It can be intercepted, and
+  sometimes is. The battery that can reach it takes it; the net does not send one
+  three sectors away to try.
 - **Civil traffic** crosses the sector on a schedule, knows nothing about any of
   this, and shooting one caps your assessment no matter how the rest of the watch
   went.
