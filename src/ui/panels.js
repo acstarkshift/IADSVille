@@ -552,7 +552,10 @@ export function renderEventLog(world, els, state) {
   if (!fresh.length) return;
   state.lastEventSeq = fresh[fresh.length - 1].seq;
 
-  const html = fresh.map((e) => `<li class="kind-${e.kind}">
+  // The `personal` flag marks the handful of lines that are about the
+  // operator's own street — written by the engine since the first build and
+  // consumed nowhere until now.
+  const html = fresh.map((e) => `<li class="kind-${e.kind}${e.personal ? ' is-personal' : ''}">
       <span class="t">${clockString(e.t)}</span><span>${esc(e.text)}</span></li>`).join('');
   els.eventLog.insertAdjacentHTML('beforeend', html);
 

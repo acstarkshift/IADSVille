@@ -260,24 +260,28 @@ export const DISTRICTS = [
 export const HOUSEHOLDS = {
   mother: {
     id: 'mother',
+    tm: 'МАТЬ, КСЕНИЯ',
     en: 'Your mother, Ксения',
     district: 'east',
     blurb: 'She writes every fortnight about the weather and the queue at the dispensary, and never about anything else. You understand why.',
   },
   sister: {
     id: 'sister',
+    tm: 'СЕСТРА НАТА И ДВОЕ ДЕТЕЙ',
     en: 'Your sister Ната, and her two children',
     district: 'mill',
     blurb: 'The children were born after you enlisted. You have met the younger one twice.',
   },
   grandmother: {
     id: 'grandmother',
+    tm: 'БАБУШКА ВЕРА',
     en: 'Your grandmother Вера',
     district: 'high',
     blurb: 'She remembers the last war and refuses to discuss it, which is its own kind of account.',
   },
   brother: {
     id: 'brother',
+    tm: 'БРАТ ИЛЬЯ',
     en: 'Your brother Илья, who failed the medical',
     district: 'river',
     blurb: 'He was kept back from service for a heart murmur and has never entirely forgiven the board, or you.',

@@ -15,6 +15,7 @@ import { ENDINGS } from '../engine/endings.js';
 import { knownRevelations } from '../engine/revelations.js';
 import { tierFor } from '../engine/command.js';
 import { STATE, PLATES } from './lexicon.js';
+import { letterById } from '../engine/family.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -171,6 +172,9 @@ export function renderDossier(host, state) {
           ${esc(STATE.country.tm)} · ${esc(STATE.country.en)}</td></tr>
         <tr><td>Household</td><td>${esc(householdOf(character).en)}</td></tr>
         <tr><td>Quarter</td><td>${esc(districtOf(character).tm)} · ${esc(districtOf(character).en)}</td></tr>
+        ${state.narrativePressure && (state.campaign.family?.permit ?? 'standing') !== 'standing'
+    ? `<tr><td>Residence permit</td><td>${state.campaign.family.permit === 'review'
+      ? 'Under review' : 'Review concluded. No action taken. The review remains in the file.'}</td></tr>` : ''}
         <tr><td>Watches stood</td><td>${character.watches}</td></tr>
         <tr><td>Assessment</td><td>${esc(tier.label)}</td></tr>
       </table>
@@ -186,6 +190,28 @@ export function renderDossier(host, state) {
           <td><b style="color:var(--ink-bright)">${esc(r.tm)}</b> · ${esc(r.title)}</td>
           <td style="color:var(--ink-dim);text-align:left">${esc(r.lines[0])}</td>
         </tr>`).join('')}
+      </table>
+    </div>` : ''}
+
+    ${state.narrativePressure
+      && ((state.campaign.family?.delivered?.length ?? 0) + (state.campaign.family?.withheld?.length ?? 0) > 0)
+    ? `<div class="card letter-card">
+      <h3>Correspondence</h3>
+      <table class="ledger">
+        ${state.campaign.family.delivered.map((d) => {
+    const t = letterById(d.id);
+    return t ? `<tr>
+          <td><b style="color:var(--ink-bright)">${esc(t.tm)}</b> · ${esc(t.title)}</td>
+          <td style="color:var(--ink-dim);text-align:left">${esc(d.excerpt ?? '')}</td>
+        </tr>` : '';
+  }).join('')}
+        ${state.campaign.family.withheld.map((h) => {
+    const t = letterById(h.id);
+    return t ? `<tr>
+          <td><b style="color:var(--ink-bright)">${esc(t.tm)}</b> · ${esc(t.title)}</td>
+          <td style="color:var(--hostile);text-align:left">Withheld by the political section.</td>
+        </tr>` : '';
+  }).join('')}
       </table>
     </div>` : ''}
 
@@ -211,8 +237,16 @@ export function renderDossier(host, state) {
         return k ? `Qualified ${k.tm} · ${k.en}` : 'Qualified';
       },
       wounded: () => 'Position overrun. Evacuated.',
+      family: () => ({
+        unopened: 'A letter from the Ville, delivered unopened',
+        resealed: 'A letter from the Ville, opened and resealed',
+        withheld: 'A letter from the Ville, withheld by the political section',
+        released: 'A withheld letter, released after assessment',
+        closed: 'Residence permit review concluded. No action taken',
+      }[entry.disposition] ?? 'Correspondence noted'),
     }[entry.kind]?.() ?? entry.kind;
-    const mood = entry.kind === 'demotion' || entry.kind === 'wounded' ? 'down' : 'up';
+    const mood = entry.kind === 'demotion' || entry.kind === 'wounded'
+      || (entry.kind === 'family' && entry.disposition === 'withheld') ? 'down' : 'up';
     return `<tr><td>Watch ${entry.at}</td><td class="${mood}">${esc(text)}</td></tr>`;
   }).join('')}
       </table>

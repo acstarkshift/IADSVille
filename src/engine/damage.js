@@ -134,6 +134,21 @@ export function damageAsset(world, asset, amount, source) {
         `${asset.label} — ${district.tm} / ${district.en.toUpperCase()} STRUCK. `
         + `${casualties} CASUALTIES`,
         { assetId: asset.id, severity: 'high', personal: true });
+      /*
+       * A few seconds later, a line only one person on the net has any use
+       * for. Routed through the chatter queue so it arrives as its own beat
+       * rather than in the same breath as the strike report.
+       */
+      if (world.narrativePressure && !world.stats.homeQuarterTrunksDown) {
+        world.stats.homeQuarterTrunksDown = true;
+        world.pendingChatter.push({
+          atS: world.t + 7,
+          text: `TRUNK LINES TO ${district.tm} / ${district.en.toUpperCase()} REPORTED DOWN.`
+            + ' NO CALLS IN OR OUT OF THE QUARTER.',
+          opts: { personal: true },
+        });
+        world.pendingChatter.sort((a, b) => a.atS - b.atS);
+      }
     } else {
       world.log('alert',
         `${asset.label} — ${district.tm} / ${district.en.toUpperCase()} STRUCK. `

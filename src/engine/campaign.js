@@ -17,6 +17,7 @@ import { COMMAND } from './config.js';
 import { tierFor } from './command.js';
 import { createCharacter, recordWatch, characterModifiers, RANKS, rankIndexOf } from './character.js';
 import { learn } from './revelations.js';
+import { emptyFamily, recordFamily, familyBriefingNote } from './family.js';
 import { SCENARIOS } from './scenarios.js';
 import { reachedEchelon, appointmentNote } from './echelon.js';
 
@@ -70,6 +71,8 @@ export function emptyCampaign(character = null) {
     epilogue: null,
     /** What the operator has worked out about their own side, in order. */
     revelations: [],
+    /** The correspondence thread: what arrived, what is held, and the permit. */
+    family: emptyFamily(),
     /**
      * The command this record currently holds. It is derived from the watches
      * stood, and stored so that being appointed can be an event with a date on
@@ -98,6 +101,10 @@ export function loadCampaign(store) {
     if (campaign.character) {
       campaign.character = { ...createCharacter({ name: campaign.character.name }), ...campaign.character };
     }
+    // Saves from before the post existed still load: the top-level spread put a
+    // fresh family object in, and a partial one from a future save is filled
+    // out field by field the way the character is.
+    campaign.family = { ...emptyFamily(), ...(parsed.family ?? {}) };
     return campaign;
   } catch {
     return emptyCampaign();
@@ -162,6 +169,10 @@ export function recordMission(campaign, result) {
   // Some watches teach you something about the people giving the orders.
   const revelation = learn(campaign, result.missionId);
 
+  // And the post arrives with the file entry — or is announced as not arriving,
+  // which in this service is also a delivery.
+  const letter = recordFamily(campaign, result, tier.id);
+
   const previous = campaign.completed[result.missionId];
   if (!previous || result.score > previous.score) {
     campaign.completed[result.missionId] = { score: result.score, tier: tier.id, role: result.role };
@@ -172,7 +183,7 @@ export function recordMission(campaign, result) {
   // to be selective, and says so by never mentioning it.
   const appointment = appointTo(campaign);
 
-  return { ...entry, service, revelation, appointment };
+  return { ...entry, service, revelation, appointment, letter };
 }
 
 /**
@@ -288,6 +299,10 @@ function supplyLine(tactical) {
 /** A quiet line before the shooting starts, coloured by how the last one went. */
 export function briefingNote(campaign, { narrativePressure = true } = {}) {
   if (!narrativePressure) return null;
+  // The post speaks first when it has something to say — a letter being sat
+  // on, or an office that has stopped sitting on anything.
+  const fromFamily = familyBriefingNote(campaign);
+  if (fromFamily) return fromFamily;
   const last = campaign.history[campaign.history.length - 1];
   if (!last) {
     return 'You have the watch. The sector is quiet. It will not stay that way.';

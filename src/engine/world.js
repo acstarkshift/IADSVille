@@ -49,6 +49,8 @@ export class World {
     this.rng = makeRng(this.seed);
     this.difficulty = DIFFICULTY[options.difficulty ?? 'veteran'] ?? DIFFICULTY.veteran;
     this.narrativePressure = options.narrativePressure ?? true;
+    /** The campaign's correspondence thread, read only by the finale endings. */
+    this.family = options.family ?? null;
     /**
      * Everything that bends the equipment to the person operating it: supply and
      * reload limits handed down by the campaign file, merged with the operator's
@@ -1170,7 +1172,8 @@ export class World {
 
   spawnDue() {
     while (this.pendingChatter.length && this.pendingChatter[0].atS <= this.t) {
-      this.log('info', this.pendingChatter.shift().text);
+      const line = this.pendingChatter.shift();
+      this.log(line.kind ?? 'info', line.text, line.opts ?? {});
     }
     while (this.pendingWaves.length && this.pendingWaves[0].atS <= this.t) {
       const spec = this.pendingWaves.shift();
@@ -1331,7 +1334,7 @@ export class World {
     if (this.scenario.finale) {
       const provisional = this.result(reason);
       const ending = composeEnding(provisional, this.character,
-        { narrativePressure: this.narrativePressure });
+        { narrativePressure: this.narrativePressure, family: this.family });
       standingDelta(this, ending.standing,
         this.narrativePressure ? ending.subtitle.toLowerCase() : ending.title.toLowerCase());
       this.endingId = ending.id;

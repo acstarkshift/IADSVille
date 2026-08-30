@@ -26,6 +26,7 @@
 
 import { ASSET_TYPES } from './config.js';
 import { districtOf, householdOf, CAPITAL } from './character.js';
+import { familyClause } from './family.js';
 
 /** Damage fraction for an asset in a finished result, 0..1. */
 function harm(result, type) {
@@ -108,7 +109,7 @@ export function endingFor(result) {
  * Written as file entries and radio traffic, never as narration — the state
  * describes what happened to you in the same register it describes everything.
  */
-export function composeEnding(result, character, { narrativePressure = true } = {}) {
+export function composeEnding(result, character, { narrativePressure = true, family = null } = {}) {
   const ending = endingFor(result);
   const r = readFinale(result);
   const lines = ending.lines(r, character).filter(Boolean);
@@ -121,6 +122,18 @@ export function composeEnding(result, character, { narrativePressure = true } = 
       standing: ending.standing,
       reading: r,
     };
+  }
+
+  /*
+   * The post's unfinished business follows the household line into the file:
+   * letters still held, a permit review the night has overtaken. Only on the
+   * endings where the state is still doing the talking — the obedient one, the
+   * split one, the collapse. The endings where you reached the Ville by
+   * telephone have nothing left for a clause to say.
+   */
+  const clause = familyClause(family);
+  if (clause && ['obedient', 'divided', 'collapse'].includes(ending.id)) {
+    lines.push(clause);
   }
 
   return {

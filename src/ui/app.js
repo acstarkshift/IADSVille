@@ -327,6 +327,7 @@ function startMission() {
     narrativePressure: state.narrativePressure,
     modifiers: missionModifiers(state.campaign, { narrativePressure: state.narrativePressure }),
     character: state.campaign.character,
+    family: state.campaign.family,
   });
 
   ui.selectedTrackId = null;

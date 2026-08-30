@@ -22,6 +22,7 @@ import { STATE } from './lexicon.js';
 import { composeEnding, ENDINGS, endingSummary } from '../engine/endings.js';
 import { composeFlightEnding, flightEndingSummary } from '../engine/epilogue.js';
 import { knownRevelations, standing as arcStanding } from '../engine/revelations.js';
+import { briefLine } from '../engine/family.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -205,6 +206,10 @@ export function renderBriefing(host, state) {
 
     ${note ? `<div class="card"><p style="color:var(--ink-dim);font-style:italic">${esc(note)}</p></div>` : ''}
 
+    ${state.narrativePressure && briefLine(state.campaign, mission.id) ? `<div class="card">
+      <p style="font-style:italic">${esc(briefLine(state.campaign, mission.id))}</p>
+    </div>` : ''}
+
     ${state.narrativePressure && arcStanding(state.campaign) ? `<div class="card file-entry">
       <h3>What you know</h3>
       <p>${esc(arcStanding(state.campaign))}</p>
@@ -384,6 +389,12 @@ export function renderDebrief(host, state, result, entry) {
       <h3>${esc(consequence.title)}</h3>
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>
+
+    ${state.narrativePressure && entry?.letter ? `<div class="card letter-card">
+      <h3>${esc(entry.letter.tm)} · ${esc(entry.letter.title)}</h3>
+      ${entry.letter.note ? `<p style="color:var(--ink-dim);font-style:italic">${esc(entry.letter.note)}</p>` : ''}
+      ${entry.letter.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
+    </div>` : ''}
 
     ${entry?.appointment ? `<div class="card file-entry is-good">
       <h3>ПРИКАЗ О НАЗНАЧЕНИИ · ORDER OF APPOINTMENT</h3>

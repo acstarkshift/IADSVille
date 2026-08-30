@@ -306,6 +306,9 @@ kbd {
 .event-log .kind-launch { color: var(--accent); }
 .event-log .kind-command { color: var(--ink-bright); }
 .event-log .kind-info { color: var(--ink-dim); }
+/* Lines about the operator's own street: brighter ink, no new colour —
+   the difference should read as attention, not as an alarm. */
+.event-log .is-personal { color: var(--ink-bright); font-weight: 600; }
 
 /* ---------------------------------------------------------------- screens */
 
@@ -499,3 +502,11 @@ table.ledger .down { color: var(--hostile); }
 }
 .revelation-card h3 { color: var(--warn); }
 .revelation-card p { line-height: 1.75; }
+
+/* The post: letters from home, and the paperwork that stands in for them. */
+.letter-card {
+  border-left: 3px solid var(--good);
+  background: color-mix(in srgb, var(--good) 4%, var(--bg-panel));
+}
+.letter-card h3 { color: var(--ink-bright); }
+.letter-card p { line-height: 1.75; }

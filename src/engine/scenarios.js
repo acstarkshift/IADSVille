@@ -488,6 +488,9 @@ export const SCENARIOS = [
     roundAllowance: 30,
     brief: [
       'This is the main effort. Suppression first, then jamming, then decoys, then everything they have.',
+      'The axis of it runs down the valley, and at the bottom of the valley is the Ville. The'
+        + ' sector defends a crossing, a headquarters, and a town; the town is the one of the'
+        + ' three that has people you can name in it.',
       'There is also a scheduled civil transit crossing the sector tonight, and the political section'
         + ' has taken an interest in one of its passengers. You will hear about it.',
       'They know where sector operations is. When it goes, the picture stops being one picture — every set',
