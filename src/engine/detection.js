@@ -368,8 +368,19 @@ export function ageTracks(world, dt) {
       continue;
     }
 
-    if (since > DETECTION.dropAfterS || track.quality <= 0) {
-      world.dropTrack(id, since > DETECTION.dropAfterS ? 'lost' : 'faded');
+    /*
+     * With the fusion centre gone every set builds its own tracks, so one
+     * aircraft crossing three coverages becomes three track numbers and the
+     * board fills with duplicates that never merge: measured on the climax
+     * watch, ninety-seven numbers for fourteen aircraft by the end — clutter
+     * presented as information. An unfused track that has stopped updating is
+     * dropped roughly twice as fast. The picture still degrades when the
+     * centre dies; it degrades into uncertainty rather than into noise.
+     */
+    const dropAfterS = world.fusionOnline
+      ? DETECTION.dropAfterS : DETECTION.dropAfterS * 0.45;
+    if (since > dropAfterS || track.quality <= 0) {
+      world.dropTrack(id, since > dropAfterS ? 'lost' : 'faded');
       continue;
     }
 

@@ -286,6 +286,13 @@ export const SCENARIOS = [
     basicConsole: true,
     /** And walked through interactively: five steps, each cleared by doing it. */
     tutorial: true,
+    /*
+     * A full crew on a quiet range reloads fast. Measured without this, one
+     * seed in five ended the teaching watch on a literal ninety-five second
+     * RELOADING bar with a single blip on the scope — the first watch of the
+     * game, doubling to eight minutes, its final act a countdown.
+     */
+    reloadMult: 0.35,
     chatter: [
       { atS: 12, text: 'WIDE EYE REPORTS READY. THE SET IS NOT RADIATING — NOTHING WILL PAINT UNTIL IT IS.' },
       { atS: 30, text: 'THE RADIATE SWITCH IS ON THE RIGHT PANEL, UNDER WIDE EYE. THE BORDER POSTS CAN HEAR THEM COMING.' },
@@ -429,8 +436,18 @@ export const SCENARIOS = [
       { atS: 70, type: 'decoy', count: 6, bearingDeg: 350, spreadDeg: 40, spacingS: 14, altM: 5200 },
       { atS: 130, type: 'striker', count: 5, bearingDeg: 10, spreadDeg: 34, spacingS: 22, altM: 5600 },
       civilTransit(240),
-      { atS: 330, type: 'decoy', count: 4, bearingDeg: 20, spreadDeg: 30, spacingS: 12, altM: 4800 },
-      { atS: 380, type: 'striker', count: 4, bearingDeg: 340, spreadDeg: 28, spacingS: 20, altM: 180 },
+      { atS: 300, type: 'decoy', count: 4, bearingDeg: 20, spreadDeg: 30, spacingS: 12, altM: 4800 },
+      { atS: 355, type: 'striker', count: 4, bearingDeg: 340, spreadDeg: 28, spacingS: 20, altM: 180 },
+      /*
+       * And a late package, because the back half had nothing in it.
+       * Measured: the last spawn used to land at forty per cent of the
+       * watch, and the remaining eight minutes ran at four to eight events a
+       * minute with no rounds in the air — the raid was decided long before
+       * the watch admitted it. This one arrives with the allocation nearly
+       * spent, which is the ammunition lesson arriving as a raid instead of
+       * as a number in the debrief.
+       */
+      { atS: 470, type: 'striker', count: 3, bearingDeg: 5, spreadDeg: 26, spacingS: 18, altM: 5200 },
     ],
   },
 
@@ -766,6 +783,9 @@ export const SCENARIOS = [
      * quiet room: the accounting starts before the firing stops.
      */
     chatter: [
+      { atS: 46, text: 'FRONTIER POSTS REPORT ENGINE NOISE ON THREE BEARINGS. THE SETS HAVE NOTHING YET.' },
+      { atS: 62, text: 'LOZAN EXCHANGE HAS STOPPED ANSWERING. THE LINE IS NOT REPORTED CUT.', pressureOnly: true },
+      { atS: 385, text: 'THE NORTHERN FORMATION HAS PASSED ITS RELEASE LINE. THE WESTERN ONE HAS NOT TURNED YET.' },
       { atS: 745, text: 'FORMATIONS REPORT ROUNDS REMAINING BY SECTION. THE FIGURES GO TO THE MINISTRY AS TRANSMITTED.' },
       { atS: 850, text: 'DISTRICT EXCHANGE REQUESTS LINE CAPACITY FOR CASUALTY TRAFFIC. GRANTED ON THE SECOND REQUEST.', pressureOnly: true },
       { atS: 930, text: 'THE 0600 BROADCAST IS IN PREPARATION. SECTOR IS ASKED FOR ONE FIGURE, CHECKED TWICE.' },

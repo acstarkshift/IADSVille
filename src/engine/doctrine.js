@@ -228,9 +228,21 @@ export function stepEngagements(world, dt) {
           // it is going for leaves room for patience. A terminal vampire is
           // shot the instant it can be, because there is no second shot.
           const timeToSpare = (track.ttiS ?? Infinity) > ENGAGEMENT.holdFireMinTtiS;
+          /*
+           * And patience is a thing you buy with rounds. A battery down to
+           * its last pair does not wait for prettier geometry — it fires
+           * what it has at what it can reach, because the alternative is
+           * finishing the watch with rounds on the rails and a raid past it.
+           * Measured: with a late package arriving on a spent allocation, a
+           * net that kept holding for sweet spots scored eighteen per cent
+           * BELOW the same crews left on free. Discipline that outlives its
+           * own magazine is not discipline.
+           */
+          const roundsToSpare = site.readyRounds > (engagement.salvo ?? 1) * 2;
           const holdable = engagement.origin !== 'free'
             && closing
             && timeToSpare
+            && roundsToSpare
             && env.rangeKm > type.maxRangeKm * ENGAGEMENT.holdFireFraction
             && world.t - (engagement.readyAtS ?? world.t) < ENGAGEMENT.holdFireMaxS;
           if (!holdable) {
@@ -644,13 +656,25 @@ export function runSurveillanceEmcon(world) {
     if (radar.siteId || !radar.alive) continue;
     const armEta = armTimeToImpact(world, radar);
     if (armEta < 18) {
-      if (radar.on) {
+      /*
+       * Said once per threat, not once per tick. The announcement fired
+       * whenever the set happened to be up with a round inside eighteen
+       * seconds — so anything that re-raised it (a measurement harness, a
+       * commander overruling the crew) produced a fresh SHUTTING DOWN every
+       * tenth of a second: measured, hundreds of phantom lines in one watch,
+       * two thirds of that run's entire event count.
+       */
+      if (radar.on && world.t - (radar.armDuckLoggedAtS ?? -999) > 20) {
+        radar.armDuckLoggedAtS = world.t;
         world.log('warn', `${radar.label} — SHUTTING DOWN, ROUND INBOUND`, { radarId: radar.id });
+        world.comms?.(radar.label, 'ROUND ON THIS SET — GOING DARK.', { urgent: true, radarId: radar.id });
       }
       radar.on = false;
       radar.blinkUntilS = world.t + 25;
     } else if (!radar.on && world.t >= (radar.blinkUntilS ?? 0)) {
+      // Nothing is homing on it any more, and it has served its blink.
       radar.on = true;
+      world.comms?.(radar.label, 'SKY CLEAR — BACK UP.', { radarId: radar.id });
     }
   }
 }

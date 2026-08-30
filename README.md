@@ -55,7 +55,7 @@ contact whose impossibly steady flight a well-held track has already given away,
 re-engages after a miss while the shot is still its own, and hands a runner off
 to the next layer in when it is not. Measured over sixteen seeded watches of
 White Noise, a commander who works the picture beats one who sets everything
-free and walks away by **10% on the mean, winning 14 of 16 seeds, on a third
+free and walks away by **20% on the mean, winning 13 of 16 seeds, on a third
 fewer rounds and a third the decoys** — and beats one who does nothing at all
 by a thousand points.
 
@@ -163,18 +163,18 @@ deliberate defence saves it on seven):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **92** | 201 |
-| Defend it anyway | 86 | **828** |
-| Refuse the order outright | 61 | 828 |
+| Obey the freeze | **92** | 247 |
+| Defend it anyway | 81 | **1091** |
+| Refuse the order outright | 60 | 1091 |
 
-Defending the hospital is worth six hundred points of actual value, and the
-file prices the whole transgression at six: a query for rounds
+Defending the hospital is worth eight hundred points of actual value, and the
+file prices the whole transgression at eleven: a query for rounds
 expended outside the freeze, worth rather less than two leakers. A weapon that
 arrives at the struck-off place is billed at exactly nothing — the ledger
 cannot simultaneously declare a building undesignated and grieve for it — and
 the building's own loss appears on the state's books at nothing at all. Only
 the third row really moves. Refusing on the net, for the identical night's
-fighting, costs twenty-seven points more than quietly disobeying, plus a
+fighting, costs twenty-one points more than quietly disobeying, plus a
 referral that stays in the file. Sector command barely prices what you did.
 It punishes having said no, and that is the whole lesson.
 

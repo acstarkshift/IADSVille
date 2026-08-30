@@ -9,7 +9,9 @@
  */
 
 import { AIR_TYPES, ASSET_TYPES, SAM_TYPES } from './config.js';
-import { dist, timeToGo, len, clamp, clamp01, invLerp, closureRate } from './math.js';
+import {
+  dist, timeToGo, len, clamp, clamp01, invLerp, closureRate, absDeltaDeg, bearing,
+} from './math.js';
 import { inEnvelope, timeToInRangeS } from './weapons.js';
 import { channelsFor } from './doctrine.js';
 
@@ -258,6 +260,22 @@ export function engagementValue(world, site, track) {
 
   let value = 100 * sweetness;
   value -= timeToRange * 0.8;          // shots you can take now beat shots you might take
+
+  /*
+   * And the seconds the guidance antenna needs to come round, which are
+   * exactly as real as the seconds a target needs to fly into range. Without
+   * this term the chooser handed battalions targets behind their own mounts
+   * and paid a silent traverse for it — measured, an AI net laid over free
+   * crews went from adding value to costing eighteen per cent, because the
+   * crews only ever self-engaged what was already in front of them. A shot
+   * that needs half a minute of slew first is a worse shot, and now says so.
+   */
+  const fc = world.radarById?.get(site.fcRadarId ?? site.radarId);
+  if (fc?.fovDeg) {
+    const off = absDeltaDeg(fc.boresightDeg, bearing(fc.pos, track.pos));
+    const slewS = Math.max(0, (off - fc.fovDeg / 2) / (fc.slewRateDegPerS || 1));
+    value -= slewS * 0.8;
+  }
   value -= Math.max(0, overkill - 3) * 6;
   value += site.readyRounds * 0.4;      // spread the load across full racks
   if (!env.ok) value -= 20;
