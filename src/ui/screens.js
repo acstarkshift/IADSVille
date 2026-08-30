@@ -341,8 +341,8 @@ export function renderDebrief(host, state, result, entry) {
 
   host.innerHTML = `<div class="screen-inner">
     ${ending ? `
-      <h1 class="title" style="font-size:30px">${esc(ending.title)}</h1>
-      <p class="subtitle">${esc(ending.subtitle ?? '')}</p>
+      <p class="subtitle" style="margin-bottom:2px">${esc(ending.title)}</p>
+      <h1 class="title" style="font-size:30px">${esc(ending.subtitle ?? ending.title)}</h1>
       <div class="card ending-card">
         ${ending.lines.map((line) => `<p>${esc(line)}</p>`).join('')}
       </div>

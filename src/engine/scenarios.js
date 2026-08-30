@@ -284,9 +284,11 @@ export const SCENARIOS = [
      * and the two that matter — the radar switch and the assignment.
      */
     basicConsole: true,
+    /** And walked through interactively: five steps, each cleared by doing it. */
+    tutorial: true,
     chatter: [
       { atS: 12, text: 'WIDE EYE REPORTS READY. THE SET IS NOT RADIATING — NOTHING WILL PAINT UNTIL IT IS.' },
-      { atS: 30, text: 'SELECT THE RADAR PANEL AND BRING THE SET UP. THE BORDER POSTS CAN HEAR THEM COMING.' },
+      { atS: 30, text: 'THE RADIATE SWITCH IS ON THE RIGHT PANEL, UNDER WIDE EYE. THE BORDER POSTS CAN HEAR THEM COMING.' },
     ],
     /*
      * The crew seat sits at BASTION, because BASTION is the battery this

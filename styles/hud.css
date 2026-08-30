@@ -535,3 +535,35 @@ table.ledger .down { color: var(--hostile); }
   visibility: hidden;
   pointer-events: none;
 }
+
+/* The teaching watch's walk-through: one instruction at a time, cleared by
+   the player actually doing it. Sits over the scope's top-left, out of the
+   track list's way, and dies with the console in a blackout. */
+.tutorial-card {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  max-width: 320px;
+  padding: 10px 34px 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 0 1px var(--engrave), 0 4px 18px rgba(0, 0, 0, .45);
+  z-index: 5;
+}
+.tutorial-card b { display: block; font-size: 12.5px; line-height: 1.45; color: var(--ink); letter-spacing: .02em; }
+.tutorial-card i { display: block; margin-top: 3px; font-size: 10px; font-style: normal; opacity: .68; letter-spacing: .14em; }
+.tutorial-card .tut-step { display: block; font-size: 9.5px; letter-spacing: .2em; opacity: .6; margin-bottom: 4px; }
+.tutorial-card .tut-skip {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  background: none;
+  border: 1px solid var(--engrave);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.is-console-dark #tutorial-card { visibility: hidden; }

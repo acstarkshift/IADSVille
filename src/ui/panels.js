@@ -322,7 +322,10 @@ export function renderFormations(world, ui, els) {
   host.innerHTML = `<div class="fmn-bar">
       <span class="lg"><b>ПОДЧИНЁННЫЕ КОМАНДЫ</b><i>SUBORDINATE COMMANDS</i></span>
       <span class="fmn-count">${held}/${Number.isFinite(limit) ? limit : '∞'} DIRECT</span>
-    </div>${cards}${renderReserve(world)}`;
+    </div>
+    <div class="unit-explain">Each formation fights on the standing order you leave it with.
+      TAKE one to command its batteries yourself; the rest are their officers' watch.</div>
+    ${cards}${renderReserve(world)}`;
 }
 
 /**
@@ -418,6 +421,7 @@ export function renderBatteries(world, ui, els) {
           ${esc(pair(DEFENCE_CLASSES[type.class]))}
         </span>
       </div>
+      <div class="unit-explain">${esc(DEFENCE_CLASSES[type.class].blurb)}</div>
       <div class="unit-row">
         <span class="unit-type wrap">${site.readyRounds}/${site.magazine} ROUNDS
           · ${esc(pair(STATUS.channels))} ${site.engagements.length}/${channelsFor(site)}${(() => {
@@ -459,6 +463,16 @@ export function renderBatteries(world, ui, els) {
     </div>`;
   }).join('');
 
+  /*
+   * Blind with hostiles airborne: nothing on the picture, something in the
+   * sky. That is the one state where the radiate switch is THE decision, and
+   * the switch says so — measured by a person, not an agent: the old
+   * bat-handle at the bottom of a Cyrillic-headed card was "too hard to
+   * turn on", which for a switch that makes the game exist is disqualifying.
+   */
+  const blind = world.tracks.size === 0
+    && world.aircraft.some((a) => a.alive && !AIR_TYPES[a.type]?.friendly);
+
   const surveillance = world.radars.filter((r) => !r.siteId).map((radar, index) => {
     const nomenclature = Object.values(EQUIPMENT).find((e) => e.en.includes(radar.label));
     const armEta = radar.alive ? armTimeToImpact(world, radar) : Infinity;
@@ -468,6 +482,9 @@ export function renderBatteries(world, ui, els) {
         <span class="unit-name" title="${esc(nomenclature?.en ?? radar.label)}">${esc(nomenclature ? nomenclature.tm : radar.label)}</span>
         <span class="unit-type">${radar.alive ? `${radar.rangeKm} КМ/KM` : esc(pair(STATUS.destroyed))}</span>
       </div>
+      <div class="unit-explain">${esc(radar.rangeKm > 90
+    ? 'Early-warning radar — the long-range surveillance picture. Nothing paints until a set radiates.'
+    : 'Gap-filler radar — covers the low approaches the big set cannot see.')}</div>
       <div class="unit-row">
         ${lamp(radar.state === 'warming' ? STATUS.warming : STATUS.radiating,
     radar.state === 'radiating' || radar.state === 'warming',
@@ -482,8 +499,13 @@ export function renderBatteries(world, ui, els) {
         <span class="unit-type">${Math.round(radar.exposure * 100)}%</span>
       </div>
       <div class="unit-controls">
-        ${toggle(radar.on ? CONTROLS.silence : CONTROLS.radiate, radar.on,
-    { act: 'emcon-radar', radar: radar.id, disabled: !radar.alive })}
+        <button class="pb pb-radiate ${radar.on ? 'is-on' : blind && radar.alive ? 'is-urgent' : ''}"
+          data-act="emcon-radar" data-radar="${radar.id}" ${radar.alive ? '' : 'disabled'}
+          title="${esc(radar.on ? CONTROLS.silence.hint : CONTROLS.radiate.hint)}">
+          <span class="lg">${radar.on
+    ? `<b>RADIATING · CLICK TO SILENCE</b><i>${esc(CONTROLS.silence.tm)}</i>`
+    : `<b>RADIATE · SET IS COLD</b><i>${esc(CONTROLS.radiate.tm)}</i>`}</span>
+        </button>
       </div>
     </div>`;
   }).join('');

@@ -355,3 +355,12 @@
 /* Envelope constants on the battery card: true all night, so they defer to
    the numbers that change. */
 .unit-row .lo { opacity: .62; }
+
+/* What the thing IS, on the card itself — one small line, not a hover. */
+.unit-explain { font-size: 10px; line-height: 1.4; opacity: .7; margin: 2px 0 5px; }
+
+/* The switch the whole game runs on, sized like it. */
+.pb-radiate { width: 100%; }
+.pb-radiate .lg b { font-size: 11px; letter-spacing: .12em; }
+.pb-radiate.is-on .lg b { color: var(--good); }
+.pb-radiate.is-urgent { animation: fire-ready 1.05s infinite; border-color: var(--warn); }

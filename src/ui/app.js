@@ -10,7 +10,7 @@
 
 import { World } from '../engine/world.js';
 import { SCENARIOS, scenarioById, rosterFor } from '../engine/scenarios.js';
-import { SIM, SAM_TYPES, ROLES } from '../engine/config.js';
+import { SIM, SAM_TYPES, ROLES, DEFENCE_CLASSES, ASSET_TYPES } from '../engine/config.js';
 import {
   loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign,
   consequenceFor, missionModifiers, enlist,
@@ -63,6 +63,12 @@ const ui = {
   watchEndsAt: 0,
   /** The country underlay. On by default; some people want a clean tube. */
   showMap: true,
+  /** One sentence about whatever the pointer is over on the scope. */
+  hoverInfo: null,
+  /** Interactive-tutorial cursor: -1 off, otherwise an index into its steps. */
+  tutorialStep: -1,
+  tutorialStepAtS: 0,
+  tutorialRendered: null,
 };
 
 let world = null;
@@ -118,6 +124,7 @@ function cacheEls() {
     canvas: id('scope'),
     scopeOverlay: id('scope-overlay'),
     scopeLegend: id('scope-legend'),
+    tutorialCard: id('tutorial-card'),
     clock: id('clock'),
     missionName: id('mission-name'),
     airCount: id('air-count'),
@@ -346,6 +353,13 @@ function startMission() {
   ui.watchEndsAt = 0;
   ui.speedHintShown = false;
   ui.netPauseNoted = false;
+  ui.hoverInfo = null;
+  // The guided walk-through runs on the teaching watch's net seat; the crew
+  // seat has its own legend line and a different set of two controls.
+  ui.tutorialStep = world.scenario.tutorial && state.role !== 'crew' ? 0 : -1;
+  ui.tutorialStepAtS = 0;
+  ui.tutorialRendered = null;
+  if (els.tutorialCard) els.tutorialCard.hidden = true;
   ui.view = state.role === 'crew' ? 'crew' : 'net';
   els.eventLog.innerHTML = '';
   accumulator = 0;
@@ -523,6 +537,8 @@ function render(now, frameDtS = 1 / 60) {
       renderScopeSide(world, ui, els, ui.view === 'crew' ? crew.rangeKm : scope.rangeKm);
       if (world.control.crewedBatteryId && ui.view === 'crew') renderCrewConsole(world, ui, els);
       else els.crewConsole.hidden = true;
+      updateLegend();
+      renderTutorial();
     }
   }
   if (!dark) {
@@ -670,10 +686,116 @@ function handleAudio() {
 function updateLegend() {
   // The crew seat had no on-screen instruction at all — a first-timer who
   // picked the flashier-sounding seat had to find the help screen to learn
-  // that the game had controls.
-  els.scopeLegend.innerHTML = ui.view === 'crew'
+  // that the game had controls. The same line doubles as the hover readout:
+  // point at anything on the scope and it says what the thing IS.
+  els.scopeLegend.textContent = ui.hoverInfo ?? (ui.view === 'crew'
     ? 'click to designate · L lock · F fire · E radiate / shut down — that last one is the whole game'
-    : 'drag a contact onto a battery to assign · right-click a radar to blink it · M for the map';
+    : 'hover anything for what it is · drag a contact onto a battery to assign · right-click a radar to blink it');
+}
+
+/** One sentence for whatever the scope's hit-test found under the pointer. */
+function describeEntity(hit) {
+  if (!hit || !world) return null;
+  if (hit.kind === 'track') {
+    const t = world.tracks.get(hit.id);
+    if (!t) return null;
+    const kindName = t.classification === 'unknown'
+      ? 'unidentified contact' : (AIR_TYPES[t.classification]?.name?.toLowerCase() ?? t.classification);
+    const dest = t.predictedAssetId ? world.assetById.get(t.predictedAssetId) : null;
+    return `${t.tn} — ${t.hostility} ${kindName}`
+      + (dest ? `, appears bound for ${dest.label}` : ', destination not yet established');
+  }
+  if (hit.kind === 'site') {
+    const s = world.siteById.get(hit.id);
+    if (!s) return null;
+    const cls = DEFENCE_CLASSES[SAM_TYPES[s.type].class];
+    return `${s.name} — ${cls.en.toLowerCase()}. ${cls.blurb}`;
+  }
+  if (hit.kind === 'radar') {
+    const r = world.radarById.get(hit.id);
+    if (!r) return null;
+    return `${r.label} — surveillance radar, ${r.rangeKm} km. `
+      + (r.alive ? (r.on ? 'Radiating.' : 'Cold — nothing paints until a set radiates.') : 'Destroyed.');
+  }
+  if (hit.kind === 'asset') {
+    const a = world.assetById.get(hit.id);
+    if (!a) return null;
+    const at = ASSET_TYPES[a.type];
+    const tags = [at.civilian ? 'civilian' : null, at.critical ? 'critical' : null]
+      .filter(Boolean).join(', ');
+    return `${a.label} — ${at.name.toLowerCase()}${tags ? ` (${tags})` : ''}`
+      + (a.destroyed ? '. Destroyed.' : ' — a place this sector defends.');
+  }
+  return null;
+}
+
+/*
+ * The teaching watch's interactive tutorial. Five steps, each cleared by the
+ * player actually doing the thing — the chatter can say "bring the set up",
+ * but an instruction that waits until you have done it is the only kind a
+ * first watch reliably reads. Dismissable, and it never touches the sim.
+ */
+const TUTORIAL_STEPS = [
+  {
+    id: 'radiate',
+    en: 'The surveillance set is cold and nothing will paint. Find WIDE EYE on the right panel and press RADIATE.',
+    tm: 'ВКЛЮЧИТЕ ИЗЛУЧЕНИЕ',
+    done: (w) => w.radars.some((r) => !r.siteId && r.on),
+  },
+  {
+    id: 'select',
+    en: 'Contacts paint as the beam sweeps. Click a contact on the scope, or a row in the TRACKS list.',
+    tm: 'ВЫБЕРИТЕ ЦЕЛЬ',
+    done: (w, u) => !!u.selectedTrackId,
+  },
+  {
+    id: 'assign',
+    en: 'Hand it to a battery: drag the contact onto a battery symbol, or press Shift+1. The battery answers on the log.',
+    tm: 'НАЗНАЧЬТЕ БАТАРЕЮ',
+    done: (w) => [...w.tracks.values()].some((t) => t.assignedTo.length > 0),
+  },
+  {
+    id: 'intercept',
+    en: 'The battery fires when the shot is right — HOLDING FOR RANGE is aiming, not refusal. Watch the intercept.',
+    tm: 'ЖДИТЕ ПЕРЕХВАТА',
+    done: (w, u, sinceS) => w.stats.kills > 0 || sinceS > 150,
+  },
+  {
+    id: 'net',
+    en: 'When sector command transmits, Y acknowledges and N refuses. Both are recorded. The rest of the watch is yours.',
+    tm: 'СЕТЬ ВАША',
+    done: (w, u, sinceS) => sinceS > 16,
+  },
+];
+
+function renderTutorial() {
+  if (!els.tutorialCard) return;
+  if (ui.tutorialStep < 0 || ui.tutorialStep >= TUTORIAL_STEPS.length) {
+    els.tutorialCard.hidden = true;
+    return;
+  }
+  while (ui.tutorialStep < TUTORIAL_STEPS.length
+    && TUTORIAL_STEPS[ui.tutorialStep].done(world, ui, world.t - ui.tutorialStepAtS)) {
+    ui.tutorialStep++;
+    ui.tutorialStepAtS = world.t;
+    ui.tutorialRendered = null;
+  }
+  if (ui.tutorialStep >= TUTORIAL_STEPS.length) {
+    els.tutorialCard.hidden = true;
+    return;
+  }
+  const step = TUTORIAL_STEPS[ui.tutorialStep];
+  if (ui.tutorialRendered === step.id) return;
+  ui.tutorialRendered = step.id;
+  els.tutorialCard.hidden = false;
+  els.tutorialCard.innerHTML = `
+    <button class="tut-skip" id="tut-skip" title="Dismiss the tutorial">×</button>
+    <span class="tut-step">${ui.tutorialStep + 1} / ${TUTORIAL_STEPS.length}</span>
+    <b>${step.en}</b><i>${step.tm}</i>`;
+  els.tutorialCard.querySelector('#tut-skip').onclick = () => {
+    ui.tutorialStep = -1;
+    els.tutorialCard.hidden = true;
+  };
 }
 
 /* --------------------------------------------------------------- input */
@@ -725,8 +847,15 @@ function wireCanvasInput() {
         x: panning.centre.x - (e.clientX - panning.x) / s,
         y: panning.centre.y + (e.clientY - panning.y) / s,
       };
+    } else {
+      // Idle pointer: say what the thing under it is, in the legend line.
+      const renderer = ui.view === 'crew' ? crew : scope;
+      ui.hoverInfo = describeEntity(
+        renderer.pick(e.clientX - rect.left, e.clientY - rect.top, world));
     }
   });
+
+  canvas.addEventListener('pointerleave', () => { ui.hoverInfo = null; });
 
   canvas.addEventListener('pointerup', (e) => {
     panning = null;
