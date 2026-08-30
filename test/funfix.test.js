@@ -11,7 +11,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
-import { scenarioById } from '../src/engine/scenarios.js';
+import { scenarioById, SCENARIOS } from '../src/engine/scenarios.js';
 import { sortedTracks, engagementValue, predictedTarget, cannotEngageReason } from '../src/engine/threat.js';
 import { dist } from '../src/engine/math.js';
 import { DETECTION, ENGAGEMENT, COMMAND, SAM_TYPES } from '../src/engine/config.js';
@@ -600,5 +600,60 @@ describe('the teaching watch teaches', () => {
     aircraft.pos = { x: site.pos.x + longest * 0.5, y: site.pos.y };
     assert.equal(w.holdsWatchOpen(aircraft), true,
       'still inside six tenths of an armed envelope — somebody may yet shoot');
+  });
+
+  /*
+   * Every seat the game offers has to have something to do in it.
+   *
+   * A player reported that the SAM-operator watch took five minutes before
+   * anything happened. Measured, it was seven — the raid spawned at the
+   * engine's 155 km default against a battery reaching forty-two, with no
+   * early-warning radar — and the neighbouring watch was worse still: its
+   * crew seat was pointed at a twelve-kilometre section the raid never came
+   * within thirty-three kilometres of, so the first legal shot was NEVER on
+   * half the seeds. Both were invisible to the suite, because nothing had
+   * ever asserted the most basic property a playable seat has: that you can
+   * eventually fire the gun you were sat down in front of.
+   *
+   * The bound is deliberately loose. This is not a pacing test — it is the
+   * floor beneath one, and it should only ever fail on a seat that is broken.
+   */
+  test('every crew seat gets a legal shot, and gets it before the watch is half gone', () => {
+    const crewWatches = SCENARIOS.filter((s) => s.roles.includes('crew') || s.roles.includes('both'));
+    assert.ok(crewWatches.length >= 3, 'the campaign offers a console on several watches');
+
+    for (const scenario of crewWatches) {
+      const firsts = [];
+      for (const seed of ['seat-1', 'seat-2', 'seat-3']) {
+        const w = new World(scenario, { role: 'crew', seed });
+        const site = w.siteById.get(w.control.crewedBatteryId);
+        assert.ok(site, `${scenario.id}: the crew seat resolves to a battery`);
+
+        let first = null;
+        let n = 0;
+        while (w.phase === 'running' && n < 20000) {
+          // The one thing the watch asks of you before anything else.
+          for (const radar of w.radars) if (radar.alive) w.setRadar(radar.id, true);
+          w.step(0.1);
+          if (w.command.pending) w.answer('accepted');
+          if (first === null && n % 10 === 0) {
+            for (const track of w.tracks.values()) {
+              if (track.destroyed || track.hostility !== 'hostile') continue;
+              if (!cannotEngageReason(w, site, track)) { first = w.t; break; }
+            }
+          }
+          n++;
+        }
+
+        assert.ok(first !== null,
+          `${scenario.id}: the crewed battery (${site.name}) was never able to take a shot `
+          + 'in the whole watch — that seat cannot be played');
+        firsts.push(first);
+      }
+      const median = [...firsts].sort((a, b) => a - b)[1];
+      assert.ok(median <= 180,
+        `${scenario.id}: the console waits ${Math.round(median)}s for its first legal shot `
+        + `(seeds ${firsts.map((f) => Math.round(f)).join('/')}s) — a seat is not a spectator stand`);
+    }
   });
 });

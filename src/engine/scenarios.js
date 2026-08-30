@@ -348,7 +348,20 @@ export const SCENARIOS = [
     roles: ['net', 'crew', 'both'],
     seed: 'low-riders-04',
     leakerTolerance: 2,
-    playerBatteryId: 's_thistle_t',
+    /*
+     * The seat is BASTION, not the point-defence section.
+     *
+     * It used to be `s_thistle_t`, a twelve-kilometre set — and measured over
+     * four seeds the raid never came within THIRTY-THREE kilometres of it.
+     * Nothing was ever engageable, on any seed, for the whole watch: a player
+     * who picked SAM OPERATOR here sat through twelve minutes they physically
+     * could not join, and the first legal shot was `never` on half the seeds.
+     * From BASTION it is 27-31 s to the first shot and 49% of the watch is
+     * engageable. It is also the apt seat for this watch: the lesson of Low
+     * Riders is that a low contact defeats the long-range set's own horizon,
+     * and the way to feel that is to be sitting in the long-range set.
+     */
+    playerBatteryId: 's_bastion',
     brief: [
       'Second wave came in at height. This one will not.',
       'A radar on a thirty-metre mast sees a target at one hundred metres for about sixty kilometres, and',
@@ -362,6 +375,35 @@ export const SCENARIOS = [
       { atS: 15, type: 'striker', count: 2, bearingDeg: 350, spreadDeg: 20, spacingS: 30, altM: 7200 },
       { atS: 90, type: 'striker', count: 5, bearingDeg: 20, spreadDeg: 34, spacingS: 26, altM: 130 },
       { atS: 260, type: 'striker', count: 3, bearingDeg: 330, spreadDeg: 18, spacingS: 24, altM: 110 },
+
+      /*
+       * And something that actually reaches the town, so the point-defence
+       * ring has a job.
+       *
+       * The three packages above release at standoff and turn for home around
+       * forty kilometres out, which is why THISTLE TOWN and HAMMER — the two
+       * sections this watch's brief tells you to site carefully — spent every
+       * measured seed at zero engagements. These two come in under the horizon
+       * on two axes at fifty-five metres, named onto the town and the
+       * operations centre so they keep coming, and they arrive while BASTION
+       * still has the third striker package on its hands. The timing is the
+       * other load-bearing number: at 300/340 they arrive after BASTION is
+       * free again and it picks them off (THISTLE 9%, watch 1023 s, held 5/6);
+       * at 220/255 they overlap the striker package properly and more of them
+       * live to reach the ring (THISTLE 14%, watch 954 s, held 6/6).
+       *
+       * The altitude is the load-bearing number. Measured, THISTLE's share of
+       * the watch it can engage: 0% with nothing; 1% with three cruise at 80 m
+       * from 130 km (BASTION kills them all on the way in); 11% at 60 m from
+       * 105 km; 14% with this pair. Six seeds, crew loop played properly:
+       * held stays 6/6 and the score is unchanged within noise, because what
+       * the package costs in leakers it returns in targets the short-range
+       * sections can finally reach.
+       */
+      { atS: 220, type: 'cruise', count: 4, bearingDeg: 340, spreadDeg: 22, spacingS: 10, altM: 55,
+        distanceKm: 95, targetAssetId: 'a_town' },
+      { atS: 255, type: 'cruise', count: 3, bearingDeg: 15, spreadDeg: 20, spacingS: 10, altM: 55,
+        distanceKm: 95, targetAssetId: 'a_c2' },
     ],
   },
 
@@ -384,10 +426,42 @@ export const SCENARIOS = [
     assets: [GROUND.town, GROUND.c2, GROUND.bridge, GROUND.depot],
     sites: [SITES.lanceEast, SITES.hammer],
     radars: [],
+    /*
+     * These come over the ridge, not from the far side of the country.
+     *
+     * Every wave used to take the engine's default spawn distance of 155 km
+     * (world.js) — which is the right number for a sector watch with an
+     * early-warning radar and a hundred-and-twenty-kilometre battalion, and
+     * the wrong one for this watch. Here there is no surveillance radar at all
+     * (the isolation is the point) and one battery reaching forty-two
+     * kilometres. Measured, that combination gave: a contact painting at 28 s
+     * at 149 km, firm at 208 s, and the first LEGAL SHOT at 435 s. Seven
+     * minutes of watching a dot crawl, on the one watch in the game whose
+     * whole subject is working a console.
+     *
+     * Seventy, eighty and eighty-five kilometres instead. Measured over six
+     * seeds with the crew loop played properly (lock what the battery can
+     * take, fire when the solution is ready), against the same six before:
+     *
+     *   first legal shot   406-672 s  ->  73-82 s on five seeds of six
+     *   watch held           4 of 6   ->  5 of 6
+     *   score                   432   ->  763
+     *   leakers                 1.2   ->  0.2
+     *   watch length          998 s   ->  709 s
+     *
+     * Do not add a fourth wave to fill the back half. It was tried three ways:
+     * two more strikers takes the watch from 5/6 held to 0/6, two more cruise
+     * to 3/6, and neither closes the quiet stretches. One battery with two
+     * channels has a hard ceiling on what it can absorb, and that ceiling —
+     * not the wave table — is what makes this watch what it is.
+     */
     waves: [
-      { atS: 25, type: 'striker', count: 3, bearingDeg: 40, spreadDeg: 22, spacingS: 34, altM: 6800 },
-      { atS: 180, type: 'striker', count: 3, bearingDeg: 70, spreadDeg: 26, spacingS: 30, altM: 250 },
-      { atS: 330, type: 'cruise', count: 3, bearingDeg: 55, spreadDeg: 30, spacingS: 12, altM: 90 },
+      { atS: 25, type: 'striker', count: 3, bearingDeg: 40, spreadDeg: 22, spacingS: 34, altM: 6800,
+        distanceKm: 70 },
+      { atS: 180, type: 'striker', count: 3, bearingDeg: 70, spreadDeg: 26, spacingS: 30, altM: 250,
+        distanceKm: 80 },
+      { atS: 330, type: 'cruise', count: 3, bearingDeg: 55, spreadDeg: 30, spacingS: 12, altM: 90,
+        distanceKm: 85 },
     ],
   },
 
