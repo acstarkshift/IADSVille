@@ -82,12 +82,23 @@ export function renderTopbar(world, ui, els) {
   els.fusionState.classList.toggle('is-bad', !world.fusionOnline);
 
   // Master annunciator: the three things that would have someone shouting.
-  const armInbound = world.radars.some((r) => r.alive && Number.isFinite(armTimeToImpact(world, r)));
+  // The ARM lamp carries its countdown — the most time-critical number in the
+  // game used to live only in an 8.5px caption inside a scrollable column.
+  let soonestArm = Infinity;
+  for (const r of world.radars) {
+    if (!r.alive) continue;
+    const eta = armTimeToImpact(world, r);
+    if (eta < soonestArm) soonestArm = eta;
+  }
+  const armInbound = Number.isFinite(soonestArm);
   const anyRadiating = world.radars.some((r) => r.state === 'radiating');
   const faulted = world.radars.some((r) => !r.alive) || world.sites.some((s) => !s.alive);
   els.masterLamps.innerHTML = [
     lamp(STATUS.radiating, anyRadiating, { colour: 'green' }),
-    lamp(STATUS.armWarning, armInbound, { colour: 'red', blinking: true }),
+    lamp(STATUS.armWarning, armInbound, {
+      colour: 'red', blinking: true,
+      caption: armInbound ? `${STATUS.armWarning.tm} ${Math.ceil(soonestArm)}s` : STATUS.armWarning.tm,
+    }),
     lamp(STATUS.fault, faulted, { colour: 'amber' }),
   ].join('');
 
@@ -173,7 +184,10 @@ export function renderTrackList(world, ui, els) {
   const rows = tracks.map((track) => {
     const brg = Math.round(bearing({ x: 0, y: 0 }, track.pos));
     const rng = Math.round(len(track.pos));
-    const alt = Math.round(track.altM / 100);
+    // Metres, plainly. The ×100M code needed a hover tooltip to decode and a
+    // conversion to compare against the battery card's altitude band — the
+    // one comparison the core verb depends on.
+    const alt = Math.round(track.altM / 100) * 100;
     const label = track.classification !== 'unknown'
       ? (AIR_TYPES[track.classification]?.label ?? '—')
       : trackProfile(track);
@@ -199,7 +213,7 @@ export function renderTrackList(world, ui, els) {
       <span>${esc(label)}</span>
       <span>${String(brg).padStart(3, '0')}</span>
       <span>${rng}</span>
-      <span>${String(alt).padStart(3, '0')}</span>
+      <span>${alt}</span>
       <span class="asgn">${engaged ? '◆' : ''}${esc(assigned)} <em style="color:var(--hostile)">${pips}</em></span>
     </li>`;
   });
@@ -477,7 +491,7 @@ export function renderCrewConsole(world, ui, els) {
   const type = SAM_TYPES[site.type];
   const nomenclature = EQUIPMENT[site.type];
 
-  const sequence = {
+  const sequence = status.holding ? STATUS.holding : {
     idle: STATUS.standby, reacting: STATUS.preparing, ready: STATUS.ready, guiding: STATUS.inFlight,
   }[status.state] ?? STATUS.standby;
 
@@ -517,7 +531,7 @@ export function renderCrewConsole(world, ui, els) {
       <button class="pb pb-fire ${status.canFire ? 'is-armed' : ''}" id="btn-fire"
         ${status.canFire ? '' : 'disabled'}>
         ${status.state === 'guiding'
-    ? `<span class="lg"><b>${status.roundsUp} В ПОЛЁТЕ</b><i>${status.roundsUp} IN FLIGHT</i></span>`
+    ? `<span class="lg"><b>${status.roundsUp} В ПОЛЁТЕ${status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}С` : ''}</b><i>${status.roundsUp} IN FLIGHT${status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}s TO INTERCEPT` : ''}</i></span>`
     : legend(CONTROLS.launch)}
       </button>
 

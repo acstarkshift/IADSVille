@@ -78,11 +78,11 @@
   text-shadow: 0 1px 0 rgba(0, 0, 0, .65), 0 -1px 0 rgba(255, 255, 255, .07);
 }
 .lg i {
-  /* The English gloss carries all the meaning for most players; it must not
-     be the smallest text on the console while the Cyrillic above it is bold
-     at 10px. Decorative plates and placards stay small — they are furniture. */
-  font-style: normal; font-size: 9px; letter-spacing: .07em;
-  color: var(--engrave-dim);
+  /* The English gloss carries all the meaning for most players, so it gets
+     the same size and the same ink as the Cyrillic above it — only the weight
+     differs. Decorative plates and placards stay small — they are furniture. */
+  font-style: normal; font-size: 10px; letter-spacing: .06em;
+  color: var(--engrave);
 }
 .lg-stack { align-items: center; text-align: center; }
 

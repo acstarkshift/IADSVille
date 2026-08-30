@@ -103,6 +103,7 @@ export const STATUS = {
   standby: { tm: 'ОЖИДАНИЕ', en: 'STANDBY' },
   preparing: { tm: 'ПОДГОТОВКА', en: 'PREPARING' },
   inFlight: { tm: 'В ПОЛЁТЕ', en: 'ROUNDS IN FLIGHT' },
+  holding: { tm: 'ВЫЖИДАНИЕ', en: 'HOLDING FOR RANGE', hint: 'the shot improves every second the target closes' },
   noTarget: { tm: 'ЦЕЛЬ НЕ НАЗНАЧЕНА', en: 'NO TARGET DESIGNATED' },
   rangeHeight: { tm: 'ДАЛЬ / ВЫСОТА', en: 'RANGE / HEIGHT' },
   horizon: { tm: 'ГОРИЗОНТ', en: 'HORIZON' },

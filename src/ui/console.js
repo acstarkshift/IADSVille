@@ -461,6 +461,21 @@ export function engagementStatus(world, site, track) {
   const env = track ? inEnvelope(site, track.pos, track.altM) : null;
   const toRange = track && env && !env.ok ? timeToInRangeS(site, track) : 0;
 
+  // The most anxious number on the console: seconds until the nearest round
+  // in flight reaches its target. For a long time the operator stared at a
+  // 2.2px dot for the whole ~25-second flight with no readout anywhere.
+  let roundEtaS = null;
+  if (engagement?.missileIds?.length) {
+    for (const id of engagement.missileIds) {
+      const missile = world.missiles.find((m) => m.id === id && m.alive);
+      if (!missile) continue;
+      const target = world.aircraftById.get(missile.targetId);
+      if (!target?.alive || !missile.speed) continue;
+      const eta = dist(missile.pos, target.pos) / missile.speed;
+      if (roundEtaS === null || eta < roundEtaS) roundEtaS = eta;
+    }
+  }
+
   return {
     hasTarget: !!track,
     trackLabel: track?.tn ?? '—',
@@ -469,8 +484,11 @@ export function engagementStatus(world, site, track) {
     envelopeReason: env?.reason ?? 'NO TARGET',
     timeToRangeS: Number.isFinite(toRange) ? toRange : null,
     state: engagement?.state ?? 'idle',
+    /** Deliberately waiting for the target to close before releasing. */
+    holding: !!engagement?.holding && engagement?.state === 'ready',
     reactionRemainingS: engagement?.state === 'reacting' ? Math.max(0, engagement.timerS) : 0,
     roundsUp: engagement?.missileIds.length ?? 0,
+    roundEtaS,
     canFire: !!engagement && engagement.state === 'ready' && (env?.ok ?? false)
       && site.readyRounds > 0 && radar?.state === 'radiating',
     guidance: radar?.state === 'radiating' ? 'GUIDING' : 'NO GUIDANCE',

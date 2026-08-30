@@ -12,6 +12,7 @@
  */
 
 import { SAM_TYPES, AIR_TYPES, ENGAGEMENT, ARM, DAMAGE } from './config.js';
+import { addEffect } from './damage.js';
 import {
   dist, sub, add, scale, bearing, headingVec, turnToward, leadPoint, clamp,
   clamp01, invLerp, lerp, len,
@@ -285,6 +286,10 @@ function resolveIntercept(world, missile, prevPos) {
       // and it used to render in the dimmest colour the log has and make no
       // sound at all.
       world.log('warn', `${missile.trackLabel ?? 'TRACK'} — MISS`, { trackId: missile.trackId });
+      // And it gets a pixel: the round detonating wide, a puff that dissipates
+      // where the dot used to be. Misses outnumber kills on the hard watches;
+      // the majority outcome cannot be the absence of a pixel.
+      addEffect(world, { kind: 'puff', pos: { ...missile.pos }, durationS: 1.8 });
       world.onMissileMiss(target, missile);
     }
     return;

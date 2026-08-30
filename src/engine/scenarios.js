@@ -263,7 +263,14 @@ export const SCENARIOS = [
      * before the first contact had even classified hostile.
      */
     directiveGraceS: 95,
-    playerBatteryId: 's_lance_w',
+    /*
+     * The crew seat sits at BASTION, because BASTION is the battery this
+     * raid is actually for. It used to sit at LANCE WEST — measured: across
+     * an entire crew-seat watch, not one contact entered that battery's
+     * envelope, its radar never turned on, and the AI won the mission in
+     * front of a player whose teaching watch was five minutes of nothing.
+     */
+    playerBatteryId: 's_bastion',
     brief: [
       'Four contacts crossed the border at height, tracking south. They are not trying to hide.',
       'Bring a radar up, sort the picture, and hand each track to a battery that can reach it.',
@@ -376,6 +383,17 @@ export const SCENARIOS = [
       'You have twenty-two rounds in the allocation. There are more contacts than that.',
     ],
     teaches: 'Jamming, burnthrough, decoys, and ammunition discipline.',
+    /*
+     * The longest routine silence in the campaign used to sit right here —
+     * seventy-five to eighty-five seconds of one slow contact and nothing
+     * else, between first paint and the decoy stream. The net talks through
+     * it, because a sector EW picture filling with noise is not actually a
+     * quiet room.
+     */
+    chatter: [
+      { atS: 52, text: 'WIDE EYE HOLDS ONE CONTACT, SLOW, NOT CLOSING. NOTHING BEHIND IT YET.' },
+      { atS: 86, text: 'EW PICKET REPORTS SWEEP JAMMING RISING ON THE NORTHERN BEARINGS. EXPECT A DIRTY PICTURE.' },
+    ],
     assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, GROUND.depot, GROUND.bridge],
     sites: [SITES.bastion, SITES.lanceWest, SITES.lanceEast, SITES.thistleTown, SITES.hammer],
     radars: [RADARS.ewrNorth, RADARS.gapSouth],

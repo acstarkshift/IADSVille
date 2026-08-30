@@ -16,6 +16,7 @@ import {
   consequenceFor, missionModifiers, enlist,
 } from '../engine/campaign.js';
 import { armTimeToImpact } from '../engine/doctrine.js';
+import { stepCommand } from '../engine/command.js';
 import { cannotEngageReason } from '../engine/threat.js';
 import { AIR_TYPES } from '../engine/config.js';
 import { dist, clamp01 } from '../engine/math.js';
@@ -221,6 +222,14 @@ function showEnlistment() {
     saveCampaign(store, state.campaign);
     showMenu();
   };
+  // The fast path past the paperwork wall: the suggested name and the clerk's
+  // defaults, one click. The choices still exist — in the dossier, where they
+  // can be read after the game has demonstrated what its nouns mean.
+  host.querySelector('#enlist-defaults').onclick = () => {
+    enlist(state.campaign, { name: nameInput.value });
+    saveCampaign(store, state.campaign);
+    showMenu();
+  };
 }
 
 function showDossier(back) {
@@ -335,6 +344,8 @@ function startMission() {
   ui.lastEventSeq = 0;
   ui.seenEventSeq = 0;
   ui.watchEndsAt = 0;
+  ui.speedHintShown = false;
+  ui.netPauseNoted = false;
   ui.view = state.role === 'crew' ? 'crew' : 'net';
   els.eventLog.innerHTML = '';
   accumulator = 0;
@@ -399,6 +410,12 @@ function setSpeed(speed) {
   els.speedGroup.querySelectorAll('[data-speed]').forEach((b) => {
     b.classList.toggle('is-down', Number(b.dataset.speed) === speed);
   });
+  // Said once, the first time somebody tries it: sector command's clock is
+  // not attached to your space bar.
+  if (speed === 0 && world?.command?.pending && !ui.netPauseNoted) {
+    ui.netPauseNoted = true;
+    world.log('warn', 'THE NET DOES NOT PAUSE. THE TRANSMISSION IS STILL WAITING FOR AN ANSWER.');
+  }
 }
 
 /* ----------------------------------------------------------- the loop */
@@ -407,6 +424,20 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dtReal = Math.min(0.25, (now - lastFrame) / 1000 || 0);
   lastFrame = now;
+
+  /*
+   * The net does not pause. With the simulation frozen — the space bar, a
+   * blurred window, the help screen — a pending directive's clock keeps
+   * running on wall time. Reading the order carefully is free; unlimited
+   * decision time at zero cost was a hole in the game's one honest threat,
+   * and silence stays an answer even for a player who never unpauses.
+   */
+  const pending = world?.command?.pending;
+  if (pending && world.phase === 'running'
+      && (state.speed === 0 || state.phase !== 'mission')) {
+    pending.deadlineS -= dtReal;
+    if (world.t > pending.deadlineS) stepCommand(world, 0);
+  }
 
   if (state.phase !== 'mission' || !world) return;
 
@@ -429,6 +460,17 @@ function frame(now) {
   if (steps > 1) world.plots = framePlots;
 
   render(now, dtReal);
+
+  // Once, on a brand-new soldier's quiet opening: the speed controls exist.
+  // Measured, a first-timer who waited for something to happen sat through
+  // nine and a half minutes at 1x with four unremarked buttons that would
+  // have fixed it.
+  if (!ui.speedHintShown && state.speed === 1 && world.t > 75
+      && world.stats.roundsFired === 0 && (world.character?.watches ?? 1) === 0) {
+    ui.speedHintShown = true;
+    world.log('info',
+      'NOTHING CLOSE YET. TIME COMPRESSION IS ON THE BOARD — KEYS 2 AND 3. THE WATCH KEEPS AT 1.');
+  }
 
   /*
    * The watch does not hard-cut to paperwork. When the simulation completes,
@@ -491,22 +533,37 @@ function clearCanvas() {
  */
 function applyEffects() {
   let shaking = false;
+  let shakeMag = 0;
   let flash = 0;
+  let alarm = false;
   for (const effect of world.effects) {
     const age = world.t - effect.startedS;
     const life = effect.durationS ?? 1;
     if (age > life) continue;
-    if (effect.kind === 'shake') shaking = true;
+    if (effect.kind === 'shake') {
+      shaking = true;
+      shakeMag = Math.max(shakeMag, effect.magnitude ?? 1);
+    }
+    if (effect.kind === 'alarm') alarm = true;
     if (effect.kind === 'flash' || effect.kind === 'blackout') {
       flash = Math.max(flash, (effect.magnitude ?? 1) * (1 - age / life));
     }
   }
 
   els.shell.classList.toggle('is-shaking', shaking);
+  // A near miss and a direct hit used to produce the same fixed two-pixel
+  // wiggle; the amplitude now carries the difference.
+  if (shaking) els.shell.style.setProperty('--shake-px', `${(1 + shakeMag * 2.2).toFixed(1)}px`);
 
-  // A brief wash of light over the scope, fading with the effect.
+  // A launch aimed at one of your own sets: a red breath at the edges of the
+  // tube. The engine has queued this effect since the first build; nothing
+  // ever consumed it.
+  els.shell.classList.toggle('is-alarm', alarm);
+
+  // A brief wash of light over the scope, fading with the effect. The 0.3
+  // factor made a kill's flash arithmetically imperceptible (0.09 alpha).
   if (flash > 0.01) {
-    els.scopeOverlay.style.backgroundColor = `rgba(255, 236, 200, ${Math.min(0.35, flash * 0.3)})`;
+    els.scopeOverlay.style.backgroundColor = `rgba(255, 236, 200, ${Math.min(0.35, flash * 0.55)})`;
   } else if (els.scopeOverlay.style.backgroundColor) {
     els.scopeOverlay.style.backgroundColor = '';
   }
@@ -530,6 +587,14 @@ function applyEffects() {
  * defended asset.
  */
 function handleAudio() {
+  // A paused simulation is a silent one. The frame loop keeps running at
+  // speed zero — for the panels — and for a long time the ARM warble ran
+  // with it: a frozen scope screaming indefinitely about a frozen round.
+  if (state.speed === 0 || document.hidden) {
+    audio.stopArmWarning();
+    return;
+  }
+
   // Keyed on the monotonic event seq, never on array position: the event list
   // is capped, and comparing against its frozen length once made every sound
   // in the game stop for the last two minutes of the finale.
@@ -537,11 +602,18 @@ function handleAudio() {
     if (e.seq <= ui.seenEventSeq) continue;
     if (e.kind === 'launch') audio.launch();
     else if (e.kind === 'good' && e.text.startsWith('SPLASH')) audio.splash();
+    else if (e.kind === 'good' && e.text.includes('TURNING BACK')) audio.relief();
+    // Ordering matters: 'NEAR MISS, POWER INTERRUPTED' also contains 'MISS',
+    // and a bomb that nearly had you must not share a sound with your own
+    // round going wide.
+    else if (e.kind === 'warn' && e.text.includes('NEAR MISS')) audio.thud();
     else if (e.kind === 'warn' && e.text.includes('MISS')) audio.miss();
     else if (e.kind === 'warn' && e.text.startsWith('NEW CONTACT')) audio.newTrack();
     else if (e.kind === 'alert' && e.text.includes('WEAPONS RELEASE')) audio.release();
+    else if (e.kind === 'alert' && e.text.includes('— HIT (')) audio.clank();
     else if (e.kind === 'alert' && /IMPACT|STRUCK|DESTROYED/.test(e.text)) audio.impact();
     else if (e.kind === 'command') audio.command();
+    else if (e.kind === 'info' && e.text.includes('ENGAGING')) audio.tick();
   }
   ui.seenEventSeq = world.events.length
     ? world.events[world.events.length - 1].seq : ui.seenEventSeq;
@@ -859,6 +931,12 @@ function wireGlobalInput() {
 
   window.addEventListener('resize', () => { scope.resize(); crew.resize(); });
   window.addEventListener('blur', () => { if (state.phase === 'mission') setSpeed(0); });
+  // With the tab hidden, requestAnimationFrame suspends but a running
+  // oscillator does not: the warble kept sounding with nothing left alive to
+  // stop it. Silence is handled here because the frame loop cannot.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) audio.stopArmWarning();
+  });
 }
 
 if (typeof document !== 'undefined') {

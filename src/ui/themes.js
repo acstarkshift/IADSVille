@@ -17,7 +17,14 @@ export const THEMES = {
     label: 'PHOSPHOR GREEN',
     blurb: 'Cathode-ray plan position indicator. Paint decays; so does your picture.',
     /** Fraction of the previous frame's paint retained. Higher = longer trails. */
-    afterglow: 0.955,
+    /*
+     * Raised from 0.955: at 60Hz that retained 6% of an echo after one second
+     * against 6-12s scan revisits — the "phosphor" was gone before the sweep
+     * came back, and the tube was carrying nothing between paints. 0.982
+     * holds a third of the echo at one second and a ghost of it at three, so
+     * the previous sweep is still readable when the next one arrives.
+     */
+    afterglow: 0.982,
     scanlines: true,
     glowPx: 9,
     sweepTailDeg: 62,
@@ -29,7 +36,7 @@ export const THEMES = {
     id: 'crt-amber',
     label: 'PHOSPHOR AMBER',
     blurb: 'Warmer tube, slower decay, and a bloom you will be staring at all night.',
-    afterglow: 0.968,
+    afterglow: 0.985,
     scanlines: true,
     glowPx: 12,
     sweepTailDeg: 78,

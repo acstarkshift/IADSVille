@@ -473,7 +473,7 @@ export function renderControls(host) {
     <div class="card">
       <h3>Everywhere</h3>
       <div class="keys">
-        ${key('Space', 'pause / resume')}
+        ${key('Space', 'pause / resume — the sim stops; a pending directive’s clock does not')}
         ${key('1 2 3', 'game speed 1× / 2× / 4×  (4 pauses)')}
         ${key('+ / −', 'zoom the scope')}
         ${key('Tab', 'switch seat (commander only)')}

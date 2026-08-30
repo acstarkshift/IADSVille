@@ -161,7 +161,9 @@ function handleThreat(world, aircraft, dt) {
     aircraft.state = 'egress';
     aircraft.weaponsLeft = 0;
     world.stats.abortedSorties++;
-    world.log('good', `${aircraft.name} — TURNING BACK`, { aircraftId: aircraft.id });
+    // "UNDER FIRE" carries the cause: this line lands seconds after a MISS,
+    // and without it the player's best outcome read as an unexplained gift.
+    world.log('good', `${aircraft.name} — TURNING BACK UNDER FIRE`, { aircraftId: aircraft.id });
   }
 }
 

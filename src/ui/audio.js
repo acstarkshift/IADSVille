@@ -82,6 +82,27 @@ export class Audio {
   }
 
   newTrack() { this.tone({ freq: 1320, dur: 0.05, type: 'square', gain: 0.05 }); }
+  /** An assignment taken up: the smallest confirmation the console makes. */
+  tick() { this.tone({ freq: 1050, dur: 0.03, type: 'square', gain: 0.04 }); }
+  /**
+   * A bomb that nearly had you. Not the flat double-blip of your own round
+   * missing — a body blow, low and wrong, because the two events shared one
+   * sound for far too long and they are not remotely the same news.
+   */
+  thud() {
+    this.noise({ dur: 0.35, gain: 0.34, freq: 160 });
+    this.tone({ freq: 95, to: 40, dur: 0.4, type: 'sine', gain: 0.26 });
+  }
+  /** Your own equipment taking a hit and surviving it: metal, then silence. */
+  clank() {
+    this.noise({ dur: 0.22, gain: 0.3, freq: 2400 });
+    this.tone({ freq: 520, to: 180, dur: 0.28, type: 'square', gain: 0.12 });
+  }
+  /** A raid breaking off: two falling notes, quiet, like a breath let out. */
+  relief() {
+    this.tone({ freq: 620, to: 470, dur: 0.16, type: 'sine', gain: 0.09 });
+    this.tone({ freq: 470, to: 340, dur: 0.22, type: 'sine', gain: 0.08, delay: 0.18 });
+  }
   launch() {
     this.tone({ freq: 180, to: 900, dur: 0.5, type: 'sawtooth', gain: 0.16 });
     this.tone({ freq: 90, to: 400, dur: 0.6, type: 'triangle', gain: 0.12 });
@@ -137,11 +158,22 @@ export class Audio {
     lfo.frequency.value = 7;
     lfoGain.gain.value = 180;
     lfo.connect(lfoGain).connect(osc.frequency);
-    env.gain.value = 0.06;
+    env.gain.value = 0.055;
+    // A slow square that chops the warble into bursts while the round is
+    // still distant. A three-minute continuous tone is wallpaper by the second
+    // minute; a tone that comes and goes stays a warning. The chop depth is
+    // driven to zero in the terminal phase so the last seconds are unbroken.
+    const chop = this.ctx.createOscillator();
+    const chopGain = this.ctx.createGain();
+    chop.type = 'square';
+    chop.frequency.value = 0.55;
+    chopGain.gain.value = 0.05;
+    chop.connect(chopGain).connect(env.gain);
     osc.connect(env).connect(this.master);
     osc.start();
     lfo.start();
-    this.armOsc = { osc, lfo, env };
+    chop.start();
+    this.armOsc = { osc, lfo, env, chop, chopGain };
   }
 
   stopArmWarning() {
@@ -149,6 +181,7 @@ export class Audio {
     try {
       this.armOsc.osc.stop();
       this.armOsc.lfo.stop();
+      this.armOsc.chop?.stop();
     } catch { /* already stopped */ }
     this.armOsc = null;
   }
@@ -161,10 +194,16 @@ export class Audio {
    */
   setArmUrgency(etaS) {
     if (!this.armOsc || !Number.isFinite(etaS)) return;
-    const urgency = Math.max(0, Math.min(1, 1 - etaS / 20));
+    // Escalation begins at forty-five seconds out, not twenty — measured, the
+    // old curve left three-quarters of every episode droning at its bored
+    // base rate. Under twenty-two seconds the chop opens up and the warble
+    // runs unbroken to impact, which is the shape of the real thing.
+    const urgency = Math.max(0, Math.min(1, 1 - etaS / 45));
     try {
-      this.armOsc.lfo.frequency.value = 5 + urgency * 12;
-      this.armOsc.env.gain.value = 0.05 + urgency * 0.05;
+      this.armOsc.lfo.frequency.value = 5 + urgency * 13;
+      this.armOsc.env.gain.value = 0.045 + urgency * 0.055;
+      this.armOsc.chopGain.gain.value = etaS > 22 ? 0.05 : 0;
+      this.armOsc.chop.frequency.value = 0.4 + urgency * 0.5;
     } catch { /* context torn down mid-frame */ }
   }
 

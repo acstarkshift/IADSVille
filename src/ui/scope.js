@@ -635,6 +635,32 @@ export class Scope {
   drawMissiles(world) {
     const { ctx } = this;
     const p = this.palette;
+
+    /*
+     * Misses, drawn. A round that went wide leaves a puff dissipating where
+     * the dot was — for years the majority outcome of every launch was the
+     * instantaneous absence of a pixel. Read from the engine's effect queue;
+     * purely cosmetic.
+     */
+    for (const effect of world.effects) {
+      if (effect.kind !== 'puff') continue;
+      const age = (world.t - effect.startedS) / (effect.durationS ?? 1.8);
+      if (age < 0 || age > 1) continue;
+      const s = this.toScreen(effect.pos);
+      ctx.save();
+      ctx.globalAlpha = 0.45 * (1 - age);
+      ctx.strokeStyle = p.warn;
+      ctx.lineWidth = 1.2 * this.dpr;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, (2 + age * 9) * this.dpr, 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = 0.25 * (1 - age);
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, (1 + age * 4.5) * this.dpr, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     for (const missile of world.missiles) {
       if (!missile.alive || missile.tofS < 0) continue;
       const s = this.toScreen(missile.pos);
@@ -840,11 +866,31 @@ export class Scope {
 
   /** Show a battery's reach when it is selected — the "can I even hit that" answer. */
   drawEnvelope(world, ui) {
+    const { ctx } = this;
+
+    /*
+     * Every living battery shows a whisper of its reach all the time. The
+     * spatial answer to "who can take this track" used to exist only for a
+     * battery the player had already thought to click — invisible exactly to
+     * the person who has not yet learned that clicking a site draws its ring.
+     */
+    ctx.save();
+    ctx.lineWidth = 1 * this.dpr;
+    for (const site of world.sites) {
+      if (!site.alive || site.id === ui.selectedSiteId) continue;
+      const t = SAM_TYPES[site.type];
+      const c = this.toScreen(site.pos);
+      ctx.strokeStyle = withAlpha(this.palette.accent, 0.09);
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, t.maxRangeKm * this.scale, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.restore();
+
     const site = ui.selectedSiteId ? world.siteById.get(ui.selectedSiteId) : null;
     if (!site) return;
     const type = SAM_TYPES[site.type];
     const s = this.toScreen(site.pos);
-    const { ctx } = this;
     ctx.save();
     ctx.strokeStyle = withAlpha(this.palette.accent, 0.5);
     ctx.setLineDash([5 * this.dpr, 4 * this.dpr]);

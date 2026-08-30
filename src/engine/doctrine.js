@@ -69,7 +69,22 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
   };
   site.engagements.push(engagement);
   if (!track.assignedTo.includes(site.id)) track.assignedTo.push(site.id);
-  world.log('info', `${site.name} — ENGAGING ${track.tn}`, { siteId: site.id, trackId: track.id });
+  /*
+   * At district and national scale, most of what happens is other people's
+   * fights, and a ticker averaging a line every two seconds trains the reader
+   * to stop reading — which the endgame then punishes. A subordinate
+   * formation outside your direct hand narrates one engagement per few
+   * seconds; your own commands, and every battalion/sector watch, log all of
+   * them.
+   */
+  const wide = world.echelon?.id === 'region' || world.echelon?.id === 'national';
+  const subordinate = wide && site.formation && !(world.isDirect?.(site.formation) ?? true);
+  world._fmnEngageLogAtS = world._fmnEngageLogAtS ?? {};
+  const lastLogged = world._fmnEngageLogAtS[site.formation] ?? -99;
+  if (!subordinate || world.t - lastLogged >= 6) {
+    if (subordinate) world._fmnEngageLogAtS[site.formation] = world.t;
+    world.log('info', `${site.name} — ENGAGING ${track.tn}`, { siteId: site.id, trackId: track.id });
+  }
   return engagement;
 }
 
@@ -167,6 +182,17 @@ export function stepEngagements(world, dt) {
           if (!holdable) {
             fireEngagement(world, site, engagement);
             engagement.unreachableS = 0;
+          } else if (!engagement.holding) {
+            /*
+             * Say so, once. The deliberate sweet-spot hold used to read as a
+             * dead order: "ENGAGING", forty-eight silent seconds, then a
+             * launch the player had stopped waiting for. The battery is not
+             * ignoring the assignment; it is aiming, and now it says so.
+             */
+            engagement.holding = true;
+            world.log('info', `${site.name} — HOLDING ${track.tn} FOR RANGE`, {
+              siteId: site.id, trackId: track.id,
+            });
           }
         } else {
           /*
@@ -487,13 +513,26 @@ export function runBatteryCrews(world, dt) {
        */
       const struckOff = world.command.constraints.freezeExcludedId ?? null;
       const available = [...world.tracks.values()]
-        .filter((t) => t.hostility === 'hostile'
-          && !t.destroyed
-          && t.quality >= DETECTION.firmQuality
-          && t.assignedTo.length === 0
-          && (struckOff === null || t.predictedAssetId !== struckOff)
-          && (world.fusionOnline || t.sources.includes(site.radarId))
-          && inEnvelope(site, t.pos, t.altM).ok)
+        .filter((t) => {
+          if (t.hostility !== 'hostile' || t.destroyed) return false;
+          if (t.quality < DETECTION.firmQuality || t.assignedTo.length) return false;
+          if (struckOff !== null && t.predictedAssetId === struckOff) return false;
+          if (!world.fusionOnline && !t.sources.includes(site.radarId)) return false;
+          const env = inEnvelope(site, t.pos, t.altM);
+          if (!env.ok) return false;
+          /*
+           * Let leavers leave. A crew chasing a departing aircraft out of the
+           * back of its own envelope was the grind that closed watches: the
+           * same low-Pk snap shot at the same egressing tail every thirty
+           * seconds, five misses in a row, the allocation gone and the watch
+           * held open past its story. An egressor gets engaged only while a
+           * shot at it is still a real shot.
+           */
+          const truth = world.aircraftById.get(t.truthId);
+          if (truth?.state === 'egress'
+            && env.rangeKm > SAM_TYPES[site.type].maxRangeKm * 0.6) return false;
+          return true;
+        })
         /*
          * Nearest first — not most dangerous first. A crew on its own
          * authority defends itself and the ground it is standing on; the

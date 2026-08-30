@@ -89,7 +89,13 @@ export function renderEnlistment(host, state) {
 
     <div class="actions">
       <button class="btn-primary" id="enlist-confirm">ПРИНЯТЬ ПРИСЯГУ · ENLIST</button>
+      <button class="btn" id="enlist-defaults"
+        title="Take the suggested name and the clerk's defaults, and get to the console">
+        ПОДПИСАТЬ ГДЕ УКАЗАНО · SIGN WHERE INDICATED</button>
     </div>
+    <p style="color:var(--ink-dim);font-size:12px;margin-top:6px">The particulars can be read at
+    leisure in the dossier. The clerk has seen people stand at this counter for ten minutes; he has
+    also seen the schedule.</p>
   </div>`;
 }
 
