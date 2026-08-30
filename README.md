@@ -55,7 +55,7 @@ contact whose impossibly steady flight a well-held track has already given away,
 re-engages after a miss while the shot is still its own, and hands a runner off
 to the next layer in when it is not. Measured over sixteen seeded watches of
 White Noise, a commander who works the picture beats one who sets everything
-free and walks away by **13% on the mean, winning 15 of 16 seeds, on a third
+free and walks away by **10% on the mean, winning 14 of 16 seeds, on a third
 fewer rounds and a third the decoys** — and beats one who does nothing at all
 by a thousand points.
 
@@ -158,17 +158,17 @@ declining to assign. It is calling a battery off a target it is already tracking
 Then the debrief shows you two numbers that have agreed all campaign and now do
 not (means over eight seeded watches, competently fought — reproduce them with
 `node tools/measure-moral.mjs`; the hospital package comes in on the deck, down
-the Kubin road, and obedience loses the building on seven nights of the eight
-while a deliberate defence saves it on seven):
+the Kubin road, and obedience loses the building on all eight nights while a
+deliberate defence saves it on seven):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **92** | 423 |
-| Defend it anyway | 88 | **873** |
-| Refuse the order outright | 61 | 873 |
+| Obey the freeze | **92** | 201 |
+| Defend it anyway | 86 | **828** |
+| Refuse the order outright | 61 | 828 |
 
-Defending the hospital is worth four hundred and fifty points of actual value,
-and the file prices the whole transgression at four: a query for rounds
+Defending the hospital is worth six hundred points of actual value, and the
+file prices the whole transgression at six: a query for rounds
 expended outside the freeze, worth rather less than two leakers. A weapon that
 arrives at the struck-off place is billed at exactly nothing — the ledger
 cannot simultaneously declare a building undesignated and grieve for it — and
@@ -256,7 +256,34 @@ cannot. Losing one leaves a hole nothing else can fill.
 | **ЗЕНИТНАЯ АРТИЛЛЕРИЯ** · Guns | ZU-4 HAMMER | 0.2–4 km, to 2,500 m | Shells, not rounds. No minimum range and no guidance to lose — which is what you want when something is already overhead. |
 | **МАЛАЯ ДАЛЬНОСТЬ** · Short-range | S-12 THISTLE | 0.8–12 km, to 6,000 m | Point defence. Must be sited *forward on the threat axis* or it never sees a target before the weapons are off. |
 | **СРЕДНЯЯ ДАЛЬНОСТЬ** · Medium-range | S-75 LANCE | 3–42 km, to 15,000 m | The workhorse. Covers the release ring, and the class you run out of first. |
-| **БОЛЬШАЯ ДАЛЬНОСТЬ** · Long-range | S-200 BASTION | 6–120 km, to 25,000 m | Owns the approach, and reaches the standoff aircraft nothing else can touch. |
+| **БОЛЬШАЯ ДАЛЬНОСТЬ** · Long-range | S-200 BASTION | 6–120 km, to 25,000 m | Owns the approach, and reaches the standoff aircraft nothing else can touch — through one arc at a time. |
+
+### The battalion's two antennas
+
+Every other class runs a single set that searches its patch and guides its
+rounds. A long-range battalion runs two, because you cannot search a frontier
+with the antenna you are using to hold a target:
+
+- an **acquisition set**, omnidirectional, 150 km — the battalion's own search
+  picture, and what the rest of the game means by "the battery's radar";
+- a **fire-control set** on a mount that covers **120°** and traverses at
+  **5°/s** — so swinging it from one edge of its arc to the other is the better
+  part of half a minute.
+
+Nothing is guided that the fire-control antenna is not pointing at. An
+engagement's reaction sequence does not even start until the mount bears on the
+target, and a crew that slews away to answer something else drops what it was
+guiding. The crew slews automatically — covering everything it is engaging when
+that fits inside the arc, and taking the most urgent when it does not — so this
+is not micromanagement; it is a constraint you plan around. The arc is drawn on
+the scope and in the cabin, with the boresight dashed down its middle, because
+which way a battalion is looking is a decision the operator is making whether
+they can see it or not.
+
+That is what a long-range battalion actually is: enormous reach through one
+soda straw. It is also why the ministry taking yours matters so much, and why
+two raids on divergent axes is a genuinely different problem from one raid
+twice the size.
 
 ## The map
 

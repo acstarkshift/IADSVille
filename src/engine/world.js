@@ -27,6 +27,7 @@ import { stepAircraft, createAircraft } from './ai.js';
 import { scoreAllTracks, cannotEngageReason } from './threat.js';
 import {
   stepEngagements, runAiBattleManager, runBatteryCrews, runAiEmcon, runSurveillanceEmcon,
+  stepFireControl,
   beginEngagement, endEngagement, fireEngagement, startReload, startScoot,
 } from './doctrine.js';
 import {
@@ -269,6 +270,20 @@ export class World {
       noiseFactor: 1,
       deadSectors: [],
       armWarningAtS: -999,
+      blinkUntilS: 0,
+      /**
+       * A sectored set: an antenna on a mount that cannot see behind itself.
+       *
+       * `fovDeg` null is the ordinary case — a surveillance or acquisition set
+       * turning through the full circle. A fire-control set instead holds a
+       * boresight and covers `fovDeg` around it, slewing at `slewRateDegPerS`
+       * to keep the targets it is working inside that arc. It is why a
+       * long-range battalion cannot simply answer two axes at once.
+       */
+      fovDeg: spec.fovDeg ?? null,
+      slewRateDegPerS: spec.slewRateDegPerS ?? null,
+      boresightDeg: spec.boresightDeg ?? this.rng.range(0, 360),
+      slewingTo: null,
     };
     this.radars.push(radar);
     this.radarById.set(radar.id, radar);
@@ -324,16 +339,45 @@ export class World {
         crewLosses: 0,
         blinkUntilS: 0,
         radarId: null,
+        fcRadarId: null,
       };
+      /*
+       * The battery's own sets.
+       *
+       * Most batteries run one: a single set that searches its patch and
+       * guides its rounds, which is how a short-range section actually works.
+       * A long-range battalion runs two, because you cannot search a whole
+       * frontier with the same antenna you are using to hold a target — an
+       * acquisition set turning through the full circle, and a fire-control
+       * set on a mount with a limited arc that must be slewed onto whatever
+       * the battalion is shooting. `site.radarId` stays the search set, which
+       * is what the rest of the game means by "the battery's radar";
+       * `site.fcRadarId` is what guides.
+       */
       const radar = this.addRadar({
         ...type.radar,
         pos: site.pos,
-        label: `${site.name} FC`,
+        label: type.fcRadar ? `${site.name} ACQ` : `${site.name} FC`,
         hp: 70,
         on: false,
       }, site.id);
       radar.exposureMult = this.modifiers.exposureMult;
       site.radarId = radar.id;
+      site.fcRadarId = radar.id;
+
+      if (type.fcRadar) {
+        // The type's `radar` block is the acquisition set for these; the
+        // fire-control set is the sectored one and is built second.
+        const fc = this.addRadar({
+          ...type.fcRadar,
+          pos: site.pos,
+          label: `${site.name} FC`,
+          hp: 70,
+          on: false,
+        }, site.id);
+        fc.exposureMult = this.modifiers.exposureMult;
+        site.fcRadarId = fc.id;
+      }
       this.sites.push(site);
       this.siteById.set(site.id, site);
     }
@@ -445,6 +489,11 @@ export class World {
   }
 
   /** Is this formation under this appointment's own hand, whoever is sitting where? */
+  /** Every set this battery owns — one for most, two for a battalion. */
+  radarsOf(site) {
+    return this.radars.filter((r) => r.siteId === site.id);
+  }
+
   isDirect(formationId) {
     const formation = this.formationById.get(formationId);
     return !!formation?.direct && this.t >= formation.handoverUntilS;
@@ -1049,8 +1098,9 @@ export class World {
     site.alive = false;
     site.withdrawn = true;
     site.engagements = [];
-    const radar = this.radarById.get(site.radarId);
-    if (radar) { radar.alive = false; radar.on = false; radar.state = 'off'; }
+    for (const radar of this.radarsOf(site)) {
+      radar.alive = false; radar.on = false; radar.state = 'off';
+    }
     this.stats.sitesWithdrawn = (this.stats.sitesWithdrawn ?? 0) + 1;
     this.log('warn', `${site.name} — OFF THE AIR, ${reason.toUpperCase()}`,
       { siteId: site.id, severity: 'high' });
@@ -1152,8 +1202,17 @@ export class World {
   setRadar(radarId, on) {
     const radar = this.radarById.get(radarId);
     if (!radar || !radar.alive) return;
-    radar.on = on;
-    this.log(on ? 'info' : 'warn', `${radar.label} — ${on ? 'RADIATE' : 'SHUT DOWN'}`, { radarId });
+    /*
+     * A battery has one emissions posture, not one per antenna. A long-range
+     * battalion runs an acquisition set and a fire-control set; the operator
+     * has a single RADIATE control for the battery and both sets answer it.
+     * The fire-control set's *pointing* is the crew's business, not a switch.
+     */
+    const family = radar.siteId
+      ? this.radars.filter((r) => r.siteId === radar.siteId && r.alive)
+      : [radar];
+    for (const r of family) r.on = on;
+    this.log('info', `${radar.label} — ${on ? 'RADIATING' : 'SILENT'}`, { radarId: radar.id });
   }
 
   toggleRadar(radarId) {
@@ -1180,8 +1239,10 @@ export class World {
       // Displacing puts the battery somewhere the enemy's targeting is not.
       const jitter = polar(site.pos, this.rng.range(0, 360), this.rng.range(2.5, 6));
       site.pos = jitter;
-      const radar = this.radarById.get(site.radarId);
-      if (radar) radar.pos = { ...jitter };
+      // Both sets travel with the battery. Leaving one at the old grid
+      // reference would leave an anti-radiation magnet behind exactly where
+      // the enemy's targeting says the battery still is.
+      for (const radar of this.radarsOf(site)) radar.pos = { ...jitter };
 
       /*
        * Anything that lives with this battery packs up and goes with it — the
@@ -1330,6 +1391,10 @@ export class World {
     runAiBattleManager(this, dt);
     runBatteryCrews(this, dt);
     runSurveillanceEmcon(this);
+    // The fire-control mounts come round onto whatever their batteries are
+    // working. Before the engagements step, so a set that arrives on target
+    // this tick lets its sequence run this tick.
+    stepFireControl(this, dt);
     // The player's own battery still needs its radar handled if they are running
     // the net rather than sitting in it.
     if (this.control.role === 'net') {

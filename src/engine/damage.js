@@ -76,8 +76,8 @@ export function damageSite(world, site, amount, cause) {
     site.alive = false;
     site.readyRounds = 0;
     site.engagements = [];
-    const radar = world.radarById.get(site.radarId);
-    if (radar && radar.alive) {
+    for (const radar of world.radarsOf(site)) {
+      if (!radar.alive) continue;
       radar.alive = false;
       radar.on = false;
       radar.state = 'off';

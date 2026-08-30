@@ -95,7 +95,7 @@ export class CrewConsole {
     if (!site) return [];
     const out = [];
     for (const track of world.tracks.values()) {
-      const own = track.sources.includes(site.radarId);
+      const own = world.radarsOf(site).some((r) => track.sources.includes(r.id));
       const cued = track.assignedTo.includes(site.id);
       if (own || cued) out.push({ ...track, cueOnly: !own && cued });
     }
@@ -208,6 +208,39 @@ export class CrewConsole {
       ctx.fillStyle = withAlpha(p.hostile, 0.75);
       ctx.font = `${12 * this.dpr}px ${FONT}`;
       ctx.fillText('SET DARK', 12 * this.dpr, 22 * this.dpr);
+    }
+
+    /*
+     * The fire-control arc, from inside the cabin. On a battalion this is the
+     * most important thing on the plan view: the antenna covers a hundred and
+     * twenty degrees, traverses at five degrees a second, and guides nothing
+     * outside the wedge. The crew watches this the way a gunner watches a
+     * traverse limit.
+     */
+    const fc = world.radarById.get(site.fcRadarId ?? site.radarId);
+    if (fc?.fovDeg && fc.alive) {
+      const half = fc.fovDeg / 2;
+      const reach = Math.min(type.maxRangeKm, this.rangeKm) * scale;
+      const lit = fc.state === 'radiating';
+      ctx.beginPath();
+      ctx.moveTo(centre.x, centre.y);
+      ctx.arc(centre.x, centre.y, reach,
+        (fc.boresightDeg - half - 90) * Math.PI / 180,
+        (fc.boresightDeg + half - 90) * Math.PI / 180);
+      ctx.closePath();
+      ctx.fillStyle = withAlpha(p.accent, lit ? 0.07 : 0.03);
+      ctx.fill();
+      ctx.strokeStyle = withAlpha(p.accent, lit ? 0.4 : 0.18);
+      ctx.lineWidth = 1.2 * this.dpr;
+      ctx.stroke();
+      const bore = headingVec(fc.boresightDeg);
+      ctx.beginPath();
+      ctx.moveTo(centre.x, centre.y);
+      ctx.lineTo(centre.x + bore.x * reach, centre.y - bore.y * reach);
+      ctx.setLineDash([4 * this.dpr, 5 * this.dpr]);
+      ctx.strokeStyle = withAlpha(p.accent, lit ? 0.5 : 0.25);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
 
     // The battery itself.
@@ -456,7 +489,10 @@ export class CrewConsole {
 export function engagementStatus(world, site, track) {
   if (!site) return null;
   const type = SAM_TYPES[site.type];
-  const radar = world.radarById.get(site.radarId);
+  // Search and guidance are the same set on most batteries and two different
+  // machines on a long-range battalion. Guidance is the fire-control set's
+  // business; everything else reads the battery's own (search) set.
+  const radar = world.radarById.get(site.fcRadarId ?? site.radarId);
   const engagement = track ? site.engagements.find((e) => e.trackId === track.id) : null;
   const env = track ? inEnvelope(site, track.pos, track.altM) : null;
   const toRange = track && env && !env.ok ? timeToInRangeS(site, track) : 0;
@@ -485,6 +521,25 @@ export function engagementStatus(world, site, track) {
    * exists because "FIRE is lit" and "this is a good shot" were the same
    * lamp, and the difference between them is the entire skill of the seat.
    */
+  /*
+   * Where the fire-control antenna is pointing, and whether the selected
+   * track is inside its arc. Null on every battery whose set turns through
+   * the full circle — there is no arc to be outside of.
+   */
+  let fc = null;
+  if (radar?.fovDeg) {
+    const az = track ? bearing(radar.pos, track.pos) : null;
+    const offAxis = az === null ? null : Math.abs(((az - radar.boresightDeg + 540) % 360) - 180);
+    fc = {
+      boresightDeg: Math.round(radar.boresightDeg),
+      fovDeg: radar.fovDeg,
+      onTarget: offAxis !== null && offAxis <= radar.fovDeg / 2,
+      // Seconds of traverse still to come before this track is inside the arc.
+      slewS: offAxis === null ? 0
+        : Math.max(0, (offAxis - radar.fovDeg / 2) / (radar.slewRateDegPerS || 1)),
+    };
+  }
+
   let pkEstimate = null;
   if (track && env?.ok) {
     const known = AIR_TYPES[track.classification] ? track.classification : 'striker';
@@ -499,6 +554,7 @@ export function engagementStatus(world, site, track) {
     inEnvelope: env?.ok ?? false,
     envelopeReason: env?.reason ?? 'NO TARGET',
     pkEstimate,
+    fc,
     timeToRangeS: Number.isFinite(toRange) ? toRange : null,
     state: engagement?.state ?? 'idle',
     /** Deliberately waiting for the target to close before releasing. */
@@ -507,8 +563,10 @@ export function engagementStatus(world, site, track) {
     roundsUp: engagement?.missileIds.length ?? 0,
     roundEtaS,
     canFire: !!engagement && engagement.state === 'ready' && (env?.ok ?? false)
-      && site.readyRounds > 0 && radar?.state === 'radiating',
-    guidance: radar?.state === 'radiating' ? 'GUIDING' : 'NO GUIDANCE',
+      && site.readyRounds > 0 && radar?.state === 'radiating'
+      && (fc === null || fc.onTarget),
+    guidance: radar?.state === 'radiating' && (fc === null || fc.onTarget)
+      ? 'GUIDING' : 'NO GUIDANCE',
     radarState: radar?.state ?? 'off',
     exposure: radar?.exposure ?? 0,
     channelsUsed: site.engagements.length,

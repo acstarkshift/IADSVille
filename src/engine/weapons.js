@@ -15,8 +15,7 @@ import { SAM_TYPES, AIR_TYPES, ENGAGEMENT, ARM, DAMAGE } from './config.js';
 import { addEffect } from './damage.js';
 import {
   dist, sub, add, scale, bearing, headingVec, turnToward, leadPoint, clamp,
-  clamp01, invLerp, lerp, len,
-} from './math.js';
+  clamp01, invLerp, lerp, len, absDeltaDeg } from './math.js';
 
 /** Turn rates by round type, degrees per second. */
 const TURN_RATE = { sam: 26, arm: 16, strike: 9, aam: 30 };
@@ -178,7 +177,15 @@ function aimPointFor(world, missile) {
     if (missile.kind === 'sam') {
       const radar = world.radarById.get(missile.radarId);
       const site = world.siteById.get(missile.siteId);
-      const guided = radar && radar.state === 'radiating' && site && site.alive;
+      /*
+       * The round is only as good as the antenna behind it — and an antenna
+       * on a limited mount has to still be pointing at the target. A crew
+       * that slews away to answer something else drops what it was guiding,
+       * which is exactly the trade a hundred-and-twenty-degree arc imposes.
+       */
+      const inArc = !radar?.fovDeg
+        || absDeltaDeg(radar.boresightDeg, bearing(radar.pos, target.pos)) <= radar.fovDeg / 2;
+      const guided = radar && radar.state === 'radiating' && inArc && site && site.alive;
       if (!guided) {
         missile.unguidedS += world.dt;
         return missile.aimPos; // fly on, blind
@@ -363,7 +370,7 @@ export function launchSalvo(world, site, track, count, origin = null) {
       targetKind: 'aircraft',
       targetId: target.id,
       siteId: site.id,
-      radarId: site.radarId,
+      radarId: site.fcRadarId ?? site.radarId,
       trackId: track.id,
     });
     missile.trackLabel = track.tn;

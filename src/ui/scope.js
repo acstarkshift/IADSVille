@@ -208,6 +208,7 @@ export class Scope {
     ctx.globalCompositeOperation = 'source-over';
 
     this.drawDeadSectors(world);
+    this.drawFireControlArcs(world);
     this.drawFormations(world);
     this.drawAssets(world, ui);
     this.drawSites(world, ui);
@@ -429,6 +430,52 @@ export class Scope {
       ctx.globalAlpha = 1;
     }
     ctx.restore();
+  }
+
+  /**
+   * Where the fire-control antennas are looking.
+   *
+   * A long-range battalion guides through a hundred-and-twenty-degree arc that
+   * takes the better part of half a minute to swing, so which way it points is
+   * a decision the operator is making whether they can see it or not. Now they
+   * can see it: a faint wedge out to the battery's reach, brighter along the
+   * boresight, and drawn under the symbols so it never competes with a track.
+   */
+  drawFireControlArcs(world) {
+    const { ctx } = this;
+    const p = this.palette;
+    for (const radar of world.radars) {
+      if (!radar.alive || !radar.fovDeg) continue;
+      const site = radar.siteId ? world.siteById.get(radar.siteId) : null;
+      if (site && !site.alive) continue;
+      const origin = this.toScreen(radar.pos);
+      const reach = Math.min(radar.rangeKm,
+        site ? SAM_TYPES[site.type].maxRangeKm : radar.rangeKm) * this.scale;
+      const half = radar.fovDeg / 2;
+      const start = (radar.boresightDeg - half - 90) * Math.PI / 180;
+      const end = (radar.boresightDeg + half - 90) * Math.PI / 180;
+      const lit = radar.state === 'radiating';
+
+      ctx.beginPath();
+      ctx.moveTo(origin.x, origin.y);
+      ctx.arc(origin.x, origin.y, reach, start, end);
+      ctx.closePath();
+      ctx.fillStyle = withAlpha(p.accent, lit ? 0.05 : 0.02);
+      ctx.fill();
+      ctx.strokeStyle = withAlpha(p.accent, lit ? 0.3 : 0.14);
+      ctx.lineWidth = 1 * this.dpr;
+      ctx.stroke();
+
+      // The boresight itself — the line the crew has actually chosen.
+      const h = headingVec(radar.boresightDeg);
+      ctx.beginPath();
+      ctx.moveTo(origin.x, origin.y);
+      ctx.lineTo(origin.x + h.x * reach, origin.y - h.y * reach);
+      ctx.strokeStyle = withAlpha(p.accent, lit ? 0.42 : 0.2);
+      ctx.setLineDash([3 * this.dpr, 5 * this.dpr]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
   }
 
   /** Wedges a damaged radar can no longer see into. */

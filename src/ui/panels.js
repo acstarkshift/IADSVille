@@ -192,7 +192,8 @@ export function renderTrackList(world, ui, els) {
   // here would undo the isolation the seat is built around.
   if (ui.view === 'crew' && world.control.crewedBatteryId) {
     const site = world.siteById.get(world.control.crewedBatteryId);
-    tracks = tracks.filter((t) => t.sources.includes(site.radarId) || t.assignedTo.includes(site.id));
+    tracks = tracks.filter((t) => world.radarsOf(site).some((r) => t.sources.includes(r.id))
+      || t.assignedTo.includes(site.id));
   }
   const rows = tracks.map((track) => {
     const brg = Math.round(bearing({ x: 0, y: 0 }, track.pos));
@@ -567,6 +568,11 @@ export function renderCrewConsole(world, ui, els) {
 
       ${row(STATUS.target, status.trackLabel)}
       ${row(envelope, envelopeDetail, status.inEnvelope ? 'is-good' : '')}
+      ${status.fc ? row(STATUS.fireControl,
+    `${String(status.fc.boresightDeg).padStart(3, '0')}° ± ${status.fc.fovDeg / 2}°`
+      + (status.hasTarget ? status.fc.onTarget ? ' · ON TARGET'
+        : ` · SLEWING ${Math.ceil(status.fc.slewS)}s` : ''),
+    status.hasTarget && status.fc.onTarget ? 'is-good' : status.hasTarget ? 'is-hot' : '') : ''}
       ${status.pkEstimate !== null
     ? row(STATUS.shotQuality, `${Math.round(status.pkEstimate * 100)}%`,
       status.pkEstimate >= 0.5 ? 'is-good' : '')

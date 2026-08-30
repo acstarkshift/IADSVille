@@ -15,7 +15,9 @@
  */
 
 import { SAM_TYPES, ENGAGEMENT, ARM, DETECTION } from './config.js';
-import { dist, len, clamp, clamp01, closureRate } from './math.js';
+import {
+  dist, len, clamp, clamp01, closureRate, bearing, absDeltaDeg, wrapDeg, turnToward,
+} from './math.js';
 import { inEnvelope, launchSalvo, timeToInRangeS } from './weapons.js';
 import { engagementValue, sortedTracks } from './threat.js';
 
@@ -83,7 +85,10 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
    * re-paid the full reaction time a free crew's shoot-look-shoot skips —
    * which quietly made supervision a tax and delegation a dominant strategy.
    */
-  if ((origin ?? 'assigned') !== 'free' && track.sources?.includes(site.radarId)) {
+  const heldByOwnSet = world.radarsOf
+    ? world.radarsOf(site).some((r) => track.sources?.includes(r.id))
+    : track.sources?.includes(site.radarId);
+  if ((origin ?? 'assigned') !== 'free' && heldByOwnSet) {
     engagement.timerS *= 0.55;
   }
   site.engagements.push(engagement);
@@ -187,10 +192,19 @@ export function stepEngagements(world, dt) {
       }
 
       if (engagement.state === 'reacting') {
-        engagement.timerS -= dt;
-        if (engagement.timerS <= 0) {
-          engagement.state = 'ready';
-          engagement.readyAtS = world.t;
+        /*
+         * The sequence does not run while the fire-control antenna is still
+         * coming round. A battalion whose set is pointed at the northern axis
+         * does not answer a contact in the west until it has traversed —
+         * five degrees a second, so most of half a minute across the arc.
+         * Batteries with a single omnidirectional set are never held up here.
+         */
+        if (fcBearsOn(world, site, track)) {
+          engagement.timerS -= dt;
+          if (engagement.timerS <= 0) {
+            engagement.state = 'ready';
+            engagement.readyAtS = world.t;
+          }
         }
       }
 
@@ -445,7 +459,8 @@ export function freeCrewCovers(world, track) {
   return world.sites.some((site) => {
     if (!site.alive || site.weaponsState !== 'free') return false;
     if (site.readyRounds <= 0 || site.engagements.length >= channelsFor(site)) return false;
-    if (!world.fusionOnline && !track.sources.includes(site.radarId)) return false;
+    if (!world.fusionOnline
+      && !world.radarsOf(site).some((r) => track.sources.includes(r.id))) return false;
     if (inEnvelope(site, track.pos, track.altM).ok) return true;
     const toRange = timeToInRangeS(site, track);
     return Number.isFinite(toRange) && toRange < 20;
@@ -520,6 +535,99 @@ function ownRoundsTimeToImpact(world, site) {
  * which case it holds the beam and takes the hit. That last judgement is exactly
  * the one the player has to make in the SAM operator seat.
  */
+/* ------------------------------------------------------------------ *
+ * Fire control — the antenna that has to be pointing at it.
+ * ------------------------------------------------------------------ */
+
+/** The set that guides this battery's rounds, which may be its only set. */
+export function fcRadarOf(world, site) {
+  return world.radarById.get(site.fcRadarId ?? site.radarId) ?? null;
+}
+
+/**
+ * Is the fire-control antenna bearing on this track?
+ *
+ * True for every battery whose set turns through the full circle — the
+ * question only means something for a set on a limited mount.
+ */
+export function fcBearsOn(world, site, track) {
+  const fc = fcRadarOf(world, site);
+  if (!fc || !fc.fovDeg) return true;
+  if (!fc.alive) return false;
+  return absDeltaDeg(fc.boresightDeg, bearing(fc.pos, track.pos)) <= fc.fovDeg / 2;
+}
+
+/**
+ * Point the fire-control sets at the work.
+ *
+ * A crew slews to cover what the battery is engaging: if everything it is
+ * working fits inside the arc, the antenna sits on the bisector and holds all
+ * of it; if it does not, the crew takes the most urgent and the rest waits.
+ * With nothing assigned the set leads the picture — it lies on the worst
+ * threat it could reach — which is what a crew with a quiet net does and what
+ * stops the arc from being a gotcha the player cannot anticipate.
+ */
+export function stepFireControl(world, dt) {
+  for (const site of world.sites) {
+    const fc = fcRadarOf(world, site);
+    if (!fc || !fc.fovDeg || !fc.alive) continue;
+
+    const bearings = [];
+    let urgent = null;
+    for (const engagement of site.engagements) {
+      const track = world.tracks.get(engagement.trackId);
+      if (!track || track.destroyed) continue;
+      bearings.push(bearing(fc.pos, track.pos));
+      if (!urgent || track.threat > urgent.threat) urgent = track;
+    }
+    if (!bearings.length) {
+      // Nothing assigned: lie on the most threatening thing in reach.
+      const type = SAM_TYPES[site.type];
+      for (const track of world.tracks.values()) {
+        if (track.destroyed || track.hostility === 'friendly' || track.threat <= 0) continue;
+        if (dist(fc.pos, track.pos) > type.maxRangeKm * 1.3) continue;
+        if (!urgent || track.threat > urgent.threat) urgent = track;
+      }
+      if (!urgent) continue;
+      bearings.push(bearing(fc.pos, urgent.pos));
+    }
+
+    /*
+     * The desired boresight. Offsets are measured relative to the first
+     * bearing and wrapped into ±180 so the span is computed the short way
+     * round — a pair at 350° and 010° is twenty degrees apart, not three
+     * hundred and forty.
+     */
+    const ref = bearings[0];
+    let lo = 0;
+    let hi = 0;
+    for (const b of bearings) {
+      const offset = wrapDeg(b - ref + 180) - 180;
+      lo = Math.min(lo, offset);
+      hi = Math.max(hi, offset);
+    }
+    const desired = (hi - lo) <= fc.fovDeg
+      ? wrapDeg(ref + (lo + hi) / 2)
+      : bearing(fc.pos, urgent.pos);
+
+    const before = fc.boresightDeg;
+    fc.boresightDeg = turnToward(fc.boresightDeg, desired, fc.slewRateDegPerS * dt);
+    const remaining = absDeltaDeg(fc.boresightDeg, desired);
+
+    // The crew says so when the mount is genuinely running, and again when it
+    // settles — a long traverse is a thing the operator is waiting on.
+    const moving = absDeltaDeg(before, fc.boresightDeg) > 1e-6;
+    if (moving && remaining > 12 && !fc.slewingTo) {
+      fc.slewingTo = Math.round(desired);
+      world.comms?.(fc.label, `SLEWING TO ${String(Math.round(desired)).padStart(3, '0')}.`,
+        { siteId: site.id, radarId: fc.id });
+    } else if (fc.slewingTo !== null && remaining <= 2) {
+      fc.slewingTo = null;
+      world.comms?.(fc.label, 'ON TARGET.', { siteId: site.id, radarId: fc.id });
+    }
+  }
+}
+
 /**
  * Emissions discipline for the surveillance sets nobody crews.
  *
@@ -574,7 +682,9 @@ export function runAiEmcon(world, dt, site) {
         world.log('warn', `${site.name} — SHUTTING DOWN, ROUND INBOUND`, { siteId: site.id });
         world.comms?.(site.name, 'ROUND ON US — GOING DARK.', { urgent: true, siteId: site.id });
       }
-      radar.on = false;
+      // Every antenna the battery owns goes down together: ducking with the
+      // search set while the fire-control set keeps shouting is not ducking.
+      for (const r of world.radarsOf(site)) r.on = false;
       site.blinkUntilS = world.t + 25;
       return;
     }
@@ -598,8 +708,9 @@ export function runAiEmcon(world, dt, site) {
     && dist(site.pos, t.pos) < type.maxRangeKm * 1.3
     && t.quality > 0.3);
 
-  if (site.weaponsState === 'hold') { radar.on = false; return; }
-  if (hasWork || threatNear) { radar.on = true; site.searchUntilS = 0; return; }
+  const setEmissions = (on) => { for (const r of world.radarsOf(site)) r.on = on; };
+  if (site.weaponsState === 'hold') { setEmissions(false); return; }
+  if (hasWork || threatNear) { setEmissions(true); site.searchUntilS = 0; return; }
 
   /*
    * Nothing to look at — but a battery that only radiates when it already has a
@@ -608,14 +719,14 @@ export function runAiEmcon(world, dt, site) {
    * just on a timer, and it is what stops a fully dark sector from sleeping
    * through a raid.
    */
-  if (world.t < (site.searchUntilS ?? 0)) { radar.on = true; return; }
+  if (world.t < (site.searchUntilS ?? 0)) { setEmissions(true); return; }
   if (world.t > (site.nextSearchS ?? 0)) {
     site.searchUntilS = world.t + SEARCH_DWELL_S;
     site.nextSearchS = world.t + SEARCH_DWELL_S + SEARCH_GAP_S;
-    radar.on = true;
+    setEmissions(true);
     return;
   }
-  radar.on = false;
+  setEmissions(false);
 }
 
 /** Everything an AI-crewed battery does on its own initiative. */
@@ -657,7 +768,8 @@ export function runBatteryCrews(world, dt) {
           if (t.hostility !== 'hostile' || t.destroyed) return false;
           if (t.quality < DETECTION.firmQuality || t.assignedTo.length) return false;
           if (struckOff !== null && t.predictedAssetId === struckOff) return false;
-          if (!world.fusionOnline && !t.sources.includes(site.radarId)) return false;
+          if (!world.fusionOnline
+            && !world.radarsOf(site).some((r) => t.sources.includes(r.id))) return false;
           const env = inEnvelope(site, t.pos, t.altM);
           if (!env.ok) return false;
           /*
@@ -704,8 +816,7 @@ export function startScoot(world, site) {
   site.scootRemainingS = type.scootS * (site.scootMult ?? 1) * (site.crewLosses ? 1.5 : 1);
   site.displaced = true;
   site.engagements = [];
-  const radar = world.radarById.get(site.radarId);
-  if (radar) {
+  for (const radar of world.radarsOf(site)) {
     radar.on = false;
     // A displaced site is a new problem for the enemy's targeting.
     radar.exposure = 0;

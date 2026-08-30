@@ -52,6 +52,10 @@ export function effectiveRangeKm(radar, target, jammers = []) {
     if (absDeltaDeg(sector.az, az) <= sector.halfWidthDeg) return 0;
   }
 
+  // And a set on a limited mount cannot see behind itself at all. This is the
+  // whole cost of a fire-control antenna: enormous reach, through an arc.
+  if (radar.fovDeg && absDeltaDeg(radar.boresightDeg, az) > radar.fovDeg / 2) return 0;
+
   // Radar cross-section scales range as the fourth root: small helps, but less
   // than people expect. A tenth of the RCS is a bit over half the range.
   let range = radar.rangeKm * Math.pow(Math.max(target.rcs, 1e-4), 0.25);
@@ -161,8 +165,31 @@ export function sweepRadar(radar, targets, jammers, rng, dt) {
 
   const az0 = radar.az;
   const degrees = (360 / radar.scanPeriodS) * dt;
-  radar.az = wrapDeg(az0 + degrees);
+  /*
+   * A sectored set rasters inside its arc instead of turning through the
+   * circle: the beam runs from one edge to the other and flies back. The
+   * crossing test below is the same either way — a target is rolled once per
+   * pass — but the flyback is a discontinuity, not a sweep, so nothing is
+   * detected on that tick. (Without this the wrap reads as a single
+   * enormous clockwise crossing and paints the entire arc at once.)
+   */
+  let flyback = false;
+  if (radar.fovDeg) {
+    const half = radar.fovDeg / 2;
+    const from = wrapDeg(radar.boresightDeg - half);
+    // How far the beam has come from the left edge, measured the short way.
+    const swept = wrapDeg(az0 - from) + degrees;
+    if (swept >= radar.fovDeg) {
+      radar.az = from;
+      flyback = true;
+    } else {
+      radar.az = wrapDeg(az0 + degrees);
+    }
+  } else {
+    radar.az = wrapDeg(az0 + degrees);
+  }
   const az1 = radar.az;
+  if (flyback) return plots;
 
   for (const target of targets) {
     if (!target.alive || !detectable(target)) continue;

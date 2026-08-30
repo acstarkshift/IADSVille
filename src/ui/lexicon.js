@@ -96,6 +96,10 @@ export const STATUS = {
   clock: { tm: 'ВРЕМЯ', en: 'TIME' },
   channels: { tm: 'КАНАЛЫ', en: 'CHANNELS' },
   exposure: { tm: 'ЗАСВЕТКА', en: 'ELINT EXPOSURE', hint: 'how well they have you pinned' },
+  fireControl: {
+    tm: 'СТАНЦИЯ НАВЕДЕНЬЯ', en: 'FIRE CONTROL',
+    hint: 'where the guidance antenna is pointing, and whether the target is inside its arc',
+  },
   shotQuality: {
     tm: 'ВЕР. ПОРАЖЕНИЯ', en: 'EST. KILL PROB',
     hint: 'what the firing tables say this shot is worth right now',

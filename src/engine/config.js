@@ -303,11 +303,34 @@ export const SAM_TYPES = {
     pkBase: 0.74,
     /** Displacement time if the crew relocates, seconds. */
     scootS: 210,
+    /**
+     * The acquisition set: the battalion's own search picture, turning
+     * through the full circle. Long-range batteries are the only class that
+     * carries two sets, and this is the one the rest of the game means when
+     * it says "the battery's radar".
+     */
     radar: {
-      kind: 'fc', label: 'BASTION FC',
+      kind: 'acq', label: 'BASTION ACQ',
       rangeKm: 150, heightM: 26, scanPeriodS: 10, warmupS: 12,
       /** How loudly it advertises itself to enemy ELINT. */
       elintGain: 1.5,
+    },
+    /**
+     * And the fire-control set, which is a different machine entirely.
+     *
+     * It sits on a mount that covers a hundred and twenty degrees and traverses
+     * at five degrees a second, so swinging it from one edge of its arc to the
+     * other is the better part of half a minute. Nothing is guided that it is
+     * not pointing at. That is what a long-range battalion actually is: enormous
+     * reach through one soda straw, and the operator's job is deciding which way
+     * the straw points before the raid tells them.
+     */
+    fcRadar: {
+      kind: 'fc', label: 'BASTION FC',
+      rangeKm: 130, heightM: 26, scanPeriodS: 4, warmupS: 8,
+      elintGain: 1.3,
+      fovDeg: 120,
+      slewRateDegPerS: 5,
     },
   },
   lance: {
