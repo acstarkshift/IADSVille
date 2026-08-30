@@ -47,7 +47,7 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
   // backs up the flag: every death path is supposed to set `destroyed`, but a
   // path that forgets must not reopen the churn.
   if (track.destroyed) return null;
-  const truth = world.aircraftById.get(track.truthId);
+  const truth = world.truthOf(track);
   if (truth && !truth.alive) return null;
   if (site.engagements.length >= channelsFor(site)) return null;
   if (site.engagements.some((e) => e.trackId === track.id)) return null;
@@ -183,7 +183,7 @@ export function stepEngagements(world, dt) {
       const track = world.tracks.get(engagement.trackId);
       if (!track) { endEngagement(world, site, engagement, 'track lost'); continue; }
 
-      const target = world.aircraftById.get(track.truthId);
+      const target = world.truthOf(track);
       if (!target || !target.alive) {
         if (engagement.missileIds.length === 0) {
           endEngagement(world, site, engagement, 'target destroyed');
@@ -421,6 +421,17 @@ function runFormationCommander(world, formation, dt) {
      * supervision where they are already aiming.
      */
     && !freeCrewCovers(world, t)
+    /*
+     * And not the enemy's rounds. Shooting a weapon out of the air is a real
+     * option and a poor bet — a fraction of the size, seconds of window, and
+     * only the low sections can reach it. An officer running a sector spends
+     * his channels on the aircraft; taking the round instead is a call the
+     * person at the console makes, deliberately, about one round they have
+     * decided matters. Measured with officers doing it automatically: the
+     * sector's answer to the raid slowed by a third and an AI net over free
+     * crews went back to taxing them.
+     */
+    && !world.truthOf(t)?.contactType
     && commanderWillEngage(world, formation, t));
 
   for (const track of candidates) {
@@ -804,7 +815,7 @@ export function runBatteryCrews(world, dt) {
            * held open past its story. An egressor gets engaged only while a
            * shot at it is still a real shot.
            */
-          const truth = world.aircraftById.get(t.truthId);
+          const truth = world.truthOf(t);
           if (truth?.state === 'egress'
             && env.rangeKm > SAM_TYPES[site.type].maxRangeKm * 0.6) return false;
           return true;
@@ -820,7 +831,14 @@ export function runBatteryCrews(world, dt) {
          * price of setting everything free and walking away.
          */
         .sort((a, b) => dist(site.pos, a.pos) - dist(site.pos, b.pos));
-      if (available[0]) beginEngagement(world, site, available[0], { origin: 'free' });
+      /*
+       * A crew shoots the aeroplane before it shoots the bomb: aircraft first,
+       * and one of the enemy's rounds only when there is nothing else in front
+       * of the battery. That ordering is what keeps a gun section from
+       * abandoning the striker it could kill for the weapon it probably cannot.
+       */
+      const pick = available.find((t) => !world.truthOf(t)?.contactType) ?? available[0];
+      if (pick) beginEngagement(world, site, pick, { origin: 'free' });
     }
   }
 }

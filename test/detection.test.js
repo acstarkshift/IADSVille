@@ -169,6 +169,15 @@ function fakeWorld(over = {}) {
     // exercising the same code path the game does.
     modifiers: { idSpeedMult: 1 },
     aircraftById: new Map([['a1', { id: 'a1', type: 'striker' }]]),
+    // Rounds in flight are trackable contacts too, so the stub resolves truth
+    // exactly the way World.truthOf does — aircraft first, then the enemy's
+    // rounds — or these tests would be exercising a path the game does not.
+    missiles: [],
+    truthOf(track) {
+      return this.aircraftById.get(track.truthId)
+        ?? this.missiles.find((m) => m.id === track.truthId)
+        ?? null;
+    },
     dropped: [],
     dropTrack(id, reason) { this.dropped.push(reason); this.tracks.delete(id); },
     ...over,

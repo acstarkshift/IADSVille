@@ -494,6 +494,22 @@ export class World {
     return this.radars.filter((r) => r.siteId === site.id);
   }
 
+  /**
+   * The thing a track is actually about.
+   *
+   * Usually an aircraft. Sometimes one of the enemy's rounds — an
+   * anti-radiation round on its way to one of your sets, or a weapon a striker
+   * has already released — because those are held on the scope too, and can be
+   * shot at. Every consumer that used to reach into `aircraftById` goes
+   * through here, so a track never silently resolves to nothing.
+   */
+  truthOf(track) {
+    if (!track) return null;
+    return this.aircraftById.get(track.truthId)
+      ?? this.missiles.find((m) => m.id === track.truthId)
+      ?? null;
+  }
+
   isDirect(formationId) {
     const formation = this.formationById.get(formationId);
     return !!formation?.direct && this.t >= formation.handoverUntilS;
@@ -841,6 +857,10 @@ export class World {
   killMissile(missile, reason) {
     missile.alive = false;
     missile.endReason = reason;
+    // One of the enemy's rounds is a tracked contact like anything else, so
+    // its track has to die with it — otherwise a weapon that has already
+    // arrived stays on the board as a firm hostile somebody will assign.
+    if (missile.contactType) this.markTracksDown(missile.id);
   }
 
   onMissileMiss(target, missile) {

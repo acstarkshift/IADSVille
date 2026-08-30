@@ -296,61 +296,76 @@ describe('district command', () => {
      * (A mean-score comparison over a handful of seeds used to live here. It
      * flapped: per-seed score swings on a district watch are several times the
      * effect, so the test measured the seed, not the design.)
+     *
+     * The delays are pooled across five watches rather than read off one. A
+     * single watch offers three to eight answered tracks per sector, and the
+     * held sector's few are bimodal — most answered on the tick they became
+     * legal, a couple firm for minutes first because nothing could reach them
+     * yet. A median of six samples flips on which kind the seed happened to
+     * deal; forty samples does not.
      */
-    const w = new World(scenarioById('four-sectors'), { role: 'net', seed: 'latency' });
-    w.formations.forEach((f) => { if (!f.hq) { f.direct = false; f.handoverUntilS = 0; } });
-    w.takeDirect('f_lozan');
-    for (const formation of w.formations) w.setPosture(formation.id, 'tight');
+    const delays = { lozan: [], kubin: [] };
+    for (const seed of ['latency-1', 'latency-2', 'latency-3', 'latency-4', 'latency-5']) {
+      const w = new World(scenarioById('four-sectors'), { role: 'net', seed });
+      w.formations.forEach((f) => { if (!f.hq) { f.direct = false; f.handoverUntilS = 0; } });
+      w.takeDirect('f_lozan');
+      for (const formation of w.formations) w.setPosture(formation.id, 'tight');
 
-    const firmAt = new Map();
-    const assignedAt = new Map();
-    const clusterOf = new Map();
-    let n = 0;
-    while (w.phase === 'running' && n < 40000) {
-      for (const radar of w.radars) if (radar.alive && !radar.siteId) radar.on = true;
-      w.step(0.1);
-      if (w.command.pending) w.answer('accepted');
+      const firmAt = new Map();
+      const assignedAt = new Map();
+      const clusterOf = new Map();
+      let n = 0;
+      while (w.phase === 'running' && n < 40000) {
+        for (const radar of w.radars) if (radar.alive && !radar.siteId) radar.on = true;
+        w.step(0.1);
+        if (w.command.pending) w.answer('accepted');
 
-      for (const track of w.tracks.values()) {
-        if (track.hostility !== 'hostile' || track.destroyed) continue;
-        if (track.quality >= DETECTION.firmQuality && !firmAt.has(track.id)) {
-          firmAt.set(track.id, w.t);
-          const asset = track.predictedAssetId ? w.assetById.get(track.predictedAssetId) : null;
-          clusterOf.set(track.id, asset?.cluster ?? 'none');
-        }
-        if (firmAt.has(track.id) && track.assignedTo.length && !assignedAt.has(track.id)) {
-          assignedAt.set(track.id, w.t);
-        }
-      }
-
-      // The player, working only their own sector — the officer's own job
-      // description, done with human immediacy.
-      for (const track of w.tracks.values()) {
-        if (track.hostility !== 'hostile' || track.destroyed || track.assignedTo.length) continue;
-        if (track.quality < DETECTION.firmQuality || clusterOf.get(track.id) !== 'lozan') continue;
-        let best = null;
-        let bestValue = -Infinity;
-        for (const site of w.sitesOf(w.formationById.get('f_lozan'))) {
-          const evaluation = engagementValue(w, site, track);
-          if (evaluation && evaluation.value > bestValue) {
-            bestValue = evaluation.value;
-            best = site;
+        for (const track of w.tracks.values()) {
+          if (track.hostility !== 'hostile' || track.destroyed) continue;
+          // Aircraft only. The enemy's rounds are tracked and engageable too,
+          // but answering one is a different problem with a different clock —
+          // it waits on a low section getting into reach, not on a commander
+          // making up their mind, which is the latency this test is about.
+          if (w.truthOf(track)?.contactType) continue;
+          if (track.quality >= DETECTION.firmQuality && !firmAt.has(track.id)) {
+            firmAt.set(track.id, w.t);
+            const asset = track.predictedAssetId ? w.assetById.get(track.predictedAssetId) : null;
+            clusterOf.set(track.id, asset?.cluster ?? 'none');
+          }
+          if (firmAt.has(track.id) && track.assignedTo.length && !assignedAt.has(track.id)) {
+            assignedAt.set(track.id, w.t);
           }
         }
-        if (best) w.assign(track.id, best.id);
-      }
-      n++;
-    }
 
-    const delays = { lozan: [], kubin: [] };
-    for (const [id, t0] of firmAt) {
-      const cluster = clusterOf.get(id);
-      if (delays[cluster] && assignedAt.has(id)) delays[cluster].push(assignedAt.get(id) - t0);
+        // The player, working only their own sector — the officer's own job
+        // description, done with human immediacy.
+        for (const track of w.tracks.values()) {
+          if (track.hostility !== 'hostile' || track.destroyed || track.assignedTo.length) continue;
+          if (w.truthOf(track)?.contactType) continue;
+          if (track.quality < DETECTION.firmQuality || clusterOf.get(track.id) !== 'lozan') continue;
+          let best = null;
+          let bestValue = -Infinity;
+          for (const site of w.sitesOf(w.formationById.get('f_lozan'))) {
+            const evaluation = engagementValue(w, site, track);
+            if (evaluation && evaluation.value > bestValue) {
+              bestValue = evaluation.value;
+              best = site;
+            }
+          }
+          if (best) w.assign(track.id, best.id);
+        }
+        n++;
+      }
+
+      for (const [id, t0] of firmAt) {
+        const cluster = clusterOf.get(id);
+        if (delays[cluster] && assignedAt.has(id)) delays[cluster].push(assignedAt.get(id) - t0);
+      }
     }
     const median = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
 
-    assert.ok(delays.lozan.length >= 3, 'the held sector answered its raid');
-    assert.ok(delays.kubin.length >= 1, 'the officer eventually answered something');
+    assert.ok(delays.lozan.length >= 15, 'the held sector answered its raids');
+    assert.ok(delays.kubin.length >= 5, 'the officer eventually answered something');
     assert.ok(median(delays.lozan) < 15,
       `your sector answers in seconds (median ${median(delays.lozan).toFixed(1)}s)`);
     assert.ok(median(delays.kubin) > median(delays.lozan) * 3,

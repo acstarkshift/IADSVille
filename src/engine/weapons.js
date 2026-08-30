@@ -165,6 +165,20 @@ export function createMissile(spec) {
     aimPos: { ...spec.pos },
     alive: true,
     trail: [],
+    /**
+     * What the picture would call this, if the picture can hold it.
+     *
+     * Set only on the enemy's rounds — an anti-radiation round or a released
+     * weapon — because those are the two things in the air that the operator
+     * can be given a chance to shoot at. Our own rounds are not targets and
+     * carry nothing here, which is also what keeps them off the scope's
+     * track list.
+     */
+    contactType: spec.contactType ?? null,
+    rcs: spec.contactType ? AIR_TYPES[spec.contactType].rcs : null,
+    /** Height it came off the aircraft at, for the descent along its run. */
+    launchAltM: spec.altM ?? 0,
+    runKm: null,
   };
 }
 
@@ -194,6 +208,25 @@ function aimPointFor(world, missile) {
       return leadPoint(missile.pos, target.pos, target.vel, missile.speed);
     }
     return leadPoint(missile.pos, target.pos, target.vel, missile.speed);
+  }
+
+  /*
+   * One of ours, chasing one of theirs. Guided by the same antenna under the
+   * same rules as any other shot — a crew that goes dark drops this round too.
+   */
+  if (missile.targetKind === 'missile') {
+    const target = world.missiles.find((m) => m.id === missile.targetId);
+    if (!target || !target.alive) return null;
+    const radar = world.radarById.get(missile.radarId);
+    const site = world.siteById.get(missile.siteId);
+    const inArc = !radar?.fovDeg
+      || absDeltaDeg(radar.boresightDeg, bearing(radar.pos, target.pos)) <= radar.fovDeg / 2;
+    if (!(radar && radar.state === 'radiating' && inArc && site && site.alive)) {
+      missile.unguidedS += world.dt;
+      return missile.aimPos;
+    }
+    missile.unguidedS = 0;
+    return leadPoint(missile.pos, target.pos, scale(headingVec(target.hdg), target.speed), missile.speed);
   }
 
   if (missile.targetKind === 'radar') {
@@ -240,11 +273,40 @@ function stepMissile(world, missile, dt) {
   missile.pos = add(missile.pos, step);
   missile.tofS += dt;
 
-  // Altitude is cosmetic for the round itself but drives the side-view display.
+  /*
+   * Altitude.
+   *
+   * This used to be frankly cosmetic — a fast exponential onto the target's
+   * height, which for anything aimed at the ground meant the round was at zero
+   * metres within a couple of seconds of leaving the aircraft. That was
+   * harmless while rounds were invisible. Now that the enemy's are tracked and
+   * can be shot at, it was the whole game: a weapon at zero metres is under
+   * every radar horizon on the board, so it could never be held, never
+   * announced, and never engaged — the option existed on paper only.
+   *
+   * A released weapon descends along its flight instead, from the height it
+   * came off the aircraft to the height of what it is aimed at, in proportion
+   * to how much of the run it has flown. Which is both what one does and what
+   * gives the defence the twenty or thirty seconds the whole idea needs.
+   */
   const targetAlt = missile.targetKind === 'aircraft'
     ? (world.aircraftById.get(missile.targetId)?.altM ?? missile.altM)
     : 0;
-  missile.altM += (targetAlt - missile.altM) * clamp01(dt * 0.6);
+  if (missile.contactType) {
+    /*
+     * Distance still to run, against the distance the run started at. The
+     * point it is running to is the briefed one for a released weapon and the
+     * radar's position for an anti-radiation round — `aimPos` starts life as
+     * the launch point, which would make the descent a no-op.
+     */
+    const goingTo = missile.briefedPos ?? missile.aimPos;
+    const toGo = dist(missile.pos, goingTo);
+    missile.runKm = missile.runKm ?? Math.max(toGo, 0.1);
+    const fraction = clamp01(1 - toGo / missile.runKm);
+    missile.altM = missile.launchAltM + (targetAlt - missile.launchAltM) * fraction;
+  } else {
+    missile.altM += (targetAlt - missile.altM) * clamp01(dt * 0.6);
+  }
 
   missile.trail.push({ x: before.x, y: before.y, t: world.t });
   if (missile.trail.length > 40) missile.trail.shift();
@@ -306,6 +368,44 @@ function resolveIntercept(world, missile, prevPos) {
     return;
   }
 
+  /*
+   * Shooting down one of theirs. Harder than an aircraft and honestly so: the
+   * thing is a fraction of the size, it is quick, and there is no second
+   * attempt — but it is the only counter to a round already in the air, and a
+   * gun section sited where the weapons come down earns its place doing it.
+   */
+  if (missile.targetKind === 'missile') {
+    const target = world.missiles.find((m) => m.id === missile.targetId);
+    if (!target || !target.alive) return;
+    const prevTarget = sub(target.pos, scale(headingVec(target.hdg), target.speed * world.dt));
+    const miss = closestApproachKm(prevPos, missile.pos, prevTarget, target.pos);
+    if (miss > Math.max(lethal, 0.35)) return;
+
+    const site = world.siteById.get(missile.siteId);
+    world.killMissile(missile, 'detonated');
+    const pk = site
+      ? computeSamPk(site, { pos: target.pos, altM: target.altM, type: target.contactType },
+        missile, world.difficulty) * ENGAGEMENT.versusRoundPk
+      : 0.2;
+    if (world.rng.chance(pk)) {
+      world.killMissile(target, 'intercepted');
+      world.markTracksDown(target.id);
+      world.stats.roundsIntercepted = (world.stats.roundsIntercepted ?? 0) + 1;
+      const label = AIR_TYPES[target.contactType]?.label ?? 'ROUND';
+      world.log('good', `${label} DESTROYED IN FLIGHT — ${missile.trackLabel ?? ''}`.trim(),
+        { severity: 'good', missileId: target.id });
+      if (site) {
+        world.comms(site.name, 'SPLASH — ROUND KILLED IN THE AIR.',
+          { urgent: true, siteId: site.id });
+      }
+      addEffect(world, { kind: 'flash', magnitude: 0.3, durationS: 0.5 });
+    } else {
+      world.log('warn', `${missile.trackLabel ?? 'ROUND'} — MISS`, { trackId: missile.trackId });
+      addEffect(world, { kind: 'puff', pos: { ...missile.pos }, durationS: 1.8 });
+    }
+    return;
+  }
+
   if (missile.targetKind === 'radar') {
     const radar = world.radarById.get(missile.targetId);
     if (!radar || !radar.alive) return;
@@ -351,7 +451,7 @@ export function stepMissiles(world, dt) {
  */
 export function launchSalvo(world, site, track, count, origin = null) {
   const type = SAM_TYPES[site.type];
-  const target = world.aircraftById.get(track.truthId);
+  const target = world.truthOf(track);
   if (!target || !target.alive) return 0;
 
   let launched = 0;
@@ -367,7 +467,7 @@ export function launchSalvo(world, site, track, count, origin = null) {
       altM: 20,
       speed: type.missileSpeed,
       hdg: bearing(site.pos, target.pos),
-      targetKind: 'aircraft',
+      targetKind: target.contactType ? 'missile' : 'aircraft',
       targetId: target.id,
       siteId: site.id,
       radarId: site.fcRadarId ?? site.radarId,
@@ -386,6 +486,9 @@ export function launchSalvo(world, site, track, count, origin = null) {
   }
 
   if (launched > 0) {
+    // A round in flight names its type differently from an aircraft; every
+    // type-table lookup below goes through the same normalisation.
+    const targetType = AIR_TYPES[target.contactType ?? target.type];
     world.log('launch', `${site.name} — ${launched} AWAY ON ${track.tn}`, {
       siteId: site.id, trackId: track.id,
     });
@@ -409,7 +512,9 @@ export function launchSalvo(world, site, track, count, origin = null) {
      * presses on. Estimated with the same Pk arithmetic the intercept will use,
      * at the launch geometry.
      */
-    const launchQuality = computeSamPk(site, target,
+    const launchQuality = computeSamPk(site,
+      { pos: target.pos, altM: target.altM, type: target.contactType ?? target.type,
+        evadingUntilS: target.evadingUntilS, worldTimeS: target.worldTimeS },
       { launchRangeKm: dist(site.pos, target.pos) }, world.difficulty);
     world.warnTargetOfLaunch(target, launchQuality >= ENGAGEMENT.crediblePk);
     // Bill the salvo to the engagement's purpose — the prediction that
@@ -424,7 +529,7 @@ export function launchSalvo(world, site, track, count, origin = null) {
     world.registerRoundsSpent(track, launched, origin, engagement?.purposeAssetId);
     // Firing on the state aircraft is recorded whether or not it works. The act
     // is the fire order, not the result of it.
-    if (AIR_TYPES[target.type].isVip) world.registerVipFires(site, launched);
+    if (targetType?.isVip) world.registerVipFires(site, launched);
   }
   return launched;
 }
@@ -472,6 +577,7 @@ export function launchArm(world, shooter, radar) {
     targetId: radar.id,
     shooterId: shooter.id,
     maxFlightS: ARM.maxFlightS,
+    contactType: 'arm',
   });
   missile.aimPos = { ...radar.pos };
   world.missiles.push(missile);
@@ -501,6 +607,7 @@ export function releaseWeapons(world, aircraft, asset, aimPoint = null) {
       targetId: asset.id,
       shooterId: aircraft.id,
       maxFlightS: 140,
+      contactType: 'glide',
     });
     missile.damage = type.weaponDamage;
     missile.briefedPos = { ...aim };

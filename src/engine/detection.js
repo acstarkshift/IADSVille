@@ -26,16 +26,28 @@ import {
  *
  * Everything that flies as an aircraft — including the friendly traffic and the
  * aircraft the sector is trying to protect, both of which have to appear on the
- * scope for the operator to have any decision to make about them. Rounds in
- * flight are not aircraft in this simulation and are never plotted: an
- * anti-radiation round is too small and too fast to hold, which is why the
- * warning of one comes from the launch and not from the track.
+ * scope for the operator to have any decision to make about them — and the
+ * enemy's rounds in flight, which used to be excluded on the grounds that an
+ * anti-radiation round is too small and too fast to hold. It is small and it is
+ * fast, and the model now says so in the numbers instead: a twentieth of a
+ * striker's cross-section, low, and gone in seconds. Whether it can be held is
+ * a question the radar equation should answer, not a question the sim should
+ * answer on the operator's behalf by refusing to look.
  *
  * A type may opt out with `radarInvisible`. Nothing currently does; the flag
  * exists so that adding a type to the game cannot silently make it undetectable,
  * which is exactly what a whitelist here did.
  */
-const detectable = (aircraft) => !AIR_TYPES[aircraft.type]?.radarInvisible;
+const detectable = (contact) => !AIR_TYPES[contactType(contact)]?.radarInvisible;
+
+/**
+ * Which entry in the type table describes this flying thing.
+ *
+ * An aircraft is its own type; one of the enemy's rounds is whatever it was
+ * stamped as when it left the rail. Everything downstream — cross-section,
+ * threat weight, the label on the row — goes through here.
+ */
+export const contactType = (contact) => contact.contactType ?? contact.type;
 
 /**
  * Nominal detection range for one radar against one target, after RCS scaling,
@@ -284,11 +296,31 @@ export function correlatePlots(world, plots) {
         world.log('warn', `NEW CONTACT — ${track.tn}. THE WATCH HAS COMPANY.`,
           { trackId: track.id });
       }
+      /*
+       * A round in the air is not a contact, it is an emergency, and it is
+       * called as one the instant the picture holds it: named, located, and
+       * said out loud to be something that can still be shot at. Everything
+       * else about this watch can wait forty seconds. This cannot.
+       */
+      const truth = world.truthOf?.(track);
+      if (truth?.contactType && world.log) {
+        const type = AIR_TYPES[truth.contactType];
+        track.classification = truth.contactType;
+        track.hostility = 'hostile';
+        const brg = String(Math.round(bearing({ x: 0, y: 0 }, track.pos))).padStart(3, '0');
+        world.log('alert', truth.contactType === 'arm'
+          ? `ROUND IN THE AIR — ${track.tn}, BEARING ${brg}. ANTI-RADIATION. ENGAGEABLE.`
+          : `WEAPON IN THE AIR — ${track.tn}, BEARING ${brg}. ENGAGEABLE.`,
+        { trackId: track.id, severity: 'high' });
+        world.comms?.('SECTOR', `${type.label} TRACKED AS ${track.tn}. LOW SECTIONS TAKE IT.`,
+          { urgent: true, trackId: track.id });
+      }
+
       // The set that found it says so — the surveillance sets only. Reporting
       // the air picture is their job; a battery's own set is looking at what
       // it is about to shoot, and does not narrate the sector.
       const finder = world.radarById?.get(plot.radarId);
-      if (finder && !finder.siteId && world.comms) {
+      if (finder && !finder.siteId && world.comms && !truth?.contactType) {
         world.comms(finder.label, `NEW CONTACT, ${track.tn}, BEARING ${
           String(Math.round(bearing(finder.pos, track.pos))).padStart(3, '0')}.`,
         { trackId: track.id, radarId: finder.id });
@@ -395,10 +427,10 @@ export function ageTracks(world, dt) {
  */
 function advanceIdentification(world, track, dt) {
   if (track.quality < DETECTION.firmQuality) return;
-  const truth = world.aircraftById.get(track.truthId);
+  const truth = world.truthOf(track);
   if (!truth) return;
 
-  const type = AIR_TYPES[truth.type];
+  const type = AIR_TYPES[contactType(truth)];
   const speedMult = (type.idSpeedMult ?? 1) * (world.modifiers?.idSpeedMult ?? 1);
   track.idProgressS += dt * speedMult * (world.fusionOnline ? 1 : 0.55);
 
@@ -455,9 +487,21 @@ export function stepDetection(world, dt) {
   const jammers = world.aircraft.filter((a) => a.alive && a.type === 'jammer' && a.jamming);
   const allPlots = [];
 
+  /*
+   * What the sets are looking for: every aircraft, plus the enemy's rounds in
+   * flight. An anti-radiation round and a released weapon are small, quick and
+   * hard to hold — which the model says in the numbers (a twentieth of a
+   * striker's cross-section) rather than by refusing to plot them. They are
+   * the two things in the air the operator might still be able to do something
+   * about, and being unable to even see them was the sim deciding that for
+   * them. Our own rounds carry no `contactType` and never enter this list.
+   */
+  const contacts = world.aircraft.concat(
+    world.missiles.filter((m) => m.alive && m.contactType));
+
   for (const radar of world.radars) {
     stepRadarPower(radar, dt);
-    const plots = sweepRadar(radar, world.aircraft, jammers, world.rng, dt);
+    const plots = sweepRadar(radar, contacts, jammers, world.rng, dt);
     for (const p of plots) allPlots.push(p);
   }
 

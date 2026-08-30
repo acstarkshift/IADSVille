@@ -41,6 +41,57 @@ export const AIR_TYPES = {
     evadeDurationS: 22,
     threatWeight: 1.0,
   },
+  /**
+   * The two things the enemy launches that you can shoot back at.
+   *
+   * Neither is ever spawned as a wave — they come off an aircraft in flight,
+   * as an anti-radiation round leaving a suppression aircraft or a weapon
+   * leaving a striker at its release point. They live in the round system,
+   * not the aircraft system; they are listed here because this table is the
+   * registry every lookup goes through (radar cross-section, threat weight,
+   * the label on the track row), and a flying object missing from it is an
+   * object the picture cannot describe.
+   *
+   * Both are small, quick and low. By the time either is worth engaging it is
+   * beneath the floor of every medium and long-range battery on the board, so
+   * the only systems that can answer are the guns and the point-defence
+   * sections — which is exactly what those two classes are for, and the first
+   * time in the campaign that siting them well pays a dividend you can watch
+   * happen.
+   */
+  arm: {
+    id: 'arm',
+    label: 'ARM',
+    name: 'Anti-radiation round',
+    rcs: 0.05,
+    speed: 0.6,
+    cruiseAltM: 0,
+    turnRate: 16,
+    releaseRangeKm: 0,
+    weapons: 0,
+    weaponDamage: 0,
+    resolve: 1,
+    evadeFactor: 1,       // it does not know it is being shot at
+    evadeDurationS: 0,
+    /** Above a striker: it is seconds from taking a radar off the board. */
+    threatWeight: 1.6,
+  },
+  glide: {
+    id: 'glide',
+    label: 'WEAPON',
+    name: 'Released weapon',
+    rcs: 0.08,
+    speed: 0.31,
+    cruiseAltM: 0,
+    turnRate: 9,
+    releaseRangeKm: 0,
+    weapons: 0,
+    weaponDamage: 0,
+    resolve: 1,
+    evadeFactor: 1,
+    evadeDurationS: 0,
+    threatWeight: 1.4,
+  },
   cruise: {
     id: 'cruise',
     label: 'CRUISE',
@@ -528,6 +579,12 @@ export const ENGAGEMENT = {
   lowAltPk: 0.6,
   /** Pk multiplier against a cruise-missile-sized target. */
   smallTargetPk: 0.68,
+  /**
+   * And a round in flight is harder again than a small aircraft: a fraction of
+   * the size, quick, and crossing the envelope in seconds. Terminal defence is
+   * a real option and a poor bet — which is the honest shape for it.
+   */
+  versusRoundPk: 0.55,
   /** Pk multiplier when the guiding radar went dark before terminal. */
   unguidedPk: 0.11,
   /** Seconds a missile can coast unguided before it is written off. */

@@ -101,16 +101,30 @@ describe('attention matters at sector level', () => {
     // SUBTRACTED ~12% — assignments stole tracks crews already had and
     // re-paid the reaction each time. Now the net assigns only what no crew
     // covers, and a netted battery re-engages after a miss.
+    /*
+     * Twelve seeds, not the six the other tests share. Measured across twelve
+     * the ladder sits at 0.998 with the net taking half the nights; across six
+     * it swings between 0.91 and 1.05 depending which six, because per-seed
+     * score variance on this watch is several times the effect being measured.
+     * A six-seed sample here was pinning the sample, not the design.
+     */
+    const ladderSeeds = Array.from({ length: 12 }, (_, i) => `g${i + 1}`);
     let aiScore = 0;
-    for (const seed of seeds) {
-      const w = new World(scenarioById('white-noise'), { role: 'net', seed });
-      w.control.netIsHuman = false;
-      for (const f of w.formations) w.setPosture(f.id, 'free');
-      drive(w);
-      aiScore += w.outcome.score;
+    let freeScore = 0;
+    for (const seed of ladderSeeds) {
+      const netted = new World(scenarioById('white-noise'), { role: 'net', seed });
+      netted.control.netIsHuman = false;
+      for (const f of netted.formations) netted.setPosture(f.id, 'free');
+      drive(netted);
+      aiScore += netted.outcome.score;
+
+      const alone = new World(scenarioById('white-noise'), { role: 'net', seed });
+      for (const site of alone.sites) alone.setWeaponsState(site.id, 'free');
+      drive(alone);
+      freeScore += alone.outcome.score;
     }
-    assert.ok(aiScore > totals.free.score * 0.95,
-      `the AI net must not tax its own crews (${aiScore} vs crews alone ${totals.free.score})`);
+    assert.ok(aiScore > freeScore * 0.95,
+      `the AI net must not tax its own crews (${aiScore} vs crews alone ${freeScore})`);
   });
 
   test('the decapitation watch is nobody\'s dominant strategy — by design', () => {
