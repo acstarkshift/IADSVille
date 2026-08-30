@@ -322,6 +322,47 @@ export const DIRECTIVES = {
     onRefuse: (w) => { w.command.constraints.palaceOrderRefused = true; },
   },
 
+  /**
+   * The aircraft has questions.
+   *
+   * The man aboard STATE 01 never transmits on this net and is never named on
+   * it. What arrives is the relay: sector command passing down, without
+   * comment, what the aircraft wants to know while four fighters close on it
+   * and every crew it is asking after is firing what is on the rails. Built on
+   * the `explain` pattern — no mechanical effect, three seconds you do not
+   * have — because that is the truthful shape of the thing: his entitlement is
+   * priced in the only currency this game has. Declared ahead of `explain` so
+   * it wins the routine slot on the one watch it exists for.
+   */
+  relayQuery: {
+    id: 'relayQuery',
+    /** How the order is named in the after-action ledger. */
+    label: 'the relayed query from the state aircraft',
+    priority: 'normal',
+    cooldownS: 170,
+    /** Twice is a passenger. A third time would be a doorbell. */
+    maxPerWatch: 2,
+    text: (w) => ((w.command.issuedCount?.relayQuery ?? 0) === 0
+      ? 'SECTOR ACTUAL: STATE 01 queries the delay in the corridor. There is no delay in the'
+        + ' corridor. The query is relayed as received. Acknowledge.'
+      : 'SECTOR ACTUAL: STATE 01 requests the damage figure for the palace and advises it is'
+        + ' carrying people who matter. Relayed as received. Acknowledge.'),
+    plain: (w) => ((w.command.issuedCount?.relayQuery ?? 0) === 0
+      ? 'SECTOR: STATE 01 queries the corridor delay. Acknowledge receipt.'
+      : 'SECTOR: STATE 01 requests a status report. Acknowledge receipt.'),
+    /*
+     * Only on the flight watch, only while the aircraft is airborne, and only
+     * once the protection order itself has gone out — a query relayed ahead of
+     * the order it presumes would be the net answering a question nobody has
+     * been asked yet. The hinge holds all routine traffic anyway; the explicit
+     * gate makes the ordering testable.
+     */
+    trigger: (w) => w.scenario.epilogue === true && !!w.vipAircraft()
+      && !!w.command.issuedOnce.protectFlight,
+    /** No mechanical effect. The three seconds are the effect. */
+    onAccept: () => {},
+  },
+
   explain: {
     id: 'explain',
     /** How the order is named in the after-action ledger. */
@@ -349,6 +390,7 @@ export const DIRECTIVES = {
     onAccept: (w) => { w.command.acknowledgedDisplacements = w.stats.displacements; },
     onRefuse: (w) => { w.command.acknowledgedDisplacements = w.stats.displacements; },
   },
+
 };
 
 /**

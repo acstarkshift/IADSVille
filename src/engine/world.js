@@ -1155,6 +1155,16 @@ export class World {
         text: `FRONTIER POSTS REPORT ENGINE NOISE TO THE ${octant}. NOTHING ON THE SETS YET.`,
       });
     }
+
+    // A scenario may script its own traffic — word of what is happening on the
+    // ground that no radar will ever paint. Copied per world, because the
+    // pending list is consumed by shift() and the scenario module is a
+    // singleton shared across replays. Lines marked pressureOnly are colour,
+    // not information, and vanish with the narrative-pressure setting.
+    for (const line of this.scenario.chatter ?? []) {
+      if (line.pressureOnly && !this.narrativePressure) continue;
+      chatter.push({ ...line });
+    }
     return chatter.sort((a, b) => a.atS - b.atS);
   }
 
@@ -1185,6 +1195,16 @@ export class World {
       });
       this.aircraft.push(aircraft);
       this.aircraftById.set(aircraft.id, aircraft);
+
+      // The watch the state aircraft flies is about one wheels-up, and the net
+      // marks it. Nothing else that spawns is announced — raids announce
+      // themselves by being detected, which is the game — but this departure
+      // happens on our own field, in the clear, on schedule.
+      if (type.isVip) {
+        this.log('alert', this.narrativePressure
+          ? `${aircraft.name} — ROLLING AT DEMOBODEDOVO. THE FIELD IS HELD FOR ONE MOVEMENT.`
+          : `${aircraft.name} — AIRBORNE OUT OF DEMOBODEDOVO.`, { severity: 'high' });
+      }
     }
   }
 

@@ -21,7 +21,7 @@ import {
 import { emptyCampaign, recordMission } from '../src/engine/campaign.js';
 import { createCharacter } from '../src/engine/character.js';
 import { AIR_TYPES, SAM_TYPES } from '../src/engine/config.js';
-import { DIRECTIVES } from '../src/engine/command.js';
+import { DIRECTIVES, issueDirective, stepCommand } from '../src/engine/command.js';
 import { dist, len } from '../src/engine/math.js';
 import { closestApproachBetween } from '../src/engine/threat.js';
 
@@ -471,5 +471,65 @@ describe('the order', () => {
     const world = play({ answer: 'refused', posture: 'hold' });
     assert.equal(world.command.constraints.flightOrderRefused, true);
     assert.ok(!world.command.constraints.flightOrderAccepted);
+  });
+});
+
+describe('the departure, and the aircraft with questions', () => {
+  test('the field talks while it is loaded, and the net marks wheels-up', () => {
+    const world = new World(epilogue, { role: 'net', seed: 'chatter' });
+    world.control.netIsHuman = false;
+    for (let n = 0; n < 700; n++) world.step(0.1);
+    const text = world.events.map((e) => e.text).join(' | ');
+    assert.match(text, /LOADING COMPLETE/);
+    assert.match(text, /EVACUATION FLIGHTS ARE HELD/);
+    assert.match(text, /FREIGHT DOORS WERE SEALED FIRST/);
+    assert.match(text, /ROLLING AT DEMOBODEDOVO/);
+  });
+
+  test('with the pressure off, the colour goes and the information stays', () => {
+    const world = new World(epilogue, {
+      role: 'net', seed: 'chatter', narrativePressure: false,
+    });
+    world.control.netIsHuman = false;
+    for (let n = 0; n < 700; n++) world.step(0.1);
+    const text = world.events.map((e) => e.text).join(' | ');
+    assert.doesNotMatch(text, /FREIGHT DOORS/);
+    assert.match(text, /CLOSED TO ALL OTHER MOVEMENTS/);
+    assert.match(text, /AIRBORNE OUT OF DEMOBODEDOVO/);
+  });
+
+  test('the relayed queries arrive only after the protection order, at most twice', () => {
+    const world = play();
+    const log = world.command.log;
+    const protectAt = log.findIndex((d) => d.id === 'protectFlight');
+    const relays = log.filter((d) => d.id === 'relayQuery');
+    assert.ok(protectAt >= 0, 'the hinge went out');
+    assert.ok(relays.length >= 1, 'the aircraft asks at least once');
+    assert.ok(relays.length <= 2, `twice is a passenger; got ${relays.length}`);
+    for (const relay of relays) {
+      assert.ok(log.indexOf(relay) > protectAt,
+        'no query is relayed ahead of the order it presumes');
+    }
+  });
+
+  test('the queries exist only on the flight watch', () => {
+    const elsewhere = new World(scenarioById('two-cities'), { role: 'net', seed: 'not-here' });
+    elsewhere.command.issuedOnce.protectFlight = true;
+    assert.equal(DIRECTIVES.relayQuery.trigger(elsewhere), false,
+      'the finale has no state aircraft to ask after');
+  });
+
+  test('silence to a relayed query is charged under a reason the debrief table shows', () => {
+    const world = new World(epilogue, { role: 'net', seed: 'relay-silence' });
+    issueDirective(world, DIRECTIVES.relayQuery);
+    world.command.pending.deadlineS = world.t - 1;
+    stepCommand(world, 0.1);
+    const entry = world.command.ledger.find((l) => /relayed query/.test(l.reason));
+    assert.ok(entry, 'the omission is recorded');
+    assert.ok(entry.charged < 0, 'and it costs');
+    // The debrief's divergence table filters on this pattern (screens.js) —
+    // the file charging you for attention correctly spent elsewhere is exactly
+    // the kind of row that card exists to show.
+    assert.match(entry.reason, /relayed/i);
   });
 });

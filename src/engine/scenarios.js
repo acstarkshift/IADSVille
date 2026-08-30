@@ -859,6 +859,21 @@ export const SCENARIOS = [
      * the arithmetic without anybody drawing attention to it.
      */
     supply: { roundsMult: 1.4, reloadsAllowed: true },
+    /*
+     * The departure, narrated from the ground. STATE 01 does not roll until
+     * sixty seconds in, and the field talks while it is being loaded — the one
+     * watch where the opening traffic is about our own side. The sequencing in
+     * these lines is the characterization: freight first, and two aircraft
+     * full of other people held on the apron so that one can go.
+     */
+    chatter: [
+      { atS: 14, pressureOnly: true,
+        text: 'DEMOBODEDOVO GROUND: LOADING COMPLETE. THE CRANE DETAIL IS RELEASED TO ITS BATTERY.' },
+      { atS: 30,
+        text: 'THE FIELD IS CLOSED TO ALL OTHER MOVEMENTS. TWO EVACUATION FLIGHTS ARE HELD ON THE APRON.' },
+      { atS: 48, pressureOnly: true,
+        text: 'PASSENGER STEPS WITHDRAWN. THE FREIGHT DOORS WERE SEALED FIRST.' },
+    ],
     brief: [
       'Two days after the last watch. You have been moved to the capital sector, which is what happens'
         + ' to people whose files say what yours now says.',

@@ -287,7 +287,7 @@ export function renderDebrief(host, state, result, entry) {
   const divergences = result.ledger
     .filter((l) => {
       const charged = l.charged ?? l.delta;
-      return Math.abs(charged) >= 2 && /civil|hospital|encampment|freeze|border|priority|state aircraft|movement order|Listonian/i.test(l.reason);
+      return Math.abs(charged) >= 2 && /civil|hospital|encampment|freeze|border|priority|state aircraft|movement order|Listonian|relayed/i.test(l.reason);
     })
     .slice(-8);
 

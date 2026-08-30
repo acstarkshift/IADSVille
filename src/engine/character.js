@@ -219,6 +219,15 @@ export const DECORATIONS = {
     blurb: 'Five sorties sent home without their weapons. No aircraft destroyed is still an attack defeated.',
     test: (r) => r.stats.turnedBack >= 5,
   },
+  transit: {
+    id: 'transit',
+    tm: 'ОРДЕН «ЗА СОПРОВОЖДЕНИЕ»',
+    en: 'Order for Escort of a State Flight',
+    // The escorted ending promises this citation, and the citation keeps the
+    // promise the way the state keeps promises: accurately, and about nothing.
+    blurb: 'The citation describes the protection of a state aircraft in transit. It does not describe the transit.',
+    test: (r) => r.missionId === 'presidents-flight' && !!r.stats.vipEscaped,
+  },
 };
 
 /** Names drawn on for a suggested identity at enlistment. */

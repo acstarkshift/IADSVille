@@ -31,6 +31,7 @@ export const STATE = {
   neighbour: { tm: 'ЛИСТОНИЯ', en: 'LISTONIA' },
   camp: { tm: 'ЛАГЕРЬ ПЕРЕМЕЩЁННЫХ', en: 'DISPLACED PERSONS CAMP' },
   airport: { tm: 'ДЕМОБОДЕДОВО', en: 'DEMOBODEDOVO' },
+  palace: { tm: 'ПРЕЗИДЕНТСКИЙ ДВОРЕЦ', en: 'PRESIDENTIAL PALACE' },
 };
 
 /** Controls the operator physically touches. */

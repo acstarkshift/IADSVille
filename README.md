@@ -431,6 +431,14 @@ strike package is coming for the palace and the field, and the long-range
 battalion that reaches the whole departure corridor is the same battalion those
 raids need.
 
+And twice in those eight minutes, the net brings you what STATE 01 wants to
+know: the delay in the corridor (there is no delay in the corridor), then the
+damage figure for the palace, with the advisory that the aircraft is carrying
+people who matter. He never transmits to you and is never named — everything
+arrives relayed by sector command, as received, awaiting your acknowledgement
+while the fighters close. His questions cost you seconds. On this watch,
+seconds are the only currency there is.
+
 There are three ways it ends, and the game does not favour any of them. Hold the
 corridor open and watch him go. Defend the city instead and let the fighters do
 what fighters do. Or select a track your own system has already identified as
