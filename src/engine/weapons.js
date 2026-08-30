@@ -388,7 +388,16 @@ export function launchSalvo(world, site, track, count, origin = null) {
     const launchQuality = computeSamPk(site, target,
       { launchRangeKm: dist(site.pos, target.pos) }, world.difficulty);
     world.warnTargetOfLaunch(target, launchQuality >= ENGAGEMENT.crediblePk);
-    world.registerRoundsSpent(track, launched, origin);
+    // Bill the salvo to the engagement's purpose — the prediction that
+    // justified the decision — not to wherever the noisy track estimate has
+    // wandered by the release instant. A stamp still empty (the track's course
+    // was not established when the engagement began) takes the best answer
+    // available now.
+    const engagement = site.engagements.find((e) => e.trackId === track.id);
+    if (engagement && engagement.purposeAssetId == null) {
+      engagement.purposeAssetId = track.predictedAssetId ?? null;
+    }
+    world.registerRoundsSpent(track, launched, origin, engagement?.purposeAssetId);
     // Firing on the state aircraft is recorded whether or not it works. The act
     // is the fire order, not the result of it.
     if (AIR_TYPES[target.type].isVip) world.registerVipFires(site, launched);

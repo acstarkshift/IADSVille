@@ -126,6 +126,9 @@ export class World {
 
     this.stats = {
       kills: 0, roundsFired: 0, leakers: 0, assetsLost: 0, sitesLost: 0,
+      /** Arrivals at a place the expenditure freeze struck off — counted in
+       *  `leakers` for the night's truth, but not a leaker the file recognises. */
+      leakersUnrecognized: 0,
       radarsLost: 0, civilianCasualties: 0, abortedSorties: 0, armsIncoming: 0,
       civilianAircraftShot: 0, displacements: 0, decoysEngaged: 0, sortiesTotal: 0,
       /*
@@ -869,6 +872,15 @@ export class World {
      */
     const type = ASSET_TYPES[asset.type];
     const excluded = this.command.constraints.freezeExcludedId === asset.id;
+    /*
+     * And the file's own leaker count follows the same recognition. The
+     * no-leakers settle used to bill every arrival at three points a head,
+     * hospital arrivals included — the inversion coming back through a side
+     * door: the state grieving, at settlement, for the building it had just
+     * declared undesignated. An arrival the freeze does not recognise is not
+     * a leaker the file can count. The score, as ever, counts all of them.
+     */
+    if (excluded) this.stats.leakersUnrecognized++;
     const weight = excluded ? 0 : type.critical ? 1 : Math.min(1, (type.value ?? 0) / 26);
     if (weight > 0) {
       this.standingDelta(COMMAND.standing.perLeaker * weight,
@@ -892,18 +904,23 @@ export class World {
    *
    * This is how the game finds out what you decided, without ever asking you.
    * A priority-of-fires order you accepted is enforced against the same figures.
+   * Callers that know what the engagement was FOR at the moment it was decided
+   * pass that stamp; the live prediction is only the fallback, because between
+   * decision and release a noisy estimate can wander onto an answer nobody
+   * chose.
    */
-  registerRoundsSpent(track, count, origin = null) {
-    const assetId = track.predictedAssetId;
+  registerRoundsSpent(track, count, origin = null, purposeAssetId = null) {
+    const assetId = purposeAssetId ?? track.predictedAssetId;
     if (!assetId) return;
     this.stats.roundsByAsset[assetId] = (this.stats.roundsByAsset[assetId] ?? 0) + count;
 
     const cluster = this.assetById.get(assetId)?.cluster;
     if (cluster) {
       this.stats.roundsByCluster[cluster] = (this.stats.roundsByCluster[cluster] ?? 0) + count;
-      // Free crews' snap shots are the sector fighting; a manual order or a
-      // human assignment is you choosing. Only the choosing lands here.
-      if (origin && origin !== 'free' && this.control.netIsHuman) {
+      // Free crews' snap shots and subordinate officers' assignments are the
+      // sector fighting; a human assignment is you choosing. Only the
+      // choosing lands here.
+      if (origin === 'assigned' && this.control.netIsHuman) {
         this.stats.yourRoundsByCluster[cluster] = (this.stats.yourRoundsByCluster[cluster] ?? 0) + count;
       }
     }
@@ -1435,7 +1452,11 @@ export class World {
     );
 
     const criticalLost = this.assets.some((a) => ASSET_TYPES[a.type].critical && a.destroyed);
-    const success = reason !== 'site-lost' && !criticalLost && this.stats.leakers <= (this.scenario.leakerTolerance ?? 2);
+    // The headline is the file's reading of the night, so it counts the
+    // leakers the file recognises: a watch that obeyed the freeze reads
+    // SECTOR HELD over the building it lost doing so. That is the point.
+    const leakersCounted = this.stats.leakers - (this.stats.leakersUnrecognized ?? 0);
+    const success = reason !== 'site-lost' && !criticalLost && leakersCounted <= (this.scenario.leakerTolerance ?? 2);
 
     const tier = tierFor(this.command.standing);
     const headline = reason === 'site-lost'

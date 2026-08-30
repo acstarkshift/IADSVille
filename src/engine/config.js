@@ -588,7 +588,15 @@ export const ASSET_TYPES = {
     id: 'hospital', label: 'DISTRICT HOSPITAL', name: 'District hospital',
     value: 8,
     scoreValue: 55,
-    hp: 120,
+    /*
+     * Stout enough to survive two weapon releases and fall to the third. At
+     * 120 it fell to the second, which made saving it require killing four
+     * raiders of the package's five — measured, a deliberate westward defence
+     * with rounds to spare still lost the building one night in two on the
+     * arithmetic alone. The freeze is meant to be what loses this place, not
+     * a binomial.
+     */
+    hp: 200,
     civilian: true,
   },
   /**

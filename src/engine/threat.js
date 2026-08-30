@@ -24,11 +24,26 @@ import { channelsFor } from './doctrine.js';
  *
  * An aeroplane does not know what anything is worth. Closest approach decides
  * it; value only breaks ties between places the track passes equally near.
+ * At half a point per point of value that "tiebreak" was still worth over a
+ * kilometre of geometry, and on a ray that passes through the hospital and on
+ * toward sector operations, a kilometre is the whole question: measured, three
+ * quarters of the rounds fired at hospital-bound raiders were billed to
+ * whatever stood behind it. Every ledger downstream — the expenditure freeze,
+ * the finale's account of what you personally defended — reads this field at
+ * the launch instant, so it has to mean what it says.
+ *
+ * The answer is also sticky. Track velocity is a noisy estimate; re-deciding
+ * from scratch every tick made the prediction wander between neighbours and
+ * billed a salvo to whichever answer the noise held at release. The incumbent
+ * keeps its seat until a challenger beats it by a clear margin of geometry;
+ * a genuine course change moves the miss distance by kilometres and unseats
+ * it within a couple of seconds.
  */
 export function predictedTarget(world, track) {
   let best = null;
   let bestScore = -Infinity;
   const speed = len(track.vel);
+  const held = track.predictedAssetId ?? null;
 
   for (const asset of world.assets) {
     if (asset.destroyed) continue;
@@ -37,9 +52,19 @@ export function predictedTarget(world, track) {
     if (!Number.isFinite(tti)) continue;
     // Penalise assets the track would have to turn a long way to reach.
     const closest = closestApproachToPoint(track, asset.pos);
-    const score = -closest * 12 - tti * 0.04 + type.value * 0.5;
+    let score = -closest * 12 - tti * 0.04 + type.value * 0.06;
+    if (asset.id === held) score += 6;
     if (score > bestScore) { bestScore = score; best = { asset, ttiS: tti, missKm: closest }; }
   }
+  /*
+   * A winner by default is not a destination. A freshly smoothed velocity can
+   * point a track at empty sky, where every asset is receding except one it
+   * would "reach" in ninety minutes and miss by fifty kilometres — and that
+   * one used to take the field, get remembered, and bill a ledger. If the
+   * best answer is not even half-plausible, the honest answer is that this
+   * track is not discernibly going anywhere yet.
+   */
+  if (best && (best.missKm > 60 || best.ttiS > 1500)) return null;
   return best;
 }
 

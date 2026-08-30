@@ -260,15 +260,31 @@ export function correlatePlots(world, plots) {
       continue;
     }
 
-    const dtSince = Math.max(0.1, world.t - best.lastUpdateS);
-    const measuredVel = scale(sub(plot.pos, best.pos), 1 / dtSince);
+    const dtSince = world.t - best.lastUpdateS;
 
-    // Alpha-beta smoothing: trust the new plot for position, blend for velocity.
+    /*
+     * Alpha-beta smoothing: trust the new plot for position, blend for
+     * velocity — but velocity only learns from plot pairs whose baseline is
+     * long enough to beat the position noise. Two radars painting the same
+     * aircraft a breath apart used to divide a few hundred metres of
+     * radar-to-radar disagreement by a tenth of a second and blend the
+     * resulting supersonic ghost in at 0.45: quality-1.0 tracks carried
+     * velocities double the true speed and ninety degrees off course, and
+     * every consumer downstream — target prediction, closure gates, the
+     * intercept arithmetic — trusted them. Nothing on this board flies
+     * faster than half a kilometre a second, and the estimator knows it.
+     */
+    if (dtSince >= 2) {
+      const measuredVel = scale(sub(plot.pos, best.pos), 1 / dtSince);
+      const measuredSpeed = len(measuredVel);
+      const capped = measuredSpeed > 0.5
+        ? scale(measuredVel, 0.5 / measuredSpeed) : measuredVel;
+      best.vel = {
+        x: best.vel.x + (capped.x - best.vel.x) * 0.45,
+        y: best.vel.y + (capped.y - best.vel.y) * 0.45,
+      };
+    }
     best.pos = { x: plot.pos.x, y: plot.pos.y };
-    best.vel = {
-      x: best.vel.x + (measuredVel.x - best.vel.x) * 0.45,
-      y: best.vel.y + (measuredVel.y - best.vel.y) * 0.45,
-    };
     best.altM = best.altM + (plot.altM - best.altM) * 0.5;
     best.quality = clamp01(best.quality + DETECTION.qualityGain);
     best.lastUpdateS = world.t;

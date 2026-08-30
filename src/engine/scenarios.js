@@ -446,7 +446,12 @@ export const SCENARIOS = [
         targetAssetId: 'a_hospital' },
       { atS: 195, type: 'striker', count: 3, bearingDeg: 20, spreadDeg: 20, spacingS: 24, altM: 260,
         targetAssetId: 'a_power' },
-      { atS: 330, type: 'striker', count: 2, bearingDeg: 292, spreadDeg: 14, spacingS: 20, altM: 180,
+      // Same deck as the first package: at 180 m the covering battery's
+      // low-altitude penalty stacked with evasion into a tail that a
+      // deliberate westward watch could not actually kill — measured, the
+      // defence lost the building three nights in eight with rounds to spare.
+      // The freeze, not the physics, is meant to be what loses the hospital.
+      { atS: 330, type: 'striker', count: 2, bearingDeg: 292, spreadDeg: 14, spacingS: 20, altM: 320,
         targetAssetId: 'a_hospital' },
     ],
   },
@@ -650,12 +655,15 @@ export const SCENARIOS = [
     radars: DISTRICT_RADARS,
     waves: [
       { atS: 35, type: 'sead', count: 2, bearingDeg: 340, spreadDeg: 44, spacingS: 26, distanceKm: 165 },
-      // Kubin takes the weight, and Kubin is what the battalion covers.
+      // Kubin takes the weight, and Kubin is what the battalion covers. The
+      // deck wave and the cruise stream are sized against FIVE battalions:
+      // the local sections can parry them with the long-range battalion's
+      // reach behind them, and visibly cannot once the ministry has it.
       { atS: 105, type: 'striker', count: 5, bearingDeg: 296, spreadDeg: 26, spacingS: 18, altM: 6000,
         distanceKm: 145, targetAssetId: 'a_kubin' },
-      { atS: 190, type: 'striker', count: 4, bearingDeg: 305, spreadDeg: 22, spacingS: 20, altM: 180,
+      { atS: 190, type: 'striker', count: 5, bearingDeg: 305, spreadDeg: 22, spacingS: 20, altM: 180,
         distanceKm: 145, targetAssetId: 'a_kubin_depot' },
-      { atS: 250, type: 'cruise', count: 4, bearingDeg: 18, spreadDeg: 26, spacingS: 14, altM: 90,
+      { atS: 250, type: 'cruise', count: 6, bearingDeg: 18, spreadDeg: 26, spacingS: 14, altM: 90,
         distanceKm: 145, targetAssetId: 'a_lozan' },
       { atS: 315, type: 'striker', count: 4, bearingDeg: 12, spreadDeg: 24, spacingS: 18, altM: 5400,
         distanceKm: 145, targetAssetId: 'a_lozan_power' },

@@ -680,10 +680,14 @@ export function settleDirectives(world) {
   const c = world.command.constraints;
 
   if (c.leakerAccount) {
-    if (world.stats.leakers === 0) {
+    // The file counts the leakers it recognises. An arrival at the place the
+    // freeze struck off is not one of them — the ledger cannot simultaneously
+    // declare a building undesignated and bill you for failing to defend it.
+    const counted = world.stats.leakers - (world.stats.leakersUnrecognized ?? 0);
+    if (counted === 0) {
       standingDelta(world, 10, 'no leakers, as ordered');
     } else {
-      standingDelta(world, -3 * world.stats.leakers, `${world.stats.leakers} leakers against a standing order`);
+      standingDelta(world, -3 * counted, `${counted} leakers against a standing order`);
     }
   }
 

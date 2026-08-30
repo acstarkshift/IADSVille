@@ -64,6 +64,15 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
      * edge of the envelope, because that is what free means.
      */
     origin: origin ?? 'assigned',
+    /**
+     * What this engagement was FOR — the prediction at the moment the decision
+     * was made. Billing (freeze rounds, the finale's account of what you chose
+     * to defend) reads this stamp, not the live prediction at release: a noisy
+     * track that wandered onto the struck-off place in the seconds between
+     * assignment and launch used to bill an obedient operator for a breach
+     * they never chose.
+     */
+    purposeAssetId: track.predictedAssetId ?? null,
     missileIds: [],
     startedS: world.t,
   };
@@ -184,7 +193,7 @@ export function stepEngagements(world, dt) {
           // it is going for leaves room for patience. A terminal vampire is
           // shot the instant it can be, because there is no second shot.
           const timeToSpare = (track.ttiS ?? Infinity) > ENGAGEMENT.holdFireMinTtiS;
-          const holdable = engagement.origin === 'assigned'
+          const holdable = engagement.origin !== 'free'
             && closing
             && timeToSpare
             && env.rangeKm > type.maxRangeKm * ENGAGEMENT.holdFireFraction
@@ -383,7 +392,16 @@ function runFormationCommander(world, formation, dt) {
       }
     }
 
-    if (best) beginEngagement(world, best.site, track, { manual: best.manual });
+    /*
+     * An officer's assignment is the formation fighting, not the player
+     * choosing — the finale's account of what YOU defended must not inherit
+     * a subordinate commander's decisions. The one exception is a cue to the
+     * player's own crewed battery, where the human still pulls the trigger.
+     */
+    if (best) {
+      beginEngagement(world, best.site, track,
+        { manual: best.manual, origin: best.manual ? 'assigned' : 'formation' });
+    }
   }
 }
 
