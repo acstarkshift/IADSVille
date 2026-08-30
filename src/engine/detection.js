@@ -257,6 +257,15 @@ export function correlatePlots(world, plots) {
         world.log('warn', `NEW CONTACT — ${track.tn}. THE WATCH HAS COMPANY.`,
           { trackId: track.id });
       }
+      // The set that found it says so — the surveillance sets only. Reporting
+      // the air picture is their job; a battery's own set is looking at what
+      // it is about to shoot, and does not narrate the sector.
+      const finder = world.radarById?.get(plot.radarId);
+      if (finder && !finder.siteId && world.comms) {
+        world.comms(finder.label, `NEW CONTACT, ${track.tn}, BEARING ${
+          String(Math.round(bearing(finder.pos, track.pos))).padStart(3, '0')}.`,
+        { trackId: track.id, radarId: finder.id });
+      }
       continue;
     }
 

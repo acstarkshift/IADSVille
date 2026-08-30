@@ -318,6 +318,11 @@ kbd {
 .event-log .kind-launch { color: var(--accent); }
 .event-log .kind-command { color: var(--ink-bright); }
 .event-log .kind-info { color: var(--ink-dim); }
+/* Radio traffic between the elements of the net: the crews talking, as
+   against the system reporting on itself. Distinct enough to scan for,
+   quiet enough not to shout over an alert. */
+.event-log .kind-comms { color: var(--ink); font-style: italic; letter-spacing: .01em; }
+.event-log .kind-comms > span:last-child::before { content: '▸ '; opacity: .5; font-style: normal; }
 /* Lines about the operator's own street: brighter ink, no new colour —
    the difference should read as attention, not as an alarm. */
 .event-log .is-personal { color: var(--ink-bright); font-weight: 600; }

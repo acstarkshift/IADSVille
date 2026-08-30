@@ -674,6 +674,27 @@ export class World {
     return event;
   }
 
+  /**
+   * Radio traffic between the elements of the net and the person listening.
+   *
+   * The log is the system talking about itself; this is the crews talking.
+   * Same ticker, its own ink, and a rate limit per element — a sector where
+   * every battery reports every state change is a sector nobody reads, which
+   * is the failure mode the churn cuts were about. An element speaks at most
+   * once every few seconds; a launch or a set going down under fire is urgent
+   * and always gets through. Somebody else's formation talks less, because
+   * from the national seat there are a dozen of them and only one of you.
+   */
+  comms(from, text, { urgent = false, siteId = null, ...meta } = {}) {
+    const site = siteId ? this.siteById.get(siteId) : null;
+    const distant = site?.formation && !(this.isDirect?.(site.formation) ?? true);
+    const spacingS = urgent ? 0 : distant ? 12 : 4;
+    this._commsAtS = this._commsAtS ?? {};
+    if (this.t - (this._commsAtS[from] ?? -999) < spacingS) return null;
+    this._commsAtS[from] = this.t;
+    return this.log('comms', `${from}: ${text}`, { siteId, ...meta });
+  }
+
   standingDelta(amount, reason) { standingDelta(this, amount, reason); }
 
   hostileTrackCount() {
@@ -732,6 +753,11 @@ export class World {
       this.log('good', `SPLASH — ${missile?.trackLabel ?? aircraft.name}`, {
         aircraftId: aircraft.id, severity: 'good',
       });
+      const shooter = missile?.siteId ? this.siteById.get(missile.siteId) : null;
+      if (shooter) {
+        this.comms(shooter.name, `SPLASH ${missile?.trackLabel ?? aircraft.name}. TARGET DESTROYED.`,
+          { urgent: true, siteId: shooter.id, aircraftId: aircraft.id });
+      }
       // The kill gets a visible moment — a short bright wash, well under the
       // magnitude of taking a hit yourself. The scope draws the expanding
       // bloom at the impact point off the destroyed track.

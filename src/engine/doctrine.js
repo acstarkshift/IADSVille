@@ -113,6 +113,13 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
     if (subordinate) world._fmnEngageLogAtS[site.formation] = world.t;
     world._engageSaidAtS[pairKey] = world.t;
     world.log('info', `${site.name} — ENGAGING ${track.tn}`, { siteId: site.id, trackId: track.id });
+    // An order given by a person gets answered by a person. Officers'
+    // assignments and crews' own snap shots do not acknowledge to you —
+    // nobody transmitted anything to them.
+    if ((origin ?? 'assigned') === 'assigned' && world.control.netIsHuman && world.comms) {
+      world.comms(site.name, `ROGER, ENGAGING ${track.tn}.`,
+        { siteId: site.id, trackId: track.id });
+    }
   }
   return engagement;
 }
@@ -154,6 +161,7 @@ export function stepEngagements(world, dt) {
         site.magazine -= load;
         site.readyRounds = load;
         world.log('good', `${site.name} — RELOAD COMPLETE, ${load} READY`, { siteId: site.id });
+        world.comms?.(site.name, `BACK ON THE RAILS, ${load} READY.`, { siteId: site.id });
       }
     }
 
@@ -564,6 +572,7 @@ export function runAiEmcon(world, dt, site) {
     if (!worthIt && !ordered) {
       if (radar.on) {
         world.log('warn', `${site.name} — SHUTTING DOWN, ROUND INBOUND`, { siteId: site.id });
+        world.comms?.(site.name, 'ROUND ON US — GOING DARK.', { urgent: true, siteId: site.id });
       }
       radar.on = false;
       site.blinkUntilS = world.t + 25;

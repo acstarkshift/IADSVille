@@ -286,6 +286,10 @@ function resolveIntercept(world, missile, prevPos) {
       // and it used to render in the dimmest colour the log has and make no
       // sound at all.
       world.log('warn', `${missile.trackLabel ?? 'TRACK'} — MISS`, { trackId: missile.trackId });
+      if (site) {
+        world.comms(site.name, `NO JOY ON ${missile.trackLabel ?? 'THAT TRACK'}.`,
+          { siteId: site.id, trackId: missile.trackId });
+      }
       // And it gets a pixel: the round detonating wide, a puff that dissipates
       // where the dot used to be. Misses outnumber kills on the hard watches;
       // the majority outcome cannot be the absence of a pixel.
@@ -378,8 +382,19 @@ export function launchSalvo(world, site, track, count, origin = null) {
     world.log('launch', `${site.name} — ${launched} AWAY ON ${track.tn}`, {
       siteId: site.id, trackId: track.id,
     });
+    world.comms(site.name, launched > 1
+      ? `MISSILES AWAY, ${launched} ROUNDS ON ${track.tn}.`
+      : `MISSILE AWAY ON ${track.tn}.`, { urgent: true, siteId: site.id, trackId: track.id });
     // The rail flares on the scope — see drawMissiles. Cosmetic.
     addEffect(world, { kind: 'launchflash', pos: { ...site.pos }, durationS: 0.5 });
+    /*
+     * And in the cabin, the launch is a physical event. Only the battery the
+     * player is actually sitting in shakes their console — a rail going off
+     * three sectors away is a line on the net, not a jolt through the floor.
+     */
+    if (world.control.crewedBatteryId === site.id) {
+      addEffect(world, { kind: 'shake', magnitude: 0.75, durationS: 0.9 });
+    }
     /*
      * Whether this launch can break the target's nerve depends on how good a
      * shot it actually was. A snap launch from the very edge of the envelope
