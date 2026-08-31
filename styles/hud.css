@@ -309,12 +309,29 @@ kbd {
 
 /* ---------------------------------------------------------------- ticker */
 
-.ticker { border-top: 1px solid var(--metal-edge); box-shadow: 0 -2px 6px rgba(0,0,0,.4); }
+.ticker {
+  position: relative;   /* the command net anchors to this */
+  border-top: 1px solid var(--metal-edge); box-shadow: 0 -2px 6px rgba(0,0,0,.4);
+}
 
+/*
+ * The command net floats above the ticker rather than sitting in it.
+ *
+ * It used to be an ordinary block inside the footer, so every directive grew
+ * the footer, shrank the stage, and forced the scope canvas to resize and
+ * rescale the entire picture mid-watch — and since directive text runs from
+ * 101 to 277 characters, the banner changed height between messages too, so
+ * the tube jumped a second time. Anchored to the top edge of the ticker it
+ * overlays the bottom slice of the scope for as long as it is up, and nothing
+ * below or beside it moves at all.
+ */
 .command-net {
+  position: absolute; left: 0; right: 0; bottom: 100%; z-index: 20;
   display: flex; align-items: center; gap: 12px; padding: 7px 10px;
+  border-top: 1px solid var(--metal-edge);
   border-bottom: 1px solid var(--metal-edge);
   background: color-mix(in srgb, var(--hostile) 16%, var(--metal-lo));
+  box-shadow: 0 -6px 18px rgba(0, 0, 0, .55);
   animation: alarm-pulse 2s infinite;
 }
 .command-net[hidden] { display: none; }

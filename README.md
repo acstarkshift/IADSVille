@@ -318,9 +318,14 @@ orders about an actual line. `M` toggles it.
   crosses that bearing, so tracks update in steps at the scan rate. A twelve-second
   early-warning scan feels nothing like a three-second point-defence set.
 - **Detection range** scales as the fourth root of radar cross-section — a tenth
-  of the RCS is a bit over half the range, not a tenth — and is then capped by the
-  radio horizon, `4.12 × (√h_radar + √h_target)` km. That single line is why a
-  contact at ninety metres appears at forty kilometres and gives you two minutes.
+  of the reference target's RCS is a bit over half the range, not a tenth — and is
+  then capped by the radio horizon, `4.12 × (√h_radar + √h_target)` km. A set's
+  quoted range is the range it sees a standard strike aircraft at, so the plate
+  and the tube agree: the coverage ring drawn on the scope is where contacts
+  actually appear. The horizon is why a cruise missile at ninety metres is not
+  seen until sixty kilometres however big the set is — the four-hundred-kilometre
+  early-warning radar and the two-hundred-kilometre battalion set both hold it at
+  sixty, and that is about two minutes.
 - **Track fusion is a service, not a fact.** Plots from every radar correlate into
   one numbered track per aircraft — in the sector operations centre. Destroy that
   building and each radar reports for itself: one aircraft grows a track number on

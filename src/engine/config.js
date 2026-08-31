@@ -362,7 +362,7 @@ export const SAM_TYPES = {
      */
     radar: {
       kind: 'acq', label: 'BASTION ACQ',
-      rangeKm: 150, heightM: 26, scanPeriodS: 10, warmupS: 12,
+      rangeKm: 224, heightM: 26, scanPeriodS: 10, warmupS: 12,
       /** How loudly it advertises itself to enemy ELINT. */
       elintGain: 1.5,
     },
@@ -378,7 +378,7 @@ export const SAM_TYPES = {
      */
     fcRadar: {
       kind: 'fc', label: 'BASTION FC',
-      rangeKm: 130, heightM: 26, scanPeriodS: 4, warmupS: 8,
+      rangeKm: 194, heightM: 26, scanPeriodS: 4, warmupS: 8,
       elintGain: 1.3,
       fovDeg: 120,
       slewRateDegPerS: 5,
@@ -405,7 +405,7 @@ export const SAM_TYPES = {
     scootS: 130,
     radar: {
       kind: 'fc', label: 'LANCE FC',
-      rangeKm: 62, heightM: 13, scanPeriodS: 6, warmupS: 8,
+      rangeKm: 93, heightM: 13, scanPeriodS: 6, warmupS: 8,
       elintGain: 1.0,
     },
   },
@@ -430,7 +430,7 @@ export const SAM_TYPES = {
     scootS: 55,
     radar: {
       kind: 'fc', label: 'THISTLE FC',
-      rangeKm: 26, heightM: 7, scanPeriodS: 3, warmupS: 4,
+      rangeKm: 39, heightM: 7, scanPeriodS: 3, warmupS: 4,
       elintGain: 0.6,
     },
   },
@@ -455,7 +455,7 @@ export const SAM_TYPES = {
     scootS: 40,
     radar: {
       kind: 'fc', label: 'HAMMER DIR',
-      rangeKm: 14, heightM: 5, scanPeriodS: 2, warmupS: 2,
+      rangeKm: 21, heightM: 5, scanPeriodS: 2, warmupS: 2,
       elintGain: 0.35,
     },
   },
@@ -466,14 +466,14 @@ export const RADAR_TYPES = {
   ewr: {
     kind: 'ewr', label: 'WIDE EYE',
     name: 'Early warning radar',
-    rangeKm: 300, heightM: 32, scanPeriodS: 12, warmupS: 20,
+    rangeKm: 449, heightM: 32, scanPeriodS: 12, warmupS: 20,
     elintGain: 2.0,
     hp: 60,
   },
   gapfiller: {
     kind: 'acq', label: 'LOW LOOK',
     name: 'Gap-filler radar',
-    rangeKm: 110, heightM: 18, scanPeriodS: 5, warmupS: 9,
+    rangeKm: 164, heightM: 18, scanPeriodS: 5, warmupS: 9,
     elintGain: 1.1,
     hp: 45,
   },
@@ -486,6 +486,33 @@ export const DETECTION = {
    * giving 50% right at the nominal range and a fast, physical roll-off.
    */
   pdExponent: 4,
+  /**
+   * The radar cross-section a set's advertised range is quoted against.
+   *
+   * Range scales as the fourth root of RCS, and that scaling used to be
+   * applied with no reference at all — `rangeKm * rcs**0.25` — which made
+   * every data plate in the game wrong. A striker (rcs 5) multiplied every
+   * advertised range by 1.50, a jammer by 2.24, an airliner by 2.51: the
+   * hundred-and-fifty-kilometre early-warning set really reached two hundred
+   * and twenty-five against the commonest target in the game and three
+   * hundred and seventy-six against civil traffic, and a sixty-two-kilometre
+   * fire-control set was measured holding a striker at a hundred and forty
+   * nine. Anchored to the striker, `rangeKm` now means what it says: the
+   * range this set sees a standard strike aircraft at. Everything else is
+   * relative to that — a cruise missile at 0.38, an anti-radiation round at
+   * 0.32, a decoy fractionally larger than the thing it imitates.
+   */
+  referenceRcs: 5,
+  /*
+   * Note on the plates: every radar's `rangeKm` was multiplied by 5**0.25
+   * (1.4953) at the same time this anchor was introduced, so the two changes
+   * cancel exactly and detection behaviour is bit-identical for every target
+   * class. What changed is truthfulness — and the scope, which draws each
+   * set's coverage circle at `rangeKm` and was therefore drawing a ring a
+   * third smaller than the range contacts actually appeared at. A player
+   * watching blips light up outside their own radar's circle is not wrong to
+   * call that broken.
+   */
   /** Below this altitude a target sits in ground clutter, in metres. */
   clutterAltM: 300,
   /** Worst-case detection multiplier for a target buried in clutter. */

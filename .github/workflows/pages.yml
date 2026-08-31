@@ -2,7 +2,12 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    # The repository's default branch, which is where the game actually lives.
+    # This said `main` for the whole life of the project and there has never
+    # been a branch by that name: the workflow was never registered, the API
+    # 404s on it, and not one commit had ever reached the published page. The
+    # player was reporting fixes as missing that had been merged for days.
+    branches: [claude/iadsville-radar-game-ad6cq1]
   workflow_dispatch:
 
 permissions:

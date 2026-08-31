@@ -37,8 +37,19 @@ describe('detection range', () => {
     const r = radar();
     const high = effectiveRangeKm(r, target({ altM: 8000 }));
     const low = effectiveRangeKm(r, target({ altM: 100 }));
-    assert.ok(high > 300, `high contact should be seen far out, got ${high}`);
+    /*
+     * The high contact is power-limited, so it is seen at the set's advertised
+     * range — exactly, because the plate is quoted against a reference-RCS
+     * target and this is one. The bar here used to be a bare `> 300` against a
+     * 300 km set, which only ever passed because range scaling was applied
+     * with no reference and quietly inflated every set by half again. What the
+     * test means is the RELATION between the two figures, so measure that.
+     */
+    assert.ok(Math.abs(high - r.rangeKm) < 1e-6,
+      `a reference target up high is seen at the set's rated range, got ${high}`);
     assert.ok(low < 75, `a contact at 100 m should be horizon-limited, got ${low}`);
+    assert.ok(low < high * 0.3,
+      `the horizon must dominate down low, not trim the edges (${low} vs ${high})`);
   });
 
   test('a cruise missile at ninety metres gets seen very late indeed', () => {

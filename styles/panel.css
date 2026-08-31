@@ -326,13 +326,30 @@
 .unit-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Ammunition, shown as rounds on a rail rather than as a number. */
-.rail { display: flex; gap: 2px; align-items: flex-end; }
-.rail i {
-  display: block; width: 5px; height: 13px; border-radius: 1px 1px 0 0;
-  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #000));
-  box-shadow: 0 0 4px color-mix(in srgb, var(--accent) 40%, transparent);
+/* The launcher: one round lamp per rail, lit green with a round on it and red
+   when that tube is empty. Domed like the console's other indicators, because
+   that is what they are. */
+.tubes { display: flex; gap: 3px; align-items: center; flex-wrap: wrap; }
+.tubes i {
+  display: block; width: 9px; height: 9px; border-radius: 50%;
+  border: 1px solid var(--metal-edge);
+  background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.25), var(--lamp-off) 68%);
 }
-.rail i.is-spent { background: var(--lamp-off); box-shadow: none; height: 6px; }
+.tubes i.is-loaded {
+  background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.55), var(--good) 62%);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--good) 65%, transparent);
+}
+.tubes i.is-spent {
+  background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.18), var(--hostile) 70%);
+  box-shadow: inset 0 0 3px rgba(0,0,0,.7);
+  opacity: .75;
+}
+
+/* Reloading or displacing: the bar empties and the seconds count down beside
+   it, so "out of the fight" has a number on it. */
+.reload-row { align-items: center; gap: 6px; }
+.reload-left { font-variant-numeric: tabular-nums; color: var(--warn); min-width: 3.2em; text-align: right; }
+.crew-tubes { display: flex; align-items: center; gap: 8px; }
 
 /* A meter with a needle-ish fill, for exposure and timers. */
 .gauge {

@@ -69,8 +69,12 @@ export function effectiveRangeKm(radar, target, jammers = []) {
   if (radar.fovDeg && absDeltaDeg(radar.boresightDeg, az) > radar.fovDeg / 2) return 0;
 
   // Radar cross-section scales range as the fourth root: small helps, but less
-  // than people expect. A tenth of the RCS is a bit over half the range.
-  let range = radar.rangeKm * Math.pow(Math.max(target.rcs, 1e-4), 0.25);
+  // than people expect. A fifth of the reference RCS is about two thirds of
+  // the range. Relative to `DETECTION.referenceRcs`, so a set's advertised
+  // range is the range it actually sees a standard strike aircraft at — see
+  // the note on that constant for what this looked like unanchored.
+  let range = radar.rangeKm
+    * Math.pow(Math.max(target.rcs, 1e-4) / DETECTION.referenceRcs, 0.25);
 
   // Battle damage raises the noise floor across the board.
   range *= radar.noiseFactor ?? 1;

@@ -66,6 +66,50 @@ function toggle(entry, on, { act, site, radar, disabled = false } = {}) {
   </button>`;
 }
 
+/**
+ * The launcher, as a row of round tube lamps.
+ *
+ * One lamp per rail: green while that tube holds a round, red when it is
+ * spent. This replaced a row of flat bars, which read as a generic progress
+ * meter rather than as the thing it is — a rack with rounds on it or not. The
+ * count is the battery's own ready capacity, so a section with four rails
+ * looks like four rails.
+ */
+function tubes(site, type) {
+  const rails = Math.min(type.readyRounds, 14);
+  const lamps = Array.from({ length: rails }, (_, i) => {
+    const loaded = i < site.readyRounds;
+    return `<i class="${loaded ? 'is-loaded' : 'is-spent'}"></i>`;
+  }).join('');
+  return `<span class="tubes" title="${site.readyRounds} of ${rails} tubes loaded`
+    + ` · ${site.magazine} rounds in store">${lamps}</span>`;
+}
+
+/**
+ * How long until this battery can shoot again, as a bar that empties.
+ *
+ * A reloading battery is out of the fight for up to a minute and a half, and
+ * the only place that number lived was a percentage-width gauge with no
+ * figure on it — you could see something was happening but not how long it
+ * had left. Returns '' when the battery is ready, so it costs no space.
+ */
+function reloadBar(site, type) {
+  const busy = site.reloadRemainingS > 0
+    ? { entry: STATUS.reloading, remainingS: site.reloadRemainingS,
+      totalS: type.reloadS * (site.reloadMult ?? 1) }
+    : site.scootRemainingS > 0
+      ? { entry: STATUS.displacing, remainingS: site.scootRemainingS,
+        totalS: type.scootS * (site.scootMult ?? 1) * 1.5 }
+      : null;
+  if (!busy) return '';
+  const frac = clamp01(1 - busy.remainingS / Math.max(busy.totalS, 1e-6));
+  return `<div class="unit-row reload-row">
+    <span class="unit-type">${esc(pair(busy.entry))}</span>
+    <span class="gauge is-warn"><i style="width:${Math.round(frac * 100)}%"></i></span>
+    <span class="unit-type reload-left">${Math.ceil(busy.remainingS)}s</span>
+  </div>`;
+}
+
 /** A legend-cap pushbutton. */
 function press(entry, { act, site, disabled = false, extra = '' } = {}) {
   return `<button class="pb ${extra}" data-act="${act}" ${site ? `data-site="${site}"` : ''}
@@ -450,14 +494,6 @@ export function renderBatteries(world, ui, els) {
     const crewed = world.control.crewedBatteryId === site.id;
     const armEta = radar?.alive ? armTimeToImpact(world, radar) : Infinity;
 
-    const rail = Array.from({ length: Math.min(type.readyRounds, 14) }, (_, i) =>
-      `<i class="${i < site.readyRounds ? '' : 'is-spent'}"></i>`).join('');
-
-    const busyLabel = site.reloadRemainingS > 0
-      ? { entry: STATUS.reloading, frac: 1 - site.reloadRemainingS / (type.reloadS * (site.reloadMult ?? 1)) }
-      : site.scootRemainingS > 0
-        ? { entry: STATUS.displacing, frac: 1 - site.scootRemainingS / (type.scootS * (site.scootMult ?? 1) * 1.5) }
-        : null;
 
     const weaponsEntry = CONTROLS[site.weaponsState];
 
@@ -499,7 +535,7 @@ export function renderBatteries(world, ui, els) {
       </div>
 
       <div class="unit-row">
-        <span class="rail" title="${site.readyRounds} ready of ${site.magazine} stored">${rail}</span>
+        ${tubes(site, type)}
         <span class="unit-type wrap" title="${esc(DEFENCE_CLASSES[type.class].blurb)}">
           ${esc(pair(DEFENCE_CLASSES[type.class]))}
         </span>
@@ -516,10 +552,7 @@ export function renderBatteries(world, ui, els) {
   })()}
           <span class="lo">· ${type.minRangeKm}–${type.maxRangeKm} KM · ${Math.round(type.minAltM)}–${Math.round(type.maxAltM).toLocaleString('en-US')} M</span></span>
       </div>
-      ${busyLabel ? `<div class="unit-row">
-        <span class="unit-type">${esc(pair(busyLabel.entry))}</span>
-        <span class="gauge is-warn"><i style="width:${Math.round(busyLabel.frac * 100)}%"></i></span>
-      </div>` : ''}
+      ${reloadBar(site, type)}
 
       <div class="unit-controls">
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
@@ -674,6 +707,8 @@ export function renderCrewConsole(world, ui, els) {
       ${row(STATUS.sequence, `${pair(sequence)}${status.reactionRemainingS > 0 ? ` ${status.reactionRemainingS.toFixed(1)}s` : ''}`)}
       ${row(STATUS.channels, `${status.channelsUsed}/${status.channels}`)}
       ${row(CONTROLS.reload, `${site.readyRounds} / ${site.magazine}`)}
+      <div class="crew-row crew-tubes">${legend(CONTROLS.launch, { inline: true })}${tubes(site, type)}</div>
+      ${reloadBar(site, type)}
 
       <button class="pb pb-fire ${status.canFire && (status.pkEstimate === null || status.pkEstimate >= 0.5) ? 'is-armed' : ''}" id="btn-fire"
         ${status.canFire ? '' : 'disabled'}>
