@@ -232,6 +232,18 @@ export function renderTrackList(world, ui, els) {
       .join(',');
     const engaged = track.engagedBy.length > 0;
 
+    /*
+     * Under your own battery's heading: did you take this one, or were you
+     * given it? In the cabin the net above you fills your shootlist and until
+     * now a cue was indistinguishable from your own lock — the player's
+     * question was literally "who is assigning my shoot list". A caret means
+     * the net called it to you; no caret means you chose it.
+     */
+    const ownEngagement = ownerId
+      ? world.siteById.get(ownerId)?.engagements.find((e) => e.trackId === track.id)
+      : null;
+    const cued = !!ownEngagement?.cued;
+
     const classes = [
       'track-row',
       `is-${track.hostility === 'pending' ? 'unknown' : track.hostility}`,
@@ -249,7 +261,7 @@ export function renderTrackList(world, ui, els) {
       <span>${String(brg).padStart(3, '0')}</span>
       <span>${rng}</span>
       <span>${alt}</span>
-      <span class="asgn">${engaged ? '◆' : ''}${esc(assigned)} <em style="color:var(--hostile)">${pips}</em></span>
+      <span class="asgn">${engaged ? '◆' : ''}${cued ? '<i class="cued" title="Called to you by the net — you did not pick this one">▸</i>' : ''}${esc(assigned)} <em style="color:var(--hostile)">${pips}</em></span>
     </li>`;
   };
 

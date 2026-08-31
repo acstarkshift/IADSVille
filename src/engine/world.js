@@ -400,6 +400,19 @@ export class World {
       name: this.scenario.formationName ?? 'THIS COMMAND',
       tm: 'ЭТА КОМАНДА',
       en: 'This command',
+      /*
+       * The callsign of the net above a crewed battery.
+       *
+       * From the net seat this formation IS the player and nobody transmits to
+       * them. From a battery's seat it is somebody else — the command post
+       * working the picture and handing you targets — and until this existed
+       * that somebody had no name, no rank and no voice: a player asked, in as
+       * many words, who was assigning their shootlist, because the game had
+       * never once said. Only surfaced where `formationIsHumanRun` is false,
+       * so the player is never told they are being ordered about by
+       * themselves.
+       */
+      netCallsign: 'ЦЕНТР · CONTROL',
     }];
 
     for (const spec of specs) {
@@ -428,6 +441,13 @@ export class World {
         commander: spec.commander
           ? { competence: 1, political: false, ...spec.commander }
           : { name: null, competence: 1, political: false },
+        /**
+         * What this formation calls itself on the air when it is talking TO
+         * the player rather than being run by them. Named officers use their
+         * own name; the anonymous command post above a crewed battery uses
+         * this. Read through `netVoice()`, never directly.
+         */
+        netCallsign: spec.netCallsign ?? null,
         /** Rounds released to it out of the strategic reserve. */
         reserveReceived: 0,
       };
@@ -488,6 +508,21 @@ export class World {
    */
   formationIsHumanRun(formation) {
     return this.control.netIsHuman && formation.direct && this.t >= formation.handoverUntilS;
+  }
+
+  /**
+   * Who is on the other end of the radio, from the seat the player is in.
+   *
+   * Null when the answer is "you" — a formation the player is running does not
+   * transmit orders to them. Otherwise the named officer if there is one, or
+   * the command post's callsign if the formation is the anonymous one a
+   * battalion watch synthesises. This is the whole answer to "who is assigning
+   * my shootlist", and before it existed the game had no way to say.
+   */
+  netVoice(formationId) {
+    const formation = this.formationById.get(formationId);
+    if (!formation || this.formationIsHumanRun(formation)) return null;
+    return formation.commander?.name ?? formation.netCallsign ?? null;
   }
 
   /** Is this formation under this appointment's own hand, whoever is sitting where? */
@@ -775,7 +810,11 @@ export class World {
    */
   comms(from, text, { urgent = false, siteId = null, ...meta } = {}) {
     const site = siteId ? this.siteById.get(siteId) : null;
-    const distant = site?.formation && !(this.isDirect?.(site.formation) ?? true);
+    // `formationId`, not `formation`. Sites have never carried a `formation`
+    // field, so this was always falsy and the twelve-second spacing for
+    // somebody else's formation had never once applied — every element on the
+    // net spoke at the four-second rate regardless of whose command it was in.
+    const distant = site?.formationId && !(this.isDirect?.(site.formationId) ?? true);
     const spacingS = urgent ? 0 : distant ? 12 : 4;
     this._commsAtS = this._commsAtS ?? {};
     if (this.t - (this._commsAtS[from] ?? -999) < spacingS) return null;

@@ -656,4 +656,82 @@ describe('the teaching watch teaches', () => {
         + `(seeds ${firsts.map((f) => Math.round(f)).join('/')}s) — a seat is not a spectator stand`);
     }
   });
+
+  /*
+   * And somebody has to be audibly on the other end of it.
+   *
+   * In the cabin the net above you fills your shootlist, but the only
+   * acknowledgement in the engine was gated on the NET seat, so from a console
+   * a target simply appeared, from nobody. A player asked, in as many words,
+   * who was assigning their shootlist. These pin the answer: the net has a
+   * voice, it uses it in the cabin, and it stays quiet in the seat where the
+   * player IS the net.
+   */
+  test('the net that fills a crewed battery\'s shootlist says so, and says who it is', () => {
+    const w = new World(scenarioById('solo-battery'), { role: 'crew', seed: 'cue-1' });
+    const site = w.siteById.get(w.control.crewedBatteryId);
+    const voice = w.netVoice(site.formationId);
+    assert.ok(voice, 'the command post above a crewed battery has a callsign');
+
+    // The events list is capped, and these watches outrun it — read at source.
+    const cues = [];
+    const log = w.log.bind(w);
+    w.log = (kind, text, meta) => {
+      if (kind === 'comms' && text.includes(`TAKE`)) cues.push(text);
+      return log(kind, text, meta);
+    };
+
+    let n = 0;
+    while (w.phase === 'running' && n < 30000) {
+      for (const radar of w.radars) if (radar.alive) w.setRadar(radar.id, true);
+      w.step(0.1);
+      if (w.command.pending) w.answer('accepted');
+      n++;
+    }
+
+    assert.ok(cues.length > 0, 'the net cued the battery at least once and said so out loud');
+    assert.match(cues[0], new RegExp(`^${voice}: ${site.name}, TAKE T-\\d+, BEARING \\d{3}\\.$`),
+      `the cue names the sender, the battery, the track and a bearing (got: ${cues[0]})`);
+    // A voice, not a doorbell: measured at roughly one cue a minute or less.
+    assert.ok(cues.length / (w.t / 60) < 3,
+      `${cues.length} cues over ${Math.round(w.t)}s is a doorbell, not a net`);
+  });
+
+  test('the net does not transmit cues to the seat where the player is the net', () => {
+    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'cue-2' });
+    let said = 0;
+    const log = w.log.bind(w);
+    w.log = (kind, text, meta) => {
+      if (kind === 'comms' && text.includes('TAKE T-')) said++;
+      return log(kind, text, meta);
+    };
+    drive(w, { onTick: handTick });
+    assert.equal(said, 0, 'nobody transmits your own decisions back to you');
+  });
+
+  test('a cue is marked as one; a lock you made yourself is not', () => {
+    const w = new World(scenarioById('solo-battery'), { role: 'crew', seed: 'cue-3' });
+    const site = w.siteById.get(w.control.crewedBatteryId);
+
+    // Run until the player can legally take something, then take it by hand.
+    let n = 0;
+    let target = null;
+    while (w.phase === 'running' && n < 30000 && !target) {
+      for (const radar of w.radars) if (radar.alive) w.setRadar(radar.id, true);
+      w.step(0.1);
+      if (w.command.pending) w.answer('accepted');
+      for (const track of w.tracks.values()) {
+        if (track.destroyed || track.hostility !== 'hostile') continue;
+        if (site.engagements.some((e) => e.trackId === track.id)) continue;
+        if (!cannotEngageReason(w, site, track)) { target = track; break; }
+      }
+      n++;
+    }
+    assert.ok(target, 'the watch offered the operator a shot to take');
+    w.assign(target.id, site.id);
+    const mine = site.engagements.find((e) => e.trackId === target.id);
+    assert.ok(mine, 'the hand assignment took');
+    assert.equal(mine.cued, false,
+      'a target you locked yourself is not marked as one the net called to you');
+  });
 });

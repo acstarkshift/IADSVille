@@ -38,7 +38,8 @@ export function channelsFor(site) {
 }
 
 /** Start an engagement if the battery has a channel free. Returns it, or null. */
-export function beginEngagement(world, site, track, { manual = false, salvo = null, origin = null } = {}) {
+export function beginEngagement(world, site, track,
+  { manual = false, salvo = null, origin = null, cued = false } = {}) {
   const type = SAM_TYPES[site.type];
   if (!site.alive) return null;
   // The aircraft behind this track is already wreckage. The symbol stays on the
@@ -66,6 +67,16 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
      * edge of the envelope, because that is what free means.
      */
     origin: origin ?? 'assigned',
+    /**
+     * Did the net hand this to you, or did you take it?
+     *
+     * `origin` cannot answer that for a crewed battery — a cue to it is
+     * stamped 'assigned' on purpose, so the trigger the human pulls is
+     * credited to the human. This flag is set only by the net, and it is what
+     * lets the cabin's shootlist say which targets it chose and which it was
+     * given.
+     */
+    cued,
     /**
      * What this engagement was FOR — the prediction at the moment the decision
      * was made. Billing (freeze rounds, the finale's account of what you chose
@@ -102,9 +113,14 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
    * them.
    */
   const wide = world.echelon?.id === 'region' || world.echelon?.id === 'national';
-  const subordinate = wide && site.formation && !(world.isDirect?.(site.formation) ?? true);
+  // `site.formationId`, not `site.formation` — the latter is never set on a
+  // site anywhere in the engine, so this whole throttle was keyed on
+  // `undefined`: every subordinate formation shared one bucket, and the
+  // six-second spacing meant to apply per formation applied across all of
+  // them at once. Found while tracing why the cabin never heard its cues.
+  const subordinate = wide && site.formationId && !(world.isDirect?.(site.formationId) ?? true);
   world._fmnEngageLogAtS = world._fmnEngageLogAtS ?? {};
-  const lastLogged = world._fmnEngageLogAtS[site.formation] ?? -99;
+  const lastLogged = world._fmnEngageLogAtS[site.formationId] ?? -99;
   /*
    * And the same battery re-announcing the same track is not news twice. A
    * shoot-look-shoot cycle or a broken-and-retaken claim used to print a
@@ -115,7 +131,7 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
   const pairKey = `${site.id}:${track.id}`;
   const saidAt = world._engageSaidAtS[pairKey] ?? -99;
   if ((!subordinate || world.t - lastLogged >= 6) && world.t - saidAt >= 30) {
-    if (subordinate) world._fmnEngageLogAtS[site.formation] = world.t;
+    if (subordinate) world._fmnEngageLogAtS[site.formationId] = world.t;
     world._engageSaidAtS[pairKey] = world.t;
     world.log('info', `${site.name} — ENGAGING ${track.tn}`, { siteId: site.id, trackId: track.id });
     // An order given by a person gets answered by a person. Officers'
@@ -124,6 +140,31 @@ export function beginEngagement(world, site, track, { manual = false, salvo = nu
     if ((origin ?? 'assigned') === 'assigned' && world.control.netIsHuman && world.comms) {
       world.comms(site.name, `ROGER, ENGAGING ${track.tn}.`,
         { siteId: site.id, trackId: track.id });
+    }
+    /*
+     * And the same courtesy in the other direction, which the cabin never got.
+     *
+     * Sitting in a battery, the net above you is run by somebody else and it
+     * is that somebody who fills your shootlist — but the acknowledgement
+     * above is gated on the NET seat, so from the console a target simply
+     * appeared, from nobody, indistinguishable from one you had locked
+     * yourself. A player asked, in as many words, who was assigning their
+     * shootlist. This is the transmission that answers it: the net calls the
+     * target to you, by name, with a bearing to turn to.
+     *
+     * Gated on an explicit `cued` flag from the caller rather than on
+     * `origin`, because a cue to the crewed battery is deliberately stamped
+     * `origin: 'assigned'` — the human pulls that trigger, so the finale must
+     * credit them for it. Origin therefore cannot tell a cue from your own
+     * LOCK; only the net knows which it sent.
+     */
+    if (cued && world.control.crewedBatteryId === site.id && world.comms) {
+      const voice = world.netVoice?.(site.formationId);
+      if (voice) {
+        const brg = String(Math.round(bearing(world.centre, track.pos))).padStart(3, '0');
+        world.comms(voice, `${site.name}, TAKE ${track.tn}, BEARING ${brg}.`,
+          { siteId: site.id, trackId: track.id });
+      }
     }
   }
   return engagement;
@@ -466,8 +507,13 @@ function runFormationCommander(world, formation, dt) {
      * player's own crewed battery, where the human still pulls the trigger.
      */
     if (best) {
-      beginEngagement(world, best.site, track,
-        { manual: best.manual, origin: best.manual ? 'assigned' : 'formation' });
+      beginEngagement(world, best.site, track, {
+        manual: best.manual,
+        origin: best.manual ? 'assigned' : 'formation',
+        // The net knows it is the one transmitting. Your own LOCK does not
+        // set this, which is how the cabin tells a cue from its own decision.
+        cued: true,
+      });
     }
   }
 }
