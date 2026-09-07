@@ -234,6 +234,41 @@ export function sweepRadar(radar, targets, jammers, rng, dt) {
   return plots;
 }
 
+/**
+ * Where a track should be right now if it has held its course.
+ *
+ * The correlator's comment always said it compared plots "against where the
+ * track is predicted to be right now"; it compared them against `pos`, which
+ * is the last plot, and dead reckoning did not begin until sixteen seconds of
+ * silence. Everything between one look and the next was therefore correlated
+ * against a position already a whole scan period out of date.
+ */
+function predictedAt(track, t) {
+  const dtSince = Math.max(0, t - track.lastUpdateS);
+  if (dtSince <= 0) return track.pos;
+  return add(track.pos, scale(track.vel, dtSince));
+}
+
+/**
+ * How far from the prediction a plot may fall and still be the same object.
+ *
+ * Base radius is measurement error. The rest is staleness: how far the target
+ * has had to move since anybody looked, and how wrong the estimate can be
+ * while it is still converging. A track with no velocity estimate at all gets
+ * the full plausible-travel gate, because with no course there is no
+ * prediction for the plot to be near — and inventing a second track in that
+ * volume is exactly the failure this replaces.
+ */
+function gateKm(track, radius, t) {
+  const dtSince = Math.max(0, t - track.lastUpdateS);
+  if (dtSince <= 0) return radius;
+  const speed = len(track.vel);
+  const growth = speed < 1e-6
+    ? DETECTION.maxTargetSpeedKmS
+    : Math.max(DETECTION.gateGrowthKmPerS, speed * 0.5);
+  return Math.min(radius + dtSince * growth, DETECTION.maxGateKm);
+}
+
 /** A fresh track built from a first plot. */
 function newTrack(world, plot, truth) {
   const tn = world.nextTn++;
@@ -262,6 +297,128 @@ function newTrack(world, plot, truth) {
 }
 
 /**
+ * With the fusion centre gone, whose track is this plot allowed to join?
+ *
+ * Its own set's — and its own BATTERY's. Losing the sector operations centre
+ * takes away the thing that reconciles plots between units; it does not take
+ * away the plotting board inside one battery's cabin, where the acquisition
+ * set and the fire-control set on the same mount have always been read
+ * together by the same two people. Without this a battalion counted every
+ * aeroplane twice all by itself the moment the centre died.
+ */
+function ownsPlot(world, track, plot) {
+  if (track.sources.includes(plot.radarId)) return true;
+  const site = world.radarById?.get(plot.radarId)?.siteId;
+  if (!site) return false;
+  return track.sources.some((id) => world.radarById?.get(id)?.siteId === site);
+}
+
+/**
+ * Remember a dropped track for a minute, so it can come back as itself.
+ *
+ * Called from `world.dropTrack`. Worth remembering if the sector ever held it
+ * firmly, or held it at all for long enough to be a thing rather than a
+ * flicker — under heavy jamming a real raider never reaches firm quality, and
+ * refusing to remember those is most of why White Noise issued two numbers per
+ * aeroplane. A single plot that faded is not remembered: reviving that would
+ * hand a real contact the number of a ghost of noise.
+ */
+export function rememberGhost(world, track) {
+  const held = track.everFirm || world.t - track.firstSeenS >= 12;
+  if (!held || track.destroyed) return;
+  world.trackGhosts = world.trackGhosts ?? [];
+  world.trackGhosts.push({
+    id: track.id,
+    tn: track.tn,
+    pos: { ...track.pos },
+    vel: { ...track.vel },
+    altM: track.altM,
+    droppedAtS: world.t,
+    sources: [...track.sources],
+    classification: track.classification,
+    hostility: track.hostility,
+    idProgressS: track.idProgressS,
+    truthId: track.truthId,
+  });
+}
+
+/**
+ * Is this plot the same aeroplane the sector lost a minute ago?
+ *
+ * A raid that flies through a seam in the coverage used to come out the other
+ * side as new aircraft with new numbers, and the net announced every one of
+ * them: measured, ninety-eight NEW CONTACT calls in a watch with forty-five
+ * objects in it, most of them about aeroplanes that were already leaving. A
+ * sector does not do that. It re-acquires, and the number it re-acquires on is
+ * the number it had.
+ *
+ * The recovered track keeps its identification work, because the sector did
+ * that work and losing the contact does not unlearn it — but it comes back
+ * with the quality of a single fresh plot, so it has to be re-earned before
+ * anybody may shoot on it.
+ */
+function reacquire(world, plot, fused) {
+  const ghosts = world.trackGhosts;
+  if (!ghosts?.length) return null;
+
+  let best = null;
+  let bestD = Infinity;
+  let bestIndex = -1;
+  for (let i = 0; i < ghosts.length; i++) {
+    const ghost = ghosts[i];
+    const age = world.t - ghost.droppedAtS;
+    if (age > DETECTION.reacquireWindowS) continue;
+    // With the fusion centre gone a set only reconciles its own numbers, the
+    // same rule the live correlation runs under.
+    if (!fused && !ghost.sources.includes(plot.radarId)) continue;
+    const predicted = add(ghost.pos, scale(ghost.vel, age));
+    const gate = Math.min(
+      DETECTION.reacquireGateKm + age * Math.max(len(ghost.vel) * 0.5, DETECTION.gateGrowthKmPerS),
+      DETECTION.maxGateKm,
+    );
+    const d = dist(predicted, plot.pos);
+    if (d >= gate) continue;
+    // And in the same layer of the sky: a low flier reappearing is not the
+    // high one that went off the plot a minute ago.
+    if (Math.abs(ghost.altM - plot.altM) > 3500) continue;
+    if (d < bestD) { bestD = d; best = ghost; bestIndex = i; }
+  }
+  if (!best) return null;
+  ghosts.splice(bestIndex, 1);
+
+  const track = {
+    id: best.id,
+    tn: best.tn,
+    pos: { ...plot.pos },
+    vel: { ...best.vel },
+    altM: plot.altM,
+    quality: DETECTION.qualityGain,
+    firstSeenS: world.t,
+    lastUpdateS: world.t,
+    sources: [plot.radarId],
+    truthId: plot.truthId,
+    classification: best.classification,
+    idProgressS: best.idProgressS,
+    hostility: best.hostility,
+    assignedTo: [],
+    engagedBy: [],
+    threat: 0,
+    coasting: false,
+    everFirm: false,
+    reacquired: true,
+  };
+  world.tracks.set(track.id, track);
+  return track;
+}
+
+/** Forget ghosts nobody is going to re-acquire. Called once a tick. */
+function ageGhosts(world) {
+  const ghosts = world.trackGhosts;
+  if (!ghosts?.length) return;
+  world.trackGhosts = ghosts.filter((g) => world.t - g.droppedAtS <= DETECTION.reacquireWindowS);
+}
+
+/**
  * Fold this tick's plots into the track picture.
  *
  * With the sector operations centre alive, plots from every radar correlate into
@@ -276,19 +433,28 @@ export function correlatePlots(world, plots) {
 
   for (const plot of plots) {
     let best = null;
-    let bestDist = radius;
+    let bestScore = Infinity;
 
     for (const track of world.tracks.values()) {
-      if (!fused && !track.sources.includes(plot.radarId)) continue;
-      // Correlate against where the track is predicted to be right now.
-      const d = dist(track.pos, plot.pos);
-      if (d < bestDist) {
-        bestDist = d;
+      if (!fused && !ownsPlot(world, track, plot)) continue;
+      // Against where the track is predicted to be right now — which is what
+      // this line has always claimed to do and never did.
+      const d = dist(predictedAt(track, world.t), plot.pos);
+      const gate = gateKm(track, radius, world.t);
+      if (d >= gate) continue;
+      // Nearest in gate-widths, not in kilometres: a plot four kilometres from
+      // a track last seen twelve seconds ago is a better match than one three
+      // kilometres from a track being painted continuously.
+      const score = d / gate;
+      if (score < bestScore) {
+        bestScore = score;
         best = track;
       }
     }
 
     if (!best) {
+      const revived = reacquire(world, plot, fused);
+      if (revived) continue;
       const track = newTrack(world, plot);
       world.tracks.set(track.id, track);
       // The first contact of the watch is an event, spoken like one. Every
@@ -343,14 +509,20 @@ export function correlatePlots(world, plots) {
      * resulting supersonic ghost in at 0.45: quality-1.0 tracks carried
      * velocities double the true speed and ninety degrees off course, and
      * every consumer downstream — target prediction, closure gates, the
-     * intercept arithmetic — trusted them. Nothing on this board flies
-     * faster than half a kilometre a second, and the estimator knows it.
+     * intercept arithmetic — trusted them. The estimator knows what the
+     * fastest tracked contact on the board is and will not believe anything
+     * quicker; that is `DETECTION.maxTargetSpeedKmS`, and it is the enemy's
+     * anti-radiation round, not a strike aircraft. Capping at a strike
+     * aircraft's pace — which is what this line used to do — meant the
+     * estimate for the one contact that is genuinely fast saturated at little
+     * over half its speed, and the correlator lost it between looks.
      */
     if (dtSince >= 2) {
       const measuredVel = scale(sub(plot.pos, best.pos), 1 / dtSince);
       const measuredSpeed = len(measuredVel);
-      const capped = measuredSpeed > 0.5
-        ? scale(measuredVel, 0.5 / measuredSpeed) : measuredVel;
+      const cap = DETECTION.maxTargetSpeedKmS;
+      const capped = measuredSpeed > cap
+        ? scale(measuredVel, cap / measuredSpeed) : measuredVel;
       best.vel = {
         x: best.vel.x + (capped.x - best.vel.x) * 0.45,
         y: best.vel.y + (capped.y - best.vel.y) * 0.45,
@@ -511,5 +683,6 @@ export function stepDetection(world, dt) {
 
   correlatePlots(world, allPlots);
   ageTracks(world, dt);
+  ageGhosts(world);
   return allPlots;
 }

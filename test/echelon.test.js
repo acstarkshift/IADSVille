@@ -297,15 +297,29 @@ describe('district command', () => {
      * flapped: per-seed score swings on a district watch are several times the
      * effect, so the test measured the seed, not the design.)
      *
-     * The delays are pooled across five watches rather than read off one. A
+     * The delays are pooled across eight watches rather than read off one. A
      * single watch offers three to eight answered tracks per sector, and the
      * held sector's few are bimodal — most answered on the tick they became
      * legal, a couple firm for minutes first because nothing could reach them
      * yet. A median of six samples flips on which kind the seed happened to
      * deal; forty samples does not.
+     *
+     * RE-ANCHORED when the correlator stopped churning track numbers. The old
+     * bound was "the held sector answers in under fifteen seconds", and it was
+     * measured against a picture in which a track sitting firm and
+     * unanswerable for a minute was quietly dropped and re-born under a new
+     * number — which restarted this clock and hid the wait entirely. Those
+     * tracks now keep their numbers, so the long half of the bimodal
+     * distribution finally reaches the sample. Measured after the fix, pooled
+     * across fifteen seeds: held sector median 21.7 s (p25 0.1, p75 61.5), the
+     * officer's 124.4 s, ratio 5.7. Across the eight this test runs: 23.0 s
+     * against 120.3 s, ratio 5.2. The bound below is that measurement with
+     * room for seed noise. It is not a loosening: the property this test
+     * exists for is the RATIO, and the ratio got stronger.
      */
     const delays = { lozan: [], kubin: [] };
-    for (const seed of ['latency-1', 'latency-2', 'latency-3', 'latency-4', 'latency-5']) {
+    for (const seed of ['latency-1', 'latency-2', 'latency-3', 'latency-4',
+      'latency-5', 'latency-6', 'latency-7', 'latency-8']) {
       const w = new World(scenarioById('four-sectors'), { role: 'net', seed });
       w.formations.forEach((f) => { if (!f.hq) { f.direct = false; f.handoverUntilS = 0; } });
       w.takeDirect('f_lozan');
@@ -366,7 +380,7 @@ describe('district command', () => {
 
     assert.ok(delays.lozan.length >= 15, 'the held sector answered its raids');
     assert.ok(delays.kubin.length >= 5, 'the officer eventually answered something');
-    assert.ok(median(delays.lozan) < 15,
+    assert.ok(median(delays.lozan) < 40,
       `your sector answers in seconds (median ${median(delays.lozan).toFixed(1)}s)`);
     assert.ok(median(delays.kubin) > median(delays.lozan) * 3,
       `the officer's sector waits (you ${median(delays.lozan).toFixed(1)}s, `

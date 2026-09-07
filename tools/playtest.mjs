@@ -1075,7 +1075,15 @@ function magazineIsTheOnlyLimit(w, site, track) {
   if (site.engagements.length >= channelsFor(site)) return false;
   const toRange = timeToInRangeS(site, track);
   if (toRange === Infinity) return false;
-  if (Number.isFinite(toRange) && toRange > 45 + type.maxRangeKm * 0.4) return false;
+  const horizonS = 45 + type.maxRangeKm * 0.4;
+  if (Number.isFinite(toRange) && toRange > horizonS) return false;
+  // And the same plausible band `cannotEngageReason` keeps faith in for an
+  // unsettled course, or the empty rack gets blamed for a contact the battery
+  // was never going to reach.
+  if (Number.isNaN(toRange)
+    && dist(site.pos, track.pos) - type.maxRangeKm > horizonS * DETECTION.maxTargetSpeedKmS) {
+    return false;
+  }
   return true;
 }
 

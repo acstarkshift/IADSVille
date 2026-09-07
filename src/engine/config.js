@@ -537,6 +537,57 @@ export const DETECTION = {
   correlationRadiusKm: 4.5,
   /** Without central fusion, plots must fall much closer to associate. */
   degradedCorrelationRadiusKm: 1.6,
+  /**
+   * How fast the correlation gate opens with the time since anybody last
+   * looked, in km per second of staleness.
+   *
+   * The radius above is measurement error, and measurement error is all it
+   * ever was — but a plot is not compared against where the target IS, it is
+   * compared against where the estimate SAYS it is, and that estimate goes
+   * stale at the scan rate. A twelve-second early-warning sweep gives an
+   * anti-radiation round eleven kilometres to be somewhere else in, and the
+   * velocity estimator blends at 0.45, so one look after birth it is holding
+   * less than half the true speed. A fixed 4.5 km gate against a stale
+   * position is why six rounds arrived on the plot as twenty-eight track
+   * numbers.
+   *
+   * This is the growth of the *uncertainty*, not of the target's speed: the
+   * prediction already carries the speed. It is floored here and scaled with
+   * the track's own speed estimate at the call site, because a fast target's
+   * estimate is wrong by more kilometres than a slow one's.
+   */
+  gateGrowthKmPerS: 0.12,
+  /**
+   * The fastest thing the sets can be asked to hold, in km/s — the cap the
+   * velocity estimator enforces, and the plausible-travel radius for a track
+   * with no course yet.
+   *
+   * This was half a kilometre a second, under a comment saying nothing on the
+   * board flew faster. The enemy's anti-radiation round flies at 0.92 and is
+   * plotted like everything else, so the estimator saturated at little over
+   * half its true speed: the prediction undershot by five kilometres every
+   * twelve-second sweep, the plot fell outside the gate, and one round became
+   * six numbers. Set above the fastest tracked contact, which is that round.
+   */
+  maxTargetSpeedKmS: 1,
+  /** Ceiling on the gate however stale the estimate is, km. */
+  maxGateKm: 14,
+  /**
+   * Track continuity across a break in contact.
+   *
+   * A track that was ever firm is remembered for this long after it is
+   * dropped, and a birth inside the remembered volume is a RE-ACQUISITION,
+   * not a new contact: it recovers the old track number, the identification
+   * work already done on it, and what the sector had decided it was. This is
+   * what a real operations centre does with a number, and without it a raid
+   * that flies through a coverage seam comes out the other side as new
+   * aeroplanes — measured, 868 track numbers for 45 objects on one watch, and
+   * a NEW CONTACT called every four to ten seconds for aircraft that were
+   * already leaving.
+   */
+  reacquireWindowS: 60,
+  /** Extra allowance on top of the ordinary gate when re-acquiring, km. */
+  reacquireGateKm: 9,
   /** Seconds of observation to classify a track's type. */
   idTimeS: 26,
   /**

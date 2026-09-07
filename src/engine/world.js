@@ -21,7 +21,7 @@ import {
 } from './config.js';
 import { makeRng } from './rng.js';
 import { dist, len, bearing, polar, wrapDeg, clamp, clamp01, absDeltaDeg } from './math.js';
-import { stepDetection } from './detection.js';
+import { stepDetection, rememberGhost } from './detection.js';
 import { stepMissiles, inEnvelope, timeToInRangeS } from './weapons.js';
 import { stepAircraft, createAircraft } from './ai.js';
 import { scoreAllTracks, cannotEngageReason } from './threat.js';
@@ -111,6 +111,12 @@ export class World {
     this.aircraft = [];
     this.missiles = [];
     this.tracks = new Map();
+    /**
+     * Numbers the sector has recently lost contact with, so a contact that
+     * comes back out of a coverage seam comes back as itself. See
+     * `rememberGhost` in detection.js.
+     */
+    this.trackGhosts = [];
     this.events = [];
     this.effects = [];
     this.plots = [];
@@ -872,6 +878,13 @@ export class World {
   dropTrack(id, reason) {
     const track = this.tracks.get(id);
     if (!track) return;
+    /*
+     * Losing the contact does not unlearn the number. A track the sector held
+     * firmly is remembered for a minute after it fades, so the same aeroplane
+     * coming back out of a coverage seam comes back as itself rather than as
+     * a new contact with a new number and a fresh announcement.
+     */
+    if (reason !== 'destroyed') rememberGhost(this, track);
     for (const siteId of track.assignedTo) {
       const site = this.siteById.get(siteId);
       if (!site) continue;

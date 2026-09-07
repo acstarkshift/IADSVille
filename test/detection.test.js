@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   effectiveRangeKm, detectionProbability, sweepRadar, stepRadarPower,
-  correlatePlots, ageTracks, trackProfile,
+  correlatePlots, ageTracks, trackProfile, rememberGhost,
 } from '../src/engine/detection.js';
 import { DETECTION, AIR_TYPES } from '../src/engine/config.js';
 import { makeRng } from '../src/engine/rng.js';
@@ -233,6 +233,120 @@ describe('track correlation', () => {
     correlatePlots(split, [plot({ radarId: 'r1' })]);
     correlatePlots(split, [plot({ radarId: 'r2', pos: { x: 0.4, y: 100.3 } })]);
     assert.equal(split.tracks.size, 2, 'without the centre, the raid appears to double');
+  });
+
+  test('a battery reads its own two sets together even with the centre gone', () => {
+    /*
+     * Losing the sector operations centre takes away the thing that
+     * reconciles plots BETWEEN units. It does not take away the plotting
+     * board inside one battalion's cabin, where the acquisition set and the
+     * fire-control set on the same mount are read by the same two people.
+     * Without this the battalion counted every aeroplane twice by itself.
+     */
+    const radarById = new Map([
+      ['acq', { id: 'acq', siteId: 's_bastion' }],
+      ['fc', { id: 'fc', siteId: 's_bastion' }],
+      ['ewr', { id: 'ewr', siteId: null }],
+    ]);
+    const w = fakeWorld({ fusionOnline: false, radarById });
+    correlatePlots(w, [plot({ radarId: 'acq' })]);
+    correlatePlots(w, [plot({ radarId: 'fc', pos: { x: 0.4, y: 100.3 } })]);
+    assert.equal(w.tracks.size, 1, 'one battery, one plot board, one number');
+
+    correlatePlots(w, [plot({ radarId: 'ewr', pos: { x: 0.4, y: 100.3 } })]);
+    assert.equal(w.tracks.size, 2, 'a different unit is still a different number');
+  });
+
+  test('one fast, sparsely-plotted round keeps ONE track number', () => {
+    /*
+     * The measured failure: an anti-radiation round at 0.92 km/s under a
+     * twelve-second early-warning sweep moves eleven kilometres between
+     * looks, and the correlator compared each new plot against the LAST PLOT
+     * rather than against the prediction its own comment promised. Six rounds
+     * arrived on the plot as seventeen to twenty-eight track numbers, with up
+     * to three live tracks on one of them at once.
+     */
+    const w = fakeWorld({
+      aircraftById: new Map(),
+      missiles: [{ id: 'm1', type: 'arm', contactType: 'arm' }],
+    });
+    let y = 400;
+    const speed = 0.92;           // km/s, an anti-radiation round
+    const scanS = 12;             // an early-warning sweep
+    for (let look = 0; look < 20; look++) {
+      correlatePlots(w, [{ radarId: 'r1', truthId: 'm1', pos: { x: 0, y }, altM: 3000 }]);
+      w.t += scanS;
+      y -= speed * scanS;
+      // Only one live track may exist on it at any point, not just at the end.
+      const live = [...w.tracks.values()].filter((t) => !t.destroyed);
+      assert.ok(live.length <= 1, `one object, one track (look ${look}, ${live.length} live)`);
+      for (const track of w.tracks.values()) track.quality = 1;
+    }
+    assert.equal(w.nextTn, 2, 'one number issued for one round');
+  });
+
+  test('a contact re-acquired after a break comes back as itself', () => {
+    /*
+     * Track continuity. A raid crossing a seam in the coverage used to come
+     * out the other side as new aeroplanes with new numbers, and the net
+     * announced every one of them. The sector re-acquires instead: same
+     * number, same identification work, and no NEW CONTACT.
+     */
+    const w = fakeWorld();
+    correlatePlots(w, [plot()]);
+    const first = [...w.tracks.values()][0];
+    first.vel = { x: 0, y: -0.2 };
+    first.quality = 1;
+    first.everFirm = true;
+    first.classification = 'striker';
+    first.hostility = 'hostile';
+    first.idProgressS = 40;
+
+    // Thirty seconds off the plot, then a plot where it should have got to.
+    rememberGhost(w, first);
+    w.tracks.delete(first.id);
+    w.t += 30;
+    correlatePlots(w, [plot({ pos: { x: 0.4, y: 100 - 0.2 * 30 } })]);
+
+    assert.equal(w.tracks.size, 1);
+    const back = [...w.tracks.values()][0];
+    assert.equal(back.tn, first.tn, 'the same number');
+    assert.equal(back.classification, 'striker', 'the identification work survives');
+    assert.equal(back.hostility, 'hostile');
+    assert.ok(back.quality <= DETECTION.qualityGain,
+      'but the quality is re-earned — one plot is one plot');
+    assert.equal(w.nextTn, 2, 'no new number was issued');
+  });
+
+  test('a contact gone too long, or reappearing somewhere else, is genuinely new', () => {
+    const stale = fakeWorld();
+    correlatePlots(stale, [plot()]);
+    const a = [...stale.tracks.values()][0];
+    a.everFirm = true;
+    rememberGhost(stale, a);
+    stale.tracks.delete(a.id);
+    stale.t += DETECTION.reacquireWindowS + 5;
+    correlatePlots(stale, [plot()]);
+    assert.equal([...stale.tracks.values()][0].tn, 'T-002', 'a minute later it is a new contact');
+
+    const elsewhere = fakeWorld();
+    correlatePlots(elsewhere, [plot()]);
+    const b = [...elsewhere.tracks.values()][0];
+    b.everFirm = true;
+    rememberGhost(elsewhere, b);
+    elsewhere.tracks.delete(b.id);
+    elsewhere.t += 10;
+    correlatePlots(elsewhere, [plot({ pos: { x: 90, y: 100 } })]);
+    assert.equal([...elsewhere.tracks.values()][0].tn, 'T-002', 'ninety km away it is not the same aeroplane');
+  });
+
+  test('a single-plot flicker is never remembered', () => {
+    const w = fakeWorld();
+    correlatePlots(w, [plot()]);
+    const track = [...w.tracks.values()][0];
+    rememberGhost(w, track);
+    assert.equal(w.trackGhosts?.length ?? 0, 0,
+      'a contact held for one look is noise, and must not lend its number to a real one');
   });
 });
 

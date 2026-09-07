@@ -8,7 +8,9 @@
  * never working from different pictures.
  */
 
-import { AIR_TYPES, ASSET_TYPES, SAM_TYPES } from './config.js';
+import {
+  AIR_TYPES, ASSET_TYPES, SAM_TYPES, DETECTION,
+} from './config.js';
 import {
   dist, timeToGo, len, clamp, clamp01, invLerp, closureRate, absDeltaDeg, bearing,
 } from './math.js';
@@ -226,6 +228,23 @@ export function cannotEngageReason(world, site, track) {
   if (Number.isFinite(toRange) && toRange > claimHorizonS) {
     return `out of reach for ${Math.round(toRange)}s`;
   }
+  /*
+   * NaN is a course not yet established, and the crew will take that on faith
+   * — but only inside a band where faith could possibly pay. The guard above
+   * is written for a finite answer, so NaN fell straight through to "the shot
+   * is legal", and the console, the AI and the measurement harness all
+   * believed it: a 42 km section reported a legal shot against a contact
+   * 147 km away, and the cabin on Economy of Force was recorded as busy from
+   * 90 s on a watch whose first hostile inside its envelope arrived at 526 s
+   * or never. Faith reaches as far as the fastest thing on the board could
+   * fly inside the battery's own planning horizon, and no further.
+   */
+  if (Number.isNaN(toRange) && !inEnvelope(site, track.pos, track.altM).ok) {
+    const gapKm = dist(site.pos, track.pos) - type.maxRangeKm;
+    if (gapKm > claimHorizonS * DETECTION.maxTargetSpeedKmS) {
+      return `out of reach at ${Math.round(dist(site.pos, track.pos))}km`;
+    }
+  }
   return null;
 }
 
@@ -243,8 +262,20 @@ export function engagementValue(world, site, track) {
   const env = inEnvelope(site, track.pos, track.altM);
   const rawTimeToRange = env.ok ? 0 : timeToInRangeS(site, track);
   if (rawTimeToRange === Infinity) return null;
-  // NaN means the track's course is not established yet; assume it is worth
-  // taking rather than declining a target that has only been seen once.
+  /*
+   * NaN means the track's course is not established yet; assume it is worth
+   * taking rather than declining a target that has only been seen once — but
+   * only inside the same plausible band `cannotEngageReason` keeps faith in,
+   * or the chooser routes a battalion onto a contact a hundred kilometres
+   * outside its ring and pins the channel there. The two have to agree: the
+   * AI and the player's hint are supposed to be reading one picture.
+   */
+  if (Number.isNaN(rawTimeToRange) && !env.ok) {
+    const horizonS = 45 + type.maxRangeKm * 0.4;
+    if (dist(site.pos, track.pos) - type.maxRangeKm > horizonS * DETECTION.maxTargetSpeedKmS) {
+      return null;
+    }
+  }
   const timeToRange = Number.isNaN(rawTimeToRange) ? 90 : rawTimeToRange;
   if (track.altM > type.maxAltM || track.altM < type.minAltM) return null;
   // A target opening the range with no shot on the board is not this site's
