@@ -594,7 +594,8 @@ src/engine/           the simulation — pure JS, no DOM, runs under node --test
 src/ui/                scope, battery console, panels, dossier, themes, audio
   lexicon.js            every legend on the equipment, in both languages
 test/                  node:test suites over the engine
-tools/                 zero-dependency static server and browser smoke test
+tools/                 static server, browser smoke test, and playtest.mjs —
+                       four scripted operators playing every seat of every watch
 ```
 
 The engine never touches `window`, which is why the same code that renders your
@@ -673,6 +674,34 @@ A few decisions worth knowing about if you read the source:
   that point defence is sited forward of the release ring, that being overrun
   does not spare the cities, and that every one of the seven endings is
   reachable.
+- **Every seat is playtested by machine.** The suite proves the engine is
+  correct; `tools/playtest.mjs` proves the game is playable, which is a
+  different question. It builds a real `World` and drives it through the same
+  public calls the console does — assign, fire, radiate, salvo, acknowledge,
+  take a sector — with four scripted operators: **nothing** (never touches a
+  control: the floor every other figure is read against), **novice** (notices
+  at forty-five seconds, works one contact at a time, eight seconds to react
+  and six more to press LAUNCH), **competent** (radiates at once, hands every
+  firm hostile to the best battery that can take it, blinks under an
+  anti-radiation round) and **expert** (competent, plus priority by
+  `engagementValue`, salvo sizing, a duty cycle on its own set, RIDE when its
+  rounds land first, and standing in the sector under the main effort). It
+  writes down what the watch *felt* like: time to the first legal shot and the
+  first round away, dead air over thirty seconds, how much of the watch had a
+  shot nobody took, and how much of it was spent watching a reload bar. Its
+  most useful finding so far is a table it disagreed with: measured over eight
+  seeds, refusing the expenditure freeze or the border restriction scores
+  identically to accepting them and costs twenty-odd points of standing,
+  because acceptance binds your *subordinates* and the operator defends the
+  place anyway. Exactly one order in the campaign is worth refusing —
+  the withdrawal of the district battalion, which is the only one that takes
+  equipment off the board. Reproduce a watch's table with:
+
+  ```
+  node tools/playtest.mjs --mission white-noise --seat all --policy all \
+    --seeds 8 --jobs 4 --md /tmp/white-noise.md
+  ```
+
 - **A strike package flies to a grid reference, not a live feed.** Sorties record
   the coordinates they were briefed on; if the target has moved by the time they
   arrive, the weapons land on empty ground. That one rule is what makes
