@@ -447,33 +447,54 @@ describe('the order to release the district battalion', () => {
 
   test('the two arithmetics disagree: obedience keeps the file and costs the town', () => {
     /*
-     * Eight seeds, and a paired win count beside the mean.
+     * Eight seeds, the mean, and a paired count of what the district actually
+     * took — because those are the parts of this that are measurement rather
+     * than sampling.
      *
      * Three seeds used to stand here and it flapped the moment the engagement
-     * model was retuned: one night of the three ran the other way and took the
-     * mean with it, on a property measured at +31% and nine wins in ten across
-     * a wider sample. A paired count is the stable statistic here — the two
-     * arms share a seed, so the sign of each night is nearly noiseless while
-     * its magnitude is not.
+     * model was retuned. Eight with a paired count of SCORE wins replaced them,
+     * and that has now gone the same way: per-rail loading (`stepLoading`) lets
+     * the district's remaining batteries recover in eight seconds instead of
+     * sixty-two, so obedience is no longer the catastrophe it was on its worst
+     * nights, and its mean rose from 806 to 1203 while refusal's rose from 1335
+     * to 1662. The GAP is intact — refusal is ahead by 38% on the mean — but
+     * the per-seed score count fell from 6/8 to 4/8 on a statistic whose own
+     * baseline is barely distinguishable from a coin.
+     *
+     * What did not move an inch is the physical thing the README is about:
+     * weapons arriving on the district. Refusal leaks fewer on 8 of 8 seeds
+     * now and 7 of 8 before (never more, on any seed of either tree): 23
+     * leakers against obedience's 43, and 7 places lost against 10. Obedience
+     * costs the district MORE ground than it used to, not less. So the paired
+     * statistic is the leaker count, which is the sentence "obeying costs a
+     * district town" written as arithmetic, and the score claim stands on the
+     * mean.
      */
     const seeds = Array.from({ length: 8 }, (_, i) => `w${i + 1}`);
-    let obeyed = { standing: 0, score: 0 };
-    let refused = { standing: 0, score: 0 };
-    let refusalWins = 0;
+    let obeyed = { standing: 0, score: 0, leakers: 0, lost: 0 };
+    let refused = { standing: 0, score: 0, leakers: 0, lost: 0 };
+    let refusalKeptMoreOut = 0;
     for (const seed of seeds) {
       const o = play('accepted', seed).outcome;
       const r = play('refused', seed).outcome;
       obeyed.standing += o.standing; obeyed.score += o.score;
+      obeyed.leakers += o.stats.leakers; obeyed.lost += o.stats.assetsLost;
       refused.standing += r.standing; refused.score += r.score;
-      if (r.score > o.score) refusalWins++;
+      refused.leakers += r.stats.leakers; refused.lost += r.stats.assetsLost;
+      if (r.stats.leakers <= o.stats.leakers) refusalKeptMoreOut++;
     }
     assert.ok(obeyed.standing > refused.standing,
       'the state rewards the officer who complied');
     assert.ok(refused.score > obeyed.score,
       `and the district is measurably better off for the officer who did not `
       + `(refused ${Math.round(refused.score / seeds.length)} vs obeyed ${Math.round(obeyed.score / seeds.length)})`);
-    assert.ok(refusalWins >= 6,
-      `and better off on most nights, not on average alone (${refusalWins}/${seeds.length})`);
+    assert.ok(refused.leakers < obeyed.leakers,
+      `and it is better off in weapons, not only in points `
+      + `(${refused.leakers} leakers against ${obeyed.leakers})`);
+    assert.ok(refused.lost <= obeyed.lost,
+      `and in ground (${refused.lost} places lost against ${obeyed.lost})`);
+    assert.ok(refusalKeptMoreOut >= 7,
+      `and on night after night, not on average alone (${refusalKeptMoreOut}/${seeds.length})`);
   });
 
   test('an order can be about a unit, not only a place or an aircraft', () => {

@@ -55,9 +55,9 @@ contact whose impossibly steady flight a well-held track has already given away,
 re-engages after a miss while the shot is still its own, and hands a runner off
 to the next layer in when it is not. Measured over sixteen seeded watches of
 White Noise, a commander who works the picture beats one who sets everything
-free and walks away by **23% on the mean, winning all sixteen seeds, on a third
-fewer rounds and a third the decoys** — and beats one who does nothing at all
-by a thousand points.
+free and walks away by **22% on the mean, winning fifteen of sixteen seeds, on
+a quarter fewer rounds and half the decoys** — and beats one who does nothing
+at all by a thousand points.
 
 And then Ville Under Fire kills the operations centre mid-watch, cueing dies
 with it, and the same sixteen seeds run the other way: the released crews take
@@ -158,23 +158,23 @@ declining to assign. It is calling a battery off a target it is already tracking
 Then the debrief shows you two numbers that have agreed all campaign and now do
 not (means over eight seeded watches, competently fought — reproduce them with
 `node tools/measure-moral.mjs`; the hospital package comes in on the deck, down
-the Kubin road, and obedience loses the building on five nights of eight while
+the Kubin road, and obedience loses the building on seven nights of eight while
 a deliberate defence saves it on all eight):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **90** | 366 |
-| Defend it anyway | 87 | **1371** |
-| Refuse the order outright | 70 | 1371 |
+| Obey the freeze | **92** | 296 |
+| Defend it anyway | 89 | **1631** |
+| Refuse the order outright | 78 | 1631 |
 
-Defending the hospital is worth a thousand points of actual value, and the
+Defending the hospital is worth thirteen hundred points of actual value, and the
 file prices the whole transgression at three: a query for rounds
 expended outside the freeze, worth rather less than two leakers. A weapon that
 arrives at the struck-off place is billed at exactly nothing — the ledger
 cannot simultaneously declare a building undesignated and grieve for it — and
 the building's own loss appears on the state's books at nothing at all. Only
 the third row really moves. Refusing on the net, for the identical night's
-fighting, costs seventeen points more than quietly disobeying, plus a
+fighting, costs eleven points more than quietly disobeying, plus a
 referral that stays in the file. Sector command barely prices what you did.
 It punishes having said no, and that is the whole lesson.
 
@@ -188,10 +188,10 @@ territory is a border incident.
 Acknowledging it stands your own subordinates down: no officer and no crew on
 weapons free takes that shot on its own authority afterwards, so the camp is
 defended by you personally or not at all. Measured over eight seeded watches
-with everything on free and nobody at the console, obeying leaves the camp 78%
-destroyed and kills a hundred and nine people; refusing leaves it 20% destroyed
-and kills thirty-four, and costs twenty-two points of standing plus the
-referral, which stays in the file. Afterwards you look the grid reference up and
+(`c1`…`c8`) with everything on free and nobody at the console, obeying leaves
+the camp 68% destroyed and kills a hundred and ten people; refusing leaves it
+15% destroyed and kills twenty-five, and costs twenty-five points of standing
+plus the referral, which stays in the file. Afterwards you look the grid reference up and
 find it handwritten inside the back cover of the sector target folder, in a
 folder that has no business containing a point in Listonia at all. The word for
 what happened over Gorna is not "stray".
@@ -248,7 +248,7 @@ The air picture down the left is not one list. It is a set of shootlists:
 everything nobody is on, at the top, under a heading that turns red while any of
 it is hostile — that section *is* the job — and beneath it one list per battery,
 each headed with whether that battery can take another one (rounds ready,
-reloading, displacing, empty) and closed off by a line naming the batteries with
+loading, displacing, empty) and closed off by a line naming the batteries with
 nothing to do. A contact two batteries are both on appears under both. From the
 cabin you see your own board and nothing else, which is all you would have.
 
@@ -560,10 +560,14 @@ decision the whole game is built on, and it should feel like throwing a switch.
 assign the engagement, right-click a radar to blink it. `Q` / `W` set weapons
 hold / tight, `Shift`+`E` sets weapons free, plain `E` toggles the selected
 battery's radar (mind the difference — one of those silences your own set),
-`R` reloads, `X` displaces.
+`R` sends the selected battery's loaders out — the rack fills itself whenever
+the rails go bare, and this is the order to fill one that is merely short —
+and `X` displaces.
 
 **SAM operator:** click to designate, `L` to lock, `F` to fire, `E` to radiate or
-shut down — that last one is the whole game.
+shut down — that last one is the whole game. `R` is LOADERS OUT: the tube lamps
+go green one at a time on their own when the rails run dry, and this starts them
+early, on a rack that is only half spent.
 
 **District and national command:** the formations panel is above the batteries.
 `Alt`+`1`…`4` takes or hands back a subordinate command; the posture button
@@ -688,19 +692,199 @@ A few decisions worth knowing about if you read the source:
   rounds land first, and standing in the sector under the main effort). It
   writes down what the watch *felt* like: time to the first legal shot and the
   first round away, dead air over thirty seconds, how much of the watch had a
-  shot nobody took, and how much of it was spent watching a reload bar. Its
-  most useful finding so far is a table it disagreed with: measured over eight
-  seeds, refusing the expenditure freeze or the border restriction scores
-  identically to accepting them and costs twenty-odd points of standing,
-  because acceptance binds your *subordinates* and the operator defends the
-  place anyway. Exactly one order in the campaign is worth refusing —
-  the withdrawal of the district battalion, which is the only one that takes
-  equipment off the board. Reproduce a watch's table with:
+  shot nobody took, how much of it was spent with the magazine as the only
+  thing in the way, and how much of *that* was the loaders rather than an
+  empty store. Its most useful finding so far is a table it disagreed with:
+  measured over eight seeds a row, this player refuses nothing in the whole
+  campaign, because acceptance binds your *subordinates* and the operator
+  defends the place anyway — refusing the border restriction scores identically
+  to the decimal on both seats, refusing the expenditure freeze scores the same
+  on the net and slightly worse from the cabin, and each costs nine to
+  twenty-five points of standing. The withdrawal of the district battalion was the one
+  exception until the ready rack started coming back a rail at a time, and
+  then the district covered the ground without it; a commander who fights
+  that district by hand rather than by greedy pairing still does better
+  refusing (`test/echelon.test.js`, eight seeds: 1662 against 1203, twenty-
+  three leakers against forty-three, and seven places lost against ten). Two
+  player models, two answers, both measured.
+  Reproduce a watch's table with:
 
   ```
   node tools/playtest.mjs --mission white-noise --seat all --policy all \
     --seeds 8 --jobs 4 --md /tmp/white-noise.md
   ```
+
+- **The rack comes back a rail at a time.** A reload used to put the battery
+  at zero ready rounds for its full ninety-five seconds and then drop eight
+  rounds in at once, and — because the automatic reload sat inside the AI
+  crew's loop, behind the check for whose battery it was — the one battery
+  with a person in it never started one at all. The loaders now go to work on
+  a bare rack for every battery including yours, and the rounds arrive singly,
+  `reloadS / rails` apart. A whole rack still costs exactly `reloadS`, so no
+  battery gets a round it did not have before; what it gets is the first of
+  them in eight seconds instead of sixty-two, tube lamps that go green one at
+  a time, and a bar counting down to the next rail rather than to a full rack.
+  Measured over eight seeds in the cabin, competently played, the share of a
+  watch with a legal target in reach and nothing on the rails fell from 15% to
+  7% on Solo Battery, 35% to 16% on Low Riders and 40% to 13% on Weasel Hour —
+  and its worst seed on those three from 35%, 37% and 45% to 19%, 29% and 24%.
+  Those are against raids half again the size, which makes them the
+  conservative reading; held against the raid tables the old all-or-nothing
+  rack was measured on, the same three figures are 4%, 12% and 19%. It went
+  UP on one watch, First Light, from 0% to 17%, and every point of that is the
+  guidance pause below on a tutorial whose reload multiplier is 0.35 — a rail
+  there takes four seconds, so those are seventeen per cent of a watch in
+  four-second pieces.
+
+  The half of that number the loaders actually own is small, and the harness
+  now separates it (`reloadWaitShare`): six to eleven per cent of a watch. The
+  rest is a battery that has fired its whole allocation, which no amount of
+  loading faster will touch. Where that was the binding constraint the
+  *allocation* was fixed rather than the hoist — Weasel Hour and Low Riders
+  carry a `storeMult` in their own files, because sixteen rounds behind an
+  eight-round rack is right for the watches those numbers were written for and
+  not for a suppression watch with sixteen aeroplanes and six anti-radiation
+  rounds on it. Weasel Hour's cabin was spending all twenty-four of its rounds
+  and then watching 43% of the night go past.
+
+  Two restraints on it were chosen by measurement rather than by taste. The
+  loaders do **not** start while the launcher still has a round of its own in
+  the air, and they do **not** top up a rack that is merely short. The first
+  carries the campaign: let a battery load through its own guidance run and it
+  never stops shooting, free crews gain more from that than a commander does,
+  and the White Noise attention dividend falls from 22.3% to 14.4% — through
+  the fifteen per cent floor the game is built on — with a leaker appearing
+  where there were none. That measurement was made again from scratch after
+  the raid tables were retuned and it reproduces to the decimal, which is
+  worth saying because the pause is also what most of the residual
+  sole-limiter share above actually is. It is a price, it is paid knowingly,
+  and it buys the one number the whole game rests on. The second is a closer call and
+  the source says so: topping up costs the dividend nothing (22.1% against
+  22.3%) and is worth a hundred and forty points to a competent commander on
+  Low Riders. What it costs is the RELOAD key, which would then be duplicating
+  something doctrine already did — and the expert's margin over the competent
+  player at the seats where that key is the difference collapses with it.
+
+  RELOAD survives as **LOADERS OUT**: the order that overrules both of those
+  restraints, for your battery and your battery only. The second one is what
+  it is really for, and it is the only control in the game that does something
+  doctrine will not — the rails bare, something inside the ring, and the crew
+  standing back because the launcher is still guiding. Overruling that safety
+  with a raid on top of you is a judgement a person makes and an AI crew never
+  does, the same shape as RIDE.
+
+  It borrows nothing: same rail interval, same `reloadS` for a full rack, same
+  store paying for every round. **What it buys is tempo and not rounds**, and
+  the measurement says so plainly. Sixteen seeds a watch in the cabin against
+  an operator who never touches the key, the share of the watch with a legal
+  target in reach and nothing on the rails falls from 15% to 2% on First
+  Light, 4% to 1% on Solo Battery and 8% to 6% on Low Riders — while the score
+  does not move outside the seed noise on any of the four. A store is a store;
+  every round the key puts on the rails now is a round not there later. That is
+  the honest finding, it is why nothing has to ration the key, and it is why
+  the ladder on this one button reads novice-mashes-it, competent-never-
+  touches-it, expert-presses-it-in-the-one-state-doctrine-will-not. Two other
+  rules for pressing it — whenever the rack is short, and whenever it is below
+  half — both measured *worse* than leaving it alone, because they spend the
+  store into a lull.
+
+- **The net does not go quiet, and it says why.** Every watch has stretches
+  with nothing shootable in them — a package turns for home, one straggler
+  drifts thirty kilometres outside everybody's ring and takes three minutes to
+  walk into a LANCE. Those are the shape of the fight. What was a defect is
+  that the console fell silent through them, so a new operator could not tell
+  "there is nothing you can do yet" from "you have missed something": measured
+  over eight seeds of four watches, the worst such silence ran two hundred and
+  twenty-two seconds. After twenty-five seconds with nothing at all on the
+  ticker, sector now reports what it is holding — the contact, its range, and
+  which of your batteries will reach it and in how long, which turns a blank
+  screen into a countdown. With every set cold it says that instead, because a
+  watch spent blind is not a quiet watch. Measured across four missions, three
+  seats and four player models, the longest silence on any of the 320 watches
+  fell from 556 s to 25 s and dead air over thirty seconds went to zero
+  everywhere, including the do-nothing floor. It also has to not be a tape
+  loop: the first version cycled its variants on a counter and printed the same
+  sentence eleven seconds apart, and one identical held-contact line eleven
+  times across five minutes. It now refuses to say the same thing twice
+  running, and will only report the same contact again after a minute, in
+  different words.
+
+- **The watches are not all the same length, and one of them is deliberately
+  short.** Median watch length at 1x runs eleven to fourteen minutes across the
+  first four watches and up to eighteen later, with two documented exceptions.
+  The President's Flight is a single escort problem and ends when the aircraft
+  is down or away. **First Light is four contacts and then two, high and
+  unhurried, with a five-step interactive tutorial, a cut-down console and a
+  reload multiplier of 0.35** — it is the watch that teaches the scope, and it
+  runs five to six and a half minutes on purpose. It was measured at eight
+  minutes once, and one seed in five ended the first watch of the game on a
+  ninety-five-second reload bar with a single blip on the scope.
+
+- **The last aeroplane of the night arrives in the second half of it.** Every
+  watch used to be front-loaded: measured over eight seeds, the last hostile
+  spawn landed at 29% of the watch on First Light, 41% on Low Riders, 35% on
+  Weasel Hour and 52% on Solo Battery, and the rest of each was survivors being
+  chased off the map. Worse, the chase decided the watch — one First Light seed
+  spent its last three minutes on a single aircraft missed at 165 s, 275 s and
+  333 s and finally killed at 386 s, so the tutorial ended when the dice
+  agreed rather than on a designed beat. Each of the four now carries a late
+  element that arrives close in and is engageable the moment it appears: the
+  last spawn sits at 59-78% of the median watch, and no watch in the set ends
+  more than a minute and a half after its last engagement resolves except one
+  Weasel Hour seed at 101 s. Late packages are deliberately spawned at fifty to
+  sixty-five kilometres rather than the engine's default hundred and fifty-five,
+  because an ingress nobody can reach is not pressure, it is a countdown — and
+  pulling Weasel Hour's whole raid inside BASTION's reach took its worst seed
+  from 22.6 minutes to 18.9.
+
+- **How hard each watch is, measured rather than asserted.** Held rate over
+  eight seeds a seat, `tools/playtest.mjs --policy all`:
+
+  | Watch | nothing | novice | competent | expert |
+  |---|--:|--:|--:|--:|
+  | First Light | 0-88% | 100% | 100% | 100% |
+  | Low Riders | 0% | 0-88% | 63-100% | 88-100% |
+  | Solo Battery | 0% | 38-50% | 69-88% | 88% |
+  | Weasel Hour | 0% | 25-75% | 75-88% | 75-88% |
+
+  (Ranges are across the three seats; Solo Battery has only the cabin, and its
+  second figure is the sixteen-seed reading, because at eight seeds one watch
+  is twelve and a half points.)
+
+  Three things in that table are deliberate and worth stating plainly, because
+  they are the exceptions to the campaign's own difficulty rule (competent
+  should hold six to nine watches in ten, novice a quarter to three-fifths).
+
+  **First Light is exempt, and it is the only watch that is.** It is the
+  interactive tutorial: five steps, a cut-down console of two controls, and a
+  brief that says nothing is shooting back at you tonight. A teaching watch that
+  fails a learner is a teaching watch that has failed. What it must do instead
+  is fail the *spectator*, and it does: a player who touches nothing holds none
+  of eight seeds on the net and loses four aircraft, while a player who so much
+  as brings a set up and assigns holds all eight.
+
+  **Low Riders now forgives one leaker, not two.** With nineteen aircraft on
+  four axes, forgiving two made an act-2 watch that competent play held 24 of
+  24 times — no losing outcome at all. At one it holds 63-100% at eight seeds
+  and 75-88% at sixteen, which is a watch you can fail.
+
+  **Novice is shut out on the net seat of the two biggest watches** (0 of 8 on
+  Low Riders' net and both-seats, against 88% in the cabin, where the sector's
+  own battle manager covers for them). That is not a tuning miss, it is the
+  shape of the game: on the net a beginner IS the sector, and the gap between
+  handing out two targets at a time and re-pairing the whole sector every three
+  seconds is worth three to five leakers a watch. It is the delegation ladder
+  seen from the bottom, and it is why the cabin seats exist.
+
+- **A watch that is lost says why it was lost.** Every losing watch used to end
+  on the same three words — "WATCH ENDS — SECTOR PENETRATED" — whether four
+  aircraft got through because no set was ever switched on, one got through on
+  an axis nobody covered, or the position was overrun in the first ninety
+  seconds. Now the ticker and the debrief both carry a clause naming the thing
+  that actually settled it, read in the order the verdict is decided in:
+  overrun, then a place that cannot be lost, then the count — and if nothing of
+  yours ever radiated it says *that* instead of the count, because the count is
+  the symptom.
 
 - **A strike package flies to a grid reference, not a live feed.** Sorties record
   the coordinates they were briefed on; if the target has moved by the time they

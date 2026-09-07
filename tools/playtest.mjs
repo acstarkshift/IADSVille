@@ -32,37 +32,65 @@
  *
  *   novice      Notices late and fixates. Brings the sets up forty-five
  *               seconds in (a real person reads the brief, then the panel,
- *               then finds the switch), works ONE contact at a time and only
- *               once it is firm and already well inside somebody's envelope —
- *               eight seconds of reaction after noticing — accepts every
- *               directive twenty seconds after it arrives, and in the cabin
- *               waits six seconds after READY before pressing LAUNCH. Never
- *               displaces, never manages emissions. This is the shape of a
- *               first watch, and the thing to watch for is where it scores
- *               BELOW `nothing`: that is the game punishing a beginner for
- *               joining in.
+ *               then finds the switch), holds `NOVICE_HANDS` contacts at a
+ *               time and only once each is firm and already well inside
+ *               somebody's envelope — eight seconds of reaction after
+ *               noticing — hands each to the NEAREST battery that can take
+ *               it, accepts every directive twenty seconds after it arrives,
+ *               and in the cabin waits six seconds after READY before
+ *               pressing LAUNCH and twenty staring at a red rack before
+ *               calling the loaders out. Never displaces, never manages
+ *               emissions, never re-pairs. This is the shape of a first
+ *               watch, and the thing to watch for is where it scores BELOW
+ *               `nothing`: that is the game punishing a beginner for joining
+ *               in.
  *
  *   competent   The obvious correct play, no craft. Radiates at once; every
  *               three seconds hands each firm, non-decoy hostile to the
- *               battery with the best `engagementValue` among those whose
- *               `cannotEngageReason` is null; never double-assigns
- *               (shoot-look-shoot); answers directives inside eight seconds;
- *               in the cabin locks and fires the instant a solution is ready;
- *               shuts a set down with an anti-radiation round inbound on it
- *               and brings it straight back up afterwards. Anything a
- *               competent player cannot do on a watch is a design problem, not
- *               a skill problem.
+ *               NEAREST of its batteries whose `cannotEngageReason` is null;
+ *               never double-assigns (shoot-look-shoot); answers directives
+ *               inside eight seconds; shuts a set down with an
+ *               anti-radiation round inbound on it and brings it straight
+ *               back up afterwards. In the cabin it locks the best shot on
+ *               offer and fires when the lamp says READY, taking the
+ *               aeroplane before the enemy's round and never launching into a
+ *               set that is about to duck.
  *
- *   expert      Competent, plus the four things the game claims to reward:
+ *               Nearest-that-can-shoot is deliberate and it is where the net
+ *               seat's ladder comes from. This model used to pair on
+ *               `engagementValue` — the same arithmetic the expert's global
+ *               pass sorts on — and the two players were then reading the
+ *               same number in a different order, worth nought to four per
+ *               cent on every watch measured. A person with a scope and a
+ *               mouse clicks the closest ring that can reach; reading the
+ *               shootlist's own ordering instead is a decision, and a
+ *               decision is what an expert is.
+ *
+ *               Anything a competent player cannot do on a watch is a design
+ *               problem, not a skill problem.
+ *
+ *   expert      Competent, plus the six things the game claims to reward:
  *               priority (a global greedy pairing over `engagementValue`,
  *               which already carries the defended-asset weight, so the round
  *               goes where the night's own arithmetic says it should); salvo
- *               sizing (`setSalvo` to two for a critical or civilian place, or
- *               for a shot the edge of the envelope is going to spoil, and one
- *               otherwise); emissions discipline (a duty cycle on the battery's
- *               own set, and RIDE — hold the beam — when the rounds already in
- *               the air land before the enemy's does); and, at district and
- *               national command, standing in the sector under the main effort
+ *               sizing on the NET (`setSalvo` to two for a critical or
+ *               civilian place, or for a shot the edge of the envelope is
+ *               going to spoil, and one otherwise — but never from the cabin,
+ *               and the measurement for that is beside the crash load below);
+ *               the SWEET SPOT in the cabin (`holdForRange` — wait four or
+ *               five seconds for a closing target to come off the rim of the
+ *               envelope, where `edgeLaunchPk` is waiting, but only while
+ *               the shootlist is clear and never for more than
+ *               `CABIN_HOLD_S`); the crash load, which is the cabin's other
+ *               piece of craft — the rack fills itself, and knowing that
+ *               LOADERS OUT is worth pressing in a lull and not worth
+ *               pressing with something in the ring is the whole of it;
+ *               emissions discipline (a duty cycle on the battery's own set,
+ *               RIDE — hold the beam — when the rounds already in the air
+ *               land before the enemy's does, and no duty cycle at all when
+ *               the battery's set is the only one looking at the sky); and,
+ *               at district and national command, standing in the sector
+ *               under the main effort
  *               — `takeDirect` on the formation carrying the most threat, but
  *               only when it beats the weakest sector already held by half
  *               again, because a handover costs eighteen or twenty-six seconds
@@ -77,53 +105,62 @@
  * paired by seed — mean score / mean standing / watches held:
  *
  *   directive           watch                  seat  accept          refuse
- *   expenditureFreeze   economy-of-force       net   1258 /89/ 8-8   1258 /68/ 7-8
- *   expenditureFreeze   economy-of-force       crew  1521 /92/ 8-8   1322 /70/ 8-8
- *   borderRestriction   across-the-line        net    865 /99/ 8-8    865 /74/ 8-8
- *   borderRestriction   across-the-line        crew   913 /93/ 8-8    913 /71/ 8-8
- *   withdrawBattalion   reinforce-the-capital  net    602 /24/ 7-8   1242 / 6/ 8-8
- *   palacePriority      two-cities             net   −640 / 3/ 1-8   −640 / 1/ 1-8
- *   engageCivil         ville-under-fire       net    610 /39/ 3-8    610 /24/ 3-8
- *   civilCorridor       white-noise            crew  1486 /92/ 8-8   1386 /85/ 8-8
- *   priority (routine)  white-noise            net   1439 /92/ 8-8   1439 /82/ 8-8
- *   conserve            white-noise            net   1439 /92/ 8-8   1439 /77/ 8-8
+ *   expenditureFreeze   economy-of-force       net   1655 /89/ 8-8   1655 /80/ 8-8
+ *   expenditureFreeze   economy-of-force       crew  1571 /96/ 8-8   1548 /76/ 8-8
+ *   borderRestriction   across-the-line        net    950 /97/ 8-8    950 /72/ 8-8
+ *   borderRestriction   across-the-line        crew  1053 /93/ 8-8   1053 /72/ 8-8
+ *   withdrawBattalion   reinforce-the-capital  net   1448 /52/ 8-8   1323 / 8/ 8-8
+ *   palacePriority      two-cities             net   −622 / 0/ 0-8   −622 / 0/ 0-8
+ *   engageCivil         ville-under-fire       net   1037 /62/ 8-8   1037 /50/ 8-8
+ *   civilCorridor       white-noise            crew  1456 /92/ 8-8   1462 /94/ 8-8
+ *   priority (routine)  white-noise            net   1453 /91/ 8-8   1453 /85/ 8-8
+ *   conserve            white-noise            net   1453 /91/ 8-8   1435 /73/ 8-8
  *
- * So the expert refuses exactly one order in the whole campaign, and it is
- * the one that takes equipment off the board:
+ * So this player refuses NOTHING, and the reason is the same in every row:
+ * accepting an order binds your SUBORDINATES, not you. The freeze and the
+ * border restriction stand the AI's crews and officers down off the
+ * struck-off place; they do not stop the person at the console from defending
+ * it, and this player defends it anyway. The score is therefore identical to
+ * the decimal on both arms of five of these rows, while refusing costs nine
+ * to twenty-four points of standing and a referral that stays in the file.
+ * That is README's own conclusion arrived at from the other end: quiet
+ * insubordination is the score-best play, and this table is what it looks
+ * like when a machine works that out on its own.
  *
- *   withdrawBattalion   REFUSE   +640 mean score, ahead on 6 seeds of 8, and
- *                                the district holds 8 of 8 instead of 7. This
- *                                is the only hinge whose acceptance MOVES
- *                                something — `withdrawSite` marches the
- *                                long-range battalion off the board — and it
- *                                costs eighteen points of standing to say no.
- *                                README: obeying costs a district town.
+ * ONE ROW CHANGED SIDES, and it is worth knowing why:
  *
- *   everything else     ACCEPT   because accepting an order binds your
- *                                SUBORDINATES, not you. The freeze and the
- *                                border restriction stand the AI's crews and
- *                                officers down off the struck-off place; they
- *                                do not stop the person at the console from
- *                                defending it, and this player defends it
- *                                anyway. The score is therefore identical to
- *                                the decimal on both arms of four of these
- *                                rows, while refusing costs twenty to
- *                                twenty-five points of standing and a
- *                                referral that stays in the file. That is
- *                                README's own conclusion, arrived at from
- *                                the other end: "Refusing on the net, for the
- *                                identical night's fighting, costs seventeen
- *                                points more than quietly disobeying." Quiet
- *                                insubordination is the score-best play, and
- *                                this table is what it looks like when a
- *                                machine works that out on its own.
+ *   withdrawBattalion   was REFUSE (1242 against 602, ahead on six seeds of
+ *                       eight), and is now ACCEPT (1440 against 1309, and
+ *                       fifty-two points of standing against eight). Nothing
+ *                       about the order moved. What moved is `stepLoading`:
+ *                       with the rack coming back a rail at a time instead of
+ *                       in a lump ninety-five seconds later, the district's
+ *                       remaining batteries cover the ground the battalion
+ *                       used to, and this player — who re-pairs every track
+ *                       to the best battery every three seconds — is exactly
+ *                       the player who can exploit that. The margin is a
+ *                       tenth of what refusal's used to be, and it points the
+ *                       other way.
  *
- * The two apparent exceptions are worth naming. Accepting the freeze in the
- * CREW seat scores 199 points BETTER than refusing it (1521 vs 1322) — the
- * sector's rounds go somewhere more valuable than the hospital when the AI is
- * told to leave it alone, and the operator in the cabin covers it. And the
- * civil corridor is worth +100 accepted, because a sector that stops shooting
- * inside a twenty-four-degree wedge stops shooting at the transit.
+ *                       It points the ORIGINAL way for a commander who fights
+ *                       the district by hand rather than by greedy
+ *                       `engagementValue` pairing: `test/echelon.test.js`
+ *                       measures that one over eight seeds and refusal is
+ *                       ahead 1662 to 1203, keeps weapons off the district on
+ *                       all eight nights (23 leakers against 43), and loses
+ *                       seven places against obedience's ten. Two player
+ *                       models, two answers, both measured; the harness
+ *                       records its own and the README's claim rests on the
+ *                       one with a person in it.
+ *
+ * There is not a single exception left in the table. Five of the ten rows are
+ * identical to the decimal on both arms, four are worse for refusing, and the
+ * tenth — the civil corridor from the cabin — is six points better for
+ * refusing on a watch whose seed-to-seed spread is a hundred times that. Every
+ * row costs between two and forty-four points of standing to refuse. This is
+ * the harness's own conclusion and not the game's argument: it is what a
+ * player who optimises the ledger does, and the whole of Economy of Force is
+ * about what that costs the person who does it.
  *
  * Reproduce any row by editing EXPERT_ANSWERS and running the two arms:
  *   node tools/playtest.mjs --mission economy-of-force --seat net \
@@ -160,8 +197,15 @@
  *
  * `magazineOnlyLimiterShare` is the share of the watch with no legal shot
  * where the ONLY thing wrong was an empty rack — the contact in the altitude
- * band, in reach, a channel free, and no round to put on it. It is how you
- * tell a quiet watch from a watch spent watching a reload bar.
+ * band, in reach, a channel free, and no round to put on it.
+ *
+ * That figure has two quite different causes and they want different repairs,
+ * so `reloadWaitShare` splits out the half that is the loaders' fault: the
+ * subset of the same seconds in which the STORE still held rounds. High
+ * `reloadWaitShare` is a watch spent watching a reload bar and is a mechanism
+ * problem. `magazineOnlyLimiterShare` with `reloadWaitShare` near zero is a
+ * battery that has fired its whole allocation, which is an ammunition
+ * problem, and no amount of loading faster will touch it.
  *
  * ---------------------------------------------------------------------------
  * SEEDS, AND WHY THE OUTPUT IS BYTE-IDENTICAL
@@ -193,10 +237,10 @@ import { fileURLToPath } from 'node:url';
 import { World } from '../src/engine/world.js';
 import { SCENARIOS } from '../src/engine/scenarios.js';
 import { cannotEngageReason, engagementValue, sortedTracks } from '../src/engine/threat.js';
-import { armTimeToImpact, channelsFor } from '../src/engine/doctrine.js';
+import { armTimeToImpact, channelsFor, railLoadS, railsOf } from '../src/engine/doctrine.js';
 import { inEnvelope, timeToInRangeS } from '../src/engine/weapons.js';
-import { AIR_TYPES, ASSET_TYPES, DETECTION, SAM_TYPES } from '../src/engine/config.js';
-import { dist, len } from '../src/engine/math.js';
+import { AIR_TYPES, ASSET_TYPES, DETECTION, ENGAGEMENT, SAM_TYPES } from '../src/engine/config.js';
+import { closureRate, dist, len } from '../src/engine/math.js';
 
 const THIS_FILE = fileURLToPath(import.meta.url);
 
@@ -218,16 +262,15 @@ const ACTION_KINDS = new Set(['launch', 'good', 'alert', 'warn', 'command', 'com
  * How the expert answers the command net. See the header for the measurement
  * behind each row; anything not named here is accepted.
  */
-export const EXPERT_ANSWERS = {
-  /*
-   * The only order in the campaign that is worth the standing it costs to
-   * refuse: measured 1242 against 602 over eight seeds, ahead on six of them,
-   * because it is the only one whose acceptance physically removes a battalion
-   * from the board. Every other order binds your subordinates rather than you,
-   * and the expert accepts it and defends the place anyway.
-   */
-  withdrawBattalion: 'refused',
-};
+/*
+ * Empty, and that is the finding: measured over eight seeds a row, this player
+ * refuses nothing in the whole campaign. The withdrawal of the district
+ * battalion was the one exception until the rack started coming back a rail at
+ * a time — see the table in the header, which carries both arms of every hinge
+ * and the reason that row changed sides. An entry here is a measurement, never
+ * a mood; add one only with the two arms that justify it.
+ */
+export const EXPERT_ANSWERS = {};
 
 /* ------------------------------------------------------------------ *
  * What the seat can touch
@@ -353,10 +396,30 @@ function assignPass(ctx, { greedy = false, salvo = false } = {}) {
       if (cannotEngageReason(w, site, track)) continue;
       const evaluation = engagementValue(w, site, track);
       if (!evaluation) continue;
-      if (greedy) pairs.push({ track, site, value: evaluation.value });
-      else if (!best || evaluation.value > best.value) {
-        best = { track, site, value: evaluation.value };
-      }
+      if (greedy) { pairs.push({ track, site, value: evaluation.value }); continue; }
+      /*
+       * The COMPETENT pass takes the nearest battery that can legally take
+       * the contact, and that is the whole of the difference between the two
+       * players on the net.
+       *
+       * It used to take the best `engagementValue` — the same number the
+       * expert's global pass sorts on — which meant both players were
+       * reading the sector's own arithmetic and the only thing left between
+       * them was the order they read it in. Measured over eight seeds, that
+       * was worth nought to four per cent on every watch in the set: the
+       * priority the game claims to reward did not exist as a skill, because
+       * the competent model already had it.
+       *
+       * Nearest-that-can-shoot is what a person does with a scope and a mouse
+       * and no time. `engagementValue` is a real decision on top of it — it
+       * carries the defended asset behind the contact, the quality of the
+       * shot and what else that battery is for — and it is on the console:
+       * the shootlist is sorted by it and the battery cards carry the figure.
+       * An operator who reads it beats one who clicks the closest ring, and
+       * now the ladder measures that.
+       */
+      const value = -dist(site.pos, track.pos);
+      if (!best || value > best.value) best = { track, site, value };
     }
     if (best) pairs.push(best);
   }
@@ -390,7 +453,23 @@ function sizeSalvo(ctx, site, track) {
   const assetType = threatened && !threatened.destroyed ? ASSET_TYPES[threatened.type] : null;
   const precious = !!assetType && (assetType.critical || assetType.civilian);
   const awkward = env.rangeKm > type.maxRangeKm * 0.75 || track.altM < type.minAltM * 3;
-  const want = (precious || awkward) && site.readyRounds >= 4 ? 2 : 1;
+  /*
+   * "Do I have rounds to spare for a second one?" is a question about the
+   * STOCK, not the rails, and the bar is two full racks.
+   *
+   * It used to read `site.readyRounds >= 4`, which was the same question when
+   * a rack was either full or empty; with the rack coming back a rail at a
+   * time it means an operator on a busy watch never once selects two, and
+   * every awkward shot goes single. But `readyRounds + magazine >= 4` is the
+   * opposite mistake — it is true of a battery down to its last four rounds —
+   * and measured over eight seeds it doubled Low Riders' sector through
+   * forty-four rounds for no more kills and left Weasel Hour's expert holding
+   * three watches of eight. Two racks in stock is the line where a second
+   * round is genuinely spare: Low Riders 1347.5 against the competent
+   * player's 1302.3 where four-in-stock scored 1232.8, and Weasel Hour 890.8
+   * against 766.8 on four seeds held instead of three.
+   */
+  const want = (precious || awkward) && site.readyRounds + site.magazine >= railsOf(site) * 2 ? 2 : 1;
   if (site.salvoSize !== want) {
     ctx.w.setSalvo(site.id, want);
     ctx.act(`SALVO ${site.salvoSize} ${site.name}`);
@@ -398,9 +477,9 @@ function sizeSalvo(ctx, site, track) {
 }
 
 /**
- * The cabin: lock what the battery can take, fire what is ready, reload when
- * the rails are bare. `fireDelayS` is how long the operator takes to react to
- * the READY lamp — zero for a drilled crew, six seconds for a first watch.
+ * The cabin: lock what the battery can take, fire what is ready, and crash-load
+ * when the rails go bare. `fireDelayS` is how long the operator takes to react
+ * to the READY lamp — zero for a drilled crew, six seconds for a first watch.
  *
  * Two rules that are not in the net-seat pass, and are the difference between
  * a crew seat that shoots and one that watches. A battery has two or four
@@ -411,14 +490,145 @@ function sizeSalvo(ctx, site, track) {
  * a round until 700 s. So the cabin locks what is in the envelope or nearly
  * in it, and lets go of a claim the geometry has taken away.
  */
-function crewLoop(ctx, fireDelayS) {
-  const { w } = ctx;
+/**
+ * Would a drilled crew hold this shot for a few seconds more range?
+ *
+ * The netted batteries have done this since `holdFireFraction` was written —
+ * a closing target still out near the rim will be markedly deeper in the
+ * envelope shortly, Pk decays hard toward the edge, and `edgeLaunchPk` taxes
+ * the launch geometry on top of that. The CABIN never did, because a manual
+ * engagement reaches 'ready' as soon as the solution is good and the operator
+ * decides the rest; and until the loaders ran continuously it hardly mattered,
+ * because the rack was empty for most of the seconds the discipline would have
+ * applied to. Measured on Weasel Hour's cabin, eight seeds: with rounds always
+ * on the rail, 98% of the cabin's launches went at more than 0.72 of maximum
+ * range, against 72% before, the whole twenty-four-round allocation was gone
+ * by 306 s instead of 435 s, and the raid outlived the magazine by four
+ * minutes. The reload cliff had been supplying the cabin's launch discipline
+ * by accident.
+ *
+ * So the EXPERT does it on purpose, from the same numbers, and the seat can see
+ * every one of them: the range rings are on the scope, the shootlist row
+ * carries the range and the closure, the fire button carries the launch-quality
+ * Pk, and the ticker says HOLDING FOR RANGE out loud whenever a netted battery
+ * does it. Everybody else shoots when the lamp says READY, because that is what
+ * READY means and there is nothing wrong with it.
+ *
+ * This is the cabin's attention dividend and it is deliberately NOT competent
+ * play. A competent operator does the things the briefing tells them to do; an
+ * expert reads a number off the button and waits four seconds. Measured, eight
+ * seeds, cabin, with the sweet spot given to the competent player as well, the
+ * expert's margin over them collapses to nothing on all four of these watches
+ * (+4.5 / +3.4 / +0.7 / −8.4 per cent) because there is no verb left between
+ * them; with it reserved, see the ladder table in README.
+ *
+ * Every escape the netted rule has, this has: a crossing or receding target, a
+ * terminal one, a battery down to its last pair, and a forty-five second cap,
+ * because a shot held past its moment is a leaker.
+ */
+/**
+ * How long the cabin will hold a ready shot while something else is waiting.
+ *
+ * The sweet-spot hold is free in an empty moment and expensive in a busy one,
+ * and the honest rule is neither "always" nor "never" but a short, bounded
+ * patience: wait for the range while the shootlist is clear, and give the
+ * launcher up after this long if anything unclaimed is inside the ring.
+ * Measured over eight seeds a cell on the four watches, expert against
+ * competent, seeds won and mean score delta on the seats with a cabin:
+ *
+ *   cap    Low Riders both   Low Riders cab   Solo Battery   Weasel cab
+ *    8 s     3/8  +17.6%       4/8   −4.0%     5/8  +16.7%    4/8  +21.1%
+ *   15 s     5/8  +24.3%       3/8   −4.6%     4/8  +15.8%    5/8  +26.5%
+ *   25 s     7/8  +25.2%       6/8   +1.3%     5/8  +20.0%    4/8  +28.1%
+ *   45 s     4/8   +6.5%       3/8   +3.2%     4/8  +14.1%    4/8  +11.8%
+ *
+ * Twenty-five. Below it the discipline never gets paid; at forty-five — the
+ * netted batteries' own `holdFireMaxS`, which is the right number for a
+ * battery with a sector behind it — the launcher is out of the fight long
+ * enough to concede the contact it was not looking at.
+ */
+const CABIN_HOLD_S = 25;
+
+function holdForRange(w, site, engagement, track) {
+  const type = SAM_TYPES[site.type];
+  const env = inEnvelope(site, track.pos, track.altM);
+  if (!env.ok) return false;
+  if (w.t - (engagement.readyAtS ?? w.t) >= ENGAGEMENT.holdFireMaxS) return false;
+  if ((track.ttiS ?? Infinity) <= ENGAGEMENT.holdFireMinTtiS) return false;
+  if (closureRate(track.pos, track.vel, site.pos) <= 0.005) return false;
+  if (site.readyRounds + site.magazine <= (engagement.salvo ?? 1) * 2) return false;
+  /*
+   * AND THE LAUNCHER MUST NOT BE WANTED ELSEWHERE. This is the clause that
+   * turns the rule into a judgement, and it is the difference between the
+   * discipline paying and costing.
+   *
+   * A shot held is a LAUNCHER held: forty-five seconds spent aiming at an
+   * aeroplane that was already going to die, while something nobody has
+   * claimed closes on the town. Measured over eight seeds with this clause
+   * missing, the sweet-spot rule was worth +33% on Solo Battery and +16% on
+   * Weasel Hour — both watches where the battery has room — and −8% on Low
+   * Riders, where nineteen aircraft arrive on four axes and the crewed
+   * BASTION is the only set that reaches most of them.
+   *
+   * It is deliberately the WHOLE shootlist and not merely a full channel
+   * count: gated on channels alone the rule still cost Low Riders, because
+   * the second contact was on its way to being legal by the time the hold
+   * expired. Patience is only free in a genuinely empty moment, and that is
+   * the version an operator would describe: "I waited because there was
+   * nothing else to shoot at."
+   *
+   * The seat can see this: the shootlist shows what is unassigned, the fire
+   * button carries the Pk, and the channel count sits beside the tube lamps.
+   */
+  const queue = [...w.tracks.values()].some((other) => other.id !== track.id
+    && shootable(other) && other.assignedTo.length === 0
+    && inEnvelope(site, other.pos, other.altM).ok);
+  if (queue && w.t - (engagement.readyAtS ?? w.t) >= CABIN_HOLD_S) return false;
+  return env.rangeKm > type.maxRangeKm * ENGAGEMENT.holdFireFraction;
+}
+
+function crewLoop(ctx, fireDelayS, craft = {}) {
+  const { w, mem } = ctx;
   const site = ctx.crewed;
   if (!site?.alive || site.scootRemainingS > 0) return;
 
   for (const engagement of [...site.engagements]) {
     if (engagement.state !== 'ready') continue;
     if (w.t - (engagement.readyAtS ?? w.t) < fireDelayS) continue;
+    /*
+     * A drilled crew does not fire half a salvo. The rack refills a rail at a
+     * time, so the SALVO selector can be sitting on two with one round on the
+     * rails and the hoist twelve seconds from the next; a crew that presses
+     * FIRE anyway throws the round away at the edge of the envelope and then
+     * shoots the second one at the same target on its own a moment later.
+     * Both the tube lamps and the loading bar say which it is, so this is a
+     * judgement the seat can actually make — the novice below does not make
+     * it, and that difference is worth measuring. Bounded by the same
+     * `salvoWaitMaxS` the netted batteries use, and abandoned outright when
+     * the store is empty or the target is terminal: there is no second round
+     * coming and no time to wait for one.
+     */
+    const shortBy = (engagement.salvo ?? 1) - site.readyRounds;
+    const track = w.tracks.get(engagement.trackId);
+    const timeToSpare = (track?.ttiS ?? Infinity) > ENGAGEMENT.holdFireMinTtiS;
+    const salvoInS = site.reloadRemainingS + (shortBy - 1) * railLoadS(site);
+    if (shortBy > 0 && site.magazine > 0 && timeToSpare
+      && salvoInS <= ENGAGEMENT.salvoWaitMaxS
+      && w.t - (engagement.readyAtS ?? w.t) < ENGAGEMENT.salvoWaitMaxS) continue;
+    if (craft.sweetSpot && track && holdForRange(w, site, engagement, track)) continue;
+    /*
+     * And do not launch into a shutdown. A set that ducks drops what it is
+     * guiding, so a round released with an anti-radiation weapon fifteen
+     * seconds off the battery's own antenna is a round bought and thrown
+     * away — the crew will be dark before it arrives. Both cabin operators
+     * know this, because both of them are the ones who duck; it is the same
+     * arithmetic `expertEmcon` does from the other end when it decides
+     * whether to RIDE. It costs nothing to wait: the round is still on the
+     * rail afterwards, and Weasel Hour is the watch that charges for
+     * forgetting.
+     */
+    const armEta = Math.min(...w.radarsOf(site).map((r) => armTimeToImpact(w, r)));
+    if (armEta < 18 && site.emconOrder !== 'ride') continue;
     const launched = w.fire(site.id, engagement.trackId);
     if (launched > 0) ctx.act(`FIRE ${launched} on ${engagement.trackId}`);
   }
@@ -438,6 +648,7 @@ function crewLoop(ctx, fireDelayS) {
   if (site.engagements.length < channelsFor(site) && site.readyRounds > 0) {
     let best = null;
     let bestValue = -Infinity;
+    let bestIsWeapon = true;
     for (const track of sortedTracks(w)) {
       if (!shootable(track)) continue;
       if (site.engagements.some((e) => e.trackId === track.id)) continue;
@@ -445,20 +656,149 @@ function crewLoop(ctx, fireDelayS) {
       const evaluation = engagementValue(w, site, track);
       if (!evaluation) continue;
       if (!evaluation.inEnvelope && !(evaluation.timeToRangeS <= 30)) continue;
-      if (evaluation.value > bestValue) { bestValue = evaluation.value; best = track; }
+      /*
+       * The aeroplane before the bomb, and the sector says so out loud: an
+       * enemy round on the plot is announced with "LOW SECTIONS TAKE IT",
+       * because a point-defence gun that can reach it has a far better shot
+       * at it than a long-range battalion does and no strike aircraft to
+       * spend its rounds on. The AI's own free crews have followed this rule
+       * since it was written; the cabin never did, and it hardly showed while
+       * the rack spent most of a suppression watch empty. With rounds always
+       * on the rail it shows immediately: measured on Weasel Hour, seed p1,
+       * the cabin put TWELVE of its twenty-four rounds into anti-radiation
+       * rounds — half the BASTION's whole allocation — against three before,
+       * and the strike package that arrived afterwards found a battalion with
+       * an empty store. Aircraft first; the enemy's rounds when there is
+       * nothing else in front of the battery.
+       *
+       * Two softer readings of the rule were measured against this one over
+       * sixteen seeds of Weasel Hour's cabin and both are worse where it
+       * matters. "Take the round if it is homing on a set of yours that is
+       * still radiating" costs the competent operator three and a half
+       * minutes of watch and six points of dead air (949 s / 6.0% against
+       * 753 s / 0.0%). "Take the round if it is inside half your maximum
+       * range — a point-defence shot" is worse again, at 935 s / 9.8%. The
+       * flat rule is also the one already written down in `doctrine.js` for
+       * the AI's own free crews, and a player model that follows the sector's
+       * doctrine is the honest one to measure with.
+       */
+      const isWeapon = !!w.truthOf(track)?.contactType;
+      if (bestIsWeapon !== isWeapon) {
+        if (isWeapon) continue;                    // an aircraft already wins
+      } else if (evaluation.value <= bestValue) continue;
+      bestValue = evaluation.value; best = track; bestIsWeapon = isWeapon;
     }
     if (best && w.assign(best.id, site.id)) ctx.act(`LOCK ${best.tn}`);
   }
 
-  if (site.readyRounds <= 0 && site.reloadRemainingS <= 0 && site.magazine > 0
-    && site.engagements.length === 0) {
-    if (w.reload(site.id)) ctx.act('RELOAD');
+  /*
+   * NOT salvo sizing, and the reason is worth keeping. The SALVO switch is
+   * live in the cabin and every operator here leaves it on one, which looks
+   * like a missing verb until it is measured: the net's own rule — two rounds
+   * when the shot is awkward and the stock covers it — read from a cabin
+   * spends the store faster than the watch does. Re-measured on the raid
+   * tables that ship, eight seeds a cell: giving the expert cabin the net's
+   * salvo rule costs Low Riders' cabin 8%, Solo Battery 12% and First Light
+   * 2%, moves Weasel Hour 24% the other way on four seeds of eight, and adds
+   * three rounds a watch everywhere. A commander with a sector can afford to
+   * double because somebody else covers what the rounds do not; a crew with
+   * one store cannot.
+   *
+   * LOADERS OUT is the verb the cabin's expert actually has, and it is one
+   * button with a three-step ladder on it, which is unusual enough to be
+   * worth saying plainly:
+   *
+   *   competent   never touches it. Doctrine fills a bare rack by itself and
+   *               a competent operator lets it.
+   *   novice      mashes it twenty seconds after the lamps go red, out of
+   *               alarm rather than judgement, which is a first watch exactly.
+   *   expert      presses it in the ONE state doctrine will not act in: the
+   *               rails bare, a hostile inside the ring, and the launcher
+   *               still guiding a round of its own, so `stepLoading` is
+   *               deliberately holding the loaders back. That safety is the
+   *               right default — see the note in `doctrine.js` and the
+   *               attention dividend it protects — and overruling it is a
+   *               judgement a person makes with a raid on top of them.
+   *
+   * WHAT IT BUYS IS TEMPO, NOT ROUNDS, and the measurement is unusually
+   * clean about that. Sixteen seeds a watch, expert in the cabin, against an
+   * operator who never touches the key, the sole-limiter share — the share of
+   * the watch with a legal target in reach and nothing on the rails:
+   *
+   *                    never        crash load
+   *   Solo Battery       4%             1%
+   *   First Light       15%             2%
+   *   Low Riders         8%             6%
+   *   Weasel Hour       16%            19%
+   *
+   * and the score does NOT move outside the noise on any of them (751.9 vs
+   * 769.0, 1190.9 vs 1190.4, 1244.6 vs 1200.6, 1194.2 vs 1129.2, with a
+   * per-seed spread several times those gaps). That is the honest finding and
+   * it is the right one: a store is a store. Every round the key puts on the
+   * rails now is a round not on the rails later, so what changes is WHEN the
+   * battery can shoot, not how often — which is precisely what the operator
+   * in the cabin experiences and precisely what the ledger cannot see.
+   *
+   * Two other rules for the key were measured over the same sixteen seeds and
+   * both are worse than doing nothing: "top up whenever the rack is short and
+   * nothing is in the ring" (749.6 / 1190.9 / 1230.9 / 1162.8, and 13 of 16
+   * watches held on Solo Battery against 14) and "whenever it is below half"
+   * (754.1 / 1190.9 / 1205.2 / 1195.6). Both spend the store into a lull.
+   */
+  if (craft.topUp && !site.loading && site.magazine > 0 && site.readyRounds === 0) {
+    const inRing = [...w.tracks.values()].some((track) => shootable(track)
+      && inEnvelope(site, track.pos, track.altM).ok);
+    if (inRing && w.reload(site.id)) ctx.act('LOADERS OUT');
   }
 }
 
 /* ------------------------------------------------------------------ *
  * The four operators
  * ------------------------------------------------------------------ */
+
+/**
+ * How many contacts the novice can hold in their head at once.
+ *
+ * This used to be one, and one is not a beginner — it is a person with a
+ * single eye. A first-watch operator is SLOW and unsystematic; they are not
+ * incapable of noticing that there are three aircraft on the scope. The
+ * difference matters because this model is the bottom of the ladder every
+ * difficulty measurement in the repository is read against, and at one contact
+ * it was not a bottom, it was a floor through which nothing could be measured:
+ * on the net seat the novice conceded three to six leakers a watch and held
+ * ZERO seeds of eight on Low Riders and on Weasel Hour from both seats, while
+ * the competent player conceded nought to one and held all eight. There is no
+ * watch that can be tuned to sit between those two, so the band the novice is
+ * supposed to occupy — a learner who wins some and loses some — could not
+ * exist on any mission at any raid size.
+ *
+ * Two, measured, on the four watches this was tuned on — eight seeds a cell,
+ * all seats, against the raid tables of the day:
+ *
+ *   hands   watches held   leakers a watch   cells at 0/8 or 8/8
+ *     1          59%            0 to 6              7 of 10
+ *     2          79%            0 to 5              4 of 10
+ *     3          93%            0 to 3              4 of 10
+ *     4          90%            0 to 2              4 of 10
+ *
+ * One hand is not a floor, it is a trapdoor: four of the ten cells sat at 0 of
+ * 8 or 8 of 8 and the middle band the novice is supposed to occupy did not
+ * exist at any raid size, because there is nothing to tune between a player
+ * who concedes six leakers and one who concedes none. Two hands puts the model
+ * on the same curve as everybody else, which is the only thing that makes a
+ * difficulty band measurable at all. Three is where it stops being a novice:
+ * it starts holding watches by attrition rather than by judgement, and the
+ * leaker range collapses to the competent player's.
+ *
+ * Everything else about the model is unchanged and every one of those things
+ * is a real beginner's fault: forty-five seconds to find the radiate switch,
+ * eight seconds from noticing a contact to doing anything about it, the
+ * NEAREST battery rather than the best one, no salvo sizing, no emissions
+ * discipline, no re-pairing when the geometry moves, twenty seconds to answer
+ * the net, and twenty seconds of staring at a red rack before it occurs to
+ * them to call the loaders out.
+ */
+const NOVICE_HANDS = 2;
 
 export const POLICIES = {
   nothing: {
@@ -469,7 +809,7 @@ export const POLICIES = {
 
   novice: {
     id: 'novice',
-    blurb: 'radiates at 45s, one target at a time, 8s to react, 20s to answer',
+    blurb: `radiates at 45s, ${NOVICE_HANDS} contacts at a time, 8s to react, 20s to answer`,
     tick(ctx) {
       const { w, mem } = ctx;
       if (w.t >= 45 && !mem.radiated) {
@@ -478,32 +818,39 @@ export const POLICIES = {
       }
       answerAfter(ctx, 20);
 
-      // One contact at a time, and it holds the attention until it is gone.
-      const focus = mem.focusId ? w.tracks.get(mem.focusId) : null;
-      const spent = !focus || focus.destroyed
-        || (mem.assigned && focus.assignedTo.length === 0)
+      /*
+       * A few contacts at a time, each held until it is gone. `NOVICE_HANDS`
+       * is the whole of this model's capacity and the note beside it carries
+       * the measurement that set it.
+       */
+      mem.focus = (mem.focus ?? []).filter((f) => {
+        const track = w.tracks.get(f.id);
+        if (!track || track.destroyed) return false;
+        if (f.assigned) return track.assignedTo.length > 0;
         // Patience is not infinite: a contact that will not become assignable
         // is eventually forgotten rather than fixated on for the whole watch.
-        || (!mem.assigned && w.t - mem.noticedAtS > 45);
-      if (spent) { mem.focusId = null; mem.assigned = false; }
+        return w.t - f.noticedAtS <= 45;
+      });
 
-      if (!mem.focusId) {
+      if (mem.focus.length < NOVICE_HANDS) {
         for (const track of sortedTracks(w)) {
           if (!shootable(track) || track.assignedTo.length > 0) continue;
+          if (mem.focus.some((f) => f.id === track.id)) continue;
           if (!ctx.own.some((s) => wellInside(s, track))) continue;
-          mem.focusId = track.id;
-          mem.noticedAtS = w.t;
-          mem.assigned = false;
+          mem.focus.push({ id: track.id, noticedAtS: w.t, assigned: false });
           ctx.act(`NOTICES ${track.tn}`);
-          break;
+          break;                                   // one new thing per tick
         }
-      } else if (!mem.assigned && w.t - mem.noticedAtS >= 8) {
-        const track = w.tracks.get(mem.focusId);
+      }
+
+      for (const f of mem.focus) {
+        if (f.assigned || w.t - f.noticedAtS < 8) continue;
+        const track = w.tracks.get(f.id);
         const site = ctx.own
           .filter((s) => wellInside(s, track) && !cannotEngageReason(w, s, track))
           .sort((a, b) => dist(a.pos, track.pos) - dist(b.pos, track.pos))[0];
         if (site && w.assign(track.id, site.id)) {
-          mem.assigned = true;
+          f.assigned = true;
           ctx.act(`ASSIGN ${track.tn} → ${site.name}`);
         }
       }
@@ -540,13 +887,13 @@ export const POLICIES = {
         mem.lastPassS = w.t;
         assignPass(ctx, { greedy: true, salvo: true });
       }
-      if (ctx.crewed) crewLoop(ctx, 0);
+      if (ctx.crewed) crewLoop(ctx, 0, { salvo: true, topUp: true, sweetSpot: true });
       if (ctx.seat !== 'crew') standInTheMainEffort(ctx);
     },
   },
 };
 
-/** A novice's cabin: the same loop, six seconds slower, and a late reload. */
+/** A novice's cabin: the same loop, six seconds slower, and a late crash load. */
 function crewLoopNovice(ctx) {
   const { w, mem } = ctx;
   const site = ctx.crewed;
@@ -557,9 +904,10 @@ function crewLoopNovice(ctx) {
     const launched = w.fire(site.id, engagement.trackId);
     if (launched > 0) ctx.act(`FIRE ${launched} on ${engagement.trackId}`);
   }
-  if (site.readyRounds <= 0 && site.reloadRemainingS <= 0 && site.magazine > 0) {
+  // Twenty seconds to notice the red lamps, which is a first watch all over.
+  if (site.readyRounds <= 0 && site.magazine > 0) {
     mem.dryAtS = mem.dryAtS ?? w.t;
-    if (w.t - mem.dryAtS >= 20 && w.reload(site.id)) { mem.dryAtS = null; ctx.act('RELOAD'); }
+    if (w.t - mem.dryAtS >= 20 && w.reload(site.id)) { mem.dryAtS = Infinity; ctx.act('CRASH LOAD'); }
   } else if (site.readyRounds > 0) {
     mem.dryAtS = null;
   }
@@ -593,7 +941,7 @@ function expertEmcon(ctx) {
     if (!site?.alive) continue;
     if (armEta < 18) {
       const roundEta = ownRoundEta(w, site);
-      if (roundEta + 2 < armEta) {
+      if (roundEta + 8 < armEta) {
         if (w.setEmconOrder(site.id, 'ride')) ctx.act('RIDE — HOLD THE BEAM');
         setGroup(ctx, group, true);
       } else {
@@ -611,6 +959,38 @@ function expertEmcon(ctx) {
       || [...w.tracks.values()].some((t) => t.hostility !== 'friendly' && t.quality > 0.3
         && dist(site.pos, t.pos) < type.maxRangeKm * 1.3);
     if (work) { setGroup(ctx, group, true); ctx.mem.searchUntilS = 0; continue; }
+    /*
+     * A duty cycle is a bet that somebody else is watching while you blink.
+     * On Solo Battery nobody is — the scenario ships no surveillance radar at
+     * all, and the isolation is the lesson — so blinking there is not
+     * discipline, it is closing your eyes. Measured, eight seeds: the expert
+     * duty-cycled the only set on the board and reached its first legal shot
+     * at 149 s against the competent player's 84 s, then spent fourteen per
+     * cent of the watch in dead air it had made itself. An operator who knows
+     * there is no second set does not blink, and takes the anti-radiation
+     * risk on the chin — which is the whole argument of the watch after it.
+     */
+    const anotherSetIsLooking = w.radars.some((r) => r.alive && r.on && !r.siteId)
+      || w.radars.some((r) => r.alive && r.on && r.siteId && r.siteId !== site.id);
+    if (!anotherSetIsLooking) { setGroup(ctx, group, true); continue; }
+    /*
+     * And the same bet is a different bet from inside the cabin. On the net a
+     * duty cycle on one battery's set costs the SECTOR a little search
+     * coverage it has elsewhere; sitting in that battery it costs you the
+     * continuity of your own guidance and the whole of your own picture, and
+     * the anti-radiation duck (`armEta < 18` above) and RIDE are already doing
+     * the part of the job that the exposure is actually about.
+     *
+     * Measured, sixteen seeds, expert in the cabin: blinking the set you are
+     * sitting in costs Weasel Hour's operator thirty points and a watch held
+     * in seven (1098 / 13 of 16 against 1128 / 14 of 16), and the same watch
+     * from BOTH seats a hundred and forty-four points and a whole watch (1103
+     * / 15 against 1247 / 16). Low Riders gains thirteen points in the cabin
+     * and forty-seven from both seats. It costs First Light's cabin seven
+     * points, which is a watch with a cut-down console and nothing to blink
+     * for. So the expert blinks everybody's set but its own.
+     */
+    if (ctx.crewed?.id === site.id) { setGroup(ctx, group, true); continue; }
     if (w.t < (ctx.mem.searchUntilS ?? 0)) { setGroup(ctx, group, true); continue; }
     if (w.t > (ctx.mem.nextSearchS ?? 0)) {
       ctx.mem.searchUntilS = w.t + 18;
@@ -753,7 +1133,9 @@ export function playRun(job) {
   const opportunities = new Set();
   let samples = 0;
   let engageableS = 0;
+  let workingS = 0;
   let magOnlyS = 0;
+  let reloadWaitS = 0;
   let firstContactS = null;
   let firstLegalShotS = null;
   let ticks = 0;
@@ -768,6 +1150,7 @@ export function playRun(job) {
     const own = ownSites(w, seat);
     let engageable = false;
     let magOnly = false;
+    let waiting = false;
     for (const track of w.tracks.values()) {
       if (track.destroyed || track.hostility !== 'hostile') continue;
       for (const site of own) {
@@ -776,6 +1159,9 @@ export function playRun(job) {
           opportunities.add(track.id);
         } else if (magazineIsTheOnlyLimit(w, site, track)) {
           magOnly = true;
+          // Rounds in the store and none on the rail: the loaders are the
+          // constraint, not the allocation.
+          if (site.magazine > 0) waiting = true;
         }
       }
     }
@@ -783,7 +1169,25 @@ export function playRun(job) {
     if (firstLegalShotS === null && engageable) firstLegalShotS = w.t;
     samples++;
     if (engageable) engageableS++;
-    else if (magOnly) magOnlyS++;
+    else if (magOnly) { magOnlyS++; if (waiting) reloadWaitS++; }
+    /*
+     * `engageableShare` counts seconds in which a NEW shot was legal, and on a
+     * two-channel battery that is a poor reading of whether the seat has
+     * anything to do: `cannotEngageReason` says "channels full" for exactly
+     * the stretch in which the operator is busiest. Measured on Solo Battery,
+     * whose LANCE has two channels and no surveillance set behind it, the
+     * competent cabin's engageable share is 16% while the trace shows
+     * continuous engagements from 81 s to 540 s — the seat is saturated, and
+     * the figure reads as idle.
+     *
+     * `busyShare` is the honest companion: a shot is legal, or a round of this
+     * battery's is in the air, or one of its channels is committed. Read them
+     * together — a low engageable share beside a high busy share is a
+     * launcher working at its ceiling, and a low busy share is a seat with
+     * nothing in front of it.
+     */
+    if (engageable || own.some((site) => site.engagements.length > 0
+      || w.missiles.some((m) => m.alive && m.siteId === site.id))) workingS++;
     holeFlags.push(!engageable
       && !w.missiles.some((m) => m.alive)
       && !w.command.pending
@@ -826,8 +1230,10 @@ export function playRun(job) {
     endAfterLastActionS: r1(Math.max(0, watchS - lastActionS)),
     holes,
     engageableShare: r3(samples ? engageableS / samples : 0),
+    busyShare: r3(samples ? workingS / samples : 0),
     legalShotOpportunities: opportunities.size,
     magazineOnlyLimiterShare: r3(samples ? magOnlyS / samples : 0),
+    reloadWaitShare: r3(samples ? reloadWaitS / samples : 0),
     rounds: outcome.stats.roundsFired,
     ownRounds,
     kills: outcome.stats.kills,
@@ -984,7 +1390,7 @@ const mean = (xs) => {
 };
 
 const TIMINGS = ['watchS', 'firstContactS', 'firstLegalShotS', 'firstLaunchS',
-  'endAfterLastActionS', 'engageableShare', 'magazineOnlyLimiterShare',
+  'endAfterLastActionS', 'engageableShare', 'busyShare', 'magazineOnlyLimiterShare', 'reloadWaitShare',
   'legalShotOpportunities', 'rounds', 'ownRounds', 'kills', 'leakers', 'assetsLost'];
 
 export function aggregate(runs) {
@@ -1106,13 +1512,14 @@ export function toMarkdown(result, opts) {
   if (opts?.command) lines.push(`\`${opts.command}\``);
   lines.push('');
   lines.push('| watch | seat | player | n | held | score | med | CV | 1st legal | 1st away'
-    + ' | eng% | mag% | holes | worst | dead end | rnds | kills | leak | lost | dir a/r/t |');
-  lines.push('|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|');
+    + ' | eng% | busy% | mag% | wait% | holes | worst | dead end | rnds | kills | leak | lost | dir a/r/t |');
+  lines.push('|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|');
   for (const row of result.aggregates.cells) {
     lines.push(`| ${row.mission} | ${row.seat} | ${row.policy} | ${row.n}`
       + ` | ${pct(row.heldRate)} | ${cell(row.meanScore)} | ${cell(row.medianScore)}`
       + ` | ${cell(row.scoreCV)} | ${cell(row.firstLegalShotS)} | ${cell(row.firstLaunchS)}`
-      + ` | ${pct(row.engageableShare)} | ${pct(row.magazineOnlyLimiterShare)}`
+      + ` | ${pct(row.engageableShare)} | ${pct(row.busyShare)} | ${pct(row.magazineOnlyLimiterShare)}`
+      + ` | ${pct(row.reloadWaitShare)}`
       + ` | ${cell(row.holeCount)} | ${cell(row.longestHoleS)} | ${cell(row.endAfterLastActionS)}`
       + ` | ${cell(row.rounds)} | ${cell(row.kills)} | ${cell(row.leakers)} | ${cell(row.assetsLost)}`
       + ` | ${cell(row.directives.accepted)}/${cell(row.directives.refused)}/`

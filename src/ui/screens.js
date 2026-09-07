@@ -349,6 +349,7 @@ export function renderDebrief(host, state, result, entry) {
       <p class="subtitle" style="margin-top:18px">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
     ` : `
       <h1 class="title" style="font-size:32px;color:${result.success ? 'var(--good)' : 'var(--hostile)'}">${esc(result.headline)}</h1>
+      ${result.cause ? `<p class="subtitle" style="color:var(--hostile)">${esc(result.cause)}</p>` : ''}
       <p class="subtitle">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
     `}
 
@@ -491,7 +492,7 @@ export function renderControls(host) {
         ${key('Shift+E', 'weapons free on the selected battery')}
         ${key('E', 'toggle the selected battery’s radar — careful: this silences your own set')}
         ${key('G', 'RIDE — hold emissions through guidance with an ARM inbound (the crew never will)')}
-        ${key('R', 'reload the selected battery')}
+        ${key('R', 'loaders out — start the selected battery’s rack filling now, short or not')}
         ${key('X', 'displace the selected battery')}
         ${key('`', 'toggle every surveillance radar')}
       </div>
@@ -504,7 +505,7 @@ export function renderControls(host) {
         ${key('F', 'fire')}
         ${key('E', 'radiate / shut down (this is the whole game)')}
         ${key('S', 'salvo size')}
-        ${key('R', 'reload')}
+        ${key('R', 'loaders out — top the rack up now, instead of waiting for the rails to go bare')}
         ${key('X', 'displace')}
       </div>
     </div>

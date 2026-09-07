@@ -4,6 +4,7 @@ import {
   closestApproachKm, inEnvelope, timeToInRangeS, computeSamPk, computeArmPk,
 } from '../src/engine/weapons.js';
 import { SAM_TYPES, ENGAGEMENT, ARM, DIFFICULTY } from '../src/engine/config.js';
+import { railLoadS, railsOf } from '../src/engine/doctrine.js';
 
 const site = (type = 'lance') => ({ id: 's1', type, alive: true, pos: { x: 0, y: 0 } });
 const target = (over = {}) => ({
@@ -147,5 +148,36 @@ describe('anti-radiation rounds', () => {
     const emitting = computeArmPk({ state: 'radiating' }, { targetDarkS: 0 }, null);
     const early = computeArmPk({ state: 'off' }, { targetDarkS: 30 }, null);
     assert.ok(emitting / early > 5);
+  });
+});
+
+describe('the ready rack', () => {
+  /*
+   * The loaders hand rounds up one at a time, and the arithmetic that keeps
+   * the ammunition economy exactly where it was is that a whole rack still
+   * costs `reloadS`. Pinned per type, because the temptation when a battery
+   * feels starved is to shave the rail interval, and shaving it is a
+   * difficulty change wearing a mechanism's clothes.
+   */
+  test('a rail costs the whole reload divided by the rails, for every type', () => {
+    for (const type of Object.values(SAM_TYPES)) {
+      const s = { type: type.id };
+      assert.equal(railsOf(s), type.readyRounds, `${type.label} has one rail per ready round`);
+      assert.ok(Math.abs(railLoadS(s) * type.readyRounds - type.reloadS) < 1e-9,
+        `${type.label}: ${type.readyRounds} rails at ${railLoadS(s)}s must come to ${type.reloadS}s`);
+    }
+  });
+
+  test('a rack scaled by a deep-magazine crew still fills in reloadS', () => {
+    // `rails` is the rack the crew was actually issued, not the type's, so a
+    // qualification that deepens the rack does not also slow the reload.
+    const s = { type: 'lance', rails: 10 };
+    assert.equal(railsOf(s), 10);
+    assert.ok(Math.abs(railLoadS(s) * 10 - SAM_TYPES.lance.reloadS) < 1e-9);
+  });
+
+  test('battle damage slows the loaders and nothing else', () => {
+    const hurt = { type: 'bastion', reloadMult: 1.4 };
+    assert.ok(Math.abs(railLoadS(hurt) / railLoadS({ type: 'bastion' }) - 1.4) < 1e-9);
   });
 });

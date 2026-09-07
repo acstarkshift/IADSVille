@@ -199,17 +199,7 @@ export function stepEngagements(world, dt) {
       continue;
     }
 
-    if (site.reloadRemainingS > 0) {
-      site.reloadRemainingS = Math.max(0, site.reloadRemainingS - dt);
-      if (site.reloadRemainingS === 0) {
-        const type = SAM_TYPES[site.type];
-        const load = Math.min(type.readyRounds, site.magazine);
-        site.magazine -= load;
-        site.readyRounds = load;
-        world.log('good', `${site.name} — RELOAD COMPLETE, ${load} READY`, { siteId: site.id });
-        world.comms?.(site.name, `BACK ON THE RAILS, ${load} READY.`, { siteId: site.id });
-      }
-    }
+    stepLoading(world, dt, site);
 
     if (site.scootRemainingS > 0) {
       site.scootRemainingS = Math.max(0, site.scootRemainingS - dt);
@@ -278,26 +268,70 @@ export function stepEngagements(world, dt) {
            * net that kept holding for sweet spots scored eighteen per cent
            * BELOW the same crews left on free. Discipline that outlives its
            * own magazine is not discipline.
+           *
+           * The stock, though, is the rack AND the store, and it has to be
+           * read that way now the loaders run continuously (`stepLoading`).
+           * With the rack topping itself up a round at a time, a busy
+           * battery sits at one or two ready almost permanently — read only
+           * the rails and every battery in the sector believes it is down to
+           * its last pair and snaps every shot at the edge of the envelope
+           * for the whole watch, which is the opposite of what this rule is
+           * for. Measured, eight seeds, Weasel Hour, the net seat where the
+           * hold actually bites: reading the rails alone scored 837
+           * competent / 882 expert and held 5 and 6 watches of 8; reading
+           * the stock scores 1025 / 1092 and holds 6 and 7. On White Noise
+           * the expert gains 15 points and on Low Riders a kill; nothing
+           * measured moved the other way by more than noise.
            */
-          const roundsToSpare = site.readyRounds > (engagement.salvo ?? 1) * 2;
+          const roundsToSpare = site.readyRounds + site.magazine > (engagement.salvo ?? 1) * 2;
           const holdable = engagement.origin !== 'free'
             && closing
             && timeToSpare
             && roundsToSpare
             && env.rangeKm > type.maxRangeKm * ENGAGEMENT.holdFireFraction
             && world.t - (engagement.readyAtS ?? world.t) < ENGAGEMENT.holdFireMaxS;
-          if (!holdable) {
+          /*
+           * And a salvo is a salvo. The rack comes back a rail at a time, so
+           * a battery in the middle of a busy watch has one or two rounds on
+           * it almost permanently — and a crew that shoots each round as it
+           * seats turns a two-round salvo into two one-round shots, each one
+           * paying the edge-launch penalty on its own. Measured, Weasel Hour's
+           * cabin: the dribble spent 23.3 rounds for 5.9 kills where the
+           * all-or-nothing rack spent 19.1 for 7.0. So an assigned engagement
+           * waits for the round the loaders are already lifting — bounded by
+           * `salvoWaitMaxS`, one rail of the slowest launcher — and shoots
+           * what it has the moment the wait would cost more than the second
+           * round is worth. A FREE crew never waits, for the same reason it
+           * never holds for range: the earliest shot there is, is what free
+           * means, and this is one more thing supervision buys.
+           */
+          const wanted = engagement.salvo ?? 1;
+          const shortBy = wanted - site.readyRounds;
+          const salvoInS = shortBy <= 0 ? 0
+            : site.reloadRemainingS + (shortBy - 1) * railLoadS(site);
+          const salvoShort = engagement.origin !== 'free'
+            && shortBy > 0
+            && site.magazine > 0
+            && timeToSpare
+            && salvoInS <= ENGAGEMENT.salvoWaitMaxS
+            && world.t - (engagement.readyAtS ?? world.t) < ENGAGEMENT.salvoWaitMaxS;
+          if (!holdable && !salvoShort) {
             fireEngagement(world, site, engagement);
             engagement.unreachableS = 0;
           } else if (!engagement.holding) {
             /*
-             * Say so, once. The deliberate sweet-spot hold used to read as a
-             * dead order: "ENGAGING", forty-eight silent seconds, then a
-             * launch the player had stopped waiting for. The battery is not
-             * ignoring the assignment; it is aiming, and now it says so.
+             * Say so, once, and say WHICH wait it is. The deliberate
+             * sweet-spot hold used to read as a dead order: "ENGAGING",
+             * forty-eight silent seconds, then a launch the player had
+             * stopped waiting for. The battery is not ignoring the
+             * assignment; it is aiming, or it is waiting for the second round
+             * of the salvo to come up the hoist, and those are ten seconds
+             * and forty-five seconds of patience respectively.
              */
             engagement.holding = true;
-            world.log('info', `${site.name} — HOLDING ${track.tn} FOR RANGE`, {
+            world.log('info', holdable
+              ? `${site.name} — HOLDING ${track.tn} FOR RANGE`
+              : `${site.name} — HOLDING ${track.tn} FOR THE SECOND ROUND`, {
               siteId: site.id, trackId: track.id,
             });
           }
@@ -829,11 +863,12 @@ export function runBatteryCrews(world, dt) {
 
     runAiEmcon(world, dt, site);
 
-    // Reload when the rack is dry and nothing is inbound to shoot at right now.
-    if (site.readyRounds === 0 && site.reloadRemainingS === 0 && site.magazine > 0
-        && site.engagements.length === 0) {
-      startReload(world, site);
-    }
+    /*
+     * The reload used to live here, which meant it lived behind `if (human)
+     * continue` — the one battery with a person in it was the one battery
+     * whose loaders never worked. It is now in `stepLoading`, which runs for
+     * every battery on the board including yours.
+     */
 
     /*
      * Weapons free means what it says: the battery engages firm hostiles inside
@@ -904,11 +939,214 @@ export function runBatteryCrews(world, dt) {
   }
 }
 
-export function startReload(world, site) {
-  if (site.magazine <= 0 || site.reloadRemainingS > 0) return false;
+/* ------------------------------------------------------------------ *
+ * The loaders
+ * ------------------------------------------------------------------ */
+
+/**
+ * How many rails this launcher has — its ready-rack capacity.
+ *
+ * Set on the site at build time from the type, because a deep-magazine crew
+ * qualification scales the rack as well as the store and the lamps have to
+ * agree with the arithmetic.
+ */
+export function railsOf(site) {
+  return Math.max(1, site.rails ?? SAM_TYPES[site.type].readyRounds);
+}
+
+export function railLoadS(site) {
   const type = SAM_TYPES[site.type];
-  site.reloadRemainingS = type.reloadS * (site.reloadMult ?? 1);
-  world.log('info', `${site.name} — RELOADING (${Math.round(site.reloadRemainingS)}s)`, { siteId: site.id });
+  return (type.reloadS / railsOf(site)) * (site.reloadMult ?? 1);
+}
+
+/**
+ * The loaders, working the rails — for every battery, including yours.
+ *
+ * Two things were wrong with the old reload and they compounded. It was
+ * all-or-nothing: the rack sat at ZERO for the whole ninety-five seconds and
+ * then eight rounds appeared at once, so a battery that had fired its last
+ * round was useless with a legal target in reach and a bar to watch. And the
+ * automatic reload lived inside `runBatteryCrews`, after `if (human)
+ * continue` — so the crewed battery, the one with a person in it, NEVER
+ * started one: measured, zero automatic reloads across four crew watches. The
+ * operator had to notice the red lamps and press a button.
+ *
+ * Both are fixed here, and here is every battery, human or not. Rounds arrive
+ * ONE AT A TIME, `reloadS / rails` apart. A whole rack still costs `reloadS`
+ * to the millisecond, so the ammunition economy is untouched; what is gone is
+ * the hole in the middle of it. A LANCE is shooting again eight seconds in
+ * rather than sixty-two.
+ *
+ * Measured, crew seat, competent, eight seeds paired: the share of the watch
+ * on which the magazine was the sole thing between the operator and a legal
+ * shot was 17.8% on Solo Battery, 4.6% on First Light, 33.6% on Low Riders
+ * and 40.5% on Weasel Hour. It is now 4.4 / 3.7 / 13.5 / 21.9 — down on eight
+ * seeds of eight on Solo Battery and Low Riders, seven of eight on Weasel
+ * Hour, and better than halved on three of the four.
+ *
+ * The half of that figure which is the LOADERS rather than an empty store is
+ * the one this fix owns, and the harness measures it separately as
+ * `reloadWaitShare`: the same seconds, but only those with rounds still in
+ * the magazine. That is what a person in a cabin experiences as waiting, and
+ * the whole of what is left of it is the rule below.
+ *
+ * WHEN DO THE LOADERS GO OUT? On a bare rack — and not while the launcher
+ * still has a round of its own in the air. Both halves were measured against
+ * the alternatives, and each is held up by a different thing.
+ *
+ * THE GUIDANCE PAUSE is the one with the campaign behind it. A crew does not
+ * walk out in front of a launcher with a round in the air, and letting them
+ * costs the number the whole game is built on: over sixteen seeds of White
+ * Noise the attention dividend — hand play against set-free-and-walk-away —
+ * falls from 22.3% to 14.4%, through the fifteen per cent floor, and one
+ * leaker appears where there were none. A battery that never stops loading
+ * never stops shooting, and free crews profit from that more than a commander
+ * does, which is exactly the salvo spam the item that asked for this was
+ * worried about. It is a pause on STARTING: once a cycle is running it goes to
+ * a full rack whatever the battery is doing, which is what lets the crew shoot
+ * the rounds as they arrive.
+ *
+ * THE BARE-RACK GATE is a closer call and it is worth being honest about.
+ * Topping up a rack that is merely short costs the dividend nothing at all
+ * (22.1% against 22.3% over the same sixteen seeds), and a competent
+ * commander scores BETTER for it on Low Riders — 1373 against 1235 on the
+ * net, 1325 against 1253 from both seats — while Solo Battery, First Light
+ * and Weasel Hour move by less than one per cent. What it costs is the RELOAD
+ * key: doctrine that tops itself up has already done the only thing the key
+ * does, and a control that duplicates doctrine is a dead control. Measured
+ * over eight seeds, the expert's margin over the competent player at the seats
+ * where that key is the difference goes from +4.5% / +3.4% / +0.7% (Solo
+ * Battery cabin, Low Riders net, Low Riders cabin) to 0% / −6.5% / +2.6% when
+ * doctrine does it for them. So the sector's crews load when the rails are
+ * bare, and topping up early is a decision a person makes — see `startReload`.
+ *
+ * (An earlier version of this note claimed the top-up cost eight points of the
+ * dividend. That was measured against a build whose RELOAD key was a
+ * time-borrowing crash load, and it does not reproduce here: 22.1% is the
+ * figure, re-measured, and the argument above is the one that survives.)
+ *
+ * WHAT IT COST, AND WHAT IT DID NOT. The per-rack arithmetic is untouched,
+ * but a crewed battery that is no longer rationed by a ninety-five-second
+ * cliff does not spend the same rounds it used to, and it would be dishonest
+ * to say otherwise. Measured, cabin, competent, eight seeds paired: Weasel
+ * Hour 19.3 rounds a watch to 23.8 and Low Riders 36.6 to 37.3; Solo Battery
+ * 18.6 to 15.8 and First Light 6.8 to 5.6, both for more kills. The sector
+ * spends where it can now reach, and spends less where it was firing to fill
+ * a gap.
+ *
+ * One thing the reload cliff had been supplying by accident is launch
+ * discipline: with a round always on the rail, a crew that shoots the instant
+ * the lamp goes green takes every shot at the rim of its envelope, where
+ * `edgeLaunchPk` is waiting. That has to be supplied on purpose now, and
+ * `holdForRange` in `tools/playtest.mjs` is both the player model that does it
+ * and the measurement of what it is worth. At the console it is the range
+ * rings, the HOLDING FOR RANGE line and the Pk figure on the fire button.
+ */
+function stepLoading(world, dt, site) {
+  const rails = railsOf(site);
+  if (site.readyRounds >= rails || site.magazine <= 0) {
+    site.reloadRemainingS = 0;
+    site.loading = false;
+    return;
+  }
+  // A launcher on the road has its loader stowed and its crew in the cabs.
+  // "A battery on the move fights nobody" — it does not load either.
+  if (site.scootRemainingS > 0) return;
+
+  // Bare rack, nothing of ours in the air. The header carries the measurement
+  // behind both halves of that, and `startReload` is the order that overrules
+  // them from the seat.
+  if (site.readyRounds === 0
+    && !site.engagements.some((e) => e.state === 'guiding')) site.loading = true;
+  if (!site.loading) { site.reloadRemainingS = 0; return; }
+
+  if (site.reloadRemainingS <= 0) site.reloadRemainingS = railLoadS(site);
+  site.reloadRemainingS -= dt;
+  while (site.reloadRemainingS <= 0 && site.readyRounds < rails && site.magazine > 0) {
+    const backInIt = site.readyRounds === 0;
+    site.readyRounds++;
+    site.magazine--;
+    /*
+     * One line, and only for the round that ends a dry spell — that is the
+     * beat the operator needs, because it is the moment the battery can shoot
+     * again. Announcing every rail would put eight lines per rack per battery
+     * on a ticker the whole game is trying to keep readable, and a battery
+     * firing at its own load rate would announce itself every eight seconds
+     * forever. The spacing is the same idea as the comms throttle.
+     */
+    if (backInIt && world.t - (site.railCallAtS ?? -999) >= 25) {
+      site.railCallAtS = world.t;
+      const short = rails - site.readyRounds;
+      world.log('good', `${site.name} — ROUND ON THE RAIL${short > 0 ? `, ${short} LOADING` : ''}`,
+        { siteId: site.id });
+      world.comms?.(site.name, 'ONE UP — BACK IN IT.', { siteId: site.id });
+    }
+    site.reloadRemainingS += railLoadS(site);
+  }
+  if (site.readyRounds >= rails || site.magazine <= 0) {
+    site.reloadRemainingS = 0;
+    site.loading = false;
+  }
+}
+
+/**
+ * Can the loaders be ordered out right now? The panel's enable test and the
+ * order's own guard, so a greyed-out key and a refused order can never
+ * disagree about why.
+ */
+export function canStartLoading(world, site) {
+  if (!site?.alive) return false;
+  if (site.magazine <= 0 || site.readyRounds >= railsOf(site)) return false;
+  if (site.scootRemainingS > 0) return false;
+  // Already working: the key is the order to START, and a battery that is
+  // loading has had it.
+  return !site.loading;
+}
+
+/**
+ * The RELOAD key: LOADERS OUT, now, on a rack that doctrine would have left
+ * alone.
+ *
+ * The rack refills itself a rail at a time whatever the operator does, so this
+ * is no longer "start the reload" — it is the order that overrules the two
+ * gates in `stepLoading`. Doctrine waits for a BARE rack and for a launcher
+ * with nothing of its own in the air; this sends the crew out on a rack that
+ * is merely short, or across a guidance run with a raid on top of the
+ * position. The second of those is the one that matters, and it is the only
+ * state in the game where a control does something doctrine will not: rails
+ * bare, a hostile inside the ring, and the loaders standing back because the
+ * launcher is still guiding.
+ *
+ * It borrows nothing and conjures nothing: the first round still takes
+ * `railLoadS` to seat and a full rack still costs `reloadS × reloadMult` to
+ * the millisecond, out of the same store. `test/world.test.js` runs an ordered
+ * battery beside an untouched one to hold that.
+ *
+ * WHAT IT BUYS IS TEMPO AND NOT ROUNDS, and that is worth being exact about
+ * because it is the difference between a control and a cheat. Measured over
+ * sixteen seeds a watch in the cabin against an operator who never touches the
+ * key, the share of the watch with a legal target in reach and nothing on the
+ * rails falls from 15% to 2% on First Light, 4% to 1% on Solo Battery and 8%
+ * to 6% on Low Riders — while the SCORE does not move outside the seed noise
+ * on any of the four watches. A store is a store. Every round the key puts on
+ * the rails now is a round not on the rails later; what changes is when the
+ * battery can shoot, which is exactly what the person in the cabin
+ * experiences and exactly what the ledger cannot see. `tools/playtest.mjs`
+ * carries the four-row table and the two rules for pressing it that measured
+ * WORSE than leaving it alone.
+ *
+ * No AI crew ever gives this order, the same shape as RIDE and for the same
+ * reason: doctrine is what happens when nobody is thinking. It is a no-op on a
+ * full rack, an empty store, a battery on the road, or one whose loaders are
+ * already out, and returns false for each so the panel can grey it out rather
+ * than offer a key that does nothing.
+ */
+export function startReload(world, site) {
+  if (!canStartLoading(world, site)) return false;
+  site.loading = true;
+  const short = Math.min(railsOf(site) - site.readyRounds, site.magazine);
+  world.log('info', `${site.name} — LOADERS OUT, ${short} ROUND${short === 1 ? '' : 'S'} TO LOAD`,
+    { siteId: site.id });
   return true;
 }
 

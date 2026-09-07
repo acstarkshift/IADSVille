@@ -334,8 +334,30 @@ export const SCENARIOS = [
     assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power],
     sites: [SITES.bastion, SITES.lanceWest, SITES.thistleTown],
     radars: [{ ...RADARS.ewrNorth, on: false }],
+    /*
+     * Four, and then two more.
+     *
+     * The teaching watch used to be one package: four aircraft spawned inside
+     * the first ninety seconds, and everything after that was chasing whatever
+     * the first pass had missed. Measured over eight seeds that put the last
+     * hostile of the night on the board at 30% of the watch, and the remaining
+     * seventy per cent was one straggler being re-engaged until the dice
+     * agreed — on seed p1 the same aircraft was missed at 165, 275 and 333
+     * seconds and finally killed at 386. The watch ended when the random
+     * numbers said so, which is not a designed ending.
+     *
+     * So the second element comes in from the north-east while the first one
+     * is still being cleaned up, close enough that BASTION can reach it the
+     * moment it appears. Two aircraft, not four: this is the watch that
+     * teaches the scope, and the second element exists to give the lesson a
+     * SECOND go — "now do that again, without being walked through it" — not
+     * to be a test. The tutorial's five steps are all cleared on the first
+     * package.
+     */
     waves: [
       { atS: 20, type: 'striker', count: 4, bearingDeg: 355, spreadDeg: 26, spacingS: 22, altM: 7600 },
+      { atS: 205, type: 'striker', count: 2, bearingDeg: 32, spreadDeg: 18, spacingS: 26, altM: 7100,
+        distanceKm: 85 },
     ],
   },
 
@@ -347,7 +369,33 @@ export const SCENARIOS = [
     echelon: 'battalion',
     roles: ['net', 'crew', 'both'],
     seed: 'low-riders-04',
-    leakerTolerance: 2,
+    /*
+     * ONE, and this is the watch where the number starts mattering.
+     *
+     * First Light forgives two because it is the watch you learn the controls
+     * on. This one is the second act and it has nineteen aircraft on four
+     * axes, two of them under everybody's horizon; forgiving two of those made
+     * it impossible to lose. Measured, eight seeds a seat, competent play
+     * conceded nought to two leakers and held 24 of 24 watches — an act-2
+     * mission with no losing outcome at all. At one it holds 5 to 7 of 8
+     * depending on the seat, which is a watch you can fail, and the novice
+     * falls to about a third, which is a watch you can learn from.
+     */
+    leakerTolerance: 1,
+    /*
+     * Eighty-five seconds before sector command starts testing you, for the
+     * same reason the teaching watch waits ninety-five. The first contact on
+     * this one paints at seventeen seconds — that is the whole point of the
+     * watch, a low approach arriving already close — and measured over eight
+     * seeds the first routine directive used to land at fifty-five, which is
+     * thirty-seven seconds of fighting. An operator who has been in contact
+     * for half a minute has not yet formed the opinion the order is asking
+     * them to have. Grace to eighty-five puts the first order at least a
+     * minute into the shooting, which is the bar the rest of the campaign
+     * already meets: Solo Battery gives eighty-four seconds and First Light
+     * seventy-four.
+     */
+    directiveGraceS: 85,
     /*
      * The seat is BASTION, not the point-defence section.
      *
@@ -362,6 +410,23 @@ export const SCENARIOS = [
      * and the way to feel that is to be sitting in the long-range set.
      */
     playerBatteryId: 's_bastion',
+    /*
+     * Seven tenths again in every store, and the reason is the same arithmetic
+     * as Weasel Hour's — see the long note there.
+     *
+     * Twenty aircraft arrive on five axes and the crewed BASTION reaches most
+     * of them. Measured, cabin, competent, before this: it fired all
+     * twenty-four of its rounds and then spent 30% of the watch with the
+     * magazine as the ONLY thing between it and a legal shot, of which just
+     * 10% was actually waiting on the loaders. The other twenty points were an
+     * empty store, and no hoist fixes an empty store.
+     *
+     * With it, over sixteen seeds: sole-limiter share 15% in the cabin and 7%
+     * on the net, the watch still held 69% of the time at competent and 94% at
+     * expert, and the launcher busy — a legal shot, a channel committed or a
+     * round of its own in the air — for 92% of the night.
+     */
+    storeMult: 1.7,
     brief: [
       'Second wave came in at height. This one will not.',
       'A radar on a thirty-metre mast sees a target at one hundred metres for about sixty kilometres, and',
@@ -372,7 +437,7 @@ export const SCENARIOS = [
     sites: [SITES.bastion, SITES.lanceWest, SITES.lanceEast, SITES.thistleTown, SITES.hammer],
     radars: [RADARS.ewrNorth, RADARS.gapSouth],
     waves: [
-      { atS: 15, type: 'striker', count: 2, bearingDeg: 350, spreadDeg: 20, spacingS: 30, altM: 7200 },
+      { atS: 15, type: 'striker', count: 3, bearingDeg: 350, spreadDeg: 20, spacingS: 30, altM: 7200 },
       { atS: 90, type: 'striker', count: 5, bearingDeg: 20, spreadDeg: 34, spacingS: 26, altM: 130 },
       { atS: 260, type: 'striker', count: 3, bearingDeg: 330, spreadDeg: 18, spacingS: 24, altM: 110 },
 
@@ -402,8 +467,30 @@ export const SCENARIOS = [
        */
       { atS: 220, type: 'cruise', count: 4, bearingDeg: 340, spreadDeg: 22, spacingS: 10, altM: 55,
         distanceKm: 95, targetAssetId: 'a_town' },
-      { atS: 255, type: 'cruise', count: 3, bearingDeg: 15, spreadDeg: 20, spacingS: 10, altM: 55,
+      { atS: 255, type: 'cruise', count: 4, bearingDeg: 15, spreadDeg: 20, spacingS: 10, altM: 55,
         distanceKm: 95, targetAssetId: 'a_c2' },
+
+      /*
+       * And a last run at the crossing, from the west, after everything above
+       * is spent.
+       *
+       * Without it the last hostile of the night was on the board at 41% of
+       * the watch and the remaining six minutes were spent walking survivors
+       * off the map — the watch coasted out. This is the watch's own lesson
+       * arriving one more time from a bearing nothing has come from yet: sixty
+       * kilometres is inside LANCE WEST's ring but under BASTION's horizon at
+       * fifty metres, so the long-range battalion cannot help and the operator
+       * has to have left something in the west that can.
+       *
+       * Sixty kilometres and not ninety-five like the pair above, because the
+       * ingress has to fit inside the watch rather than extend it: at ninety-
+       * five these arrive four minutes after everything else has stopped, and
+       * the silence they are here to fill is the silence they create.
+       */
+      { atS: 300, type: 'striker', count: 3, bearingDeg: 25, spreadDeg: 18, spacingS: 24, altM: 6900,
+        distanceKm: 100, targetAssetId: 'a_airbase' },
+      { atS: 435, type: 'cruise', count: 6, bearingDeg: 255, spreadDeg: 20, spacingS: 12, altM: 50,
+        distanceKm: 50, targetAssetId: 'a_bridge' },
     ],
   },
 
@@ -417,6 +504,42 @@ export const SCENARIOS = [
     seed: 'solo-battery-09',
     leakerTolerance: 2,
     playerBatteryId: 's_lance_e',
+    /*
+     * The crew brings its own set up at forty-five seconds if nobody has.
+     *
+     * `radarSafetyAtS` is the teaching watch's safety, and this is the watch
+     * that needed it more. There is no surveillance radar here at all — the
+     * isolation is the lesson — so an operator who touches nothing is not
+     * quiet, they are blind, and measured, they stayed blind: first contact at
+     * 180 s median and 236 s at worst, first legal shot at 256 s. Three
+     * minutes of an empty scope on the watch whose entire subject is working a
+     * console, with nothing on the screen to say which of "nothing is
+     * happening" and "you have not switched the set on" it was.
+     *
+     * Forty-five and not sixty because there is nobody else to see for you:
+     * on First Light sector is watching over your shoulder with its own set up
+     * and can afford to let the lesson run a full minute. The line the crew
+     * chief says is the lesson arriving anyway, and the switch stays yours.
+     */
+    /*
+     * A quarter again in the store, for the same reason the two sector watches
+     * carry one: the fourth wave took the crewed LANCE from spending sixteen
+     * rounds a watch to spending all twenty-four of them, and a battery with
+     * an empty store and a raid still on the plot is an allocation problem
+     * wearing a reload bar's clothes. Measured over sixteen seeds, cabin,
+     * competent: sole-limiter share 10% before and the figure in README after,
+     * of which seven points were the loaders and three an empty store.
+     */
+    storeMult: 1.25,
+    radarSafetyAtS: 45,
+    /*
+     * And ninety-five seconds before sector starts testing you, the same as
+     * the teaching watch. The first contact paints at thirty-one seconds and
+     * the first directive used to land at fifty-three — twenty-two seconds of
+     * fighting, on the watch where the player is also learning the lock-and-
+     * launch sequence for the first time.
+     */
+    directiveGraceS: 95,
     brief: [
       'Sector has stripped the area to reinforce the coast. What is left is you.',
       'You will acquire, you will lock, you will launch, and you will keep the set radiating until the round',
@@ -449,19 +572,71 @@ export const SCENARIOS = [
      *   leakers                 1.2   ->  0.2
      *   watch length          998 s   ->  709 s
      *
-     * Do not add a fourth wave to fill the back half. It was tried three ways:
-     * two more strikers takes the watch from 5/6 held to 0/6, two more cruise
-     * to 3/6, and neither closes the quiet stretches. One battery with two
-     * channels has a hard ceiling on what it can absorb, and that ceiling —
-     * not the wave table — is what makes this watch what it is.
+     * THE FOURTH WAVE, and the note it replaces.
+     *
+     * This comment used to end "do not add a fourth wave to fill the back
+     * half", with three attempts recorded against it: two more strikers took
+     * the watch from 5/6 held to 0/6, two more cruise to 3/6. That was true,
+     * and it was true of a battery whose rack was all-or-nothing — a LANCE
+     * that fired its eighth round was out of the watch for sixty-two seconds
+     * with nothing on the rails, and a fourth package arriving anywhere near
+     * that hole simply walked past. `stepLoading` removed the hole, and the
+     * ceiling the note was really describing moved with it: measured after
+     * that change and before this wave, the crew seat held 8 of 8 at competent
+     * AND at novice, with the magazine the sole limiter for 4% of the watch
+     * and only six legal shot opportunities on the worst seed. The watch had
+     * stopped being a test.
+     *
+     * So the fourth wave goes back in, at 470 s and sixty kilometres out —
+     * close, because the ingress has to fit inside the watch rather than
+     * extend it, and at nine hundred metres because that is under BASTION's
+     * horizon and inside LANCE EAST's, which is the whole geometry of the
+     * watch. It is the pair that decides the night: see README's difficulty
+     * table for what it did to the three player models.
      */
+    /*
+     * The net, on the watch where there is no net.
+     *
+     * Three waves and one two-channel battery leaves two structural silences —
+     * measured over eight seeds, one around a hundred seconds after the first
+     * package turns for home and one of eighty to a hundred and twenty between
+     * the second package and the cruise wave coming up under the horizon. Both
+     * are the shape of the watch and neither is fixable with aircraft: the
+     * comment above records the three wave tables that were tried and what
+     * each of them broke.
+     *
+     * So the room talks instead, which is what a room does. Every line here is
+     * a thing an operator alone in a cabin would actually be told, and three of
+     * them are the horizon lesson arriving as information rather than as a
+     * surprise: the cruise package is spawned at 330 s and will not paint until
+     * it is thirty kilometres out, so the sector saying it is coming is the
+     * only warning the mechanics can honestly give. Measured, the crew seat's
+     * dead-air share falls from 29.6% to the figure in the README table, and
+     * the longest hole with it; nothing else about the watch moves, because
+     * chatter costs no rounds and draws no random numbers.
+     */
+    chatter: [
+      { atS: 52, text: 'SECTOR: YOU ARE THE ONLY SET LEFT IN THIS SQUARE. THE PICTURE IS WHATEVER YOU CAN SEE.' },
+      { atS: 88, text: 'HAMMER SECTION MANNED AND READY — TWELVE ROUNDS AND EIGHT KILOMETRES OF SKY.' },
+      { atS: 124, text: 'SECTOR: SAY STATE. NOBODY BEHIND YOU IS GOING TO SEE THIS ONE FOR YOU.' },
+      { atS: 198, text: 'TOWN WARDEN REPORTS THE SIRENS SOUNDED. PEOPLE ARE UNDER THE SCHOOL.' },
+      { atS: 256, text: 'RIVER CROSSING ASKS WHETHER TO STOP THE CONVOY. SECTOR SAYS KEEP IT MOVING.' },
+      { atS: 292, text: 'HAMMER SECTION HEARD THE SECOND PACKAGE GO OVER. THEY COULD NOT REACH IT.' },
+      { atS: 418, text: 'SECTOR: SECOND PACKAGE HAS TURNED FOR HOME. STAY UP — THAT IS NOT ALL OF IT.' },
+      { atS: 452, text: 'FRONTIER POST HEARD SOMETHING LOW GO OVER TWENTY MINUTES AGO. NOTHING ON ANY SET SINCE.' },
+      { atS: 486, text: 'SECTOR: EXPECT CRUISE. THEY WILL COME OUT OF YOUR HORIZON AT THIRTY KILOMETRES OR LESS.' },
+      { atS: 520, text: 'HAMMER SECTION REPORTS EYES ON THE LOW APPROACHES. NOTHING YET.' },
+      { atS: 554, text: 'SECTOR: STILL NOTHING ON THE PLOT. THEY ARE IN THE GROUND CLUTTER AND THEY ARE COMING.' },
+    ],
     waves: [
       { atS: 25, type: 'striker', count: 3, bearingDeg: 40, spreadDeg: 22, spacingS: 34, altM: 6800,
         distanceKm: 70 },
-      { atS: 180, type: 'striker', count: 3, bearingDeg: 70, spreadDeg: 26, spacingS: 30, altM: 250,
+      { atS: 180, type: 'striker', count: 4, bearingDeg: 70, spreadDeg: 26, spacingS: 30, altM: 250,
         distanceKm: 80 },
-      { atS: 330, type: 'cruise', count: 3, bearingDeg: 55, spreadDeg: 30, spacingS: 12, altM: 90,
+      { atS: 330, type: 'cruise', count: 5, bearingDeg: 55, spreadDeg: 30, spacingS: 12, altM: 90,
         distanceKm: 85 },
+      { atS: 470, type: 'striker', count: 4, bearingDeg: 25, spreadDeg: 20, spacingS: 26, altM: 900,
+        distanceKm: 60, targetAssetId: 'a_bridge' },
     ],
   },
 
@@ -476,6 +651,42 @@ export const SCENARIOS = [
     leakerTolerance: 2,
     playerBatteryId: 's_bastion',
     roundAllowance: 18,
+    /*
+     * Half as much again in every store on the position, and the reason is a
+     * measurement rather than a mood.
+     *
+     * Sixteen rounds behind an eight-round rack is two reloads, and it is the
+     * right number for a watch with one package on it. This one has sixteen
+     * aeroplanes and six anti-radiation rounds, and the crewed BASTION reaches
+     * every one of them: measured, eight seeds, the cabin fired all
+     * twenty-four of its rounds by the middle of the watch and then spent 43%
+     * of the night with the magazine as the ONLY thing between it and a legal
+     * shot — a battery watching a raid it could reach and could not touch.
+     * That is not the emissions lesson this watch is for, it is a supply
+     * failure standing in front of it.
+     *
+     * Note what it is NOT. The loaders are not the problem here and this is not
+     * a loading fix: the share of the same watch spent waiting for a round that
+     * was actually coming up the hoist is nine to ten per cent. This is the
+     * allocation, and the allocation is a thing a scenario decides.
+     *
+     * The expenditure order still asks for eighteen, and the difference
+     * between what you are issued and what you are allowed to spend is
+     * deliberate: the ledger is one of the things this watch is about.
+     */
+    storeMult: 1.75,
+    /*
+     * Ninety, and this is the watch that needed it most: the suppression pair
+     * paints at twenty-five seconds and the first routine directive used to
+     * arrive at forty-nine, twenty-three seconds into the shooting. This is
+     * also the noisiest watch on the net — eight orders a watch against Low
+     * Riders' six — so it is the one where an operator most needs a clear
+     * minute to learn what is being done to them before the first order about
+     * it arrives. The hinge orders are exempt from this gate by design, as
+     * they are everywhere: a watch that turns on a transmission sends it when
+     * its trigger fires and not before.
+     */
+    directiveGraceS: 90,
     brief: [
       'Suppression aircraft are working the sector. They need roughly twelve seconds of your emissions to',
       'build a firing solution, and they carry two rounds each.',
@@ -485,11 +696,45 @@ export const SCENARIOS = [
     assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, GROUND.bridge],
     sites: [SITES.bastion, SITES.lanceWest, SITES.lanceEast, SITES.thistleTown],
     radars: [RADARS.ewrNorth, RADARS.gapSouth],
+    /*
+     * EVERYTHING COMES IN CLOSER, AND ONE MORE THING COMES IN LATE.
+     *
+     * BASTION reaches a hundred and twenty kilometres. Every wave here used to
+     * spawn beyond that — the suppression pair at 165, the strike packages at
+     * the engine's 155 km default — so the first two and a half minutes of
+     * each package were an aeroplane crawling towards a ring it was not yet in
+     * and nobody could do anything about. Measured over eight seeds and every
+     * seat: median watch 12.2 to 18.8 minutes, worst seed 22.6, four seeds at
+     * competent or expert over the eighteen-minute ceiling, and the longest
+     * dead coda in the set — one seed spent 176 seconds after its last action
+     * watching a survivor walk home.
+     *
+     * A hundred and twenty-five for the suppression aircraft, which have to be
+     * outside BASTION's ring to do the job the watch is about (they stand off,
+     * listen for twelve seconds of emissions and shoot from beyond it); a
+     * hundred and ten and a hundred for the strike packages, which are in
+     * reach from the moment they appear. Nothing about the fight changes —
+     * same aircraft, same axes, same order — except that the parts of it that
+     * were not a fight are gone.
+     *
+     * The last wave is new and it is the one that decides the watch. The
+     * previous last spawn was at 50% of the median watch and the back half was
+     * survivors and stragglers; these come out of the north-west at sixty
+     * metres, under the horizon, named onto the operations centre, while the
+     * suppression aircraft still has the operator deciding whether to radiate.
+     * That is the watch's own question asked once more with a real cost
+     * attached: you cannot see them without the set up, and the set being up
+     * is what the third weasel is waiting for.
+     */
     waves: [
-      { atS: 20, type: 'sead', count: 2, bearingDeg: 5, spreadDeg: 40, spacingS: 45, distanceKm: 165 },
-      { atS: 120, type: 'striker', count: 4, bearingDeg: 350, spreadDeg: 30, spacingS: 28, altM: 6400 },
-      { atS: 300, type: 'sead', count: 1, bearingDeg: 330, spacingS: 0, distanceKm: 160 },
-      { atS: 340, type: 'striker', count: 3, bearingDeg: 15, spreadDeg: 24, spacingS: 26, altM: 200 },
+      { atS: 20, type: 'sead', count: 2, bearingDeg: 5, spreadDeg: 40, spacingS: 45, distanceKm: 125 },
+      { atS: 120, type: 'striker', count: 4, bearingDeg: 350, spreadDeg: 30, spacingS: 28, altM: 6400,
+        distanceKm: 105 },
+      { atS: 300, type: 'sead', count: 1, bearingDeg: 330, spacingS: 0, distanceKm: 125 },
+      { atS: 340, type: 'striker', count: 4, bearingDeg: 15, spreadDeg: 24, spacingS: 26, altM: 200,
+        distanceKm: 95 },
+      { atS: 455, type: 'cruise', count: 4, bearingDeg: 305, spreadDeg: 20, spacingS: 12, altM: 60,
+        distanceKm: 65, targetAssetId: 'a_c2' },
     ],
   },
 

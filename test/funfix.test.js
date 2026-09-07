@@ -17,6 +17,7 @@ import { dist } from '../src/engine/math.js';
 import { DETECTION, ENGAGEMENT, COMMAND, SAM_TYPES } from '../src/engine/config.js';
 import { timeToInRangeS } from '../src/engine/weapons.js';
 import { DIRECTIVES } from '../src/engine/command.js';
+import { railLoadS } from '../src/engine/doctrine.js';
 
 /** Drive a watch with the AI's radars up and directives answered. */
 function drive(w, { onTick = null, maxTicks = 40000, answer = 'accepted' } = {}) {
@@ -54,19 +55,33 @@ function handTick(w) {
 describe('attention matters at sector level', () => {
   /*
    * The structural fix, measured. Over twelve seeds the hand player beats
-   * set-free-and-walk-away by 14.0% mean score on White Noise, on 71% of the
-   * rounds, 27% of the decoys, 2 leakers against 12 and no ground lost against
-   * three. Per-seed noise makes a small-sample score assertion flappy, so this
-   * test pins the STABLE part of the dividend — no worse a defence on far
-   * fewer rounds and a third the decoys — plus a loose guard on the score
-   * itself. Before the fix the two strategies were statistically identical in
-   * every column.
+   * set-free-and-walk-away by 20.0% mean score on White Noise, winning eleven
+   * seeds of twelve, on 79% of the rounds, 47% of the decoys, no leakers
+   * against eleven and no ground lost against two. Per-seed noise makes a small-sample score
+   * assertion flappy, so this test pins the STABLE part of the dividend — no
+   * worse a defence on far fewer rounds and half the decoys — plus a loose
+   * guard on the score itself. Before the fix the two strategies were
+   * statistically identical in every column.
    *
    * Twelve seeds and not the six that stood here: at six the round ratio
    * measured 0.753 against a 0.75 bar it had comfortably cleared before the
    * civil corridor started standing free crews down inside the wedge, which
-   * spends the walk-away arm's rounds more frugally too. At twelve the ratio
-   * is 0.713 and stable. The six-seed sample was measuring the sample.
+   * spends the walk-away arm's rounds more frugally too. The six-seed sample
+   * was measuring the sample.
+   *
+   * The round and decoy bars were re-anchored when the ready rack started
+   * refilling a rail at a time (`stepLoading`): a hand player's batteries are
+   * no longer rationed by a ninety-five-second reload either, so hand play
+   * spends a few more rounds and takes more of its shots before a decoy has
+   * given itself away. Paired, same seeds, before and after — rounds 0.712 →
+   * 0.785 over twelve seeds and 0.713 → 0.753 over twenty-four; decoys 0.325
+   * → 0.467 and 0.292 → 0.427. The bars below sit clear of both rather than
+   * shaving either. The dividend itself went UP, which is the point: 16.0% →
+   * 17.7% over twenty-four seeds, 16.4% → 22.3% over sixteen, 14.0% → 20.0%
+   * over twelve. A battery that is back in the fight in eight seconds is
+   * worth more to a commander who is choosing its targets than to a crew
+   * left on free, because the free crew spends the extra rounds at the edge
+   * of its envelope on whatever it can see.
    */
   const seeds = Array.from({ length: 12 }, (_, i) => `g${i + 1}`);
   const totals = { free: null, hand: null };
@@ -94,11 +109,11 @@ describe('attention matters at sector level', () => {
 
     assert.ok(totals.hand.leak <= totals.free.leak, 'no more leakers than the walk-away');
     assert.ok(totals.hand.assetsLost <= totals.free.assetsLost, 'no more ground lost');
-    assert.ok(totals.hand.rounds < totals.free.rounds * 0.75,
-      `a quarter fewer rounds at least (${totals.hand.rounds} vs ${totals.free.rounds})`);
+    assert.ok(totals.hand.rounds < totals.free.rounds * 0.80,
+      `a fifth fewer rounds at least (${totals.hand.rounds} vs ${totals.free.rounds})`);
     assert.ok(totals.hand.decoys < totals.free.decoys * 0.55,
       `discrimination is real (${totals.hand.decoys} vs ${totals.free.decoys} decoys engaged)`);
-    // Measured +14% mean over 16 seeds with 14 per-seed wins; asserted at +5%
+    // Measured +22.3% mean over 16 seeds winning 15 of them; asserted at +5%
     // so seed noise cannot flap the build while a real regression still fails.
     assert.ok(totals.hand.score > totals.free.score * 1.05,
       `working the picture must clearly beat walking away (${totals.hand.score} vs ${totals.free.score})`);
@@ -113,9 +128,12 @@ describe('attention matters at sector level', () => {
      * Twenty-four seeds, not the six the other tests share, and not the twelve
      * that stood here before. Per-seed score variance on this watch is several
      * times the effect being measured: across twenty-four the ladder sits at
-     * 0.968 with the net taking exactly half the nights (12/24), while
-     * individual twelve-seed windows of the same run range from 0.885 to 1.05
-     * purely on which twelve. A twelve-seed sample was pinning the sample.
+     * 1.044 with the net taking half the nights (12/24), while individual
+     * twelve-seed windows of the same run range widely purely on which twelve.
+     * A twelve-seed sample was pinning the sample. (It measured 0.997 before
+     * the ready rack began refilling a rail at a time, and 1.044 after: the
+     * net gained more from batteries that come back quickly than free crews
+     * did, which is the right direction for a ladder to move.)
      * Forty seconds of build time is the price of the campaign's load-bearing
      * property being measured rather than sampled.
      */
@@ -654,6 +672,49 @@ describe('the teaching watch teaches', () => {
       assert.ok(median <= 180,
         `${scenario.id}: the console waits ${Math.round(median)}s for its first legal shot `
         + `(seeds ${firsts.map((f) => Math.round(f)).join('/')}s) — a seat is not a spectator stand`);
+    }
+  });
+
+  /*
+   * And the gun has to reload itself.
+   *
+   * The automatic reload used to live inside `runBatteryCrews`, after
+   * `if (human) continue` — so the one battery in the sector with a person in
+   * it was the one battery whose loaders never worked. Measured across four
+   * crew watches: zero reloads, ever. The operator had to notice the red
+   * lamps and press a button, and then watch a bar for up to ninety-five
+   * seconds at zero ready rounds.
+   *
+   * Two properties, and the test touches no control at all to prove them:
+   * the rack refills on its own in the crewed seat, and it refills a rail at
+   * a time so the battery is shootable long before it is full.
+   */
+  test('the crewed battery loads itself, a rail at a time, with nobody pressing anything', () => {
+    for (const id of ['solo-battery', 'low-riders', 'weasel-hour']) {
+      const w = new World(scenarioById(id), { role: 'crew', seed: 'load-1' });
+      const site = w.siteById.get(w.control.crewedBatteryId);
+      const rails = site.rails;
+      const railS = railLoadS(site);
+      // Weapons hold: nothing this battery does may spend what arrives, so
+      // what we measure is the loaders and only the loaders.
+      w.setWeaponsState(site.id, 'hold');
+      site.readyRounds = 0;
+      const stock = site.magazine;
+
+      // One rail, and only one, by the time the first hoist is done.
+      let n = 0;
+      while (w.phase === 'running' && n < Math.round((railS * 1.2) / 0.1)) { w.step(0.1); n++; }
+      assert.equal(site.readyRounds, 1,
+        `${id}: the crewed battery is back in the fight one round in, unbidden`);
+
+      // And full at reloadS — the economy is exactly what it was.
+      while (w.phase === 'running' && n < Math.round((SAM_TYPES[site.type].reloadS + 1) / 0.1)) {
+        w.step(0.1); n++;
+      }
+      assert.equal(site.readyRounds, rails, `${id}: a full rack still costs the full reload`);
+      assert.equal(site.magazine, stock - rails, `${id}: every round came out of the store`);
+      assert.ok(!w.events.some((e) => /LOADERS OUT/.test(e.text)),
+        `${id}: and nobody ordered anything`);
     }
   });
 

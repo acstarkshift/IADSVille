@@ -344,6 +344,16 @@
   box-shadow: inset 0 0 3px rgba(0,0,0,.7);
   opacity: .75;
 }
+/* The rail the loaders are on. Amber, and it pulses, because a rail that is
+   about to be a round is neither loaded nor spent — and watching one lamp
+   come up is how the reload reads now that the rack fills a round at a time. */
+.tubes i.is-loading {
+  background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.4), var(--warn) 66%);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--warn) 60%, transparent);
+  animation: tube-hoist 1.6s ease-in-out infinite;
+}
+@keyframes tube-hoist { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .tubes i.is-loading { animation: none; } }
 
 /* Reloading or displacing: the bar empties and the seconds count down beside
    it, so "out of the fight" has a number on it. */

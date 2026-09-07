@@ -13,7 +13,7 @@ import { bearing, dist, len, clockString, clamp01 } from '../engine/math.js';
 import { sortedTracks, cannotEngageReason } from '../engine/threat.js';
 import { trackProfile } from '../engine/detection.js';
 import { engagementStatus } from './console.js';
-import { armTimeToImpact, channelsFor } from '../engine/doctrine.js';
+import { armTimeToImpact, canStartLoading, channelsFor, railLoadS, railsOf } from '../engine/doctrine.js';
 import { CONTROLS, STATUS, EQUIPMENT, PLATES, legend, pair, pairHtml } from './lexicon.js';
 import { rankOf } from '../engine/character.js';
 
@@ -70,41 +70,52 @@ function toggle(entry, on, { act, site, radar, disabled = false } = {}) {
  * The launcher, as a row of round tube lamps.
  *
  * One lamp per rail: green while that tube holds a round, red when it is
- * spent. This replaced a row of flat bars, which read as a generic progress
- * meter rather than as the thing it is — a rack with rounds on it or not. The
- * count is the battery's own ready capacity, so a section with four rails
- * looks like four rails.
+ * spent, and amber on the one the loaders are working — because the rack now
+ * fills a rail at a time and the lamp going green one by one IS the reload.
+ * This replaced a row of flat bars, which read as a generic progress meter
+ * rather than as the thing it is. The count is the battery's own ready
+ * capacity, so a section with four rails looks like four rails.
  */
-function tubes(site, type) {
-  const rails = Math.min(type.readyRounds, 14);
+function tubes(site) {
+  const capacity = railsOf(site);
+  const rails = Math.min(capacity, 14);
+  // The rail being hoisted onto is the next empty one, and only while the
+  // loaders are actually on it — a rack sitting half full between waves is
+  // not loading, and a lamp that says it is would be a lie about the one
+  // thing this row exists to report.
+  const loading = site.reloadRemainingS > 0 && site.readyRounds < capacity ? site.readyRounds : -1;
   const lamps = Array.from({ length: rails }, (_, i) => {
-    const loaded = i < site.readyRounds;
-    return `<i class="${loaded ? 'is-loaded' : 'is-spent'}"></i>`;
+    if (i < site.readyRounds) return '<i class="is-loaded"></i>';
+    return `<i class="${i === loading ? 'is-loading' : 'is-spent'}"></i>`;
   }).join('');
-  return `<span class="tubes" title="${site.readyRounds} of ${rails} tubes loaded`
+  return `<span class="tubes" title="${site.readyRounds} of ${capacity} tubes loaded`
     + ` · ${site.magazine} rounds in store">${lamps}</span>`;
 }
 
 /**
- * How long until this battery can shoot again, as a bar that empties.
+ * How long until the NEXT round is on the rail, and how many are still coming.
  *
- * A reloading battery is out of the fight for up to a minute and a half, and
- * the only place that number lived was a percentage-width gauge with no
- * figure on it — you could see something was happening but not how long it
- * had left. Returns '' when the battery is ready, so it costs no space.
+ * The old bar counted down the whole ninety-five-second reload, because the
+ * whole ninety-five seconds was what you had to wait for. The loaders now
+ * hand rounds up one at a time, so the number the operator needs is the small
+ * one — seconds to the next rail — with the count still to come beside it. A
+ * displacing battery keeps the old full-duration bar, because displacing
+ * really is all-or-nothing. Returns '' when there is nothing to wait for, so
+ * it costs no space.
  */
 function reloadBar(site, type) {
-  const busy = site.reloadRemainingS > 0
-    ? { entry: STATUS.reloading, remainingS: site.reloadRemainingS,
-      totalS: type.reloadS * (site.reloadMult ?? 1) }
-    : site.scootRemainingS > 0
-      ? { entry: STATUS.displacing, remainingS: site.scootRemainingS,
-        totalS: type.scootS * (site.scootMult ?? 1) * 1.5 }
+  const busy = site.scootRemainingS > 0
+    ? { entry: STATUS.displacing, remainingS: site.scootRemainingS,
+      totalS: type.scootS * (site.scootMult ?? 1) * 1.5, count: 0 }
+    : site.reloadRemainingS > 0
+      ? { entry: STATUS.loading, remainingS: site.reloadRemainingS,
+        totalS: railLoadS(site),
+        count: Math.min(railsOf(site) - site.readyRounds, site.magazine) }
       : null;
   if (!busy) return '';
   const frac = clamp01(1 - busy.remainingS / Math.max(busy.totalS, 1e-6));
   return `<div class="unit-row reload-row">
-    <span class="unit-type">${esc(pair(busy.entry))}</span>
+    <span class="unit-type">${esc(pair(busy.entry))}${busy.count ? ` ${busy.count}` : ''}</span>
     <span class="gauge is-warn"><i style="width:${Math.round(frac * 100)}%"></i></span>
     <span class="unit-type reload-left">${Math.ceil(busy.remainingS)}s</span>
   </div>`;
@@ -235,15 +246,23 @@ export function renderFlightStrip(world, els) {
  */
 function shootlistState(world, site) {
   if (!site.alive) return { text: 'DESTROYED', cls: 'is-down' };
-  if (site.reloadRemainingS > 0) {
-    return { text: `RELOADING ${Math.ceil(site.reloadRemainingS)}s`, cls: 'is-busy' };
-  }
   if (site.scootRemainingS > 0) {
     return { text: `DISPLACING ${Math.ceil(site.scootRemainingS)}s`, cls: 'is-busy' };
   }
   if (site.weaponsState === 'hold') return { text: 'WEAPONS HOLD', cls: 'is-busy' };
-  if (site.readyRounds <= 0) return { text: 'RAILS EMPTY', cls: 'is-down' };
-  return { text: `${site.readyRounds} RDY`, cls: '' };
+  /*
+   * Rounds on the rails beat the loaders: the rack is almost always short of
+   * something now that it tops itself up a rail at a time, and a battery with
+   * seven rounds up is not "RELOADING", it is a battery with seven rounds up.
+   * Loading is the headline only when the rails really are bare — and then
+   * the number the reader wants is seconds to the NEXT one, not to a full
+   * rack, because one round is all it takes to be back in the fight.
+   */
+  if (site.readyRounds > 0) return { text: `${site.readyRounds} RDY`, cls: '' };
+  if (site.reloadRemainingS > 0) {
+    return { text: `LOADING ${Math.ceil(site.reloadRemainingS)}s`, cls: 'is-busy' };
+  }
+  return { text: 'RAILS EMPTY', cls: 'is-down' };
 }
 
 export function renderTrackList(world, ui, els) {
@@ -535,7 +554,7 @@ export function renderBatteries(world, ui, els) {
       </div>
 
       <div class="unit-row">
-        ${tubes(site, type)}
+        ${tubes(site)}
         <span class="unit-type wrap" title="${esc(DEFENCE_CLASSES[type.class].blurb)}">
           ${esc(pair(DEFENCE_CLASSES[type.class]))}
         </span>
@@ -572,7 +591,7 @@ export function renderBatteries(world, ui, els) {
           <span class="lg"><b>${esc(CONTROLS.salvo.tm)} ${site.salvoSize}</b><i>SALVO</i></span>
         </button>`}
         ${press(CONTROLS.reload, { act: 'reload', site: site.id,
-    disabled: detached || site.magazine <= 0 || site.reloadRemainingS > 0 })}
+    disabled: detached || !canStartLoading(world, site) })}
         ${world.scenario.basicConsole ? '' : press(CONTROLS.displace, { act: 'scoot', site: site.id,
     disabled: detached || site.scootRemainingS > 0 })}
       </div>
@@ -707,7 +726,7 @@ export function renderCrewConsole(world, ui, els) {
       ${row(STATUS.sequence, `${pair(sequence)}${status.reactionRemainingS > 0 ? ` ${status.reactionRemainingS.toFixed(1)}s` : ''}`)}
       ${row(STATUS.channels, `${status.channelsUsed}/${status.channels}`)}
       ${row(CONTROLS.reload, `${site.readyRounds} / ${site.magazine}`)}
-      <div class="crew-row crew-tubes">${legend(CONTROLS.launch, { inline: true })}${tubes(site, type)}</div>
+      <div class="crew-row crew-tubes">${legend(CONTROLS.launch, { inline: true })}${tubes(site)}</div>
       ${reloadBar(site, type)}
 
       <button class="pb pb-fire ${status.canFire && (status.pkEstimate === null || status.pkEstimate >= 0.5) ? 'is-armed' : ''}" id="btn-fire"

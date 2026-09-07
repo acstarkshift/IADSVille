@@ -597,6 +597,24 @@ export const ENGAGEMENT = {
    */
   holdFireMinTtiS: 75,
   /**
+   * A salvo is a salvo, and the loaders are allowed this long to complete one.
+   *
+   * The rack refills a rail at a time now (`stepLoading`), so a battery in the
+   * middle of a busy watch sits at one or two ready almost permanently — and a
+   * crew that shoots each round the moment it seats turns every two-round
+   * salvo into two separate one-round shots at the worst end of the Pk curve.
+   * Measured on Weasel Hour's cabin, eight seeds: that dribble spent 23.3
+   * rounds for 5.9 kills where the old all-or-nothing rack spent 19.1 for 7.0.
+   * The fix is patience with a bound: an assigned engagement waits for the
+   * second round if it is coming inside this many seconds, and shoots what it
+   * has if it is not.
+   *
+   * Twelve seconds is one rail of the slowest launcher in the inventory (a
+   * BASTION seats a round every 95/8 s), so the rule is really "wait for the
+   * round the loaders are already lifting, never for the one after it".
+   */
+  salvoWaitMaxS: 12,
+  /**
    * Launch-quality Pk below which a shot cannot break the target's nerve.
    * The round still flies and can still kill; it just does not read as the
    * kind of attack anyone jettisons a war load over.
@@ -817,6 +835,27 @@ export const COMMAND = {
   maxStanding: 100,
   /** Seconds to answer a directive before it counts as ignored. */
   directiveTimeoutS: 45,
+  /**
+   * Seconds of total silence on the ticker before the net says something.
+   *
+   * A watch has stretches with nothing to shoot at, and it always will: a
+   * package turns for home, a straggler drifts thirty kilometres outside
+   * everybody's ring, and for two or three minutes the only correct action is
+   * to wait. Those are legitimate. What is not legitimate is a CONSOLE that
+   * gives the operator no way to tell "there is nothing to do yet" from "you
+   * have missed something", and until now the game's answer was a blank
+   * ticker, which reads as the second.
+   *
+   * So the net checks in. Twenty-five seconds is longer than a busy stretch
+   * ever goes quiet for — measured over the four watches this was tuned on, a
+   * fighting sector triggers it a handful of times a watch and a fighting
+   * cabin barely at all — and short enough that the console is never blank for
+   * the half minute at which silence stops reading as a lull and starts
+   * reading as a fault. Each report is state, not filler: what is held, how
+   * far out it is, which battery will reach it and in how long, so a run of
+   * them reads as a countdown rather than as a screensaver.
+   */
+  lullReportS: 25,
   /*
    * Half the wedge an accepted civil corridor closes, degrees. Twelve is a
    * scheduled airway's width plus the error in a bearing read off a scope,

@@ -43,6 +43,13 @@ export const CONTROLS = {
   search: { tm: 'ПОШУК', en: 'SEARCH' },
   lock: { tm: 'ЗАХВАТ', en: 'LOCK' },
   launch: { tm: 'ПУСК', en: 'LAUNCH' },
+  /*
+   * The key still says RELOAD because that is what it is called and what the
+   * keyboard hint teaches, but the order it gives is LOADERS OUT: the rack
+   * fills itself a rail at a time whenever the rails go bare, and this is the
+   * order to send the crew out on a rack that is merely short, or across a
+   * guidance run. `startReload` carries the whole rule.
+   */
   reload: { tm: 'ПЕРЕЗАРЯД', en: 'RELOAD' },
   displace: { tm: 'СМЕНА МЕСТА', en: 'DISPLACE' },
   salvo: { tm: 'ЗАЛП', en: 'SALVO' },
@@ -121,6 +128,13 @@ export const STATUS = {
   destroyed: { tm: 'УНИЧТОЖЕН', en: 'DESTROYED' },
   displacing: { tm: 'НА МАРШЕ', en: 'DISPLACING' },
   reloading: { tm: 'ЗАРЯЖАНИЕ', en: 'RELOADING' },
+  /**
+   * ЗАРЯЖАНИЕ is the whole operation; ПОДАЧА is the hoist putting the next
+   * round on the rail, which is what the bar counts down now the rack fills
+   * one at a time. The two are different words on the panel because they are
+   * different lengths of wait: the second is the one you can shoot after.
+   */
+  loading: { tm: 'ПОДАЧА', en: 'LOADING' },
 };
 
 /** Equipment nomenclature. Every system carries a type and a works number. */

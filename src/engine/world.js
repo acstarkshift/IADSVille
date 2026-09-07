@@ -17,12 +17,12 @@
  */
 
 import {
-  SIM, SAM_TYPES, RADAR_TYPES, ASSET_TYPES, AIR_TYPES, DIFFICULTY, COMMAND, DAMAGE,
+  SIM, SAM_TYPES, RADAR_TYPES, ASSET_TYPES, AIR_TYPES, DETECTION, DIFFICULTY, COMMAND, DAMAGE,
 } from './config.js';
 import { makeRng } from './rng.js';
 import { dist, len, bearing, polar, wrapDeg, clamp, clamp01, absDeltaDeg } from './math.js';
 import { stepDetection } from './detection.js';
-import { stepMissiles, inEnvelope } from './weapons.js';
+import { stepMissiles, inEnvelope, timeToInRangeS } from './weapons.js';
 import { stepAircraft, createAircraft } from './ai.js';
 import { scoreAllTracks, cannotEngageReason } from './threat.js';
 import {
@@ -316,10 +316,40 @@ export class World {
         alive: true,
         damage: 0,
         readyRounds,
+        /**
+         * How many rails the launcher has, which is where the rack tops back
+         * up to and how many lamps the panel draws. It is the starting rack
+         * and not `type.readyRounds` because a deep-magazine qualification
+         * scales the rack as well as the store: the loaders must be allowed
+         * to refill what the crew was issued.
+         */
+        rails: readyRounds,
+        /**
+         * The store behind the rack, and how deep it is on THIS watch.
+         *
+         * `storeMult` is a scenario's own loadout decision, and it exists
+         * because "the magazine is the only thing between the operator and a
+         * legal shot" turned out to be a two-part figure once the loaders ran
+         * continuously. The loaders' half is small — measured, six to eleven
+         * per cent of the watch across these four. The other half is a
+         * battalion that has fired its entire allocation and is watching the
+         * rest of the raid go past, and no amount of loading faster touches
+         * it: on Weasel Hour the crewed BASTION spent all twenty-four of its
+         * rounds and then sat unable to shoot for a third of the night.
+         *
+         * A watch that presents more aeroplanes than the standard load can
+         * answer has to say so in its own file rather than in the inventory,
+         * because the type's sixteen rounds are right for the watches that
+         * were built around them.
+         */
         magazine: this.modifiers.reloadsAllowed
-          ? Math.round(type.magazine * this.modifiers.roundsMult)
+          ? Math.round(type.magazine * this.modifiers.roundsMult
+            * (this.scenario.storeMult ?? 1))
           : 0,
+        /** Seconds until the next round seats. See `stepLoading`. */
         reloadRemainingS: 0,
+        /** True while the loaders are out: rails arrive one at a time. */
+        loading: false,
         scootRemainingS: 0,
         displaced: false,
         engagements: [],
@@ -1319,6 +1349,13 @@ export class World {
     if (radar) this.setRadar(radarId, !radar.on);
   }
 
+  /**
+   * LOADERS OUT. The rack fills itself a round at a time whenever the rails go
+   * bare, so this is not "start the reload" any more — it is the order to send
+   * the crew out on a rack that is only half spent, or across a guidance run.
+   * It still fails loudly when there is nothing in the store to break out,
+   * because a denied resupply is a plot point and not a UI state.
+   */
   reload(siteId) {
     const site = this.siteById.get(siteId);
     if (!site) return false;
@@ -1506,9 +1543,28 @@ export class World {
     stepAircraft(this, dt);
     stepMissiles(this, dt);
     stepDamage(this, dt);
+    /*
+     * "Did anything the OPERATOR owns ever radiate?" — one bit, kept because
+     * the debrief has to be able to tell a quiet watch from a blind one when
+     * it names the cause of a failure.
+     *
+     * Deliberately scoped to the sets this seat can actually switch: the
+     * surveillance radars, and the crewed battery's own. Every AI battery on
+     * the board runs its own emissions discipline and comes up in its own
+     * time, so a flag that counted those would be true on every watch ever
+     * played and would never be able to name the one failure it exists for —
+     * a player who sat through a raid with their own sets cold.
+     *
+     * Costs a scan of a handful of sets and draws no random numbers.
+     */
+    if (!this._everRadiated && this.radars.some((r) => r.alive && r.on
+      && (!r.siteId || r.siteId === this.control.crewedBatteryId))) {
+      this._everRadiated = true;
+    }
     stepCommand(this, dt);
     this.stepReserve();
     this.stepAdvisories();
+    this.reportTheLull();
     this.checkEnd();
   }
 
@@ -1531,6 +1587,32 @@ export class World {
       if (flipped) {
         this.log('warn', 'SECTOR HAS BROUGHT THE SURVEILLANCE SET UP REMOTELY. THE SWITCH IS YOURS TO KEEP.',
           { severity: 'high' });
+      } else if (!this.radars.some((r) => r.alive && r.on)) {
+        /*
+         * And on a watch with no surveillance set at all, the safety is your
+         * own crew rather than sector — there is nobody else to flip.
+         *
+         * Solo Battery is the case: no early-warning radar, one battery, and
+         * an operator who touches nothing sat blind for three minutes with an
+         * empty scope that could not tell them which of "nothing is out there"
+         * and "you have not switched the set on" they were looking at.
+         * Measured: first contact 180 s median, first legal shot 256 s. A crew
+         * alone in a cabin under an air raid warning does not sit in the dark
+         * waiting to be told; they come up, and they say why.
+         *
+         * Only when NOTHING at all is radiating, so an operator who has
+         * deliberately gone dark — which is the entire subject of the watch
+         * after this one — is never overruled by a safety.
+         */
+        const own = this.control.crewedBatteryId
+          ? this.radars.filter((r) => r.alive && r.siteId === this.control.crewedBatteryId)
+          : [];
+        if (own.length) {
+          for (const radar of own) radar.on = true;
+          this.log('warn', 'CREW HAS BROUGHT THE SET UP ON ITS OWN AUTHORITY — NOBODY ELSE IS LOOKING.',
+            { severity: 'high' });
+          this.comms?.('CREW CHIEF', 'WE CANNOT SEE ANYTHING WITH THE SET COLD. IT IS UP.');
+        }
       }
     }
 
@@ -1554,6 +1636,160 @@ export class World {
         trackId: track.id, severity: 'high',
       });
     }
+  }
+
+  /**
+   * The net does not go quiet, and when it has nothing to report it says so.
+   *
+   * Every watch has stretches with nothing shootable in them — a package turns
+   * for home, one straggler drifts thirty kilometres outside everybody's ring
+   * and takes three minutes to walk into a LANCE — and those stretches are the
+   * shape of the fight rather than a defect in it. What WAS a defect is that
+   * the console fell completely silent through them, so a new operator could
+   * not tell "there is nothing you can do yet" from "you have missed
+   * something". Measured over eight seeds of the four watches this was tuned
+   * on, the worst of those silences ran two hundred and twenty-two seconds:
+   * the sector had killed everything it could reach and one missed striker was
+   * crawling towards LANCE EAST's ring.
+   *
+   * So after `COMMAND.lullReportS` with nothing at all on the ticker, sector
+   * says what it is holding: the contact, its range, and which of your
+   * batteries will have it and in how long. That last clause is the whole
+   * point — it converts a blank screen into a countdown, and a countdown is
+   * something an operator can plan a reload or an emissions cycle around.
+   *
+   * Logged as `info` and never as `comms`, deliberately: the debrief's
+   * "seconds after the last action" figure exists to catch a watch that keeps
+   * running after the fighting has stopped, and a net saying "nothing held"
+   * must not be allowed to disguise exactly that. It draws no random numbers,
+   * so every seeded measurement in the repository is unmoved by it.
+   *
+   * AND IT NEVER SAYS THE SAME THING TWICE RUNNING. The first version of this
+   * cycled a variant list on a counter that only advanced when a line was
+   * printed, which sounds like the same thing and is not: the state can change
+   * between two lulls, so the counter walks two different lists and lands on
+   * the same sentence, or on its twin. Measured on the build that shipped it,
+   * one watch printed "SAY STATE. NOTHING BEHIND YOU IS SEEING THIS SQUARE FOR
+   * YOU." and "SAY STATE. NOBODY BEHIND YOU IS GOING TO SEE THIS ONE FOR YOU."
+   * eleven seconds apart, and another printed one identical held-contact line
+   * ELEVEN times between 191 s and 477 s. That is not a room talking, it is a
+   * tape loop, and a tape loop teaches the reader to stop reading — which is
+   * the exact failure the whole idea was meant to repair.
+   *
+   * So `say()` remembers the last thing said and takes the next variant that
+   * is not it, and the held-contact report — which is generated rather than
+   * chosen from a list — is only allowed to repeat itself about the same
+   * contact after a minute, and phrases itself differently when it does.
+   */
+  reportTheLull() {
+    const last = this.events[this.events.length - 1];
+    if (this.t - (last ? last.t : 0) < COMMAND.lullReportS) return;
+
+    const mine = this.sites.filter((s) => s.alive
+      && (s.id === this.control.crewedBatteryId || this.commandable(s.id)));
+    let worst = null;
+    for (const track of this.tracks.values()) {
+      if (track.destroyed || track.hostility !== 'hostile') continue;
+      if (track.quality < DETECTION.firmQuality) continue;
+      if (!worst || track.threat > worst.threat) worst = track;
+    }
+
+    // Never the same sentence twice running, whichever list it comes from.
+    const say = (variants) => {
+      const fresh = variants.filter((v) => v !== this._lullLast);
+      return (fresh.length ? fresh : variants)[(this._lullCount ?? 0) % (fresh.length || 1)];
+    };
+
+    let text;
+    if (worst) {
+      // Who gets it, and when. `timeToInRangeS` is the same walk-forward the
+      // shootlist's own "IN RANGE IN" column runs, so the number the net reads
+      // out is the number on the operator's screen.
+      let bestSite = null;
+      let bestS = Infinity;
+      for (const site of mine) {
+        const toRange = timeToInRangeS(site, worst);
+        if (!Number.isFinite(toRange) || toRange >= bestS) continue;
+        bestS = toRange; bestSite = site;
+      }
+      const km = Math.round(dist(this.centre, worst.pos));
+      /*
+       * A held contact is worth reporting once, and then it is the same news.
+       * `_lullTrackAtS` is how long ago we last said anything about THIS
+       * contact; inside a minute the net moves on to something else rather
+       * than reading the same range out again with a different number on it.
+       */
+      this._lullTrackAtS = this._lullTrackAtS ?? {};
+      const saidAgo = this.t - (this._lullTrackAtS[worst.id] ?? -999);
+      if (saidAgo < 60) {
+        text = say([
+          `${worst.tn} IS THE ONLY THING WE HOLD AND IT HAS NOT CHANGED. NOTHING ELSE IS UP.`,
+          'STILL THE ONE CONTACT. THE REST OF THE SQUARE IS CLEAN.',
+          `NO CHANGE ON ${worst.tn}. FRONTIER POSTS HAVE NOTHING BEHIND IT.`,
+        ]);
+      } else if (!bestSite) {
+        text = say([
+          `HOLDING ${worst.tn}, ${km} KM OUT. NOTHING OF OURS REACHES IT ON THAT COURSE.`,
+          `${worst.tn} AT ${km} KM AND OUTSIDE EVERY RING WE HAVE. WATCH IT AND WAIT.`,
+        ]);
+        this._lullTrackAtS[worst.id] = this.t;
+      } else if (bestS > 0) {
+        text = say([
+          `HOLDING ${worst.tn}, ${km} KM OUT. ${bestSite.name} REACHES IT IN `
+            + `${Math.round(bestS)} SECONDS.`,
+          `${worst.tn} AT ${km} KM, CLOSING. ${bestSite.name} HAS IT IN `
+            + `${Math.round(bestS)}.`,
+        ]);
+        this._lullTrackAtS[worst.id] = this.t;
+      } else {
+        /*
+         * Already inside somebody's ring and still not engageable, so the
+         * geometry is not what is wrong — say what is, in the same words the
+         * shootlist uses. "REACHES IT IN 0 SECONDS" was the first version of
+         * this line and it was worse than silence: it read as a countdown that
+         * had finished while nothing happened.
+         */
+        const why = (cannotEngageReason(this, bestSite, worst) ?? 'nothing').toUpperCase();
+        text = say([
+          `${worst.tn} IS INSIDE ${bestSite.name}'S RING AT ${km} KM AND IT CANNOT `
+            + `TAKE IT — ${why}.`,
+          `${bestSite.name} HAS ${worst.tn} ON THE PLOT AND CANNOT SHOOT: ${why}.`,
+        ]);
+        this._lullTrackAtS[worst.id] = this.t;
+      }
+    } else if (!this.radars.some((r) => r.alive && r.on)) {
+      /*
+       * The spectator trap, said out loud, and said differently each time. A
+       * watch spent with every set cold is not a quiet watch, it is a blind
+       * one, and the console has to say which of the two the operator is
+       * looking at — the measured floor for this game is a sixteen-minute
+       * solo-battery watch on which a player who touches nothing sees nothing
+       * and is never told why.
+       */
+      text = say([
+        'NOTHING IS RADIATING. THE PLOT IS BLANK UNTIL A SET COMES UP.',
+        'STILL NO EMISSIONS FROM YOUR POSITION. WE ARE BLIND, NOT QUIET.',
+        'SAY STATE. NOTHING BEHIND YOU IS SEEING THIS SQUARE FOR YOU.',
+        'THE SCOPE IS EMPTY BECAUSE THE SET IS COLD, NOT BECAUSE THE SKY IS.',
+      ]);
+    } else if (this.pendingWaves.length) {
+      text = say([
+        'NOTHING ON THE PLOT. THE NEXT MOVEMENT HAS NOT SHOWN ITSELF YET.',
+        'SETS CLEAN. THE FRONTIER POSTS HAVE NOTHING FOR US EITHER.',
+        'STILL NOTHING HELD. STAY UP — IT IS NOT OVER.',
+        'QUIET SQUARE. THAT IS A GAP IN THEIR PROGRAMME, NOT THE END OF IT.',
+        'NO CONTACTS. USE IT — RACKS, EMISSIONS, WHATEVER IS SHORT.',
+      ]);
+    } else {
+      text = say([
+        'PLOT CLEAR. STAY UP UNTIL SECTOR STANDS YOU DOWN.',
+        'NOTHING AIRBORNE THAT WE CAN SEE. HOLD YOUR POSITION.',
+        'THAT APPEARS TO BE ALL OF IT. NOBODY IS STANDING YOU DOWN YET.',
+      ]);
+    }
+    this._lullCount = (this._lullCount ?? 0) + 1;
+    this._lullLast = text;
+    this.log('info', `SECTOR: ${text}`);
   }
 
   /** The raid is over when there is nothing left to spawn, fly, or resolve. */
@@ -1648,6 +1884,9 @@ export class World {
     this.outcome = this.result(reason);
     this.log(this.outcome.success ? 'good' : 'alert',
       `WATCH ENDS — ${this.outcome.headline}`, { severity: 'high' });
+    // And why, on the ticker, where the person is still looking. The debrief
+    // repeats it; the ticker is where they find out.
+    if (this.outcome.cause) this.log('alert', this.outcome.cause, { severity: 'high' });
   }
 
   /**
@@ -1711,6 +1950,24 @@ export class World {
       : success ? 'SECTOR HELD' : 'SECTOR PENETRATED';
 
     return {
+      /**
+       * Why, in one clause, and it is not decoration.
+       *
+       * Every losing watch used to end on the same three words —
+       * "SECTOR PENETRATED" — and stop. A player who conceded four leakers
+       * because they never brought a set up, one who conceded one because the
+       * operations centre was on an axis nobody covered, and one who was
+       * overrun in the first ninety seconds all got the identical line, so
+       * losing taught nothing and the debrief had to be read as arithmetic to
+       * find out what had happened. A watch that cannot say why it went wrong
+       * cannot be learned from, and a beginner's watch has to be learnable
+       * from its failures first of all.
+       *
+       * Read in the same order the verdict is decided in — overrun, then the
+       * place that cannot be lost, then the count — so the clause always names
+       * the thing that actually settled it.
+       */
+      cause: this.failureCause({ reason, success, criticalLost, leakersCounted }),
       missionId: this.scenario.id,
       role: this.control.role,
       reason,
@@ -1752,6 +2009,43 @@ export class World {
       })),
       battery: this.control.crewedBatteryId ? this.batteryReport(this.control.crewedBatteryId) : null,
     };
+  }
+
+  /**
+   * The one clause that says what settled the watch. Null when it was held.
+   *
+   * Order matters and it is the order the verdict itself is decided in. The
+   * blind case is checked before the leaker count because it is the CAUSE of
+   * the leaker count: an operator who never radiated did not lose to four
+   * aircraft, they lost to an empty scope, and telling them "four leaked" is
+   * telling them the symptom.
+   */
+  failureCause({ reason, success, criticalLost, leakersCounted }) {
+    if (success) return null;
+    if (reason === 'site-lost') {
+      return 'YOUR POSITION WAS OVERRUN — THE REST OF THE RAID CROSSED AN EMPTY SQUARE.';
+    }
+    if (criticalLost) {
+      const lost = this.assets.find((a) => ASSET_TYPES[a.type].critical && a.destroyed);
+      return `${(lost?.label ?? ASSET_TYPES[lost?.type]?.label ?? 'A PLACE THAT CANNOT BE LOST')
+        .toUpperCase()} WAS DESTROYED. THAT ALONE LOSES THE WATCH.`;
+    }
+    const tolerance = this.scenario.leakerTolerance ?? 2;
+    const n = leakersCounted;
+    const never = !this._everRadiated;
+    if (never) {
+      return `NOTHING OF YOURS EVER RADIATED. ${n} GOT THROUGH A SECTOR THAT `
+        + 'COULD NOT SEE THEM.';
+    }
+    const dry = this.sites.some((s) => s.alive && s.readyRounds === 0 && s.magazine === 0);
+    const refused = this.command.ledger.some((e) => /^refused /.test(e.reason ?? ''));
+    const tail = dry
+      ? ' AT LEAST ONE BATTERY FINISHED THE WATCH WITH AN EMPTY STORE.'
+      : refused
+        ? ' YOU REFUSED AN ORDER TONIGHT; THE FILE WILL SAY SO BESIDE THIS.'
+        : ' THE ALLOWANCE WAS ' + tolerance + '.';
+    return `${n} LEAKER${n === 1 ? '' : 'S'} REACHED WHAT ${n === 1 ? 'IT WAS' : 'THEY WERE'} `
+      + `SENT FOR.${tail}`;
   }
 
   /** The SAM operator's own line in the report: what your battery did. */

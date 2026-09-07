@@ -177,14 +177,94 @@ describe('engagement mechanics', () => {
     for (const site of world.sites) assert.ok(site.readyRounds >= 0 && site.magazine >= 0);
   });
 
-  test('reloading takes the rack offline and then refills it', () => {
+  test('the rack refills a rail at a time, and the whole rack still costs reloadS', () => {
+    /*
+     * The two halves of the per-rail reload, measured on the same battery.
+     * Nobody touches a control: the loaders work on their own, which is the
+     * whole point — the crewed battery used to be the one battery whose
+     * automatic reload never ran.
+     */
     const world = readyWorld('first-light');
     const site = world.sites[0];
+    const type = SAM_TYPES[site.type];
+    const rails = site.rails;
+    // Weapons hold so the battery cannot spend what the loaders bring up:
+    // this test is about the loaders, and a battery that shoots mid-count
+    // would be measuring the raid instead.
+    world.setWeaponsState(site.id, 'hold');
     site.readyRounds = 0;
-    assert.ok(startReload(world, site));
-    assert.ok(site.reloadRemainingS > 0);
-    run(world, SAM_TYPES[site.type].reloadS + 2);
-    assert.ok(site.readyRounds > 0, 'the rack came back full');
+    const railS = (type.reloadS / rails) * (site.reloadMult ?? 1);
+
+    // Well before the first rail is due, still bare.
+    run(world, railS * 0.6);
+    assert.equal(site.readyRounds, 0, 'no round arrives before its hoist is finished');
+    // And shortly after, exactly one — not eight.
+    run(world, railS * 0.6);
+    assert.equal(site.readyRounds, 1, 'rounds arrive one at a time');
+    assert.ok(site.reloadRemainingS > 0, 'and the next one is already on its way');
+
+    // The economy is untouched: a whole rack still takes reloadS to fill.
+    const before = site.readyRounds + site.magazine;
+    run(world, type.reloadS);
+    assert.equal(site.readyRounds, rails, 'the rack is full at reloadS, not sooner');
+    assert.equal(site.readyRounds + site.magazine, before,
+      'and every round came out of the store — none appeared from nowhere');
+  });
+
+  test('LOADERS OUT fills a rack doctrine would have left alone, and makes nothing', () => {
+    /*
+     * The whole arithmetic of the RELOAD control in one test. Doctrine sends
+     * the loaders out on a BARE rack; this is the order that sends them out on
+     * one that is merely short. It moves rounds EARLIER and never makes them:
+     * the rail interval is the same, the store pays for every round, and a
+     * battery nobody ordered simply sits at what it has. Two identical
+     * batteries, one order between them.
+     */
+    const ordered = readyWorld('first-light');
+    const plain = readyWorld('first-light');
+    const type = SAM_TYPES[ordered.sites[0].type];
+    const rails = ordered.sites[0].rails;
+    const railS = (type.reloadS / rails) * (ordered.sites[0].reloadMult ?? 1);
+    // Half a rack each: short, but not bare, so doctrine does nothing at all.
+    const half = Math.floor(rails / 2);
+    for (const world of [ordered, plain]) {
+      world.setWeaponsState(world.sites[0].id, 'hold');
+      world.sites[0].readyRounds = half;
+    }
+    run(ordered, railS * 1.5);
+    run(plain, railS * 1.5);
+    assert.equal(ordered.sites[0].readyRounds, half, 'doctrine leaves a short rack alone');
+    assert.equal(plain.sites[0].readyRounds, half);
+
+    const site = ordered.sites[0];
+    const stock = site.readyRounds + site.magazine;
+    assert.ok(startReload(ordered, site), 'the order is accepted');
+    assert.equal(startReload(ordered, site), false, 'and is a no-op while the crew is out');
+
+    run(ordered, railS * 1.1);
+    run(plain, railS * 1.1);
+    assert.equal(site.readyRounds, half + 1, 'one rail, at the same interval as any other');
+    assert.equal(plain.sites[0].readyRounds, half,
+      'while the battery beside it, unordered, still has what it had');
+
+    // Full at exactly the rails it was short, times the rail interval — no
+    // borrowed time, no half intervals, nothing conjured.
+    run(ordered, railS * (rails - half));
+    assert.equal(site.readyRounds, rails, 'the ordered rack fills at the ordinary rate');
+    assert.equal(site.readyRounds + site.magazine, stock, 'and the store paid for every round');
+    assert.equal(plain.sites[0].readyRounds, half, 'and doctrine still has not moved');
+  });
+
+  test('LOADERS OUT spammed every tick cannot conjure a single round', () => {
+    const world = readyWorld('first-light');
+    const site = world.sites[0];
+    world.setWeaponsState(site.id, 'hold');
+    site.readyRounds = 0;
+    const rails = site.rails;
+    const stock = site.readyRounds + site.magazine;
+    run(world, SAM_TYPES[site.type].reloadS, () => { world.reload(site.id); });
+    assert.ok(site.readyRounds <= rails);
+    assert.equal(site.readyRounds + site.magazine, stock, 'the store paid for every round');
   });
 
   test('weapons hold breaks off everything the battery was working', () => {
@@ -271,5 +351,123 @@ describe('scoring', () => {
     assert.equal(world.stats.civilianAircraftShot, 1);
     assert.ok(world.command.standing < before, 'sector command notices');
     assert.ok(world.outcome.breakdown.civilian < 0);
+  });
+});
+
+describe('the loaders work for the battery with a person in it', () => {
+  /*
+   * The bug this pins was the whole of the original report: the automatic
+   * reload lived inside `runBatteryCrews`, AFTER the check that skips the
+   * human's battery, so the one launcher with an operator sitting in it never
+   * started a reload on its own. Measured before the fix: zero automatic
+   * reloads across four crew watches, and an operator who had to notice the
+   * red lamps and press a key before the rack would move at all.
+   *
+   * The seat is not touched here. Nobody presses RELOAD, nobody fires, nobody
+   * assigns; the rack is emptied by hand to put the battery in the state the
+   * report described, and the only question asked is whether the rounds come
+   * back.
+   */
+  test('a crewed battery refills its own rack with nobody touching a control', () => {
+    const world = new World(scenarioById('solo-battery'), { role: 'crew' });
+    for (const radar of world.radars) radar.on = true;
+    const mine = world.siteById.get(world.control.crewedBatteryId);
+    assert.ok(mine.magazine > 0, 'the store has rounds to give');
+    mine.readyRounds = 0;
+
+    run(world, 20);
+    assert.ok(mine.readyRounds > 0,
+      `the loaders should have seated a round by now (rack ${mine.readyRounds})`);
+    assert.ok(mine.readyRounds < mine.rails,
+      'and they arrive one at a time, not as a rack appearing at once');
+
+    const type = SAM_TYPES[mine.type];
+    run(world, type.reloadS * (mine.reloadMult ?? 1));
+    assert.equal(mine.readyRounds, mine.rails, 'a full rack still costs the full reloadS');
+  });
+
+  /*
+   * And the ammunition economy is untouched by all of it: rounds come off the
+   * store one for one, so a rack that fills a rail at a time costs exactly
+   * what a rack that appeared in a lump cost.
+   */
+  test('every round on a rail came off the store', () => {
+    const world = new World(scenarioById('solo-battery'), { role: 'crew' });
+    // Nothing shoots: weapons held and every set cold, so the only thing that
+    // can move the two numbers is the hoist.
+    for (const site of world.sites) world.setWeaponsState(site.id, 'hold');
+    for (const radar of world.radars) radar.on = false;
+    const mine = world.siteById.get(world.control.crewedBatteryId);
+    // The rack is emptied first: the question is whether what comes back came
+    // out of the store, not what the crew was issued to begin with.
+    mine.readyRounds = 0;
+    const total = mine.readyRounds + mine.magazine;
+    run(world, 200);
+    assert.equal(world.stats.roundsFired, 0, 'nobody fired anything');
+    assert.equal(mine.readyRounds + mine.magazine, total,
+      'the loaders neither conjure nor lose a round');
+  });
+});
+
+describe('a lost watch says why it was lost', () => {
+  /*
+   * "SECTOR PENETRATED" on its own is not a debrief, it is a verdict, and a
+   * beginner's watch has to be learnable from its failures before anything
+   * else. The clause is read in the order the verdict is decided in, and the
+   * blind case is checked before the leaker count because it is the CAUSE of
+   * the leaker count.
+   */
+  test('a watch spent with every set cold blames the sets, not the count', () => {
+    /*
+     * Read in the order the verdict is decided in: a place that cannot be
+     * lost outranks the count, and the count outranks nothing. The blind
+     * clause sits between them because it is the CAUSE of the count — an
+     * operator who never radiated did not lose to four aircraft, they lost to
+     * an empty scope, and telling them "four leaked" names the symptom.
+     */
+    const world = new World(scenarioById('low-riders'), { role: 'net' });
+    for (const site of world.sites) world.setWeaponsState(site.id, 'hold');
+    for (const radar of world.radars) radar.on = false;
+    run(world, 3000, (w) => {
+      for (const r of w.radars) if (!r.siteId) r.on = false;
+    });
+    assert.equal(world.outcome.success, false);
+    assert.ok(world.outcome.cause && world.outcome.cause.length > 20,
+      'a lost watch always carries a clause');
+    assert.ok(!world._everRadiated, 'and nothing the seat owns ever radiated on it');
+    assert.equal(
+      world.failureCause({ reason: 'raid-spent', success: false, criticalLost: false, leakersCounted: 4 }),
+      'NOTHING OF YOURS EVER RADIATED. 4 GOT THROUGH A SECTOR THAT COULD NOT SEE THEM.',
+    );
+  });
+
+  test('and when something was radiating, it names the count and the state', () => {
+    const world = readyWorld('low-riders');
+    run(world, 120);
+    const said = world.failureCause({
+      reason: 'raid-spent', success: false, criticalLost: false, leakersCounted: 2,
+    });
+    assert.match(said, /^2 LEAKERS REACHED/, said);
+    assert.ok(!/NEVER RADIATED/.test(said), 'the sets were up, so that is not the reason');
+  });
+
+  test('a watch that was held names no cause at all', () => {
+    const world = readyWorld('first-light');
+    run(world, 3000);
+    assert.equal(world.outcome.success, true);
+    assert.equal(world.outcome.cause, null);
+  });
+
+  test('losing a place that cannot be lost names the place', () => {
+    const world = readyWorld('first-light');
+    run(world, 60);
+    const critical = world.assets.find((a) => a.id === 'a_c2');
+    critical.destroyed = true;
+    world.finish('raid-spent');
+    assert.equal(world.outcome.success, false);
+    assert.match(world.outcome.cause, /LOSES THE WATCH/);
+    assert.ok(world.outcome.cause.includes(critical.label?.toUpperCase() ?? 'CENTRE')
+      || /CANNOT BE LOST/.test(world.outcome.cause),
+    `expected the place to be named, got ${world.outcome.cause}`);
   });
 });
