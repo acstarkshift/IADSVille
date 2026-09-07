@@ -159,4 +159,74 @@ describe('the playtest harness', () => {
         `${run.mission}/${run.seat}: the empty chair answered the command net`);
     }
   });
+
+  /*
+   * The two verbs no player model had ever pressed.
+   *
+   * A scrub found `scoot` mentioned only in this file's own header prose and
+   * `commitReserve` not mentioned at all — so D4, the line that asks whether
+   * skill buys anything on a watch, was being judged on Two Cities,
+   * President's Flight and Weasel Hour without the two most expert-flavoured
+   * actions on the console. An instrument that cannot press a control cannot
+   * report on it, and reported silence as "the watch has no depth".
+   */
+  test('the expert presses DISPLACE when the position itself is the objective', () => {
+    /*
+     * The finale's third axis comes for the ground the operator is standing
+     * on, and the forward post drives out with the battery. Measured across
+     * the finale's eight net seeds: every seed on which this model displaced
+     * held the sector, and every seed on which it did not was lost. That is
+     * the whole watch in one verb, and no player model had ever pressed it.
+     */
+    const moved = playRun({ mission: 'two-cities', seat: 'net', policy: 'expert', seed: 'p2' }).run;
+    assert.ok(moved.displacements >= 1,
+      'a raid tracking the post that travels with your battery is answered by moving');
+    const rooted = playRun({ mission: 'two-cities', seat: 'net', policy: 'competent', seed: 'p2' }).run;
+    assert.equal(rooted.displacements, 0,
+      'and the competent model stays put — displacement is the craft, not the baseline');
+
+    /*
+     * Weasel Hour hunts antennas rather than positions, and an intact
+     * battalion answers a round with a twenty-five second blink. Three and a
+     * half minutes off the air is the worse trade, and measured it cost this
+     * model a watch in eight for nothing.
+     */
+    const ducking = playRun({ mission: 'weasel-hour', seat: 'net', policy: 'expert', seed: 'p1' }).run;
+    assert.equal(ducking.displacements, 0,
+      'an intact battery ducks a round rather than spending the night driving');
+
+    // First Light has nothing shooting back at all. Nobody moves.
+    const quiet = playRun({ mission: 'first-light', seat: 'net', policy: 'expert', seed: 'p1' }).run;
+    assert.equal(quiet.displacements, 0, 'and nobody displaces on a watch with no enemy fire');
+  });
+
+  test('the expert releases the national reserve, and only where there is one', () => {
+    const national = playRun({ mission: 'two-cities', seat: 'net', policy: 'expert', seed: 'p1' }).run;
+    assert.ok(national.reserveReleased > 0, 'the finale has a reserve and the expert commits it');
+    const baseline = playRun({ mission: 'two-cities', seat: 'net', policy: 'competent', seed: 'p1' }).run;
+    assert.equal(baseline.reserveReleased, 0, 'the competent model leaves it in the depot');
+
+    const sector = playRun({ mission: 'weasel-hour', seat: 'net', policy: 'expert', seed: 'p1' }).run;
+    assert.equal(sector.reserveReleased, 0,
+      'and nobody below national command has one to release');
+  });
+
+  /*
+   * The hole detector used to count ANY logged line as activity, including
+   * the `info` echo of the operator's own switch. Combined with a correlator
+   * announcing a fresh contact every few seconds it reported zero holes on
+   * all 896 runs of the campaign matrix — on watches the playtesters had
+   * described as five silent minutes. It counts what an operator would look
+   * up for, and nothing else.
+   */
+  test('a switch flipping in an empty sky is not something happening', () => {
+    const run = playRun({ mission: 'two-cities', seat: 'net', policy: 'competent', seed: 'p1' }).run;
+    assert.ok(run.holes.longestS > 0,
+      'the finale has quiet stretches and the instrument must be able to see one');
+    assert.ok(Number.isFinite(run.firstInEnvelopeS) || run.firstInEnvelopeS === null,
+      'the in-envelope companion column is reported');
+    assert.ok(run.firstInEnvelopeS === null || run.firstLegalShotS === null
+      || run.firstInEnvelopeS >= run.firstLegalShotS - 0.001,
+      'a contact cannot be inside the ring before it is claimable');
+  });
 });

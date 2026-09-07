@@ -88,14 +88,29 @@
  *               emissions discipline (a duty cycle on the battery's own set,
  *               RIDE — hold the beam — when the rounds already in the air
  *               land before the enemy's does, and no duty cycle at all when
- *               the battery's set is the only one looking at the sky); and,
- *               at district and national command, standing in the sector
- *               under the main effort
+ *               the battery's set is the only one looking at the sky);
+ *               DISPLACE — one move per battery per watch, taken when the
+ *               enemy has demonstrably got this grid (a round tracking one of
+ *               its sets, or one that has already arrived) and there is
+ *               nothing of ours in the air to drop by going; the RESERVE at
+ *               national command — the whole allocation to the one formation
+ *               carrying the raid, once the raid is established, because four
+ *               minutes on the road means a late release arrives after the
+ *               watch; and, at district and national command, standing in the
+ *               sector under the main effort
  *               — `takeDirect` on the formation carrying the most threat, but
  *               only when it beats the weakest sector already held by half
  *               again, because a handover costs eighteen or twenty-six seconds
  *               of nobody commanding anything. And it answers the command net
  *               from the table below rather than out of politeness.
+ *
+ *               DISPLACE and the reserve were added after a scrub found that
+ *               no player model had ever pressed either — so D4, the line
+ *               that asks whether skill buys anything, was being judged on
+ *               three watches without the two most expert-flavoured verbs on
+ *               the console. Both are counted per run (`displacements`,
+ *               `reserveReleased`) so a reader can see when they fired rather
+ *               than taking the blurb's word for it.
  *
  * ---------------------------------------------------------------------------
  * THE EXPERT'S ANSWER TABLE
@@ -176,8 +191,16 @@
  *     could legally take (crew seat: their own battery only);
  *   - nothing in flight: not one round alive anywhere, theirs or the enemy's;
  *   - no directive pending on the command net;
- *   - not one line reached the ticker that second — chatter, comms, launch,
- *     command traffic, anything.
+ *   - not one line the operator would look up for reached the ticker that
+ *     second — chatter, comms, a launch, a kill, a warning, command traffic.
+ *
+ * That last clause used to read "anything", and it counted the `info` lines
+ * the console emits when a switch moves or a set warms up. Those are echoes
+ * of the operator's own hands, not the watch giving them something, and with
+ * the correlator churning out a fresh NEW CONTACT every few seconds on top of
+ * them, this detector reported zero holes on every one of 896 runs — including
+ * watches the playtesters described as five silent minutes. It now counts the
+ * same `ACTION_KINDS` the end-of-watch measurement counts, and nothing else.
  *
  * A hole is thirty consecutive such seconds. That is the length at which a
  * person puts the controller down. `holes.count` counts them, `longestS` is
@@ -194,6 +217,19 @@
  * 90% on First Light because it answers none of them; competent scores 40% on
  * the same watch because it answered them. Read it as unanswered opportunity,
  * and read a policy that cannot get it down as a seat that cannot keep up.
+ *
+ * `firstInEnvelopeS` is the honest companion to `firstLegalShotS`, and the
+ * crew seat's T2 is judged against both. A legal shot means a battery of
+ * yours could be given the contact; being IN THE ENVELOPE means the thing is
+ * actually in front of you. The two diverge by minutes on the watches where
+ * the crewed battery is parked off the raid's axis, and reading only the
+ * first of them reported those cabins as busy when they were empty.
+ *
+ * `blindShare` is the share of the watch on which not one battery of this
+ * seat's had a surviving fire-control antenna. It is zero on most watches and
+ * it is the whole story on the two where the enemy hunts radars: a cabin
+ * whose sets are wreckage has no verbs left, and until this column existed
+ * nothing distinguished that from a quiet night.
  *
  * `magazineOnlyLimiterShare` is the share of the watch with no legal shot
  * where the ONLY thing wrong was an empty rack — the contact in the altitude
@@ -888,10 +924,120 @@ export const POLICIES = {
         assignPass(ctx, { greedy: true, salvo: true });
       }
       if (ctx.crewed) crewLoop(ctx, 0, { salvo: true, topUp: true, sweetSpot: true });
-      if (ctx.seat !== 'crew') standInTheMainEffort(ctx);
+      expertDisplace(ctx);
+      if (ctx.seat !== 'crew') {
+        standInTheMainEffort(ctx);
+        commitTheReserve(ctx);
+      }
     },
   },
 };
+
+/**
+ * DISPLACE — one move, and only when the enemy has your grid.
+ *
+ * The most expensive verb on the console: forty seconds for a gun section,
+ * three and a half minutes for a battalion, and the battery is out of the
+ * fight for all of it with its sets down. It buys one thing, and it is the
+ * only thing that buys it — the enemy's targeting is a grid reference, and
+ * after a displacement that reference is an empty field. `startScoot` zeroes
+ * the set's exposure and clears its battle damage with it.
+ *
+ * So the trigger is the two cases where the grid itself is the target rather
+ * than the antenna on it.
+ *
+ * THE POSITION IS THE OBJECTIVE. A hostile is tracking toward something that
+ * lives with this battery — the forward post that packs up and drives out
+ * with it. That is the enemy coming for the ground you are standing on, and
+ * no amount of blinking answers it: measured on the finale, whose third axis
+ * is exactly this, one displacement of the home battery is the difference
+ * between a scripted overrun and a watch held.
+ *
+ * DUCKING HAS STOPPED WORKING. A round is tracking one of this battery's
+ * sets, or arrived inside the last minute and a half, AND the battery has
+ * already been hurt by the hunt — a set destroyed, a wedge of sky burned out
+ * of one, casualties, damage on the position. A round against an intact
+ * battery is answered by the blink at a cost of twenty-five seconds; a
+ * battery that has been hit is one the enemy has ranged.
+ *
+ * Two guards make it a decision rather than a reflex: nothing of ours in the
+ * air, because a set that packs up drops what it is guiding, and once per
+ * battery per watch, because a battery that spends the night driving defends
+ * nothing. Measured, three and a half minutes off the air for a battalion is
+ * a bad trade against an anti-radiation round it can simply duck — the
+ * looser "any round inbound" trigger cost Weasel Hour's net expert a watch in
+ * eight and gained nothing anywhere else.
+ */
+function expertDisplace(ctx) {
+  const { w, mem } = ctx;
+  mem.moved = mem.moved ?? new Set();
+  for (const site of ctx.own) {
+    if (!site.alive || site.scootRemainingS > 0 || mem.moved.has(site.id)) continue;
+    if (site.readyRounds <= 0 && site.magazine <= 0) continue;
+    if (w.missiles.some((m) => m.alive && m.siteId === site.id)) continue;
+
+    const travelsWithUs = w.assets
+      .filter((a) => a.follows === site.id && !a.destroyed).map((a) => a.id);
+    const comingForUs = travelsWithUs.length > 0
+      && [...w.tracks.values()].some((t) => t.hostility === 'hostile' && !t.destroyed
+        && t.quality >= FIRM && travelsWithUs.includes(t.predictedAssetId));
+
+    const sets = w.radarsOf(site);
+    const hunted = sets.some((radar) => radar.alive
+      && (Number.isFinite(armTimeToImpact(w, radar))
+        || w.t - (radar.armWarningAtS ?? -9999) < 90));
+    const hurt = site.damage > 0 || (site.crewLosses ?? 0) > 0
+      || sets.some((radar) => !radar.alive || radar.deadSectors.length > 0);
+
+    if (!comingForUs && !(hunted && hurt)) continue;
+    if (w.scoot(site.id)) {
+      mem.moved.add(site.id);
+      ctx.act(`DISPLACE ${site.name}`);
+    }
+  }
+}
+
+/**
+ * The strategic reserve — sixteen rounds, four minutes on the road, and a
+ * question rather than a resource.
+ *
+ * National command only, and the whole allocation goes to one formation
+ * because splitting it is how you fail to save either place. The timing is
+ * the craft: released before the raid has declared itself it goes to the
+ * wrong valley, and released late it arrives after the debrief, so this waits
+ * until the picture is established and then sends everything to whichever
+ * formation is carrying the most threat. No player model had ever touched it.
+ */
+function commitTheReserve(ctx) {
+  const { w, mem } = ctx;
+  if (mem.reserveSent || !(w.reserve?.rounds > 0) || w.reserve.frozen) return;
+  // Four minutes on the road: released after this it is a delivery to a
+  // finished watch. Held before the raid declares itself it goes nowhere useful.
+  if (w.t < 120) return;
+
+  const subordinate = w.formations.filter((f) => !f.hq && w.sitesOf(f).length);
+  if (!subordinate.length) return;
+  const mass = new Map(subordinate.map((f) => [f.id, 0]));
+  for (const track of w.tracks.values()) {
+    if (track.hostility !== 'hostile' || track.destroyed || !(track.threat > 0)) continue;
+    let nearest = null;
+    let best = Infinity;
+    for (const formation of subordinate) {
+      for (const site of w.sitesOf(formation)) {
+        const d = dist(site.pos, track.pos);
+        if (d < best) { best = d; nearest = formation; }
+      }
+    }
+    if (nearest) mass.set(nearest.id, mass.get(nearest.id) + track.threat);
+  }
+  const top = subordinate.sort((a, b) => mass.get(b.id) - mass.get(a.id))[0];
+  if (!top || mass.get(top.id) <= 0) return;
+  const sent = w.commitReserve(top.id, w.reserve.rounds);
+  if (sent > 0) {
+    mem.reserveSent = true;
+    ctx.act(`RESERVE ${sent} → ${top.name}`);
+  }
+}
 
 /** A novice's cabin: the same loop, six seconds slower, and a late crash load. */
 function crewLoopNovice(ctx) {
@@ -1117,12 +1263,18 @@ export function playRun(job) {
   let ownRounds = 0;
   const realLog = w.log.bind(w);
   w.log = (kind, text, meta = {}) => {
-    sawLine = true;
     // Everything except the debrief's own headline, which is logged AFTER the
     // last thing that happened and would otherwise report every watch as
     // ending on the beat. `endAfterLastActionS` is exactly the dead coda the
     // "bookends are alive" work went after, so it must not measure itself.
-    if (ACTION_KINDS.has(kind) && !text.startsWith('WATCH ENDS')) lastActionS = w.t;
+    if (ACTION_KINDS.has(kind) && !text.startsWith('WATCH ENDS')) {
+      lastActionS = w.t;
+      // And the same set breaks a hole. This used to be set by ANY line,
+      // including the `info` echo of the operator's own switch and a set
+      // reporting that it is warming up, which is not the watch giving
+      // anybody something to do.
+      sawLine = true;
+    }
     if (kind === 'launch' && isOwn(meta.siteId)) {
       if (firstLaunchS === null) firstLaunchS = w.t;
       const away = /— (\d+) AWAY ON/.exec(text);
@@ -1146,6 +1298,8 @@ export function playRun(job) {
   let reloadWaitS = 0;
   let firstContactS = null;
   let firstLegalShotS = null;
+  let firstInEnvelopeS = null;
+  let blindS = 0;
   let ticks = 0;
   let capHit = false;
 
@@ -1159,9 +1313,11 @@ export function playRun(job) {
     let engageable = false;
     let magOnly = false;
     let waiting = false;
+    let inEnv = false;
     for (const track of w.tracks.values()) {
       if (track.destroyed || track.hostility !== 'hostile') continue;
       for (const site of own) {
+        if (inEnvelope(site, track.pos, track.altM).ok) inEnv = true;
         if (cannotEngageReason(w, site, track) === null) {
           engageable = true;
           opportunities.add(track.id);
@@ -1173,8 +1329,15 @@ export function playRun(job) {
         }
       }
     }
+    // A seat with no surviving fire-control antenna anywhere has no verbs
+    // left, whatever else the numbers say about it.
+    if (own.length && !own.some((site) => {
+      const fc = w.radarById.get(site.fcRadarId ?? site.radarId);
+      return fc?.alive;
+    })) blindS++;
     if (firstContactS === null && w.tracks.size > 0) firstContactS = w.t;
     if (firstLegalShotS === null && engageable) firstLegalShotS = w.t;
+    if (firstInEnvelopeS === null && inEnv) firstInEnvelopeS = w.t;
     samples++;
     if (engageable) engageableS++;
     else if (magOnly) { magOnlyS++; if (waiting) reloadWaitS++; }
@@ -1233,6 +1396,7 @@ export function playRun(job) {
     capHit,
     firstContactS: r1(firstContactS),
     firstLegalShotS: r1(firstLegalShotS),
+    firstInEnvelopeS: r1(firstInEnvelopeS),
     firstLaunchS: r1(firstLaunchS),
     lastHostileSpawnS: r1(lastHostileSpawnS),
     endAfterLastActionS: r1(Math.max(0, watchS - lastActionS)),
@@ -1242,6 +1406,9 @@ export function playRun(job) {
     legalShotOpportunities: opportunities.size,
     magazineOnlyLimiterShare: r3(samples ? magOnlyS / samples : 0),
     reloadWaitShare: r3(samples ? reloadWaitS / samples : 0),
+    blindShare: r3(samples ? blindS / samples : 0),
+    displacements: outcome.stats.displacements ?? 0,
+    reserveReleased: w.reserve?.released ?? 0,
     rounds: outcome.stats.roundsFired,
     ownRounds,
     kills: outcome.stats.kills,
@@ -1397,9 +1564,10 @@ const mean = (xs) => {
   return clean.length ? clean.reduce((a, b) => a + b, 0) / clean.length : null;
 };
 
-const TIMINGS = ['watchS', 'firstContactS', 'firstLegalShotS', 'firstLaunchS',
+const TIMINGS = ['watchS', 'firstContactS', 'firstLegalShotS', 'firstInEnvelopeS', 'firstLaunchS',
   'endAfterLastActionS', 'engageableShare', 'busyShare', 'magazineOnlyLimiterShare', 'reloadWaitShare',
-  'legalShotOpportunities', 'rounds', 'ownRounds', 'kills', 'leakers', 'assetsLost'];
+  'blindShare', 'legalShotOpportunities', 'rounds', 'ownRounds', 'kills', 'leakers', 'assetsLost',
+  'displacements', 'reserveReleased'];
 
 export function aggregate(runs) {
   const cells = new Map();
@@ -1519,17 +1687,20 @@ export function toMarkdown(result, opts) {
   if (opts?.command) lines.push('');
   if (opts?.command) lines.push(`\`${opts.command}\``);
   lines.push('');
-  lines.push('| watch | seat | player | n | held | score | med | CV | 1st legal | 1st away'
-    + ' | eng% | busy% | mag% | wait% | holes | worst | dead end | rnds | kills | leak | lost | dir a/r/t |');
-  lines.push('|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|');
+  lines.push('| watch | seat | player | n | held | score | med | CV | 1st legal | 1st env | 1st away'
+    + ' | eng% | busy% | mag% | wait% | blind% | holes | worst | dead end | rnds | kills | leak | lost'
+    + ' | disp | res | dir a/r/t |');
+  lines.push('|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|');
   for (const row of result.aggregates.cells) {
     lines.push(`| ${row.mission} | ${row.seat} | ${row.policy} | ${row.n}`
       + ` | ${pct(row.heldRate)} | ${cell(row.meanScore)} | ${cell(row.medianScore)}`
-      + ` | ${cell(row.scoreCV)} | ${cell(row.firstLegalShotS)} | ${cell(row.firstLaunchS)}`
+      + ` | ${cell(row.scoreCV)} | ${cell(row.firstLegalShotS)} | ${cell(row.firstInEnvelopeS)}`
+      + ` | ${cell(row.firstLaunchS)}`
       + ` | ${pct(row.engageableShare)} | ${pct(row.busyShare)} | ${pct(row.magazineOnlyLimiterShare)}`
-      + ` | ${pct(row.reloadWaitShare)}`
+      + ` | ${pct(row.reloadWaitShare)} | ${pct(row.blindShare)}`
       + ` | ${cell(row.holeCount)} | ${cell(row.longestHoleS)} | ${cell(row.endAfterLastActionS)}`
       + ` | ${cell(row.rounds)} | ${cell(row.kills)} | ${cell(row.leakers)} | ${cell(row.assetsLost)}`
+      + ` | ${cell(row.displacements)} | ${cell(row.reserveReleased)}`
       + ` | ${cell(row.directives.accepted)}/${cell(row.directives.refused)}/`
       + `${cell(row.directives.timedOut)} |`);
   }
