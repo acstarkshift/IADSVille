@@ -34,7 +34,13 @@ jobs:
           node-version: '22'
       - name: Run tests before publishing
         run: npm test
+      # The first run of this workflow failed here with "Get Pages site
+      # failed … Not Found": the repository had never had a Pages site created
+      # at all. `enablement` creates it with the workflow's own token, so the
+      # deploy no longer depends on somebody having clicked through Settings.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       # The repository root is the site: index.html plus static ES modules, no
       # build step and nothing to bundle.
       - uses: actions/upload-pages-artifact@v3
