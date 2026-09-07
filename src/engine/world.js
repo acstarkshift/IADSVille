@@ -1743,18 +1743,56 @@ export class World {
         this._lullTrackAtS[worst.id] = this.t;
       } else {
         /*
-         * Already inside somebody's ring and still not engageable, so the
-         * geometry is not what is wrong — say what is, in the same words the
-         * shootlist uses. "REACHES IT IN 0 SECONDS" was the first version of
-         * this line and it was worse than silence: it read as a countdown that
-         * had finished while nothing happened.
+         * Already inside somebody's ring, so the geometry is not what is
+         * wrong — say what is, in the same words the shootlist uses.
+         * "REACHES IT IN 0 SECONDS" was the first version of this line and it
+         * was worse than silence: it read as a countdown that had finished
+         * while nothing happened.
+         *
+         * The range in this sentence is measured FROM THE BATTERY, not from
+         * the sector centre the other lulls plot from: the clause names a
+         * particular battery's ring, and a ring is a circle around the mount.
+         * Reading the centre's number into it printed "T-004 IS INSIDE
+         * BASTION'S RING AT 136 KM" for a battery that reaches 120, which
+         * teaches the operator the wrong reach for their own equipment.
+         *
+         * And `cannotEngageReason` returning null does not mean "nothing":
+         * it means the shot is LEGAL and only the order is missing. Rendering
+         * that as "CANNOT SHOOT: NOTHING" told the operator the opposite of
+         * what to do, in the one channel that exists to fill a lull, and it
+         * did it hardest to the beginner it was written for. Null gets its
+         * own sentence — the one that hands them the contact.
          */
-        const why = (cannotEngageReason(this, bestSite, worst) ?? 'nothing').toUpperCase();
-        text = say([
-          `${worst.tn} IS INSIDE ${bestSite.name}'S RING AT ${km} KM AND IT CANNOT `
-            + `TAKE IT — ${why}.`,
-          `${bestSite.name} HAS ${worst.tn} ON THE PLOT AND CANNOT SHOOT: ${why}.`,
-        ]);
+        const why = cannotEngageReason(this, bestSite, worst);
+        const ringKm = Math.round(dist(bestSite.pos, worst.pos));
+        if (why) {
+          text = say([
+            `${worst.tn} IS INSIDE ${bestSite.name}'S RING AT ${ringKm} KM AND IT CANNOT `
+              + `TAKE IT — ${why.toUpperCase()}.`,
+            `${bestSite.name} HAS ${worst.tn} ON THE PLOT AND CANNOT SHOOT: `
+              + `${why.toUpperCase()}.`,
+          ]);
+        } else if (bestSite.weaponsState === 'hold') {
+          /*
+           * Legal, unordered, AND muzzled. The order would be accepted and
+           * then sit there, because a battery on WEAPONS HOLD launches
+           * nothing; naming the hold is the difference between advice the
+           * operator can act on and advice that dead-ends one click later.
+           */
+          text = say([
+            `${worst.tn} IS INSIDE ${bestSite.name}'S RING AT ${ringKm} KM AND THEY ARE ON `
+              + 'WEAPONS HOLD. RELEASE THEM AND GIVE THEM THE CONTACT.',
+            `${bestSite.name} COULD TAKE ${worst.tn} AT ${ringKm} KM BUT IS HELD. THE `
+              + 'ONLY THING IN THE WAY IS YOUR WEAPONS STATE.',
+          ]);
+        } else {
+          text = say([
+            `${worst.tn} IS INSIDE ${bestSite.name}'S RING AT ${ringKm} KM AND NOBODY IS ON `
+              + `IT. ${bestSite.name} CAN TAKE IT — GIVE IT TO THEM.`,
+            `${bestSite.name} HOLDS ${worst.tn} AT ${ringKm} KM, CAN SHOOT, AND HAS NO `
+              + 'ORDER. THE CONTACT IS YOURS TO HAND OVER.',
+          ]);
+        }
         this._lullTrackAtS[worst.id] = this.t;
       }
     } else if (!this.radars.some((r) => r.alive && r.on)) {

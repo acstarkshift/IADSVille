@@ -14,6 +14,9 @@ import { scenarioById, SCENARIOS } from '../src/engine/scenarios.js';
 import { SAM_TYPES, DETECTION, ENGAGEMENT } from '../src/engine/config.js';
 import { beginEngagement, fireEngagement, armTimeToImpact, startReload } from '../src/engine/doctrine.js';
 import { loseCentralControl, consoleDark } from '../src/engine/damage.js';
+import { cannotEngageReason } from '../src/engine/threat.js';
+import { timeToInRangeS } from '../src/engine/weapons.js';
+import { dist } from '../src/engine/math.js';
 
 /** Run a world forward, optionally doing something each step. */
 function run(world, seconds, each) {
@@ -469,5 +472,104 @@ describe('a lost watch says why it was lost', () => {
     assert.ok(world.outcome.cause.includes(critical.label?.toUpperCase() ?? 'CENTRE')
       || /CANNOT BE LOST/.test(world.outcome.cause),
     `expected the place to be named, got ${world.outcome.cause}`);
+  });
+});
+
+describe('the quiet net gives advice, not the opposite of it', () => {
+  /*
+   * `reportTheLull` exists to turn a blank ticker into something the operator
+   * can act on, so the one thing it must never do is describe a shot that is
+   * ready to be ordered as a shot that cannot be taken. `cannotEngageReason`
+   * returning null means LEGAL — the old line printed that null as the word
+   * NOTHING ("CANNOT SHOOT: NOTHING") and did it most often to the beginner
+   * policies, at the exact moment the answer was "give the contact to that
+   * battery". This drives the real method at a real world state.
+   */
+
+  /** Pick the same worst track / best battery pair the lull report picks. */
+  function lullPair(world) {
+    const mine = world.sites.filter((s) => s.alive
+      && (s.id === world.control.crewedBatteryId || world.commandable(s.id)));
+    let worst = null;
+    for (const track of world.tracks.values()) {
+      if (track.destroyed || track.hostility !== 'hostile') continue;
+      if (track.quality < DETECTION.firmQuality) continue;
+      if (!worst || track.threat > worst.threat) worst = track;
+    }
+    if (!worst) return null;
+    let bestSite = null;
+    let bestS = Infinity;
+    for (const site of mine) {
+      const toRange = timeToInRangeS(site, worst);
+      if (!Number.isFinite(toRange) || toRange >= bestS) continue;
+      bestS = toRange; bestSite = site;
+    }
+    return bestSite ? { worst, bestSite, bestS } : null;
+  }
+
+  /** The last thing the net said, whatever kind of line it was logged as. */
+  function saidBy(world, fn) {
+    const before = world.events.length;
+    fn();
+    return world.events.slice(before).map((e) => e.text).join(' | ');
+  }
+
+  test('a legal, unordered shot is handed over, never reported as NOTHING', () => {
+    const world = readyWorld('first-light');
+    let pair = null;
+    // Run until the watch itself produces the state the line is about: a firm
+    // hostile already inside a commandable battery's ring with nothing wrong.
+    for (let i = 0; i < 12000 && world.phase === 'running'; i++) {
+      world.step(0.1);
+      const found = lullPair(world);
+      if (found && found.bestS <= 0 && !cannotEngageReason(world, found.bestSite, found.worst)) {
+        pair = found; break;
+      }
+    }
+    assert.ok(pair, 'the watch put a legal, in-ring shot on the plot');
+
+    // A lull is silence, so silence the ticker and let the net fill it.
+    world.events = [];
+    world._lullTrackAtS = {};
+    world._lullLast = null;
+    const said = saidBy(world, () => world.reportTheLull());
+
+    assert.match(said, /SECTOR: /, `the net said something: ${said}`);
+    assert.ok(!/NOTHING/.test(said),
+      `a legal shot must never be reported as NOTHING, got: ${said}`);
+    assert.match(said, /NOBODY IS ON IT|HAS NO ORDER/,
+      `the net names the missing order, got: ${said}`);
+    assert.match(said, new RegExp(`\\b${pair.bestSite.name}\\b`), said);
+
+    // And the kilometres belong to the ring the sentence names, not to the
+    // sector centre: "INSIDE BASTION'S RING AT 136 KM" for a battery that
+    // reaches 120 taught the operator the wrong reach for their own equipment.
+    const km = Number(said.match(/AT (\d+) KM/)?.[1]);
+    const fromRing = dist(pair.bestSite.pos, pair.worst.pos);
+    assert.ok(Number.isFinite(km), `the line quotes a range: ${said}`);
+    assert.ok(Math.abs(km - fromRing) <= 1,
+      `the range is measured from ${pair.bestSite.name}, not the plot centre: `
+      + `said ${km} km, battery to track is ${fromRing.toFixed(1)} km`);
+    assert.ok(km <= SAM_TYPES[pair.bestSite.type].maxRangeKm + 1,
+      `a range inside the ring cannot exceed the ring: ${said}`);
+  });
+
+  test('a battery that genuinely cannot shoot still says why', () => {
+    const world = readyWorld('first-light');
+    let pair = null;
+    for (let i = 0; i < 12000 && world.phase === 'running'; i++) {
+      world.step(0.1);
+      const found = lullPair(world);
+      if (found && found.bestS <= 0) { pair = found; break; }
+    }
+    assert.ok(pair, 'the watch put a contact inside a ring');
+    // Empty the rails: now the reason is real, and the net must name it.
+    pair.bestSite.readyRounds = 0;
+    world.events = [];
+    world._lullTrackAtS = {};
+    world._lullLast = null;
+    const said = saidBy(world, () => world.reportTheLull());
+    assert.match(said, /NO ROUNDS ON THE RAILS/, said);
+    assert.ok(!/NOTHING/.test(said), said);
   });
 });
