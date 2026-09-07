@@ -11,8 +11,10 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
 import { scenarioById, SCENARIOS } from '../src/engine/scenarios.js';
-import { SAM_TYPES, DETECTION, ENGAGEMENT } from '../src/engine/config.js';
-import { beginEngagement, fireEngagement, armTimeToImpact, startReload } from '../src/engine/doctrine.js';
+import { SAM_TYPES, AIR_TYPES, DETECTION, ENGAGEMENT } from '../src/engine/config.js';
+import {
+  beginEngagement, fireEngagement, armTimeToImpact, startReload, railLoadS,
+} from '../src/engine/doctrine.js';
 import { loseCentralControl, consoleDark } from '../src/engine/damage.js';
 import { cannotEngageReason } from '../src/engine/threat.js';
 import { timeToInRangeS } from '../src/engine/weapons.js';
@@ -571,5 +573,68 @@ describe('the quiet net gives advice, not the opposite of it', () => {
     const said = saidBy(world, () => world.reportTheLull());
     assert.match(said, /NO ROUNDS ON THE RAILS/, said);
     assert.ok(!/NOTHING/.test(said), said);
+  });
+});
+
+describe('a knob the watch turns, and a ledger that agrees with the ticker', () => {
+  /*
+   * `scenario.reloadMult` was asserted in the teaching watch's own file, under
+   * a comment giving the measurement behind it, quoted twice in the README —
+   * and read by nothing. A grep found every `reloadMult` read going to the
+   * SITE's field, which is built from character modifiers and crew casualties
+   * and never once from the scenario. Proven empirically at the time: adding
+   * `reloadMult: 0.8` to another watch produced a byte-identical sixteen-seed
+   * table across every seat and player.
+   */
+  test('the watch its scenario says reloads fast, reloads fast', () => {
+    const fast = new World(scenarioById('first-light'), { role: 'net', seed: 'knob-1' });
+    const plain = new World(scenarioById('low-riders'), { role: 'net', seed: 'knob-1' });
+    assert.equal(scenarioById('first-light').reloadMult, 0.35,
+      'the teaching watch still declares a fast crew');
+    assert.equal(scenarioById('low-riders').reloadMult, undefined,
+      'and the watch beside it declares nothing');
+
+    for (const site of fast.sites) {
+      assert.ok(site.reloadMult < 0.5,
+        `${site.name} carries the watch's multiplier (${site.reloadMult})`);
+    }
+    for (const site of plain.sites) {
+      assert.ok(site.reloadMult >= 0.9,
+        `${site.name} on a watch with no multiplier is unmodified (${site.reloadMult})`);
+    }
+
+    // And it is the rail time that moves, which is the thing the README quotes.
+    const site = fast.sites.find((s) => s.type === 'bastion');
+    const type = SAM_TYPES[site.type];
+    const railS = railLoadS(site);
+    assert.ok(railS > 3.5 && railS < 5,
+      `a rail on the teaching watch takes about four seconds, not ${railS.toFixed(1)}`);
+    assert.ok(railS < (type.reloadS / site.rails) * 0.5, 'which is well under the standard hoist');
+  });
+
+  /*
+   * TURNED BACK is the second of the two ways to win a watch, and the debrief
+   * printed zero over a ticker that had just announced two of them: the stat
+   * was only ever incremented when an aborted aircraft finished flying off
+   * the map. Probed over 48 teaching watches — 79 aborts, six counted, and
+   * twenty watches ending with an aborted aircraft still airborne.
+   */
+  test('a sortie that broke off is counted whether or not it has gone home yet', () => {
+    const world = readyWorld('first-light');
+    // Fly the watch far enough that the raid is on the board.
+    run(world, 200);
+    const flying = world.aircraft.filter((a) => a.alive && a.type !== 'civil'
+      && !AIR_TYPES[a.type].isVip && !a.aborted);
+    assert.ok(flying.length > 0, 'there are sorties in the air to turn back');
+
+    const before = world.result('raid-spent');
+    flying[0].aborted = true;
+    const after = world.result('raid-spent');
+
+    assert.equal(after.stats.turnedBack, before.stats.turnedBack + 1,
+      'the debrief counts the sortie the ticker announced');
+    assert.equal(after.breakdown.turnedBack, before.breakdown.turnedBack + 18,
+      'and pays for it, at the same eighteen points as one that flew home');
+    assert.equal(after.score, before.score + 18);
   });
 });

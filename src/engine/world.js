@@ -371,7 +371,21 @@ export class World {
         // Crew quality starts at whatever the operator brings to it and is only
         // ever degraded from there by casualties.
         reactionMult: crewMult(m.reactionMult),
-        reloadMult: crewMult(m.reloadMult),
+        /*
+         * The operator's crew quality, times whatever the WATCH says about
+         * its loaders.
+         *
+         * `scenario.reloadMult` was set on the teaching watch under a comment
+         * explaining exactly why — a full crew on a quiet range reloads fast,
+         * and without it one seed in five ended the first watch of the game
+         * on a ninety-five second bar with a single blip on the scope — and
+         * nothing anywhere read the field. The README quoted it twice, once
+         * as "a reload multiplier of 0.35" and once as "a rail there takes
+         * four seconds", and a rail there took eleven point nine. Adding it
+         * to another scenario produced a byte-identical sixteen-seed table,
+         * which is how a dead knob proves it is dead.
+         */
+        reloadMult: crewMult(m.reloadMult) * (this.scenario.reloadMult ?? 1),
         scootMult: crewMult(m.scootMult),
         extraChannels: mine ? (m.extraChannels ?? 0) : 0,
         crewLosses: 0,
@@ -2039,7 +2053,27 @@ export class World {
      */
     const killScore = (this.stats.kills - this.stats.decoysEngaged) * 22
       + this.stats.decoysEngaged * 4;
-    const turnedBackScore = this.stats.turnedBack * 18;
+    /*
+     * A sortie that broke off is a sortie you stopped, whether or not it has
+     * finished flying home.
+     *
+     * `stats.turnedBack` is incremented in `onAircraftExit` and nowhere else,
+     * so an aircraft that aborted under fire and was still on the board when
+     * the watch ended was neither counted nor paid for. Probed over 48
+     * teaching watches: 79 sorties aborted, six counted, and twenty of the
+     * forty-eight ended with one or two aborted aircraft still airborne. The
+     * debrief printed TURNED BACK 0 over a ticker that had announced the
+     * turn-backs by name, which breaks the two-ledgers principle on every
+     * watch in the game — and turning a raid back is the second of the two
+     * ways to win this thing.
+     *
+     * Counted here at settlement, and written into the stats spread as well
+     * as the score, so the debrief and the ticker finally agree. Civil
+     * traffic and the state aircraft are not sorties and are not counted.
+     */
+    const turnedBackTotal = this.stats.turnedBack + this.aircraft.filter((a) => a.alive
+      && a.aborted && a.type !== 'civil' && !AIR_TYPES[a.type].isVip).length;
+    const turnedBackScore = turnedBackTotal * 18;
     const leakerPenalty = this.stats.leakers * 45;
     /*
      * Five a round, up from three. At three, a kill paid for seven rounds and
@@ -2113,7 +2147,7 @@ export class World {
         civilian: -civilPenalty || 0,
         equipment: -equipmentPenalty || 0,
       },
-      stats: { ...this.stats },
+      stats: { ...this.stats, turnedBack: turnedBackTotal },
       ledger: [...this.command.ledger],
       /** Orders accepted or refused, for the endings to read. */
       constraints: { ...this.command.constraints },
