@@ -166,3 +166,94 @@ describe('the console', () => {
     assert.ok(moved, 'the raid does not wait for your display');
   });
 });
+
+/*
+ * What a battery with one antenna left can still do, and what it cannot.
+ *
+ * A long-range battalion runs two sets — an acquisition antenna that turns
+ * through the circle and a fire-control antenna on a limited mount — and
+ * every route to the emissions switch addresses `site.radarId`, which is the
+ * acquisition set. Killing that one used to take the battery's whole
+ * emissions control away for the rest of the watch while the other set sat
+ * there alive and unreachable: measured in the cabin, RADIATE pressed some
+ * seven hundred times over twelve minutes with no effect and no message.
+ * And a battery whose GUIDANCE was gone went on holding engagements it could
+ * not guide, so the console answered "all channels engaged" to an operator
+ * whose antennas were scrap.
+ */
+describe('a battery with one antenna left', () => {
+  const battalion = (w) => w.sites.find((s) => w.radarsOf(s).length > 1);
+
+  test('the emissions switch acts on whichever set survives', () => {
+    const w = world();
+    const site = battalion(w);
+    assert.ok(site, 'weasel-hour fields a battalion with two sets');
+    const acq = w.radarById.get(site.radarId);
+    const fc = w.radarById.get(site.fcRadarId);
+    assert.notEqual(acq.id, fc.id, 'and they are two different antennas');
+
+    damageRadar(w, acq, acq.hp + 1, 'anti-radiation round');
+    assert.equal(acq.alive, false);
+    assert.ok(fc.alive, 'the fire-control set is still standing');
+
+    // The operator presses RADIATE. The order is addressed through the dead
+    // antenna, because that is what the console has always addressed.
+    w.setRadar(site.radarId, true);
+    assert.equal(fc.on, true, 'the surviving set answers the switch');
+    w.setRadar(site.radarId, false);
+    assert.equal(fc.on, false, 'and answers it in both directions');
+  });
+
+  test('a battery that cannot guide drops the engagements it cannot guide', () => {
+    const w = world();
+    const site = battalion(w);
+    for (const radar of w.radars) radar.on = true;
+    // Run until this battalion has something on its channels.
+    let n = 0;
+    while (w.phase === 'running' && n < 12000 && site.engagements.length === 0) {
+      w.step(0.1);
+      for (const track of w.tracks.values()) {
+        if (track.hostility === 'hostile' && !track.destroyed) w.assign(track.id, site.id);
+      }
+      n++;
+    }
+    assert.ok(site.engagements.length > 0, 'the battalion took a target');
+
+    const fc = w.radarById.get(site.fcRadarId ?? site.radarId);
+    damageRadar(w, fc, fc.hp + 1, 'anti-radiation round');
+    w.step(0.1);
+    assert.equal(site.engagements.length, 0,
+      'with the guidance antenna gone the channels are free, and say so');
+  });
+});
+
+/*
+ * The emissions order that the crews used to undo.
+ *
+ * `runAiEmcon` runs for every battery nobody is sitting in, once a tick, and
+ * rewrote `radar.on` unconditionally — so the net seat's SILENCE on a battery
+ * card was accepted and reversed a tenth of a second later, on the watch
+ * whose entire lesson is emissions control.
+ */
+describe('an emissions order from the net', () => {
+  test('holds for the rest of the watch on a battery nobody is sitting in', () => {
+    const w = world();
+    const site = w.sites.find((s) => s.id !== w.control.crewedBatteryId);
+    for (const radar of w.radars) radar.on = true;
+    for (let i = 0; i < 1500; i++) w.step(0.1);      // let the raid get going
+
+    w.setRadar(site.radarId, false);
+    assert.equal(w.liveRadarOf(site).on, false, 'the order takes effect');
+    for (let i = 0; i < 600; i++) w.step(0.1);       // a full minute of ticks
+    assert.equal(w.radarsOf(site).every((r) => !r.on), true,
+      'and is still in force a minute later — doctrine defers to the seat');
+
+    w.setRadar(site.radarId, true);
+    for (let i = 0; i < 600; i++) w.step(0.1);
+    // The one thing that may still take the set down is the anti-radiation
+    // duck, and only while a round is actually inbound on it.
+    const ducking = w.t < (site.blinkUntilS ?? 0);
+    assert.ok(w.radarsOf(site).some((r) => r.on) || ducking,
+      'RADIATE holds too, except while a round is on top of them');
+  });
+});

@@ -207,6 +207,18 @@ export function sortedTracks(world) {
 export function cannotEngageReason(world, site, track) {
   if (!site.alive) return 'battery destroyed';
   if (world.commandable && !world.commandable(site.id)) return 'not under your command';
+  /*
+   * A round is guided by an antenna on the ground, and this function never
+   * once looked to see whether the battery still had one. A battalion whose
+   * fire-control set was wreckage went on reporting legal shots — to the AI
+   * chooser, to the measurement harness, and to the cabin, whose preflight
+   * line answered "NO TARGET SELECTED" while the honest answer was that the
+   * operator's antennas were scrap. It is checked before the ammunition and
+   * the channels because it outranks both: with no guidance there is nothing
+   * a full rack could do.
+   */
+  const fc = world.radarById?.get(site.fcRadarId ?? site.radarId);
+  if (fc && !fc.alive) return 'fire control destroyed';
   const type = SAM_TYPES[site.type];
   if (track.altM > type.maxAltM) {
     return `above its ceiling (${Math.round(type.maxAltM / 1000)}km)`;
@@ -255,6 +267,10 @@ export function cannotEngageReason(world, site, track) {
  */
 export function engagementValue(world, site, track) {
   if (!site.alive || site.weaponsState === 'hold') return null;
+  // No antenna to guide with, no shot — the same gate `cannotEngageReason`
+  // states in words, because the AI and the console read one picture.
+  const guidance = world.radarById?.get(site.fcRadarId ?? site.radarId);
+  if (guidance && !guidance.alive) return null;
   if (site.readyRounds <= 0) return null;
   if (site.engagements.length >= channelsFor(site)) return null;
 

@@ -84,6 +84,14 @@ export const STATUS = {
   fault: { tm: 'АВАРА', en: 'FAULT' },
   guiding: { tm: 'ВЕДЁТ', en: 'GUIDING' },
   noGuidance: { tm: 'НЕТ ВЕДЕНЬЯ', en: 'NO GUIDANCE' },
+  antennasGone: {
+    tm: 'АНТЕННЫ УНИЧТОЖЕНЫ', en: 'ANTENNAS DESTROYED',
+    hint: 'the guidance set is wreckage — nothing can be locked or launched from here',
+  },
+  emconHeld: {
+    tm: 'ПО ПРИКАЗУ', en: 'BY ORDER',
+    hint: 'this battery holds the emissions posture you gave it; its crew will not change it back',
+  },
   inEnvelope: { tm: 'В ЗОНЕ', en: 'IN ENVELOPE' },
   outOfZone: { tm: 'ВНЕ ЗОНЫ', en: 'OUT OF ZONE' },
   noSolution: { tm: 'НЕТ РЕШЕНЬЯ', en: 'NO FIRING SOLUTION' },

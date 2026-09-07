@@ -1003,7 +1003,9 @@ function runAction(act, siteId, radarId, formationId) {
    */
   const THROWN = new Set(['emcon', 'emcon-radar', 'weapons', 'posture', 'ride', 'direct']);
   if (THROWN.has(act)) {
-    const wasRadiating = act === 'emcon' ? !!world.radarById?.get(site?.radarId)?.on
+    // The surviving set, not `site.radarId` — the switch acts on whichever
+    // antenna the battery still has, so the click must sound like that one.
+    const wasRadiating = act === 'emcon' ? !!world.liveRadarOf?.(site)?.on
       : act === 'emcon-radar' ? !!world.radarById?.get(radarId)?.on : null;
     queueMicrotask(() => audio.toggleSwitch(wasRadiating === null ? true : !wasRadiating));
   } else {

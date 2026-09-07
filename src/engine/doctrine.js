@@ -210,6 +210,27 @@ export function stepEngagements(world, dt) {
       continue; // a battery on the move fights nobody
     }
 
+    /*
+     * A battery with no fire-control antenna left cannot guide anything, and
+     * holding the claims it made before the antenna died is worse than
+     * useless: the channel count reads four of four, the console answers ALL
+     * CHANNELS ENGAGED, and the operator is told the battery is busy when the
+     * truth is that its guidance is wreckage. Measured in the cabin, this was
+     * seventy-eight per cent of one watch spent looking at a panel whose only
+     * complaint was that no target was selected.
+     */
+    if (!fcRadarOf(world, site)?.alive) {
+      if (site.engagements.length) {
+        world.logThrottled(`noGuidance:${site.id}`, 20, 'alert',
+          `${site.name} — FIRE CONTROL DESTROYED, ENGAGEMENTS DROPPED`,
+          { siteId: site.id, severity: 'high' });
+        for (const engagement of [...site.engagements]) {
+          endEngagement(world, site, engagement, 'no guidance');
+        }
+      }
+      continue;
+    }
+
     for (const engagement of [...site.engagements]) {
       const track = world.tracks.get(engagement.trackId);
       if (!track) { endEngagement(world, site, engagement, 'track lost'); continue; }
@@ -781,8 +802,14 @@ export function runSurveillanceEmcon(world) {
 }
 
 export function runAiEmcon(world, dt, site) {
-  const radar = world.radarById.get(site.radarId);
-  if (!radar || !radar.alive) return;
+  /*
+   * Whichever set is still standing, not `site.radarId` — that names the
+   * ACQUISITION antenna, and bailing out when it died left a battalion's
+   * surviving fire-control set frozen in whatever state it happened to be in
+   * for the rest of the watch. A crew with one antenna left still works it.
+   */
+  const radar = world.radarsOf(site).find((r) => r.alive);
+  if (!radar) return;
   const type = SAM_TYPES[site.type];
 
   const armEta = armTimeToImpact(world, radar);
@@ -834,6 +861,31 @@ export function runAiEmcon(world, dt, site) {
     && t.quality > 0.3);
 
   const setEmissions = (on) => { for (const r of world.radarsOf(site)) r.on = on; };
+
+  /*
+   * An emissions order from the net stands.
+   *
+   * This function runs for every battery nobody is sitting in, once a tick,
+   * and it used to rewrite `radar.on` unconditionally — so the operator's
+   * SILENCE or RADIATE on a battery card was undone a tenth of a second
+   * after the click, with nothing said about it. The switch existed, the
+   * click was accepted, and the lamp went back. On the watch whose entire
+   * lesson is emissions control that is not a bug in a battery, it is the
+   * lesson being unteachable.
+   *
+   * A crew that has been given an emissions posture holds it. The
+   * anti-radiation duck above still overrides it — nobody at a set dies for
+   * a switch, and the commander who wants them to has the RIDE order for
+   * exactly that — but once the round is past, the set comes back to what
+   * the operator asked for rather than to the crew's own search cycle.
+   *
+   * Ordering a battery silent therefore costs the sector that battery's
+   * share of the search, which is the trade the whole game is about, and
+   * ordering one up costs exposure. Both are now the operator's to make.
+   */
+  if (site.emconHold === 'silent') { setEmissions(false); return; }
+  if (site.emconHold === 'radiate') { setEmissions(true); site.searchUntilS = 0; return; }
+
   if (site.weaponsState === 'hold') { setEmissions(false); return; }
   if (hasWork || threatNear) { setEmissions(true); site.searchUntilS = 0; return; }
 

@@ -507,7 +507,16 @@ function renderReserve(world) {
 export function renderBatteries(world, ui, els) {
   const units = world.sites.map((site, index) => {
     const type = SAM_TYPES[site.type];
-    const radar = world.radarById.get(site.radarId);
+    /*
+     * The battery's emissions lamp and switch follow whichever set is still
+     * standing, not `site.radarId` — that names the acquisition antenna, and
+     * reading only it greyed the RADIATE cap out for the rest of the watch
+     * the moment that one set died, on a battery whose fire-control antenna
+     * was alive and answerable the whole time.
+     */
+    const sets = world.radarsOf(site);
+    const radar = sets.find((r) => r.alive) ?? world.radarById.get(site.radarId);
+    const anyAlive = sets.some((r) => r.alive);
     const nomenclature = EQUIPMENT[site.type];
     const mine = world.homeBatteryId === site.id;
     const crewed = world.control.crewedBatteryId === site.id;
@@ -573,11 +582,16 @@ export function renderBatteries(world, ui, els) {
       </div>
       ${reloadBar(site, type)}
 
+      ${site.emconHold && !crewed ? `<div class="unit-row is-quiet">
+        <span class="unit-type wrap">${esc(pair(STATUS.emconHeld))} — ${esc(
+    site.emconHold === 'silent' ? 'SILENT' : 'RADIATING')} UNTIL YOU SAY OTHERWISE</span>
+      </div>` : ''}
+
       <div class="unit-controls">
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
-    { act: 'emcon', site: site.id, disabled: detached || !radar?.alive })}
+    { act: 'emcon', site: site.id, disabled: detached || !anyAlive })}
         ${world.scenario.basicConsole ? '' : `<button class="pb ${site.emconOrder === 'ride' ? 'is-down' : ''}"
-          data-act="ride" data-site="${site.id}" ${detached || !radar?.alive ? 'disabled' : ''}
+          data-act="ride" data-site="${site.id}" ${detached || !anyAlive ? 'disabled' : ''}
           title="${esc(site.emconOrder === 'ride' ? CONTROLS.ride.hint : CONTROLS.perDoctrine.hint)} (G)">
           <span class="lg"><b>${esc(CONTROLS.ride.tm)}</b><i>${esc(
     site.emconOrder === 'ride' ? 'RIDING' : 'RIDE')}</i></span>
@@ -694,7 +708,17 @@ export function renderCrewConsole(world, ui, els) {
    * reasons it is.
    */
   const unfit = track && site.alive ? cannotEngageReason(world, site, track) : null;
-  const noTarget = !track;
+  /*
+   * And when the answer is that the antennas are wreckage, say THAT, whether
+   * or not a contact happens to be selected. A cabin whose fire-control set
+   * had been destroyed showed "NO TARGET SELECTED — PICK A CONTACT" for the
+   * rest of the watch, which is advice about the wrong problem given to
+   * somebody who has just been bombed. Photographed three minutes apart on
+   * two different watches, unchanged both times.
+   */
+  const guidance = world.radarById.get(site.fcRadarId ?? site.radarId);
+  const wrecked = site.alive && guidance && !guidance.alive;
+  const noTarget = !track && !wrecked;
 
   els.crewConsole.innerHTML = `
     <div class="unit is-mine" style="margin:0">
@@ -741,6 +765,10 @@ export function renderCrewConsole(world, ui, els) {
       </div>` : ''}
       ${noTarget ? `<div class="unit-row unit-unfit is-quiet">
         <span>NO TARGET SELECTED — PICK A CONTACT ON THE SCOPE OR THE LIST</span>
+      </div>` : ''}
+      ${wrecked ? `<div class="unit-row unit-unfit">
+        <span>${esc(pair(STATUS.antennasGone))} — ${esc(guidance.label)} DESTROYED. THIS BATTERY
+        CANNOT GUIDE A ROUND.</span>
       </div>` : ''}
 
       <div class="unit-controls" style="margin-top:8px">

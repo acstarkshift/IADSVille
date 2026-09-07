@@ -834,6 +834,30 @@ export class World {
   }
 
   /**
+   * A line that says the same thing as the last one, said at most once every
+   * `gapS` seconds per `key`.
+   *
+   * The engine had one of these already — `armDuckLoggedAtS`, gated at twenty
+   * seconds, written after a set announced SHUTTING DOWN hundreds of times in
+   * one watch — and then every other repeating refusal in the game was
+   * written without it. Measured in one First Light cabin watch: two hundred
+   * and eleven copies of "NO FIRING SOLUTION", and at nine minutes all five
+   * visible ticker lines were that one sentence. A refusal repeated is a
+   * refusal nobody reads, and it costs the operator the watch's actual
+   * traffic to say it.
+   *
+   * The key is the caller's business and should name the thing being refused,
+   * not the sentence: one line per battery per reason, so two batteries
+   * declining the same track both get heard once.
+   */
+  logThrottled(key, gapS, kind, text, meta = {}) {
+    this._throttledAtS = this._throttledAtS ?? {};
+    if (this.t - (this._throttledAtS[key] ?? -9999) < gapS) return null;
+    this._throttledAtS[key] = this.t;
+    return this.log(kind, text, meta);
+  }
+
+  /**
    * Radio traffic between the elements of the net and the person listening.
    *
    * The log is the system talking about itself; this is the crews talking.
@@ -1343,23 +1367,70 @@ export class World {
 
   setRadar(radarId, on) {
     const radar = this.radarById.get(radarId);
-    if (!radar || !radar.alive) return;
+    if (!radar) return;
     /*
      * A battery has one emissions posture, not one per antenna. A long-range
      * battalion runs an acquisition set and a fire-control set; the operator
      * has a single RADIATE control for the battery and both sets answer it.
      * The fire-control set's *pointing* is the crew's business, not a switch.
+     *
+     * And the switch is addressed through `site.radarId`, which is the
+     * ACQUISITION set — so an early `if (!radar.alive) return` meant that
+     * killing one antenna took the battery's whole emissions control away
+     * for the rest of the watch while its other set sat there alive and
+     * unreachable. Measured in the cabin: BASTION ACQ destroyed at 161s,
+     * RADIATE pressed some seven hundred times over the next twelve minutes
+     * with no effect and no message. The order goes to whichever of this
+     * battery's sets is still standing.
      */
     const family = radar.siteId
       ? this.radars.filter((r) => r.siteId === radar.siteId && r.alive)
-      : [radar];
+      : (radar.alive ? [radar] : []);
+    if (!family.length) {
+      const site = radar.siteId ? this.siteById.get(radar.siteId) : null;
+      this.logThrottled(`noAntennas:${radar.siteId ?? radar.id}`, 20, 'warn',
+        `${site?.name ?? radar.label} — NO ANTENNAS LEFT TO RAISE`,
+        { siteId: radar.siteId, radarId: radar.id });
+      return;
+    }
     for (const r of family) r.on = on;
-    this.log('info', `${radar.label} — ${on ? 'RADIATING' : 'SILENT'}`, { radarId: radar.id });
+    /*
+     * And the order sticks. Every battery nobody is sitting in runs
+     * `runAiEmcon` once a tick, which used to rewrite `radar.on`
+     * unconditionally — so the net seat's SILENCE or RADIATE cap on a battery
+     * card was accepted and undone a tenth of a second later, silently, on
+     * the watch whose stated lesson is emissions control. A crew that has
+     * been given an emissions order follows it; the one thing that still
+     * overrides it is the anti-radiation duck, because nobody dies for a
+     * switch, and the commander has the RIDE order for that.
+     */
+    const site = radar.siteId ? this.siteById.get(radar.siteId) : null;
+    if (site) {
+      site.emconHold = on ? 'radiate' : 'silent';
+      site.emconHeldAtS = this.t;
+    }
+    this.log('info', `${family[0].label} — ${on ? 'RADIATING' : 'SILENT'}`,
+      { radarId: family[0].id });
+  }
+
+  /**
+   * Whichever of a battery's sets is still standing — the one whose lamp the
+   * console shows and whose state the RADIATE cap toggles. A battery is one
+   * emissions posture, and reading it off a destroyed antenna is how the cap
+   * came to be greyed out over a live set.
+   */
+  liveRadarOf(site) {
+    if (!site) return null;
+    return this.radarsOf(site).find((r) => r.alive)
+      ?? this.radarById.get(site.radarId) ?? null;
   }
 
   toggleRadar(radarId) {
     const radar = this.radarById.get(radarId);
-    if (radar) this.setRadar(radarId, !radar.on);
+    if (!radar) return;
+    const site = radar.siteId ? this.siteById.get(radar.siteId) : null;
+    const shown = site ? this.liveRadarOf(site) : radar;
+    this.setRadar(radarId, !(shown ?? radar).on);
   }
 
   /**
