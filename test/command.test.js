@@ -374,3 +374,123 @@ describe('the campaign file', () => {
     assert.equal(loadCampaign(store).standing, COMMAND.startingStanding);
   });
 });
+
+describe('the net says something new, and stops before the watch does', () => {
+  /** Play a whole watch with the sets up and every order accepted. */
+  const playOut = (mission, seed) => {
+    const w = new World(scenarioById(mission), { role: 'net', seed });
+    let n = 0;
+    while (w.phase === 'running' && n < 40000) {
+      for (const radar of w.radars) if (radar.alive) radar.on = true;
+      w.step(0.1);
+      if (w.command.pending) w.answer('accepted');
+      n++;
+    }
+    return w;
+  };
+
+  /*
+   * Cadence passed everywhere; content did not. Eight orders a watch drawn
+   * from three sentences, because the loop walked the directive table in
+   * declaration order and the first thing that triggered always won.
+   * Measured on one weasel watch: no-leakers at 96s, priority of fires at
+   * 188, logistics at 280, the political section at 372, priority of fires
+   * AGAIN at 489, logistics again at 580, the political section again at 697
+   * — three of the four repeated verbatim.
+   */
+  test('no routine order is transmitted twice in the same words', () => {
+    for (const mission of ['weasel-hour', 'four-sectors', 'reinforce-the-capital', 'white-noise']) {
+      for (const seed of ['net-1', 'net-2', 'net-3']) {
+        const w = playOut(mission, seed);
+        const seen = new Map();
+        for (const directive of w.command.log) {
+          seen.set(directive.text, (seen.get(directive.text) ?? 0) + 1);
+        }
+        const repeated = [...seen.entries()].filter(([, n]) => n > 1);
+        assert.equal(repeated.length, 0,
+          `${mission}/${seed}: "${repeated[0]?.[0].slice(0, 60)}" went out ${repeated[0]?.[1]} times`);
+      }
+    }
+  });
+
+  /*
+   * Seven of two hundred and one First Light directives were transmitted
+   * inside twelve seconds of the end and three inside two, every one still
+   * PENDING at the debrief — one at 291.6s of a 293.1s watch. An order
+   * nobody can answer is not menace, it is litter. The guard draws the same
+   * random number and consumes the same slot as a transmission would, so a
+   * withheld order cannot shift a seeded score by skipping the draw, which
+   * is exactly how the first attempt at this failed.
+   */
+  test('nothing routine goes out over a watch that is already over', () => {
+    for (const mission of ['first-light', 'weasel-hour', 'two-cities']) {
+      for (const seed of ['late-1', 'late-2', 'late-3']) {
+        const w = playOut(mission, seed);
+        for (const directive of w.command.log) {
+          assert.ok(w.t - directive.issuedS >= 30,
+            `${mission}/${seed}: ${directive.id} was transmitted ${(w.t - directive.issuedS).toFixed(1)}s `
+            + 'before the debrief');
+        }
+        assert.equal(w.command.log.filter((d) => d.state === 'pending').length, 0,
+          `${mission}/${seed}: an order was still on the net when the watch ended`);
+      }
+    }
+  });
+
+  test('an expenditure order does not come back with the figure it already quoted', () => {
+    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'conserve-1' });
+    w.stats.roundsFired = Math.ceil(w.roundAllowance * 0.7);
+    assert.ok(DIRECTIVES.conserve.trigger(w), 'expenditure is over the line');
+    issueDirective(w, DIRECTIVES.conserve);
+    answerDirective(w, 'accepted');
+    assert.equal(DIRECTIVES.conserve.trigger(w), false,
+      'nothing has been fired since, so logistics has nothing to say');
+    w.stats.roundsFired += 5;
+    assert.ok(DIRECTIVES.conserve.trigger(w), 'and something to say again once you spend more');
+  });
+
+  /*
+   * The mirror of the order to keep radiating, and the reason the emissions
+   * switch had to start working first: this one is only answerable because
+   * an order to a battery now sticks instead of being undone by doctrine on
+   * the next tick.
+   */
+  test('the emissions restriction darkens the sector that accepts it', () => {
+    const w = new World(scenarioById('weasel-hour'), { role: 'net', seed: 'emcon-1' });
+    for (const radar of w.radars) if (radar.alive) radar.on = true;
+    let n = 0;
+    while (w.phase === 'running' && n < 20000 && !w.command.constraints.silentUnlessEngaged) {
+      w.step(0.1);
+      if (w.command.pending?.id === 'emconDiscipline') w.answer('accepted');
+      else if (w.command.pending) w.answer('accepted');
+      n++;
+    }
+    assert.ok(w.command.constraints.silentUnlessEngaged,
+      'the weasel watch offers the emissions restriction');
+
+    // A battery with nothing near it and nothing to guide goes dark on its own.
+    const quiet = w.sites.filter((s) => s.alive && !s.engagements.length
+      && ![...w.tracks.values()].some((t) => t.hostility !== 'friendly' && t.quality > 0.3
+        && Math.hypot(t.pos.x - s.pos.x, t.pos.y - s.pos.y) < 60));
+    for (let i = 0; i < 30; i++) w.step(0.1);
+    for (const site of quiet) {
+      if (site.emconHold) continue;              // the operator's own order wins
+      assert.equal(w.radarsOf(site).some((r) => r.on), false,
+        `${site.name} kept radiating with nothing near it, against an accepted order`);
+    }
+  });
+
+  test('and bills the operator who holds one up by hand anyway', () => {
+    const w = new World(scenarioById('weasel-hour'), { role: 'net', seed: 'emcon-2' });
+    w.command.constraints.silentUnlessEngaged = true;
+    const site = w.sites.find((s) => s.alive);
+    // Hold it up by hand with nothing anywhere near it, from a standing start.
+    w.setRadar(site.radarId, true);
+    const before = w.command.standing;
+    for (let i = 0; i < 400; i++) stepCommand(w, 0.1);
+    assert.ok(w.command.standing < before,
+      'a battery held radiating against the restriction is charged for it');
+    assert.ok(w.command.ledger.some((e) => /emissions restriction/.test(e.reason)),
+      'and the ledger names the order it broke');
+  });
+});

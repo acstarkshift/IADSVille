@@ -638,3 +638,40 @@ describe('a knob the watch turns, and a ledger that agrees with the ticker', () 
     assert.equal(after.score, before.score + 18);
   });
 });
+
+describe('a refusal is said once, not two hundred and eleven times', () => {
+  /*
+   * The dry-fire refusal was debounced at a second and a half and the
+   * refused-assignment line at nothing at all, against the engine's own
+   * twenty-second precedent (`armDuckLoggedAtS`, written after a set
+   * announced SHUTTING DOWN hundreds of times in one watch). Measured in one
+   * First Light cabin watch: two hundred and eleven copies of "NO FIRING
+   * SOLUTION", and at nine minutes all five visible ticker lines were that
+   * one sentence.
+   */
+  test('a held fire key answers once every twenty seconds, not every second', () => {
+    const world = readyWorld('first-light');
+    const site = world.sites[0];
+    const before = world.events.length;
+    // A hundred presses in ten seconds, which is a person leaning on a key.
+    for (let i = 0; i < 100; i++) { world.fire(site.id); world.step(0.1); }
+    const lines = world.events.slice(before).filter((e) => /NO FIRING SOLUTION/.test(e.text));
+    assert.equal(lines.length, 1, `ten seconds of pressing is one line, got ${lines.length}`);
+
+    run(world, 20);
+    world.fire(site.id);
+    const after = world.events.filter((e) => /NO FIRING SOLUTION/.test(e.text));
+    assert.equal(after.length, 2, 'and it is said again once the gate has run out');
+  });
+
+  test('the gate is per battery and per reason, so two batteries are both heard', () => {
+    const world = readyWorld('first-light');
+    const [a, b] = world.sites;
+    world.fire(a.id);
+    world.fire(b.id);
+    const lines = world.events.filter((e) => /NO FIRING SOLUTION/.test(e.text));
+    assert.equal(lines.length, 2, 'a refusal from a different battery is different news');
+    assert.ok(lines.some((e) => e.text.includes(a.name)));
+    assert.ok(lines.some((e) => e.text.includes(b.name)));
+  });
+});

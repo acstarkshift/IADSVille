@@ -890,6 +890,15 @@ export function runAiEmcon(world, dt, site) {
   if (hasWork || threatNear) { setEmissions(true); site.searchUntilS = 0; return; }
 
   /*
+   * An accepted emissions restriction binds the crews, the way every accepted
+   * order binds the crews — a crew on its own authority still reads its
+   * traffic. It costs the sector its automatic search sweeps, which is a real
+   * price paid in what you can see, and it is why holding a battery up by
+   * hand against the order is a deliberate act the file can bill.
+   */
+  if (world.command?.constraints?.silentUnlessEngaged) { setEmissions(false); return; }
+
+  /*
    * Nothing to look at — but a battery that only radiates when it already has a
    * picture never gets one. Crews therefore search on a duty cycle: a short
    * sweep, then back down. It is the same bargain the player makes by hand,

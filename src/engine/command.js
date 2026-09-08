@@ -14,8 +14,10 @@
  * module is designed to spend it.
  */
 
-import { COMMAND, ASSET_TYPES, AIR_TYPES } from './config.js';
-import { bearing, clamp } from './math.js';
+import {
+  COMMAND, ASSET_TYPES, AIR_TYPES, SAM_TYPES,
+} from './config.js';
+import { bearing, clamp, dist } from './math.js';
 import { radiating } from './detection.js';
 
 /**
@@ -81,7 +83,17 @@ export const DIRECTIVES = {
     cooldownS: 240,
     text: (w) => `LOGISTICS: Expenditure is ${w.stats.roundsFired} rounds against an allocation of ${w.roundAllowance}. Single rounds only until further notice. Acknowledge.`,
     plain: (w) => `LOGISTICS: Expenditure at ${w.stats.roundsFired} of ${w.roundAllowance}. Restrict to single rounds. Acknowledge.`,
-    trigger: (w) => w.stats.roundsFired > w.roundAllowance * 0.6,
+    /*
+     * And not again until the figure it quotes has moved. Logistics came back
+     * two hundred and forty seconds later with the identical sentence and the
+     * identical count, because the salvo cap it had just imposed meant
+     * nothing had been fired in between — an order to spend less, addressed
+     * to somebody who had stopped spending. If the number has not changed,
+     * there is nothing to transmit.
+     */
+    trigger: (w) => w.stats.roundsFired > w.roundAllowance * 0.6
+      && w.stats.roundsFired > (w.command.lastConserveRounds ?? -1),
+    onIssue: (w) => { w.command.lastConserveRounds = w.stats.roundsFired; },
     onAccept: (w) => {
       w.command.constraints.maxSalvo = 1;
       for (const site of w.sites) site.salvoSize = 1;
@@ -109,9 +121,17 @@ export const DIRECTIVES = {
      * the finale and overwrote the palace designation, corrupting the ledger
      * ("FORWARD POST lost after being designated priority").
      */
+    /*
+     * And a designation is not repeated. Measured on two watches, the same
+     * place was designated priority of fires twice in one night, in the same
+     * words, four hundred seconds apart — which is not an order, it is an
+     * echo. If the place sector command would name is the place it already
+     * named, it has nothing to say.
+     */
     trigger: (w) => w.t > 120 && w.hostileTrackCount() > 2
       && !w.scenario.finale && !w.scenario.epilogue
-      && !w.command.constraints.priorityIsHinge,
+      && !w.command.constraints.priorityIsHinge
+      && DIRECTIVES.priority.pick(w)?.id !== w.command.constraints.priorityOfFiresId,
     onAccept: (w, target) => {
       if (w.command.constraints.priorityIsHinge) return;
       // One designation, one key. This used to write `priorityAssetId`, which
@@ -390,11 +410,101 @@ export const DIRECTIVES = {
     cooldownS: 150,
     /** Twice is menace. Seven times, as measured, was a doorbell. */
     maxPerWatch: 2,
-    text: (w) => `POLITICAL SECTION: Your expenditure and your emissions are both being reviewed. Confirm you are reading this transmission.`,
-    plain: () => 'SECTOR: Radio check. Confirm you are reading this transmission.',
+    /*
+     * And the second one is not the first one again. Cadence was never the
+     * problem with this order — content was: the political section came on
+     * the net at 232.5s and again at 385.4s with the identical sentence, and
+     * a threat repeated word for word stops being a threat and becomes a
+     * doorbell with a script. The second transmission knows there was a first.
+     */
+    text: (w) => ((w.command.issuedCount?.explain ?? 0) === 0
+      ? 'POLITICAL SECTION: Your expenditure and your emissions are both being reviewed. '
+        + 'Confirm you are reading this transmission.'
+      : 'POLITICAL SECTION: Your acknowledgement was received and filed. The review is '
+        + 'ongoing. Confirm again.'),
+    plain: (w) => ((w.command.issuedCount?.explain ?? 0) === 0
+      ? 'SECTOR: Radio check. Confirm you are reading this transmission.'
+      : 'SECTOR: Second radio check. Confirm again.'),
     trigger: (w) => w.t > 200 && w.stats.roundsFired > 4,
     /** No mechanical effect. It exists to take three seconds you do not have. */
     onAccept: () => {},
+  },
+
+  /**
+   * The emissions restriction — the political section's answer to the
+   * `radiate` order above, and the mirror of it.
+   *
+   * Sector command wants the sets up because it wants the picture. The
+   * political section wants them down because it has read the loss returns,
+   * and because an emissions log is a thing that can be produced at a
+   * hearing. You answer both, on the same net, in the same watch, and one of
+   * them is going to be quoted back at you.
+   *
+   * Accepting binds the crews the way every accepted order binds the crews:
+   * a battery with nothing near it and nothing to guide stops running its
+   * search duty cycle and sits dark, so the sector genuinely sees less. What
+   * it costs YOU is charged only for a battery held up needlessly by hand —
+   * which is possible at all only because the net seat's emissions switch now
+   * sticks instead of being undone by doctrine on the next tick. Without that
+   * repair this order would have been another banner with a timer.
+   *
+   * It offers itself only where somebody is shooting at antennas.
+   */
+  emconDiscipline: {
+    id: 'emconDiscipline',
+    label: 'the emissions restriction',
+    priority: 'normal',
+    once: true,
+    text: () => 'POLITICAL SECTION: Frontier direction-finding is reading this sector. '
+      + 'Batteries not engaged are to remain silent. Your emissions log will be reviewed. '
+      + 'Acknowledge.',
+    plain: () => 'SECTOR: Emissions restriction. Batteries not engaged are to stay silent. '
+      + 'Acknowledge.',
+    /*
+     * Only where the seat is actually holding batteries — battalion and
+     * sector command — and never over the finale or the epilogue. From
+     * district command upward the operator is moving formations across a
+     * district, not working a RADIATE cap on four cards, so an order about
+     * individual batteries' emissions would be one they could not carry out
+     * with the controls in front of them. Measured with it live at every
+     * echelon, the sector it darkens is the sector the raid then walks
+     * through: Two Cities lost 7.8 points of held rate and Reinforce the
+     * Capital 6.3, on watches whose difficulty was not the thing being fixed.
+     */
+    trigger: (w) => w.t > 110 && w.stats.armsIncoming > 0 && w.hostileTrackCount() > 0
+      && !w.scenario.finale && !w.scenario.epilogue
+      && (w.echelon.id === 'battalion' || w.echelon.id === 'sector'),
+    onAccept: (w) => {
+      w.command.constraints.silentUnlessEngaged = true;
+      w.command.constraints.emconBreachS = 0;
+    },
+    /**
+     * Enforced continuously, and only against the operator's own hand: a
+     * battery is in breach when the SEAT has ordered it up with nothing to
+     * guide and nothing within half again its reach. Doctrine's own crews
+     * comply automatically, so a player who never touches the switch never
+     * pays — this bills the deliberate act, like the freeze does.
+     */
+    check: (w, dt) => {
+      const c = w.command.constraints;
+      if (!c.silentUnlessEngaged || c.emconBreachLogged) return null;
+      let breaching = false;
+      for (const site of w.sites) {
+        if (!site.alive || site.emconHold !== 'radiate') continue;
+        if (site.engagements.length) continue;
+        const reach = SAM_TYPES[site.type].maxRangeKm * 1.5;
+        const near = [...w.tracks.values()].some((t) => t.hostility !== 'friendly'
+          && t.quality > 0.3 && dist(site.pos, t.pos) < reach);
+        if (!near && w.radarsOf(site).some((r) => r.alive && r.on)) breaching = true;
+      }
+      if (!breaching) return null;
+      c.emconBreachS = (c.emconBreachS ?? 0) + dt;
+      if (c.emconBreachS > 30) {
+        c.emconBreachLogged = true;
+        return { standing: -9, reason: 'a battery held radiating against the emissions restriction' };
+      }
+      return null;
+    },
   },
 
   displaced: {
@@ -544,6 +654,12 @@ export function issueDirective(world, template) {
   world.command.issuedCount = world.command.issuedCount ?? {};
   world.command.issuedCount[template.id] = (world.command.issuedCount[template.id] ?? 0) + 1;
   if (template.once) world.command.issuedOnce[template.id] = true;
+  /*
+   * What the order has to remember about itself the moment it goes out, as
+   * opposed to when it is answered — the expenditure figure it quoted, so it
+   * cannot come back later with the same one.
+   */
+  template.onIssue?.(world, subject);
   world.log('command', body, { severity: template.priority === 'high' ? 'high' : 'normal' });
   return directive;
 }
@@ -669,8 +785,26 @@ export function stepCommand(world, dt) {
    */
   if (world.t - (world.command.lastRoutineAtS ?? -999) < 90 / rate) return;
 
-  for (const template of Object.values(DIRECTIVES)) {
-    if (HINGE_DIRECTIVES.includes(template)) continue;
+  /*
+   * Least-used first.
+   *
+   * The cadence was right and the content was not: eight orders a watch drawn
+   * from three sentences, because the loop walked the table in declaration
+   * order and the first thing that triggered always won. Measured on one
+   * weasel watch — no-leakers at 96s, priority of fires at 188, logistics at
+   * 280, the political section at 372, priority of fires AGAIN at 489,
+   * logistics again at 580, the political section again at 697. Repetition is
+   * the one thing a threat cannot survive. The net now exhausts what it has
+   * not said yet before it repeats itself, and only then in declaration
+   * order, so the sequence is still deterministic.
+   */
+  const routine = Object.values(DIRECTIVES)
+    .filter((t) => !HINGE_DIRECTIVES.includes(t))
+    .map((t, i) => ({ t, i, used: world.command.issuedCount?.[t.id] ?? 0 }))
+    .sort((a, b) => a.used - b.used || a.i - b.i)
+    .map((entry) => entry.t);
+
+  for (const template of routine) {
     if (template.once && world.command.issuedOnce[template.id]) continue;
     const count = world.command.issuedCount?.[template.id] ?? 0;
     if (count >= (template.maxPerWatch ?? 3)) continue;
@@ -680,8 +814,25 @@ export function stepCommand(world, dt) {
     // Even sector command has to get through: a raid this size generates a lot
     // of traffic, so directives arrive with some slack rather than instantly.
     if (!world.rng.chance(0.55 * rate)) continue;
-    issueDirective(world, template);
+    /*
+     * Nothing routine goes out over a watch that is already over.
+     *
+     * Measured on the teaching watch: seven of two hundred and one directives
+     * were transmitted inside twelve seconds of the end and three inside two,
+     * every one of them still PENDING at the debrief — one issued at 291.6s
+     * of a 293.1s watch, and reproduced live in the browser at 292.1s with
+     * WATCH ENDS at 292.2. An order nobody can answer is not menace, it is
+     * litter.
+     *
+     * The draw above happens first and the slot is consumed either way. That
+     * is deliberate and it is where the first attempt at this went wrong: a
+     * guard placed before the draw skipped a random number and shifted every
+     * seeded score behind it (net competent 1202.6 to 1197.8, one seed by
+     * thirty-nine points) for a change that was supposed to be about silence.
+     */
     world.command.lastRoutineAtS = world.t;
+    if (world.raidIsSpent()) return;
+    issueDirective(world, template);
     return;
   }
 }

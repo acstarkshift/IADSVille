@@ -913,7 +913,15 @@ function assignSelected(siteId) {
     const track = world.tracks.get(ui.selectedTrackId);
     const reason = site && track ? cannotEngageReason(world, site, track) : null;
     if (reason) {
-      world.log('warn', `${site.name} — CANNOT TAKE ${track.tn}: ${reason.toUpperCase()}`,
+      /*
+       * Once per battery per reason per twenty seconds. Pressing ASSIGN on
+       * four batteries in a row used to print four lines a second for as long
+       * as the operator kept trying — measured on the weasel watch, BASTION /
+       * LANCE WEST / LANCE EAST / THISTLE TOWN cannot take T-017, over and
+       * over for twenty consecutive seconds, with nothing else audible.
+       */
+      world.logThrottled(`cannotTake:${siteId}:${reason}`, 20, 'warn',
+        `${site.name} — CANNOT TAKE ${track.tn}: ${reason.toUpperCase()}`,
         { siteId, trackId: track.id });
     }
   } else {

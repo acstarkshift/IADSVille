@@ -1091,6 +1091,28 @@ export class World {
     return true;
   }
 
+  /**
+   * Is the raid over bar the rounds already in the air?
+   *
+   * The exact condition `checkEnd` uses, minus the rounds — so this is true
+   * for the last thirty to sixty seconds of a watch that ends the ordinary
+   * way, and it is the window in which the command net must stop transmitting
+   * orders nobody will get to answer.
+   */
+  raidIsSpent() {
+    if (this.pendingWaves.length > 0) return false;
+    const holding = this.aircraft.filter((a) => this.holdsWatchOpen(a));
+    if (!holding.length) return true;
+    /*
+     * And everything still up that already has a round tracking it is
+     * arithmetic, not a fight. Without this clause an order went out one and
+     * a half seconds before the debrief, on a watch whose last aeroplane was
+     * mid-intercept when it was sent — technically live, and gone before
+     * anybody could answer the net.
+     */
+    return holding.every((a) => this.missiles.some((m) => m.alive && m.targetId === a.id));
+  }
+
   /** Can any surviving battery still put a round on this aircraft? */
   anySiteReaches(aircraft, rangeFraction = 1.05) {
     return this.sites.some((site) => {
@@ -1330,14 +1352,20 @@ export class World {
       ? site.engagements.find((e) => e.trackId === trackId)
       : site.engagements.find((e) => e.state === 'ready');
     if (!engagement) {
-      // A dry fire command answers. Silence on the fire key read as a broken
-      // keyboard; the refusal names what is actually missing, and is
-      // debounced so a held key does not fill the ticker with it.
-      if (this.t - (this.lastDryFireS ?? -9) > 1.5) {
-        this.lastDryFireS = this.t;
-        this.log('warn', `${site.name} — НЕТ РЕШЕНЬЯ · NO FIRING SOLUTION (lock a target first)`,
-          { siteId });
-      }
+      /*
+       * A dry fire command answers. Silence on the fire key read as a broken
+       * keyboard; the refusal names what is actually missing.
+       *
+       * Once every twenty seconds per battery, which is the gate the engine
+       * already uses for the set that keeps announcing it is shutting down.
+       * At the second and a half it used to run at, one First Light cabin
+       * watch printed two hundred and eleven copies of this one sentence, and
+       * at nine minutes all five visible ticker lines were it. A refusal
+       * repeated is a refusal nobody reads, and it costs the operator the
+       * watch's actual traffic to say it.
+       */
+      this.logThrottled(`dryFire:${siteId}`, 20, 'warn',
+        `${site.name} — НЕТ РЕШЕНЬЯ · NO FIRING SOLUTION (lock a target first)`, { siteId });
       return 0;
     }
     return fireEngagement(this, site, engagement);

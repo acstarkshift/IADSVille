@@ -265,6 +265,34 @@ function shootlistState(world, site) {
   return { text: 'RAILS EMPTY', cls: 'is-down' };
 }
 
+/**
+ * Is this contact work anybody at this seat can actually do?
+ *
+ * UNPAIRED is the seat's work list, and a work list that includes work nobody
+ * can do is a way of telling the operator they are failing at something that
+ * does not exist. It counted every unassigned hostile with no filter at all:
+ * measured, "10 WITH NOBODY ON THEM" for six minutes of a coda in which all
+ * ten were outbound or out of reach; two suppression aircraft at 160 km listed
+ * as urgent against a longest reach of 120; two more at 193 and 204 km, off
+ * the range scale the operator was looking at.
+ *
+ * Answerable means some battery of yours could take it now, or could take it
+ * once it has flown a little further in — which is what "out of reach for
+ * eighty seconds" is, and it is why that one reason counts as work arriving.
+ * Everything else — never in reach, an empty rack, a destroyed antenna — is
+ * not this contact's problem and not the operator's failure.
+ *
+ * Exported because it is the rule rather than the rendering, and a rule about
+ * what the operator is being blamed for deserves a test.
+ */
+export function answerableBy(world, sites, track) {
+  if (track.hostility !== 'hostile') return true;
+  return sites.some((site) => {
+    const why = cannotEngageReason(world, site, track);
+    return !why || /^out of reach for/.test(why);
+  });
+}
+
 export function renderTrackList(world, ui, els) {
   let tracks = sortedTracks(world);
 
@@ -343,15 +371,42 @@ export function renderTrackList(world, ui, els) {
       <span class="sl-name">${esc(label)}</span><span class="sl-note" title="${esc(note)}">${esc(note)}</span>
     </li>`;
 
-  const unpaired = tracks.filter((t) => t.assignedTo.length === 0);
+  /*
+   * UNPAIRED is the seat's work list, and a work list that includes work
+   * nobody can do is a way of telling the operator they are failing at
+   * something that does not exist. It counted every unassigned hostile with
+   * no filter at all: measured, "10 WITH NOBODY ON THEM" for six minutes of a
+   * coda in which all ten were outbound or out of reach; two suppression
+   * aircraft at 160 km listed as urgent against a longest reach of 120; two
+   * more at 193 and 204 km, off the range scale the operator was looking at.
+   *
+   * The partition is answerable versus out of reach, and it is decided by the
+   * same `cannotEngageReason` the battery cards use: a contact is answerable
+   * if some battery of yours could take it now, or could take it as soon as
+   * it has flown a little further in. Everything else stays visible — losing
+   * it would be worse — as a plain tail with the reason attached, and neither
+   * the count nor the red header sees it.
+   */
+  const mine = ui.view === 'crew' && world.control.crewedBatteryId
+    ? world.sites.filter((s) => s.id === world.control.crewedBatteryId)
+    : world.sites.filter((s) => s.alive && world.commandable(s.id));
+  const answerable = (track) => answerableBy(world, mine, track);
+
+  const unassigned = tracks.filter((t) => t.assignedTo.length === 0);
+  const unpaired = unassigned.filter(answerable);
+  const beyond = unassigned.filter((t) => !answerable(t));
   const sections = [];
-  if (unpaired.length || !tracks.length) {
+  if (unassigned.length || !tracks.length) {
     sections.push(head('UNPAIRED', unpaired.length ? `${unpaired.length} WITH NOBODY ON THEM` : 'NOTHING WAITING',
       unpaired.some((t) => t.hostility === 'hostile') ? 'is-urgent' : ''));
     sections.push(unpaired.length
       ? unpaired.map(rowFor).join('')
       : `<li class="track-row is-empty" role="presentation"><span>—</span><span>${
         ui.view === 'crew' ? 'nothing held' : 'no contacts'}</span></li>`);
+  }
+  if (beyond.length) {
+    sections.push(head('OUT OF REACH', `${beyond.length} NOTHING OF YOURS CAN TAKE`, 'is-idle'));
+    sections.push(beyond.map((t) => rowFor(t)).join(''));
   }
 
   // In the cabin the board is your own battery's; the net's other shootlists

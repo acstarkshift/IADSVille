@@ -18,6 +18,7 @@ import { DETECTION, ENGAGEMENT, COMMAND, SAM_TYPES } from '../src/engine/config.
 import { timeToInRangeS } from '../src/engine/weapons.js';
 import { DIRECTIVES } from '../src/engine/command.js';
 import { railLoadS } from '../src/engine/doctrine.js';
+import { answerableBy } from '../src/ui/panels.js';
 
 /** Drive a watch with the AI's radars up and directives answered. */
 function drive(w, { onTick = null, maxTicks = 40000, answer = 'accepted' } = {}) {
@@ -977,5 +978,65 @@ describe('where a contact is going, said once and meant', () => {
       }
     }
     assert.ok(checked, 'the watch offered a firm track to check');
+  });
+});
+
+/*
+ * The shootlist's urgent count, which is the seat's own account of how much
+ * work it is failing to do.
+ */
+describe('the work list only lists work', () => {
+  const wideAwake = (id, seed) => {
+    const w = new World(scenarioById(id), { role: 'net', seed });
+    for (const radar of w.radars) if (radar.alive) radar.on = true;
+    return w;
+  };
+
+  test('a contact nothing of yours can reach is not unanswered work', () => {
+    const w = wideAwake('four-sectors', 'unpaired-1');
+    const mine = w.sites.filter((s) => s.alive && w.commandable(s.id));
+    const longest = Math.max(...mine.map((s) => SAM_TYPES[s.type].maxRangeKm));
+
+    // A hostile parked well outside every ring, holding still so it will
+    // never fly into one.
+    const beyond = {
+      id: 'trkFar', tn: 'T-900', pos: { x: 0, y: longest * 2.5 }, vel: { x: 0, y: 0 },
+      altM: 9000, quality: 1, hostility: 'hostile', classification: 'sead',
+      assignedTo: [], engagedBy: [], threat: 5,
+    };
+    assert.equal(answerableBy(w, mine, beyond), false,
+      `nothing of yours reaches ${Math.round(longest * 2.5)}km — that is not your failure`);
+
+    // And one inside somebody's ring is.
+    const near = { ...beyond, id: 'trkNear', pos: { x: mine[0].pos.x, y: mine[0].pos.y + 5 } };
+    assert.equal(answerableBy(w, mine, near), true);
+  });
+
+  test('a contact that will be in reach shortly IS work, and counts', () => {
+    const w = wideAwake('four-sectors', 'unpaired-2');
+    const mine = w.sites.filter((s) => s.alive && w.commandable(s.id));
+    const site = mine[0];
+    const reach = SAM_TYPES[site.type].maxRangeKm;
+    // Just outside the ring and closing on it fast.
+    const closing = {
+      id: 'trkIn', tn: 'T-901',
+      pos: { x: site.pos.x, y: site.pos.y + reach * 1.15 },
+      vel: { x: 0, y: -0.25 },
+      altM: 6000, quality: 1, hostility: 'hostile', classification: 'striker',
+      assignedTo: [], engagedBy: [], threat: 5,
+    };
+    assert.equal(answerableBy(w, mine, closing), true,
+      'work arriving in a few seconds is work');
+  });
+
+  test('friendly traffic is never counted as unanswered work', () => {
+    const w = wideAwake('four-sectors', 'unpaired-3');
+    const mine = w.sites.filter((s) => s.alive && w.commandable(s.id));
+    const civil = {
+      id: 'trkCiv', tn: 'T-902', pos: { x: 0, y: 400 }, vel: { x: 0, y: 0 },
+      altM: 11000, quality: 1, hostility: 'friendly', classification: 'civil',
+      assignedTo: [], engagedBy: [], threat: 0,
+    };
+    assert.equal(answerableBy(w, mine, civil), true);
   });
 });
