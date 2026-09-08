@@ -1309,6 +1309,13 @@ A few decisions worth knowing about if you read the source:
   both usually get it. The dividend is in held watches, not in score, and both
   are reported.
 
+  *One Reinforce the Capital seed runs 18.7 minutes*, against an
+  eighteen-minute ceiling — and it is the walk-away. A player who touches
+  nothing shoots nothing down, so every aircraft on the board flies its whole
+  profile; the same seed played competently ends at 15.6 and the longest of the
+  thirty-two played seeds is 16.6. The watch is not lengthened for anybody who
+  is at the console.
+
   *Two Cities from both seats holds 8 of 8 competently played*, against a
   60-90% rule, where the same player on the net holds 6. The `both` seat is a
   commander who is also crewing the one battery that reaches either city; that
