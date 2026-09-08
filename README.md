@@ -791,6 +791,28 @@ A few decisions worth knowing about if you read the source:
   the way, how much of *that* was the loaders rather than an empty store, and
   how much of it the seat spent with no surviving guidance antenna anywhere.
 
+  The expert reads the ledger, which is a verb the console has always shown and
+  no model had ever used. Every watch is issued an allocation, the top bar
+  counts against it from the first round, and logistics comes on the net at
+  sixty per cent of it to say *single rounds only until further notice*. The
+  model was doubling until that transmission landed and then being bound by
+  it, which is the difference between discipline and compliance — and on
+  Weasel Hour, which issues eighteen rounds against twenty-one aircraft and
+  says so in the brief, it meant a careful player scored BELOW a competent one
+  on all three seats. Stopping at sixty per cent of the allocation takes the
+  expert's held rate from 78% to 84% on the net and 81% to 88% from both seats
+  over thirty-two seeds.
+
+  The cabin got two verbs of its own, ablated on thirty-two seeds before they
+  were kept. It plans a channel ahead — locking what will be in reach inside
+  the horizon the refusal line already quotes ("CANNOT LOCK T-002 — OUT OF
+  REACH FOR 68S"), because the reaction sequence runs whether the target is
+  inside the ring or a minute short of it — and it holds its last rack for the
+  aircraft only its own battery can reach. Together they are worth six points
+  of Low Riders' cabin dividend and take its both-seat arm from −4.2% to
+  +2.6%; on Weasel Hour they cost the cabin six points of held rate, which is
+  recorded rather than hidden.
+
   A model may only press what the seat has, and that is a rule of the harness
   and not a detail. The expert was selecting two-round salvos on First Light,
   whose `basicConsole` strips the salvo switch off the battery card — so the
@@ -1020,19 +1042,21 @@ A few decisions worth knowing about if you read the source:
   pulling Weasel Hour's whole raid inside BASTION's reach took its worst seed
   from 22.6 minutes to 18.9.
 
-- **How hard each watch is, measured rather than asserted.** Held rate over
-  eight seeds a seat, `tools/playtest.mjs --policy all`:
+- **How hard each watch is, measured rather than asserted.** Held rate,
+  `tools/playtest.mjs --policy all`. The first four watches are quoted over
+  **thirty-two** seeds a seat, because the act-one scrub found that at eight
+  one watch is twelve and a half points and every difficulty finding on Low
+  Riders and Solo Battery reversed itself between blocks; the rest are still
+  eight-seed readings and say so.
 
-  | Watch | nothing | novice | competent | expert |
-  |---|--:|--:|--:|--:|
-  | First Light | 0-75% | 100% | 100% | 100% |
-  | Low Riders | 0% | 0-88% | 63-100% | 88-100% |
-  | Solo Battery | 0% | 38% | 75% | 88% |
-  | Weasel Hour | 0-50% | 38-100% | 88-100% | 88-100% |
+  | Watch | seeds | nothing | novice | competent | expert |
+  |---|--:|--:|--:|--:|--:|
+  | First Light | 8 | 0-75% | 100% | 100% | 100% |
+  | Low Riders | 32 | 0% | 0-63% | 59-72% | 63-81% |
+  | Solo Battery | 32 | 0% | 41% | 75% | 81% |
+  | Weasel Hour | 32 | 0% | 19-84% | 88-94% | 84-94% |
 
-  (Ranges are across the three seats; Solo Battery has only the cabin. At
-  eight seeds one watch is twelve and a half points, so read a single cell's
-  spread as noise and the columns as the shape.)
+  (Ranges are across the three seats; Solo Battery has only the cabin.)
 
   Three things in that table are deliberate and worth stating plainly, because
   they are the exceptions to the campaign's own difficulty rule (competent
@@ -1088,6 +1112,27 @@ A few decisions worth knowing about if you read the source:
   cent held becomes 72 / 59 / 66, a beginner in the cabin 81% becomes 63%, and
   the cabin's attention dividend goes from 8 of 16 seeds and +4.5% to 24 of 32
   and +20.1%.
+
+  **Weasel Hour is now a watch a beginner can lose, and it costs a competent
+  net seat four points of the ceiling.** Fifteen aircraft against four
+  batteries with an allowance of two leakers produced a mean of 0.1 leakers at
+  competent play — nothing was getting through, so nothing below competent
+  could fail: a beginner held 88% of the net's watches and 100% of the cabin's,
+  and a player who touched nothing held 31% of the cabin's. The raid is
+  twenty-one aircraft now (two more at height, one more low, and a three-ship
+  cruise run at the power station in the 205-274 s hole the hole-window column
+  found), and the strike package that comes out of the north-north-east spawns
+  at eighty kilometres rather than ninety-five, because from ninety-five its
+  egress was three hundred seconds of the sector shooting at an aeroplane with
+  nothing left to drop. Thirty-two seeds a seat: a beginner falls to 41 / 84 /
+  19 per cent, the do-nothing cabin to none, competent play sits at 94 / 88 /
+  88, no run passes eighteen minutes (six of a hundred and ninety-two did) and
+  none contains a thirty-second silence. Four raid sizes were measured at
+  thirty-two seeds each: at twenty aircraft competent play holds 94-100% and
+  the watch is not a test, at twenty-two 81-97%, at twenty-three the competent
+  band is perfect at 81-84% but a beginner falls to 3-13% on two seats and the
+  expert to 69% in the cabin. Twenty-one is the least bad of the four and the
+  net seat's 94% is what it costs.
 
   **Solo Battery's attention dividend is capped by a ceiling and a single
   building, and the wave table is not the problem.** Over thirty-two seeds the

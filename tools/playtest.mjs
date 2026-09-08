@@ -517,7 +517,30 @@ function sizeSalvo(ctx, site, track) {
    * player's 1302.3 where four-in-stock scored 1232.8, and Weasel Hour 890.8
    * against 766.8 on four seeds held instead of three.
    */
-  const want = (precious || awkward) && site.readyRounds + site.magazine >= railsOf(site) * 2 ? 2 : 1;
+  /*
+   * AND NOT ONCE THE LEDGER HAS STARTED WATCHING.
+   *
+   * Every watch is issued an allocation, the top bar counts against it from
+   * the first round, and logistics comes on the net at sixty per cent of it to
+   * say "single rounds only until further notice". An operator who has read
+   * the bar knows what that order is going to say before it arrives and stops
+   * doubling; the model was doubling until the transmission landed and then
+   * being bound by it, which is the difference between discipline and
+   * compliance.
+   *
+   * It matters most where the allocation is deliberately tighter than the
+   * raid. Weasel Hour issues eighteen rounds against twenty-three aircraft and
+   * says so in the brief, and measured over thirty-two seeds a careful player
+   * who kept doubling scored BELOW a competent one on all three seats —
+   * −0.4%, −7.7% and −3.7% — because a pair at five points a round buys very
+   * little against a suppression package that is going home anyway. Reading
+   * the ledger is the verb; this is the model finally pressing it.
+   */
+  const spent = ctx.w.stats.roundsFired;
+  const disciplined = Number.isFinite(ctx.w.roundAllowance)
+    && spent >= ctx.w.roundAllowance * 0.6;
+  const want = !disciplined && (precious || awkward)
+    && site.readyRounds + site.magazine >= railsOf(site) * 2 ? 2 : 1;
   if (site.salvoSize !== want) {
     ctx.w.setSalvo(site.id, want);
     ctx.act(`SALVO ${site.salvoSize} ${site.name}`);

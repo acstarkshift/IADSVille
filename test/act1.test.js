@@ -237,3 +237,36 @@ describe('a gauge with nothing behind it is dead weight', () => {
     ], 'seven alternatives were measured at thirty-two seeds and every one is worse');
   });
 });
+
+describe('the act-one examination', () => {
+  test('Weasel Hour flies twenty-one aircraft, and its comment says so', () => {
+    const scenario = scenarioById('weasel-hour');
+    const total = scenario.waves.reduce((n, wave) => n + wave.count, 0);
+    assert.equal(total, 21,
+      'fifteen aircraft against four batteries could not be failed by a beginner');
+  });
+
+  test('the strike package that walks home comes in inside the ring it walks out of', () => {
+    const scenario = scenarioById('weasel-hour');
+    const homeward = scenario.waves.find((wave) => wave.bearingDeg === 15);
+    assert.equal(homeward.distanceKm, 80,
+      'at ninety-five its egress was five minutes of shooting at an empty aeroplane');
+  });
+
+  test('the middle of the watch has something in it', () => {
+    const scenario = scenarioById('weasel-hour');
+    const spawns = scenario.waves.map((wave) => wave.atS).sort((a, b) => a - b);
+    for (let i = 1; i < spawns.length; i++) {
+      assert.ok(spawns[i] - spawns[i - 1] <= 130,
+        `a ${spawns[i] - spawns[i - 1]}s gap between packages at ${spawns[i - 1]}s`);
+    }
+  });
+
+  test('the suppression aircraft still stand off outside the battalion', () => {
+    const scenario = scenarioById('weasel-hour');
+    for (const wave of scenario.waves.filter((w) => w.type === 'sead')) {
+      assert.ok(wave.distanceKm >= 120,
+        'a weasel inside the ring is a weasel the battalion simply shoots');
+    }
+  });
+});

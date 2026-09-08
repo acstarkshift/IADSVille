@@ -881,6 +881,27 @@ export const SCENARIOS = [
     directiveGraceS: 90,
     /** And a clear minute of fighting, whenever the first contact paints. */
     directiveContactGraceS: 60,
+    /*
+     * The noisiest net in the campaign had nothing scripted on it at all.
+     *
+     * Eight directives a watch is the ORDERS; this is the room, and the room
+     * is what tells an operator that the thing hunting them is a person with a
+     * procedure rather than a dice roll. Every line here is the watch's own
+     * argument — twelve seconds of emissions, an allocation that is smaller
+     * than the raid, and a sector that will keep telling you to radiate
+     * because sector is not the one being shot at.
+     */
+    chatter: [
+      { atS: 16, text: 'EW PICKET: SOMEBODY IS LISTENING ON THE NORTHERN BEARINGS. THEY HAVE NOT SHOT YET.' },
+      { atS: 68, text: 'CREW CHIEF: TWELVE SECONDS OF EMISSIONS IS ALL THEY NEED. WE HAVE GIVEN THEM MORE THAN THAT.' },
+      { atS: 168, text: 'FRONTIER POST: TWO MORE LIFTED OFF THE COAST FIELD. THAT IS WHAT THEY DO WHEN THE FIRST PAIR HAVE FAILED.' },
+      { atS: 262, text: 'POWER STATION ASKS WHETHER TO SHED LOAD. TELL THEM WHAT IS COMING AND LET THEM DECIDE.' },
+      { atS: 320, text: 'SECTOR: SECOND SUPPRESSION ELEMENT IS AIRBORNE. YOU WILL KNOW WHEN IT IS LISTENING.' },
+      { atS: 412, text: 'ORDNANCE: EVERY ROUND SPENT ON A WEAPON IS A ROUND NOT SPENT ON WHAT CARRIED IT.' },
+      { atS: 500, text: 'SECTOR: EXPECT SOMETHING LOW OUT OF THE NORTH-WEST. THEY HAVE WATCHED YOU LOOK NORTH ALL NIGHT.' },
+      { atS: 600, text: 'POLITICAL SECTION WANTS TO KNOW WHY THE EMISSIONS LOG HAS GAPS IN IT.' },
+      { atS: 700, text: 'BORDER POSTS REPORT THE LAST OF THEM CROSSING BACK NORTH. NOBODY IS STANDING YOU DOWN.' },
+    ],
     brief: [
       'Suppression aircraft are working the sector. They need roughly twelve seconds of your emissions to',
       'build a firing solution, and they carry two rounds each.',
@@ -906,12 +927,44 @@ export const SCENARIOS = [
      * A hundred and twenty-five for the suppression aircraft, which have to be
      * outside BASTION's ring to do the job the watch is about (they stand off,
      * listen for twelve seconds of emissions and shoot from beyond it); a
-     * hundred and ten and a hundred for the strike packages, which are in
+     * hundred and five and eighty for the strike packages, which are in
      * reach from the moment they appear. Nothing about the fight changes —
      * same aircraft, same axes, same order — except that the parts of it that
-     * were not a fight are gone.
+     * were not a fight are gone. (The sentence above said "a hundred and ten
+     * and a hundred" over code that read 105 and 95, for two passes.)
      *
-     * The last wave is new and it is the one that decides the watch. The
+     * THE EIGHTY IS THE SECOND OF THOSE AND IT WAS NINETY-FIVE. That package
+     * comes out of the north-north-east — the quadrant BASTION itself sits in
+     * — drops on its target and walks straight back out along the same line,
+     * and the watch is held open until it is a hundred and ten kilometres from
+     * the centre or beyond every surviving battery's usable reach. From
+     * ninety-five that egress leg was three hundred seconds of the sector
+     * shooting at an aeroplane with nothing left to drop. Measured over
+     * sixteen seeds, three seats and four player models: six runs of a hundred
+     * and ninety-two ran past the eighteen-minute ceiling, worst 18.9; at
+     * eighty none of three hundred and eighty-four do.
+     *
+     * AND THE RAID IS TWENTY-ONE AIRCRAFT, NOT FIFTEEN, which is the larger
+     * change and the reason for it is that this is the last watch of the first
+     * act and it could not be failed. Fifteen aircraft against four batteries
+     * with an allowance of two leakers gave a mean of 0.1 leakers at competent
+     * play: nothing was getting through, so nothing below competent could
+     * lose. A beginner held 88% of the net's watches and every single one of
+     * the cabin's. Two more in the high package, one more in the low one and
+     * a three-ship cruise run at the power station in the gap between them —
+     * measured over thirty-two seeds a seat, a beginner on the net falls from
+     * 88% to 41%, which is the band the campaign asks of them, and the
+     * do-nothing cabin from 31% held to none.
+     *
+     * Four sizes were measured at thirty-two seeds each and this is the least
+     * bad of them: at twenty aircraft a competent operator holds 94-100% and
+     * the watch is not a test; at twenty-two, 81-97%; at twenty-three the
+     * competent band is perfect at 81-84% but a beginner falls to 3-13% on two
+     * seats and the expert to 69% in the cabin. Twenty-one keeps the expert at
+     * 84-94% and the beginner on the net in band, and pays for it with a
+     * competent net seat four points above the ninety-per-cent ceiling.
+     *
+     * The last wave is the one that decides the watch. The
      * previous last spawn was at 50% of the median watch and the back half was
      * survivors and stragglers; these come out of the north-west at sixty
      * metres, under the horizon, named onto the operations centre, while the
@@ -922,11 +975,22 @@ export const SCENARIOS = [
      */
     waves: [
       { atS: 20, type: 'sead', count: 2, bearingDeg: 5, spreadDeg: 40, spacingS: 45, distanceKm: 125 },
-      { atS: 120, type: 'striker', count: 4, bearingDeg: 350, spreadDeg: 30, spacingS: 28, altM: 6400,
-        distanceKm: 105 },
+      { atS: 120, type: 'striker', count: 6, bearingDeg: 350, spreadDeg: 30, spacingS: 24, altM: 6400,
+        distanceKm: 105, targetAssetId: 'a_airbase' },
+      /*
+       * The gap, filled by the raid rather than by talk. Measured with the
+       * hole windows the scrub added: from 205 s to 274 s this watch had
+       * nothing engageable, nothing in flight and nothing to say, on the
+       * both-seats configuration at competent play — the longest structural
+       * silence in act one. Three cruise at sixty metres out of the west,
+       * named onto the power station, arrive while the operator is still
+       * deciding whether to keep radiating for the second weasel.
+       */
+      { atS: 215, type: 'cruise', count: 3, bearingDeg: 250, spreadDeg: 18, spacingS: 12, altM: 60,
+        distanceKm: 70, targetAssetId: 'a_power' },
       { atS: 300, type: 'sead', count: 1, bearingDeg: 330, spacingS: 0, distanceKm: 125 },
-      { atS: 340, type: 'striker', count: 4, bearingDeg: 15, spreadDeg: 24, spacingS: 26, altM: 200,
-        distanceKm: 95 },
+      { atS: 340, type: 'striker', count: 5, bearingDeg: 15, spreadDeg: 24, spacingS: 24, altM: 200,
+        distanceKm: 80, targetAssetId: 'a_bridge' },
       { atS: 455, type: 'cruise', count: 4, bearingDeg: 305, spreadDeg: 20, spacingS: 12, altM: 60,
         distanceKm: 65, targetAssetId: 'a_c2' },
     ],
