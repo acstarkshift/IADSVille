@@ -45,7 +45,7 @@ export const REVELATIONS = {
     title: 'THE GRID REFERENCE',
     lines: [
       'The strays were logged as strays. Two rounds, both malfunctioning in the same way, both'
-        + ' malfunctioning onto the same grid reference eleven kilometres beyond a national border,'
+        + ' malfunctioning onto the same grid reference six kilometres beyond a national border,'
         + ' four hours apart.',
       'You looked the grid reference up. Not in an intelligence product — in the sector target folder,'
         + ' which is on an open shelf because everything in it is our own territory and there is'

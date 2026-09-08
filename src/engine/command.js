@@ -192,7 +192,19 @@ export const DIRECTIVES = {
       + 'designated defended place. Acknowledge.',
     plain: () => 'SECTOR: Expenditure freeze. Engage only aircraft threatening designated defended '
       + 'places. The district hospital is not designated. Acknowledge.',
-    trigger: (w) => w.assets.some((a) => a.type === 'hospital') && w.t > 45,
+    /*
+     * A hundred seconds, not forty-five, and the difference is the whole
+     * transmission. At forty-five the order arrived fifteen seconds after
+     * first contact, with one aircraft on the plot at a hundred and fifty
+     * kilometres and the first hospital-bound track still a hundred and five
+     * seconds from spawning: the decision the campaign turns on was answered
+     * before there was anything to weigh, and a player pressed Y and felt
+     * nothing. At a hundred the western probe is committed, the airbase
+     * package is inside the rings, and the covering battery has rounds in the
+     * air — so "these rounds are not yours to spend" is about rounds you can
+     * see.
+     */
+    trigger: (w) => w.assets.some((a) => a.type === 'hospital') && w.t > 100,
     onAccept: (w) => {
       const hospital = w.assets.find((a) => a.type === 'hospital');
       w.command.constraints.freezeExcludedId = hospital?.id ?? null;
@@ -258,7 +270,18 @@ export const DIRECTIVES = {
       + 'incident and will be treated as one. There is nothing at that grid we are responsible for. '
       + 'Acknowledge.',
     plain: () => 'SECTOR: No engagement across the Listonian border. Acknowledge.',
-    trigger: (w) => w.assets.some((a) => a.type === 'camp') && w.t > 50,
+    /*
+     * It arrives in a fight, not in a menu. At fifty seconds it landed
+     * twenty-five seconds after first contact and forty-nine seconds before
+     * the sector had fired a round, about a missile that would not spawn for
+     * another minute and would not be tracked for seven — so refusing it cost
+     * eleven points of standing before the player had done anything worth
+     * refusing over. Now it waits for a hundred and fifty seconds and for the
+     * sector to have actually shot at something, with a fallback at 220 s so a
+     * watch nobody is fighting still gets its order.
+     */
+    trigger: (w) => w.assets.some((a) => a.type === 'camp') && w.t > 150
+      && (w.stats.roundsFired > 0 || w.t > 220),
     onAccept: (w) => {
       const camp = w.assets.find((a) => a.type === 'camp');
       w.command.constraints.borderExcludedId = camp?.id ?? null;
