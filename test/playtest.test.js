@@ -240,6 +240,70 @@ describe('the playtest harness', () => {
    * described as five silent minutes. It counts what an operator would look
    * up for, and nothing else.
    */
+  /*
+   * THE CURVE, PINNED.
+   *
+   * The campaign is four acts and it is supposed to get harder. Before the
+   * curve scrub it did not: measured on each watch's primary seat, act one
+   * held 100 / 63 / 88 per cent competently played and act two held 100 / 88 /
+   * 100 / 100 / 88 — the second act of four was the easiest thing in the game
+   * — while act four held 75 and 75 against act three's 63 and 63. Every one
+   * of those numbers came out of a leaker count that could not see a cruise
+   * missile arrive, which is why the property was never visible.
+   *
+   * Sixteen seeds and not eight, and it costs the suite about a minute. At
+   * eight a held rate is a multiple of 12.5 against a band sixty points wide,
+   * so there are three rungs for four acts and the ordering below cannot be
+   * expressed, let alone tested: the same tree reads act three ABOVE act two
+   * on eight seeds purely on which eight.
+   *
+   * Asserted with one seed of slack in the ordering, because the bar is a
+   * design property and not a fixture — a change that moves one watch by one
+   * night out of sixteen has not broken the campaign's shape, and a change
+   * that moves an act has.
+   */
+  test('the campaign gets harder act by act, and it is measured not asserted', async () => {
+    const ACT = { battalion: 1, sector: 2, region: 3, national: 4 };
+    const SEEDS = 16;
+    const SLACK = 1 / SEEDS;             // one night in sixteen
+    const held = new Map();
+    for (const scenario of SCENARIOS) {
+      const seat = scenario.roles[0];
+      let n = 0;
+      for (let i = 1; i <= SEEDS; i++) {
+        if (playRun({ mission: scenario.id, seat, policy: 'competent', seed: `p${i}` }).run.held) n++;
+      }
+      held.set(scenario.id, n / SEEDS);
+    }
+    const acts = [1, 2, 3, 4].map((a) => SCENARIOS
+      .filter((s) => ACT[s.echelon] === a)
+      .map((s) => [s.id, held.get(s.id)]));
+
+    // First Light is the documented exception: a teaching watch that fails a
+    // learner has failed, so it is excluded from the ordering and asserted
+    // separately as the one watch that cannot be lost by anyone who plays.
+    assert.equal(held.get('first-light'), 1, 'the tutorial is held by everyone who plays it');
+    const ranked = acts.map((act) => act.filter(([id]) => id !== 'first-light'));
+
+    for (const [a, act] of ranked.entries()) {
+      for (const [id, rate] of act) {
+        assert.ok(rate >= 0.60 - 1e-9 && rate <= 0.90 + 1e-9,
+          `${id} is inside the difficulty band (${Math.round(rate * 100)}%)`);
+      }
+      if (a === 0) continue;
+      const previousHardest = Math.min(...ranked[a - 1].map(([, r]) => r));
+      for (const [id, rate] of act) {
+        assert.ok(rate <= previousHardest + SLACK + 1e-9,
+          `${id} at ${Math.round(rate * 100)}% may not be easier than act ${a}'s `
+          + `hardest watch at ${Math.round(previousHardest * 100)}%`);
+      }
+      const mean = (list) => list.reduce((x, [, r]) => x + r, 0) / list.length;
+      assert.ok(mean(act) <= mean(ranked[a - 1]) + SLACK + 1e-9,
+        `act ${a + 1} (${Math.round(mean(act) * 100)}%) may not be easier than `
+        + `act ${a} (${Math.round(mean(ranked[a - 1]) * 100)}%)`);
+    }
+  });
+
   test('a switch flipping in an empty sky is not something happening', () => {
     const run = playRun({ mission: 'two-cities', seat: 'net', policy: 'competent', seed: 'p1' }).run;
     assert.ok(run.holes.longestS > 0,
