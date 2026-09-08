@@ -709,20 +709,38 @@ same sector command that told you which city was allowed to matter now tells you
 that this aircraft is protected **at all cost**, and asks you to acknowledge it
 on the net.
 
-Six enemy fighters are already up for it, in two flights. They ignore the ground
-entirely — no radars, no batteries, no city — and fly lead pursuit on the one
-aircraft they came for, one round each, off one pass, from twenty kilometres.
-Every fighter you stop before its launch point is a round that never leaves the
-rail, and twenty kilometres is inside the reach of the battalion holding the
-corridor, so stopping them is a shooting problem and not a hope. It was four
-fighters releasing from twenty-six kilometres at a kill probability of 0.55, and
-that arithmetic made the ending a coin flip: with the best corridor play the
-console allows, exactly one round still left a rail on eight seeds of eight, and
-a player who stopped three fighters and a player who stopped none faced the same
-draw. Meanwhile a
+Eight enemy fighters are already up for it, in two flights. They ignore the
+ground entirely — no radars, no batteries, no city — and fly lead pursuit on the
+one aircraft they came for, one round each, off one pass, from twenty
+kilometres. Every fighter you stop before its launch point is a round that never
+leaves the rail, and twenty kilometres is inside the reach of the battalion
+holding the corridor, so stopping them is a shooting problem and not a hope. It
+was four fighters releasing from twenty-six kilometres at a kill probability of
+0.55, and that arithmetic made the ending a coin flip: with the best corridor
+play the console allows, exactly one round still left a rail on eight seeds of
+eight, and a player who stopped three fighters and a player who stopped none
+faced the same draw. Meanwhile a
 strike package is coming for the palace and the field, and the long-range
 battalion that reaches the whole departure corridor is the same battalion those
 raids need.
+
+**And the corridor is yours, which it had never actually been.** The brief's own
+sentence is that one battalion cannot cover the corridor and the city at once —
+and it was false, because a second formation was covering the corridor for
+nothing. The capital sector is commanded by a colonel of the political section,
+the campaign's most carefully built device, who expends rounds only on what the
+priority of fires names; on this watch nothing named anything, so the one
+officer in the game written never to help was shooting down the fighters on his
+own initiative. Measured with nobody at the console at all, sixteen seeds: five
+of the six fighters were dead before they launched and the aeroplane lived
+through five of sixteen undefended watches, which is why a spectator used to
+outscore a competent player here. The capital's priority of fires — the palace,
+settled two days ago, by the same section — is now in force from the handover,
+and an aeroplane is not on any list of buildings. He says so on the net, once,
+the first time he declines: *that contact is not tracking a designated defended
+place. This sector holds the priority of fires. The corridor is yours.* Sixteen
+seeds after: a player who touches nothing holds 13% of the net's watches against
+a competent player's 75%, and outscores nobody.
 
 And twice in those seven minutes, the net brings you what STATE 01 wants to
 know: the delay in the corridor (there is no delay in the corridor), then the
@@ -750,9 +768,9 @@ wreckage and are not the same act. Measured over eight seeds: a competent player
 is now 7% ahead of one who touches nothing on the net and 36% from both seats,
 and holds seven watches of eight against its four, where before the aeroplane
 was scored the two were 7% and 4% apart and the verdict could not tell them
-apart at all. On this watch the dividend is in watches held rather than in
-points: the aeroplane is worth six hundred and everything else on the board is
-worth the same to both of them.
+apart at all. Re-measured over sixteen seeds after the corridor was handed
+back, a competent player is 69% ahead of the spectator on the net and 54% from
+both seats, and holds twelve watches of sixteen against its two.
 
 Nothing asks you which you meant. The tape only records what left the rails, and
 whose battery it left from.
@@ -1331,14 +1349,21 @@ A few decisions worth knowing about if you read the source:
   competent model rather than a heavier raid, which would only widen the gap
   between the two by making both worse.
 
-  *The attention dividend on The President's Flight is +5.8% on the net and
-  −1.9% from both seats* against a bar of +10%. It is a seven-minute escort
+  *The attention dividend on The President's Flight is +9.1% on the net and
+  +0.9% from both seats* against a bar of +10%. It is a seven-minute escort
   with one decision in it — the corridor or the city — and once a model makes
   that decision correctly there is very little left above it: the expert holds
-  75% against the competent player's 63% and is still only a few per cent
-  ahead, because the thing they differ on is worth six hundred points and they
-  both usually get it. The dividend is in held watches, not in score, and both
-  are reported.
+  88% against the competent player's 75% on the net and is still only a few per
+  cent ahead, because the thing they differ on is worth six hundred points and
+  they both usually get it. From both seats the expert holds 63% against 75%,
+  and the cause is named rather than excused: the model swaps the formation it
+  is standing in when threat mass moves, and on this watch the mass sits over
+  the capital while the fight it must not lose is eighty kilometres down the
+  corridor. Two rewrites of that rule were measured on sixteen seeds — owning a
+  contact by the nearest battery that could reach it, and weighting it by
+  whether its officer would decline it — and both cost the net seat nineteen
+  points of held rate while moving the both seat by six. Neither was kept. The
+  dividend is in held watches, not in score, and both are reported.
 
   *Sixteen runs of eight hundred and ninety-six pass the eighteen-minute
   ceiling, and fifteen of them are the walk-away.* A player who touches nothing
@@ -1417,7 +1442,7 @@ A few decisions worth knowing about if you read the source:
   | Four Sectors | 0% | 38% | 69% | 100% |
   | Reinforce the Capital | 0% | 56% | 69% | 94% |
   | The Two Cities | 0% | 6-13% | 69-94% | 63-81% |
-  | The President's Flight | 19-31% | 38% | 63-69% | 63-75% |
+  | The President's Flight | 6-13% | 13-44% | 75% | 63-88% |
 
   (Ranges are across the seats each watch offers; Solo Battery has only the
   cabin, and the last two only the net and both seats.)
@@ -1430,7 +1455,7 @@ A few decisions worth knowing about if you read the source:
   | I — battalion | First Light \| Low Riders \| Solo Battery | 100%\* \| 81% \| 81% | **87.5%** |
   | II — sector | Weasel Hour \| White Noise \| Economy of Force \| Across the Line \| Ville Under Fire | 75% \| 81% \| 81% \| 75% \| 69% | **76.3%** |
   | III — district | Four Sectors \| Reinforce the Capital | 69% \| 69% | **68.8%** |
-  | IV — national | The Two Cities \| The President's Flight | 69% \| 63% | **65.6%** |
+  | IV — national | The Two Cities \| The President's Flight | 69% \| 75% | **72%** |
 
   \* the documented teaching exception, below.
 

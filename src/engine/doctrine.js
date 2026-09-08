@@ -670,9 +670,16 @@ function announceStandDown(world, formation, track) {
   if (formation.declinedOnce) return;
   formation.declinedOnce = true;
   const place = world.assetById.get(track.predictedAssetId);
-  world.comms?.(formation.commander?.name ?? formation.name,
-    `${place?.label ?? 'THAT CONTACT'} IS NOT ON THE PRIORITY OF FIRES. `
-    + 'THIS SECTOR WILL NOT EXPEND ROUNDS OUTSIDE THE ORDER.',
+  /*
+   * And when the thing it is not defending has wings, the sentence has to say
+   * so, or the player hears a refusal about a place and looks for the place.
+   */
+  const body = place
+    ? `${place.label} IS NOT ON THE PRIORITY OF FIRES. `
+      + 'THIS SECTOR WILL NOT EXPEND ROUNDS OUTSIDE THE ORDER.'
+    : 'THAT CONTACT IS NOT TRACKING A DESIGNATED DEFENDED PLACE. '
+      + 'THIS SECTOR HOLDS THE PRIORITY OF FIRES. THE CORRIDOR IS YOURS.';
+  world.comms?.(formation.commander?.name ?? formation.name, body,
     { urgent: true, formationId: formation.id });
 }
 
@@ -693,6 +700,29 @@ export function commanderWillEngage(world, formation, track) {
   if (acrossBorder && track.predictedAssetId === acrossBorder) return false;
   if (formation.commander?.political) {
     const priority = world.command?.constraints?.priorityOfFiresId;
+    /*
+     * AN AEROPLANE IS NOT A DEFENDED PLACE.
+     *
+     * The gate below asks whether this contact's objective is the priority's
+     * cluster, and a contact with no objective ON THE GROUND fell straight
+     * through it as though it were harmless. On the escort watch every fighter
+     * on the board is exactly that: it is hunting an aircraft, so it threatens
+     * no address in the target folder, so the one officer in the campaign
+     * written never to help was covering the corridor for free. Measured, 16
+     * seeds, nobody at the console: five of the six fighters were dead before
+     * they launched and STATE 01 lived through 5 of 16 undefended watches.
+     *
+     * The reading is the colonel's own and it is the joke the watch is built
+     * on — the order to protect the aircraft came to YOU, on your net; what he
+     * holds is a list of buildings. Scoped to a watch with a state aircraft
+     * up, because "threatens nothing on the ground" is only a category worth
+     * having where there is something in the air worth hunting.
+     */
+    const huntsSomethingAirborne = !track.predictedAssetId && !!world.vipAircraft?.();
+    if (priority && huntsSomethingAirborne) {
+      announceStandDown(world, formation, track);
+      return false;
+    }
     if (priority && track.predictedAssetId && track.predictedAssetId !== priority) {
       // The order names a place, but it means a side — the same reading the
       // breach accounting applies. The colonel holds the priority's whole

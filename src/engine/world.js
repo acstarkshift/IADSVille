@@ -265,6 +265,23 @@ export class World {
     this.buildDefences();
     this.buildFormations();
     this.buildWaves();
+
+    /*
+     * A priority of fires that arrived before the watch did.
+     *
+     * Every other designation in the game comes down the net and is answered.
+     * One does not: on the escort watch the capital's priority was settled two
+     * days earlier, by the same section that will not expend a round outside
+     * it, and the brief says so in the first line. Declaring it here rather
+     * than asking for it is the point — the operator is not being tested on
+     * this order, they are living inside it, and the thing it does not name is
+     * an aeroplane.
+     */
+    if (this.scenario.priorityOfFires) {
+      this.command.constraints.priorityOfFiresId = this.scenario.priorityOfFires;
+      this.command.constraints.priorityDesignatedAtS = 0;
+      this.command.constraints.priorityIsHinge = true;
+    }
     this.pendingChatter = this.buildOpeningChatter();
     this.applyRole(options.role ?? 'net', options.batteryId);
 

@@ -255,11 +255,17 @@ export const AIR_TYPES = {
     /**
      * One round each, off one pass, from twenty kilometres.
      *
-     * Six fighters is therefore six launches and no more, which is what makes
-     * the corridor defensible at all: every fighter stopped before it reaches
-     * its launch point is a round that is never in the air, and the difference
-     * between stopping four of them and stopping none is the difference
-     * between a fair chance and none.
+     * Eight fighters is therefore eight launches and no more, which is what
+     * makes the corridor defensible at all: every fighter stopped before it
+     * reaches its launch point is a round that is never in the air, and the
+     * difference between stopping five of them and stopping none is the
+     * difference between a fair chance and none.
+     *
+     * It was six until the residue pass took the capital sector's colonel off
+     * the corridor, where he had been shooting the fighters down on his own
+     * initiative for nothing. With the corridor genuinely the operator's, six
+     * left a competent net seat holding every watch of sixteen; eight puts it
+     * at 75 per cent, which is the band.
      *
      * The numbers moved once, and they moved because the shape was wrong rather
      * than the difficulty. At four fighters releasing from twenty-six

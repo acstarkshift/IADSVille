@@ -137,6 +137,37 @@ export function huntsTheFlight(world, track) {
   return Number.isFinite(cpa.ttiS) && cpa.missKm < 25 && cpa.ttiS < 300;
 }
 
+/**
+ * Seconds until this contact can shoot at the aircraft the watch is about.
+ *
+ * A DEADLINE IS A DEADLINE, AND ONE OF THEM HAS WINGS. Every battery in the
+ * game decides whether to hold for a better shot by asking how long the thing
+ * in front of it has before it arrives at what it is going for — and a fighter
+ * hunting an aeroplane is going for nothing on the ground, so `ttiS` came back
+ * Infinity and every crew in the corridor concluded it had all the time in the
+ * world. Measured on the escort watch, sixteen seeds from both seats: an
+ * expert crewing the battalion by hand held 9 watches against a competent
+ * player's 12, because the model was patiently aiming at fighters that get one
+ * pass from twenty kilometres and then leave.
+ *
+ * The launch range is the fighter's own, out of `AIR_TYPES`, so a contact the
+ * picture has not classified yet returns Infinity and nothing changes — you do
+ * not get to react to a fighter you have not identified.
+ */
+export function timeToFlightRelease(world, track) {
+  const vip = world.vipAircraft?.();
+  if (!vip) return Infinity;
+  const releaseKm = AIR_TYPES[track.classification]?.airToAirRangeKm;
+  if (!releaseKm) return Infinity;
+  const cpa = closestApproachBetween(track, vip);
+  if (!Number.isFinite(cpa.ttiS) || cpa.missKm >= releaseKm) return Infinity;
+  if (cpa.rangeKm <= releaseKm) return 0;
+  // Closing speed along the line, read off the geometry the CPA already has.
+  const closing = (cpa.rangeKm - cpa.missKm) / Math.max(cpa.ttiS, 0.1);
+  if (closing <= 0) return Infinity;
+  return (cpa.rangeKm - releaseKm) / closing;
+}
+
 export function flightThreat(world, track) {
   const vip = world.vipAircraft?.();
   if (!vip) return 0;
@@ -221,7 +252,9 @@ export function scoreAllTracks(world) {
   for (const track of world.tracks.values()) {
     track.threat = threatScore(world, track);
     const prediction = predictedTarget(world, track);
-    track.ttiS = prediction?.ttiS ?? Infinity;
+    // The sooner of the two clocks: arrival at whatever place it is going for,
+    // and the moment it can shoot at the aircraft this watch is about.
+    track.ttiS = Math.min(prediction?.ttiS ?? Infinity, timeToFlightRelease(world, track));
     /*
      * The raw geometric answer, refreshed every tick and never smoothed.
      *
@@ -427,6 +460,25 @@ export function engagementValue(world, site, track) {
     value += worth * 1.1;
     if (assetType.critical) value += 25;
   }
+
+  /*
+   * ...AND THE ONE DEFENDED THING IN THIS GAME WITH WINGS.
+   *
+   * The block above prices a shot by the place it protects, and a fighter
+   * closing on the state aircraft protects no place, so on the one watch whose
+   * whole subject is an aeroplane every chooser in the game — the AI net, the
+   * cabin, the console's best-battery hint, the measurement players — scored
+   * the fighters as bare geometry and preferred a pretty solution on a bomber
+   * over the contact about to shoot down the thing the brief calls the only
+   * thing that matters. `threatScore` had the number the whole time and
+   * nothing that PAIRS a battery to a contact ever read it.
+   *
+   * Zero on eleven watches of twelve, because `flightThreat` is zero wherever
+   * there is no state aircraft, and priced on the same scale as a defended
+   * place — `PROTECTED_FLIGHT_VALUE` is set just above the palace on purpose.
+   */
+  const flight = flightThreat(world, track);
+  if (flight > 0) value += flight * 1.1;
 
   /*
    * Urgency reshapes the whole calculus. With the target's arrival imminent

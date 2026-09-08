@@ -2171,6 +2171,22 @@ export const SCENARIOS = [
     requiresEnding: ['obedient', 'exemplary'],
     /** Read by the scoring and the endings the way `finale` is. */
     epilogue: true,
+    /*
+     * THE ORDER THAT WAS ALREADY IN FORCE.
+     *
+     * The capital's priority of fires is the palace and it was settled before
+     * this watch was handed over — which is why it is declared here instead of
+     * being asked for on the net. It has one consequence and the watch is
+     * built on it: COL. STRELNIK holds a list of buildings, an aeroplane is
+     * not on any list of buildings, and so the corridor is the operator's job
+     * and nobody else's. Before this existed his sector shot the fighters down
+     * on its own initiative and the brief's own sentence — "you have one
+     * battalion that can cover the corridor; it cannot cover the corridor and
+     * the city at the same time" — was false. Measured at eight seeds on the
+     * net: a player who touched nothing held 4 of 8 and outscored competent
+     * play; after, nothing holds 0 of 8.
+     */
+    priorityOfFires: 'a_palace',
     /** What is left of the reserve two days later. */
     reserveRounds: 6,
     /**
@@ -2282,13 +2298,19 @@ export const SCENARIOS = [
        * Mostrograd until it rolls, which gives the operator four minutes of
        * knowing exactly what is about to happen and being unable to start it.
        *
-       * Three, not two, and the same at the far end — six fighters carrying one
+       * Four, and the same at the far end — eight fighters carrying one
        * shorter-legged round each rather than four carrying a long one. The
        * arithmetic against a defence that does nothing is unchanged; what
        * changes is that stopping fighters now subtracts something. See
        * AIR_TYPES.interceptor for the measurement that moved these numbers.
+       *
+       * They went from three a flight to four when the priority of fires above
+       * took COL. STRELNIK off the corridor: with the fighters facing only the
+       * batteries the operator actually commands, six of them left a competent
+       * net seat holding 16 of 16. Sixteen seeds, eight fighters: nothing 13%,
+       * novice 44%, competent 75%, expert 88%.
        */
-      { atS: 20, type: 'interceptor', count: 3, spacingKm: 16, scalable: false,
+      { atS: 20, type: 'interceptor', count: 4, spacingKm: 16, scalable: false,
         pos: { x: 150, y: 142 }, waypoints: [{ x: 150, y: 100 }] },
 
       /*
@@ -2322,8 +2344,10 @@ export const SCENARIOS = [
        * belongs.
        *
        * A fourth FIGHTER at the far end of the corridor was tried first and
-       * answers the wrong question — the watch is not about whether you can
-       * shoot fighters, it is about whether you can afford to. A fifth striker
+       * answered the wrong question while the colonel was still covering the
+       * corridor for free; with the corridor handed back to the operator it is
+       * the whole of this watch's difficulty and both flights carry one. A
+       * fifth striker
        * over Mostrograd was tried too and took the competent seat to 50 per
        * cent, under the floor. One more aeroplane over the city is the same
        * pressure arriving where the brief puts it.
@@ -2351,7 +2375,7 @@ export const SCENARIOS = [
        * corridor where one battalion's coverage runs out and the reloads have
        * not come back yet.
        */
-      { atS: 290, type: 'interceptor', count: 3, spacingKm: 16, scalable: false,
+      { atS: 290, type: 'interceptor', count: 4, spacingKm: 16, scalable: false,
         pos: { x: 196, y: 40 }, waypoints: [{ x: 186, y: -6 }] },
     ],
   },

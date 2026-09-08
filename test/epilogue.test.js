@@ -23,7 +23,8 @@ import { createCharacter } from '../src/engine/character.js';
 import { AIR_TYPES, SAM_TYPES } from '../src/engine/config.js';
 import { DIRECTIVES, issueDirective, stepCommand } from '../src/engine/command.js';
 import { dist, len } from '../src/engine/math.js';
-import { closestApproachBetween } from '../src/engine/threat.js';
+import { closestApproachBetween, huntsTheFlight, timeToFlightRelease } from '../src/engine/threat.js';
+import { commanderWillEngage } from '../src/engine/doctrine.js';
 
 const epilogue = scenarioById(EPILOGUE_ID);
 
@@ -156,21 +157,23 @@ describe('the corridor', () => {
       'and there are far more contacts than it has channels to hold them with');
   });
 
-  test('there are six fighters and they carry one round each', () => {
+  test('there are eight fighters and they carry one round each', () => {
     /*
-     * Six, not four. Re-anchored on measurement, not loosened: at four
-     * fighters releasing from twenty-six kilometres at a kill probability of
-     * 0.55, the best corridor play the console allows still let exactly one
-     * round leave a rail on eight seeds of eight — the aeroplane's fate was one
-     * coin flip and no amount of skill moved it. Six shorter-legged rounds at
-     * 0.38 is the same expected number of hits against a defence that does
-     * nothing, with a gradient underneath it. The property this test exists for
-     * is unchanged and is asserted below: one pass, one round, so every fighter
-     * stopped short of its launch point is a launch that never happens.
+     * Eight, and every step of that number is a measurement. At four fighters
+     * releasing from twenty-six kilometres at a kill probability of 0.55, the
+     * best corridor play the console allows still let exactly one round leave a
+     * rail on eight seeds of eight — the aeroplane's fate was one coin flip and
+     * no amount of skill moved it. Six shorter-legged rounds at 0.38 gave the
+     * same expected hits against a defence that does nothing, with a gradient
+     * underneath it. Eight is what the corridor needs now that the capital
+     * sector's colonel has stopped defending it for free: at six a competent
+     * net seat held sixteen watches of sixteen. The property this test exists
+     * for is unchanged and is asserted below: one pass, one round, so every
+     * fighter stopped short of its launch point is a launch that never happens.
      */
     const fighters = epilogue.waves.filter((w) => w.type === 'interceptor');
     const total = fighters.reduce((n, w) => n + w.count, 0);
-    assert.equal(total, 6);
+    assert.equal(total, 8);
     assert.equal(AIR_TYPES.interceptor.airToAir, 1,
       'one pass, one round — so every fighter stopped is a launch prevented');
     assert.ok(AIR_TYPES.interceptor.airToAirRangeKm
@@ -178,6 +181,54 @@ describe('the corridor', () => {
     'and the release point is inside the reach of the battalion holding the corridor');
     assert.ok(AIR_TYPES.interceptor.speed > AIR_TYPES.vip.speed * 1.5,
       'a fighter that cannot run down what it is chasing is an escort');
+  });
+
+  test('the corridor is the operator\'s, because the colonel holds a list of buildings', () => {
+    /*
+     * The watch's own brief — "you have one battalion that can cover the
+     * corridor; it cannot cover the corridor and the city at the same time" —
+     * was false for as long as the capital sector had no priority of fires to
+     * be bound by. Its political commander fought the fighters on his own
+     * initiative, and a player who touched nothing kept the aeroplane on 5 of
+     * 16 undefended watches with five of the six fighters dead before they
+     * launched. Both halves are asserted: the order is in force from the
+     * handover, and the officer it binds declines a contact that threatens no
+     * designated place.
+     */
+    const w = new World(epilogue, { role: 'net', seed: 'corridor-1' });
+    assert.equal(w.command.constraints.priorityOfFiresId, 'a_palace',
+      'the priority of fires is in force before the watch starts');
+
+    const city = w.formations.find((f) => f.commander?.political);
+    assert.ok(city, 'the capital sector is run by the political section');
+
+    // Run far enough in for the aircraft to be up and a fighter to be tracked.
+    while (w.phase === 'running' && w.t < 200) w.step(0.1);
+    assert.ok(w.vipAircraft(), 'the state aircraft is airborne');
+    const hunter = [...w.tracks.values()].find((t) => t.hostility === 'hostile'
+      && !t.destroyed && huntsTheFlight(w, t) && !t.predictedAssetId);
+    assert.ok(hunter, 'and something is hunting it');
+    assert.equal(commanderWillEngage(w, city, hunter), false,
+      'the colonel will not expend a round on something that threatens no place');
+  });
+
+  test('a fighter about to shoot is a deadline, not a leisurely target', () => {
+    /*
+     * Every crew in the game decides whether to hold for a better shot by
+     * asking how long the contact has before it arrives at what it is going
+     * for. A fighter is going for an aeroplane, so that clock read Infinity and
+     * the corridor's crews aimed patiently at contacts that get one pass from
+     * twenty kilometres and leave.
+     */
+    const w = new World(epilogue, { role: 'net', seed: 'corridor-2' });
+    while (w.phase === 'running' && w.t < 240) w.step(0.1);
+    const hunters = [...w.tracks.values()].filter((t) => t.classification === 'interceptor'
+      && !t.destroyed && huntsTheFlight(w, t));
+    assert.ok(hunters.length, 'fighters are on the plot and identified');
+    assert.ok(hunters.some((t) => Number.isFinite(timeToFlightRelease(w, t))),
+      'and at least one of them has a finite time to its own launch point');
+    assert.ok(hunters.every((t) => t.ttiS <= timeToFlightRelease(w, t) + 0.001),
+      'the track carries the sooner of its two deadlines');
   });
 
   test('the strike package competes for the same rounds', () => {
