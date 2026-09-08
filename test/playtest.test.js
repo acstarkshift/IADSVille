@@ -178,10 +178,10 @@ describe('the playtest harness', () => {
      * held the sector, and every seed on which it did not was lost. That is
      * the whole watch in one verb, and no player model had ever pressed it.
      */
-    const moved = playRun({ mission: 'two-cities', seat: 'net', policy: 'expert', seed: 'p2' }).run;
+    const moved = playRun({ mission: 'two-cities', seat: 'both', policy: 'expert', seed: 'p2' }).run;
     assert.ok(moved.displacements >= 1,
       'a raid tracking the post that travels with your battery is answered by moving');
-    const rooted = playRun({ mission: 'two-cities', seat: 'net', policy: 'competent', seed: 'p2' }).run;
+    const rooted = playRun({ mission: 'two-cities', seat: 'both', policy: 'competent', seed: 'p2' }).run;
     assert.equal(rooted.displacements, 0,
       'and the competent model stays put — displacement is the craft, not the baseline');
 

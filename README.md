@@ -158,23 +158,23 @@ declining to assign. It is calling a battery off a target it is already tracking
 Then the debrief shows you two numbers that have agreed all campaign and now do
 not (means over eight seeded watches, competently fought — reproduce them with
 `node tools/measure-moral.mjs`; the hospital package comes in on the deck, down
-the Kubin road, and obedience loses the building on seven nights of eight while
+the Kubin road, and obedience loses the building on five nights of eight while
 a deliberate defence saves it on all eight):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **92** | 296 |
-| Defend it anyway | 89 | **1631** |
-| Refuse the order outright | 78 | 1631 |
+| Obey the freeze | **93** | 657 |
+| Defend it anyway | 91 | **1644** |
+| Refuse the order outright | 77 | 1644 |
 
-Defending the hospital is worth thirteen hundred points of actual value, and the
-file prices the whole transgression at three: a query for rounds
-expended outside the freeze, worth rather less than two leakers. A weapon that
+Defending the hospital is worth a thousand points of actual value, and the
+file prices the whole transgression at two: a query for rounds
+expended outside the freeze, worth rather less than a leaker. A weapon that
 arrives at the struck-off place is billed at exactly nothing — the ledger
 cannot simultaneously declare a building undesignated and grieve for it — and
 the building's own loss appears on the state's books at nothing at all. Only
 the third row really moves. Refusing on the net, for the identical night's
-fighting, costs eleven points more than quietly disobeying, plus a
+fighting, costs fourteen points more than quietly disobeying, plus a
 referral that stays in the file. Sector command barely prices what you did.
 It punishes having said no, and that is the whole lesson.
 

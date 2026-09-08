@@ -343,8 +343,18 @@ describe('district command', () => {
           if (w.truthOf(track)?.contactType) continue;
           if (track.quality >= DETECTION.firmQuality && !firmAt.has(track.id)) {
             firmAt.set(track.id, w.t);
-            const asset = track.predictedAssetId ? w.assetById.get(track.predictedAssetId) : null;
-            clusterOf.set(track.id, asset?.cluster ?? 'none');
+          }
+          /*
+           * Whose sector's problem is this? Taken the first time the picture
+           * will say — not at the instant the track goes firm, which is
+           * before there is a course to read a destination off. The
+           * destination label is published only once a track has flown
+           * straight for long enough to have one, so asking at first-firm
+           * used to get `null` and file three quarters of the raid under
+           * nobody's sector.
+           */
+          if (firmAt.has(track.id) && !clusterOf.has(track.id) && track.predictedAssetId) {
+            clusterOf.set(track.id, w.assetById.get(track.predictedAssetId)?.cluster ?? 'none');
           }
           if (firmAt.has(track.id) && track.assignedTo.length && !assignedAt.has(track.id)) {
             assignedAt.set(track.id, w.t);

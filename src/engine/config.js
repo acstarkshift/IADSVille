@@ -588,6 +588,32 @@ export const DETECTION = {
   reacquireWindowS: 60,
   /** Extra allowance on top of the ordinary gate when re-acquiring, km. */
   reacquireGateKm: 9,
+  /**
+   * How steady a heading has to hold to count as a course, and for how long.
+   *
+   * A velocity estimate blended out of noisy plots wanders by a few degrees
+   * between looks even on an aircraft flying a ruler-straight line, and the
+   * prediction built on it wandered with it: a wave-one striker bound for the
+   * power station was published as heading for the camp, the bridge, the
+   * camp, nowhere, the camp and the bridge inside twenty-five seconds. On the
+   * two watches where that label IS the decision — the hospital freeze and
+   * the border exclusion — it invited the operator to break an order over an
+   * aeroplane that was never going near the protected place, and doctrine
+   * stood whole formations down on it.
+   *
+   * A turn of more than this many degrees between two looks resets the clock;
+   * until the clock passes `courseSettleS` the track is published as going
+   * nowhere in particular, which is a thing the code already knows how to say.
+   */
+  courseSteadyDeg: 25,
+  courseSettleS: 10,
+  /**
+   * And once there is a course, a different answer has to be the better one
+   * for this long before it takes the field. Straight hysteresis: the
+   * incumbent already gets a margin of geometry in `predictedTarget`, and
+   * this is the time to go with it.
+   */
+  predictionDwellS: 12,
   /** Seconds of observation to classify a track's type. */
   idTimeS: 26,
   /**

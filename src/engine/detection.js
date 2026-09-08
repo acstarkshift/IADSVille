@@ -523,10 +523,30 @@ export function correlatePlots(world, plots) {
       const cap = DETECTION.maxTargetSpeedKmS;
       const capped = measuredSpeed > cap
         ? scale(measuredVel, cap / measuredSpeed) : measuredVel;
+      const was = best.vel;
       best.vel = {
         x: best.vel.x + (capped.x - best.vel.x) * 0.45,
         y: best.vel.y + (capped.y - best.vel.y) * 0.45,
       };
+      /*
+       * How long this track has been flying the same way.
+       *
+       * Everything downstream that answers "where is it GOING" — the
+       * defended place it is tracking toward, the orders that exclude a
+       * place, the ledger that bills a salvo to one — is built on this
+       * estimate, and the estimate wanders by a few degrees a look even on an
+       * aircraft holding a ruler-straight line. The clock below is what lets
+       * those consumers wait for a course instead of publishing the noise.
+       */
+      const from = len(was);
+      const to = len(best.vel);
+      if (from > 1e-6 && to > 1e-6) {
+        const turned = absDeltaDeg(bearing({ x: 0, y: 0 }, was), bearing({ x: 0, y: 0 }, best.vel));
+        best.courseSettledS = turned <= DETECTION.courseSteadyDeg
+          ? (best.courseSettledS ?? 0) + dtSince : 0;
+      } else {
+        best.courseSettledS = 0;
+      }
     }
     best.pos = { x: plot.pos.x, y: plot.pos.y };
     best.altM = best.altM + (plot.altM - best.altM) * 0.5;

@@ -179,13 +179,74 @@ export function threatScore(world, track) {
   return score;
 }
 
-/** Refresh every track's threat score. Called once per tick. */
+/**
+ * Refresh every track's threat score, and publish where it is going.
+ *
+ * The threat score itself reads the raw geometry every tick, because the sort
+ * order has to react the instant something turns toward a town. The
+ * PUBLISHED destination is a different promise and is held to a stricter
+ * standard, because it is not a hint — it is a fact the rest of the game
+ * acts on. Doctrine stands whole formations down off it when an order
+ * excludes a place; the freeze and the border restriction are settled on it;
+ * the finale's account of what you personally defended reads it at the launch
+ * instant; and the operator is invited to break an order over it.
+ *
+ * Measured before this gate, over the first two hundred seconds of the two
+ * watches where the label is the decision: one hundred and twenty-five label
+ * changes across forty-five tracks on Economy of Force, one track changing
+ * its mind sixteen times, and a wave-one striker bound for the power station
+ * reading camp, bridge, camp, nowhere, camp, bridge inside twenty-five
+ * seconds. Two gates fix it and neither invents information. A track with no
+ * settled course publishes NOTHING, which is honest and which the code
+ * already has a sentence for. And a challenger has to be the better answer
+ * for a dwell before it takes the field from the incumbent.
+ */
 export function scoreAllTracks(world) {
   for (const track of world.tracks.values()) {
     track.threat = threatScore(world, track);
     const prediction = predictedTarget(world, track);
-    track.predictedAssetId = prediction?.asset.id ?? null;
     track.ttiS = prediction?.ttiS ?? Infinity;
+    /*
+     * The raw geometric answer, refreshed every tick and never smoothed.
+     *
+     * Two different questions wear the same words. "Which place is this
+     * aeroplane's course pointing at RIGHT NOW" is a kinematic fact and the
+     * choosers want it fresh — `threatScore` has always used it that way, and
+     * `engagementValue` weighs a shot by what it defends. "Which place is
+     * this contact GOING FOR" is a claim the game acts on, and it gets the
+     * settled answer below. Keeping the chooser on the settled label was
+     * measured and rejected: it re-routed fire enough to leave Economy of
+     * Force's crewed battery without a single hostile in its envelope on one
+     * seed in three.
+     */
+    track.headingForAssetId = prediction?.asset.id ?? null;
+
+    const settled = (track.courseSettledS ?? 0) >= DETECTION.courseSettleS;
+    if (!settled) {
+      /*
+       * Before there is a course there is nothing to say, and saying it
+       * anyway is what produced camp / bridge / camp / nowhere / camp /
+       * bridge in twenty-five seconds. But a wobble in an established track
+       * is not new information either — blanking the label every time the
+       * estimate twitched would have replaced one flicker with another, and
+       * would have starved every consumer that reads it: the freeze
+       * accounting, the border stand-down, the ledger the finale reads.
+       * An answer already given is kept until a better one earns its place.
+       */
+      if (!track.predictedAssetId) {
+        track.predictedCandidateId = null;
+        track.predictedCandidateSinceS = world.t;
+      }
+      continue;
+    }
+    const wanted = prediction?.asset.id ?? null;
+    if (wanted !== track.predictedCandidateId) {
+      track.predictedCandidateId = wanted;
+      track.predictedCandidateSinceS = world.t;
+    }
+    if (wanted === track.predictedAssetId) continue;
+    const dwelt = world.t - (track.predictedCandidateSinceS ?? world.t);
+    if (dwelt >= DETECTION.predictionDwellS) track.predictedAssetId = wanted;
   }
 }
 
@@ -337,7 +398,8 @@ export function engagementValue(world, site, track) {
    * hand-played climax watches. Weighted by the night's own valuation
    * (scoreValue), because that is the arithmetic a defence answers to.
    */
-  const threatened = track.predictedAssetId ? world.assetById.get(track.predictedAssetId) : null;
+  const heading = track.headingForAssetId ?? track.predictedAssetId;
+  const threatened = heading ? world.assetById.get(heading) : null;
   if (threatened && !threatened.destroyed) {
     const assetType = ASSET_TYPES[threatened.type];
     let worth = assetType.scoreValue ?? assetType.value ?? 0;
