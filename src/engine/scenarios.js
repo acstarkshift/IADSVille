@@ -1,4 +1,5 @@
 import { reachedEchelon, withinAppointment } from './echelon.js';
+import { AIR_TYPES } from './config.js';
 
 /**
  * The campaign.
@@ -619,7 +620,7 @@ export const SCENARIOS = [
        * AND FIVE AT HEIGHT, NOT THREE, ARRIVING SIXTEEN SECONDS APART.
        *
        * This is the only package on the watch that belongs to the cabin. Of
-       * the twenty-eight aircraft, seventeen are under BASTION's floor and
+       * the thirty aircraft, seventeen are under BASTION's floor and
        * most of the rest are inside a LANCE's ring as well — but a strike
        * package at six thousand nine hundred metres on the north-east axis is
        * the long-range battalion's problem and nobody else's, and at three
@@ -775,6 +776,10 @@ export const SCENARIOS = [
      * chatter costs no rounds and draws no random numbers.
      */
     chatter: [
+      { atS: 14, text: 'AIR RAID WARNING RED. TAKE POST. THE SET IS COLD AND THE VALLEY IS YOURS.' },
+      { atS: 32, whileOwnCold: true,
+        text: 'CREW CHIEF: NOTHING PAINTS UNTIL WE RADIATE, AND NOBODY IS RADIATING FOR US.',
+        insteadText: 'CREW CHIEF: SET IS UP AND SWEEPING. TWENTY-FOUR ROUNDS AND TWO CHANNELS, THAT IS ALL OF IT.' },
       { atS: 52, text: 'SECTOR: YOU ARE THE ONLY SET LEFT IN THIS SQUARE. THE PICTURE IS WHATEVER YOU CAN SEE.' },
       { atS: 88, text: 'HAMMER SECTION MANNED AND READY — TWELVE ROUNDS AND EIGHT KILOMETRES OF SKY.' },
       { atS: 124, text: 'SECTOR: SAY STATE. NOBODY BEHIND YOU IS GOING TO SEE THIS ONE FOR YOU.' },
@@ -787,6 +792,34 @@ export const SCENARIOS = [
       { atS: 520, text: 'HAMMER SECTION REPORTS EYES ON THE LOW APPROACHES. NOTHING YET.' },
       { atS: 554, text: 'SECTOR: STILL NOTHING ON THE PLOT. THEY ARE IN THE GROUND CLUTTER AND THEY ARE COMING.' },
     ],
+    /*
+     * DO NOT RETUNE THIS TABLE. Sixteen aircraft in four waves, and it is the
+     * only arrangement of them in which the whole difficulty bar passes.
+     *
+     * Seven alternatives were measured at thirty-two seeds each during the
+     * gameplay scrub and every one of them broke a line this one holds.
+     * Re-pointing the waves at the depot, the operations centre and the town
+     * in any of three orders took a competent operator to 94-100% held;
+     * pointing the third one at the operations centre twice destroyed it on
+     * thirty-two watches of thirty-two; sending the cruise wave at the
+     * operations centre put a beginner at 19%; moving the first wave to the
+     * depot or the town cost the attention dividend outright. Recorded here so
+     * the next reader does not spend an afternoon rediscovering it.
+     *
+     * AND WHAT THE WATCH IS ACTUALLY ABOUT, which is not what its brief says.
+     * The brief, the sirens and the town warden are all about the town, and
+     * `pickRaidTarget` weights the operations centre at 88 against the town's
+     * 9.1 — so the town is destroyed on none of thirty-two competent watches
+     * and touched on three, while SECTOR OPS is four hundred of the roughly
+     * nine hundred points of ground here AND is marked critical, so losing it
+     * subtracts about five hundred and converts the verdict at the same time.
+     * A competent operator holds twenty-one of the twenty-two seeds where it
+     * survives and none of the ten where it does not. That is a good hinge and
+     * the trace shows the operator earning it; the fiction pointing somewhere
+     * else is deliberate, because a crew alone in a valley is told to defend
+     * the place they live in and finds out what the file actually values by
+     * losing it.
+     */
     waves: [
       { atS: 25, type: 'striker', count: 3, bearingDeg: 40, spreadDeg: 22, spacingS: 34, altM: 6800,
         distanceKm: 70 },
@@ -1650,3 +1683,40 @@ export const watchesAt = (echelonId) => SCENARIOS.filter((s) => s.echelon === ec
 
 /** The watches a given campaign may actually select. */
 export const rosterFor = (campaign) => SCENARIOS.filter((s) => isUnlocked(s, campaign));
+
+/**
+ * Does anything in this raid hunt the antenna, or the ground it stands on?
+ *
+ * The console carries two controls for that question and only that question:
+ * the ЗАСВЕТКА · ELINT EXPOSURE gauge, which reads how much of your emissions
+ * somebody has collected, and DISPLACE, which is the only verb that empties
+ * the grid reference they collected it at. On Solo Battery neither means
+ * anything — not one of the sixteen aircraft in that raid carries an
+ * anti-radiation round, so `armsLeft` is nought for every one of them, the
+ * INBOUND ARM lamp never lights, and the gauge sat pinned at 100% in red from
+ * the four-minute mark of three hand-played watches with nothing behind it. A
+ * gauge that is always red is a decoration, and a button whose whole purpose
+ * is to answer a threat that does not exist is a trap: it costs a battalion
+ * three and a half minutes off the air.
+ *
+ * First Light already hides both behind `basicConsole`, with a comment saying
+ * the exposure gauge belongs to watches where somebody shoots back. This asks
+ * the raid table instead of asking the scenario to remember.
+ */
+export function raidHuntsRadars(scenario) {
+  return (scenario?.waves ?? []).some((wave) => (AIR_TYPES[wave.type]?.arms ?? 0) > 0);
+}
+
+/**
+ * ...and the other half of the same question: is the POSITION the objective?
+ *
+ * DISPLACE answers two threats, not one. The second is a hostile tracking
+ * toward something that packs up and drives out with the battery — the forward
+ * post on the finale — and on that watch one displacement is the difference
+ * between a scripted overrun and a watch held. A scenario with no such asset
+ * and no anti-radiation round in its raid has nothing for the button to do.
+ */
+export function positionCanBeHunted(scenario) {
+  return raidHuntsRadars(scenario)
+    || (scenario?.assets ?? []).some((asset) => asset.follows);
+}

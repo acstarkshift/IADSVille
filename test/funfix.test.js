@@ -825,7 +825,10 @@ describe('the teaching watch teaches', () => {
     const cues = [];
     const log = w.log.bind(w);
     w.log = (kind, text, meta) => {
-      if (kind === 'comms' && text.includes(`TAKE`)) cues.push(text);
+      // `TAKE T-`, not `TAKE`: scripted chatter is radio traffic too now, and
+      // "TAKE POST" is not a cue. The sibling test below always read it this
+      // way; this one was looser than it meant to be.
+      if (kind === 'comms' && text.includes('TAKE T-')) cues.push(text);
       return log(kind, text, meta);
     };
 

@@ -475,9 +475,13 @@ export function renderDebrief(host, state, result, entry) {
  * help screen that names keys the console has removed is worse than no help
  * screen: it sends a new operator hunting for a control that is not there.
  */
-export function renderControls(host, { basic = false } = {}) {
+export function renderControls(host, { basic = false, hunted = true } = {}) {
   const key = (k, d) => `<div><b>${esc(k)}</b><span>${esc(d)}</span></div>`;
   const unless = (cond, row) => (cond ? '' : row);
+  // DISPLACE is listed only where something can hunt the position: an
+  // anti-radiation round in the raid, or a place that drives out with the
+  // battery. `panels.js` hides the cap on the same test.
+  const displaceable = !basic && hunted;
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title" style="font-size:28px">CONTROLS</h1>
     <div class="card">
@@ -502,7 +506,7 @@ export function renderControls(host, { basic = false } = {}) {
         ${key('E', 'toggle the selected battery’s radar — careful: this silences your own set')}
         ${unless(basic, key('G', 'RIDE — hold emissions through guidance with an ARM inbound (the crew never will)'))}
         ${key('R', 'loaders out — start the selected battery’s rack filling now, short or not')}
-        ${unless(basic, key('X', 'displace the selected battery'))}
+        ${displaceable ? key('X', 'displace the selected battery') : ''}
         ${key('`', 'toggle every surveillance radar')}
       </div>
     </div>
@@ -515,7 +519,7 @@ export function renderControls(host, { basic = false } = {}) {
         ${key('E', 'radiate / shut down (this is the whole game)')}
         ${unless(basic, key('S', 'salvo size'))}
         ${key('R', 'loaders out — top the rack up now, instead of waiting for the rails to go bare')}
-        ${unless(basic, key('X', 'displace'))}
+        ${displaceable ? key('X', 'displace') : ''}
       </div>
     </div>
     <div class="card">

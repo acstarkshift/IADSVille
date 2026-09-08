@@ -16,6 +16,7 @@ import { engagementStatus } from './console.js';
 import { armTimeToImpact, canStartLoading, channelsFor, railLoadS, railsOf } from '../engine/doctrine.js';
 import { CONTROLS, STATUS, EQUIPMENT, PLATES, legend, pair, pairHtml } from './lexicon.js';
 import { rankOf } from '../engine/character.js';
+import { raidHuntsRadars, positionCanBeHunted } from '../engine/scenarios.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -661,8 +662,9 @@ export function renderBatteries(world, ui, els) {
         </button>`}
         ${press(CONTROLS.reload, { act: 'reload', site: site.id,
     disabled: detached || !canStartLoading(world, site) })}
-        ${world.scenario.basicConsole ? '' : press(CONTROLS.displace, { act: 'scoot', site: site.id,
-    disabled: detached || site.scootRemainingS > 0 })}
+        ${world.scenario.basicConsole || !positionCanBeHunted(world.scenario) ? ''
+    : press(CONTROLS.displace, { act: 'scoot', site: site.id,
+      disabled: detached || site.scootRemainingS > 0 })}
       </div>
     </div>`;
   }).join('');
@@ -696,12 +698,12 @@ export function renderBatteries(world, ui, els) {
         ${lamp(STATUS.armWarning, Number.isFinite(armEta), { colour: 'red', blinking: true,
     caption: Number.isFinite(armEta) ? `${STATUS.armWarning.tm} ${Math.ceil(armEta)}s` : STATUS.armWarning.tm })}
       </div>
-      <div class="unit-row">
+      ${raidHuntsRadars(world.scenario) ? `<div class="unit-row">
         <span class="unit-type">${esc(pair(STATUS.exposure))}</span>
         <span class="gauge ${radar.exposure > 0.65 ? 'is-hot' : radar.exposure > 0.35 ? 'is-warn' : ''}">
           <i style="width:${Math.round(radar.exposure * 100)}%"></i></span>
         <span class="unit-type">${Math.round(radar.exposure * 100)}%</span>
-      </div>
+      </div>` : ''}
       <div class="unit-controls">
         <button class="pb pb-radiate ${radar.on ? 'is-on' : blind && radar.alive ? 'is-urgent' : ''}"
           data-act="emcon-radar" data-radar="${radar.id}" ${radar.alive ? '' : 'disabled'}
@@ -734,9 +736,22 @@ export function renderCrewConsole(world, ui, els) {
   const armEta = radar?.alive ? armTimeToImpact(world, radar) : Infinity;
   const type = SAM_TYPES[site.type];
   const nomenclature = EQUIPMENT[site.type];
-  // The teaching watch shows the seat, not the trade: displacement and the
-  // ELINT game wait until a watch where somebody is actually shooting back.
+  /*
+   * The teaching watch shows the seat, not the trade: displacement and the
+   * ELINT game wait until a watch where somebody is actually shooting back.
+   *
+   * And so does every other watch where nobody is. `basicConsole` is First
+   * Light saying so by hand; `raidHuntsRadars` asks the raid table instead —
+   * measured on Solo Battery, not one of its sixteen aircraft carries an
+   * anti-radiation round, so the exposure gauge sat pinned at 100% in red
+   * from the four-minute mark of three hand-played watches with nothing
+   * behind it and the INBOUND ARM lamp never lit once. `positionCanBeHunted`
+   * is the same question for DISPLACE, which also answers a hostile tracking
+   * toward something that drives out with the battery.
+   */
   const basic = !!world.scenario.basicConsole;
+  const hunted = !basic && raidHuntsRadars(world.scenario);
+  const canBeHunted = !basic && positionCanBeHunted(world.scenario);
 
   const sequence = status.holding ? STATUS.holding : {
     idle: STATUS.standby, reacting: STATUS.preparing, ready: STATUS.ready, guiding: STATUS.inFlight,
@@ -831,15 +846,15 @@ export function renderCrewConsole(world, ui, els) {
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
     { act: 'emcon', site: site.id, disabled: !radar?.alive })}
         ${press(CONTROLS.reload, { act: 'reload', site: site.id })}
-        ${basic ? '' : press(CONTROLS.displace, { act: 'scoot', site: site.id })}
+        ${canBeHunted ? press(CONTROLS.displace, { act: 'scoot', site: site.id }) : ''}
       </div>
 
-      ${basic ? '' : `<div class="unit-row" style="margin-top:9px">
+      ${hunted ? `<div class="unit-row" style="margin-top:9px">
         ${legend(STATUS.exposure, { inline: true })}
         <span class="gauge ${(radar?.exposure ?? 0) > 0.65 ? 'is-hot' : (radar?.exposure ?? 0) > 0.35 ? 'is-warn' : ''}">
           <i style="width:${Math.round((radar?.exposure ?? 0) * 100)}%"></i></span>
         <span class="unit-type">${Math.round((radar?.exposure ?? 0) * 100)}%</span>
-      </div>`}
+      </div>` : ''}
       ${site.crewLosses ? `<div class="crew-row is-hot">${legend(STATUS.crew, { inline: true })}
         <b>${site.crewLosses} ПОТЕРЬ / CASUALTIES</b></div>` : ''}
 

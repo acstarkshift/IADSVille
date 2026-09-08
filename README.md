@@ -1089,6 +1089,23 @@ A few decisions worth knowing about if you read the source:
   the cabin's attention dividend goes from 8 of 16 seeds and +4.5% to 24 of 32
   and +20.1%.
 
+  **Solo Battery's attention dividend is capped by a ceiling and a single
+  building, and the wave table is not the problem.** Over thirty-two seeds the
+  ladder is clean — 0 / 41 / 75 / 81 per cent held, score coefficient of
+  variation 0.33 — but a careful operator beats a competent one on 19 seeds of
+  32 and by 8.0%, under the bar on both counts. Two things cap it. A competent
+  operator already scores 962-980 on a clean seed against roughly nine hundred
+  points of ground and three hundred and fifty of kills, so there is little
+  room above them; and SECTOR OPS is four hundred of that ground AND is marked
+  critical, so its loss subtracts about five hundred points and converts the
+  verdict at the same moment — a competent operator holds 21 of the 22 seeds
+  where it survives and none of the 10 where it does not. Seven alternative
+  wave tables were measured at thirty-two seeds each during the scrub and every
+  one broke something this one holds (competent at 94-100%, or the operations
+  centre destroyed on 32 of 32, or a beginner at 19%); they are recorded in the
+  scenario file beside a DO-NOT-RETUNE note. The dividend is a watch-shape
+  problem and the shape is load-bearing.
+
   **Novice is shut out on the net seat of the two biggest watches** (0 of 8 on
   Low Riders' net and both-seats, against 88% in the cabin, where the sector's
   own battle manager covers for them). That is not a tuning miss, it is the
@@ -1096,6 +1113,26 @@ A few decisions worth knowing about if you read the source:
   handing out two targets at a time and re-pairing the whole sector every three
   seconds is worth three to five leakers a watch. It is the delegation ladder
   seen from the bottom, and it is why the cabin seats exist.
+
+- **A gauge with nothing behind it is dead weight, and so is a button that
+  answers a threat the raid does not carry.** The battery card and the cabin
+  both wear ЗАСВЕТКА · ELINT EXPOSURE — how much of your emissions somebody has
+  collected — and DISPLACE, the only verb that empties the grid reference they
+  collected it at. On Solo Battery neither means anything: not one of the
+  sixteen aircraft in that raid carries an anti-radiation round, so the INBOUND
+  ARM lamp never lights and the gauge sat pinned at 100% in red from the
+  four-minute mark of three hand-played watches. First Light already hid both
+  behind its cut-down console with a comment saying the exposure gauge belongs
+  to watches where somebody shoots back; the console now asks the raid table
+  instead of asking each scenario to remember — `raidHuntsRadars` for the
+  gauge, and `positionCanBeHunted` for DISPLACE, which also answers a hostile
+  tracking toward something that drives out with the battery. The keyboard row
+  on the CONTROLS page follows the same test, so the help screen never names a
+  key the console has taken away. Six watches lose the pair — First Light, Low
+  Riders, Solo Battery, White Noise, Economy of Force and Across the Line, none
+  of which fields an anti-radiation round — and the six where something really
+  is hunting the antenna keep both. No measurement moves, because none of this
+  touches the simulation.
 
 - **A watch that is lost says why it was lost.** Every losing watch used to end
   on the same three words — "WATCH ENDS — SECTOR PENETRATED" — whether four

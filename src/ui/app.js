@@ -9,7 +9,7 @@
  */
 
 import { World } from '../engine/world.js';
-import { SCENARIOS, scenarioById, rosterFor } from '../engine/scenarios.js';
+import { SCENARIOS, scenarioById, rosterFor, positionCanBeHunted } from '../engine/scenarios.js';
 import { SIM, SAM_TYPES, ROLES, DEFENCE_CLASSES, ASSET_TYPES } from '../engine/config.js';
 import {
   loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign,
@@ -328,7 +328,8 @@ function showHelp(back) {
   // salvo, RIDE and displacement off the console, so this page must not go on
   // telling a new operator to press S, G and X.
   const basic = !!state.mission?.basicConsole;
-  showScreen((host) => renderControls(host, { basic }));
+  const hunted = !state.mission || positionCanBeHunted(state.mission);
+  showScreen((host) => renderControls(host, { basic, hunted }));
   els.screen.querySelector('#btn-close-help').onclick = () => helpReturn();
 }
 

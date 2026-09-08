@@ -13,8 +13,10 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
-import { scenarioById, SCENARIOS } from '../src/engine/scenarios.js';
-import { SAM_TYPES } from '../src/engine/config.js';
+import {
+  scenarioById, SCENARIOS, raidHuntsRadars, positionCanBeHunted,
+} from '../src/engine/scenarios.js';
+import { SAM_TYPES, AIR_TYPES } from '../src/engine/config.js';
 
 /** Run to `untilS`, keeping every set the AI owns radiating. */
 function run(w, untilS, { crewRadiates = false } = {}) {
@@ -203,5 +205,35 @@ describe('the raid the cabin owns', () => {
       .reduce((n, wave) => n + wave.count, 0);
     assert.ok(under >= 14,
       `most of this raid must be under the crewed battery's ${floor} m floor, got ${under}`);
+  });
+});
+
+describe('a gauge with nothing behind it is dead weight', () => {
+  test('the raid predicates agree with what the waves actually carry', () => {
+    for (const scenario of SCENARIOS) {
+      const carried = (scenario.waves ?? [])
+        .some((wave) => (AIR_TYPES[wave.type]?.arms ?? 0) > 0);
+      assert.equal(raidHuntsRadars(scenario), carried, `${scenario.id} arms`);
+      const travels = (scenario.assets ?? []).some((a) => a.follows);
+      assert.equal(positionCanBeHunted(scenario), carried || travels, `${scenario.id} position`);
+    }
+  });
+
+  test('Solo Battery has nothing to expose and nowhere to drive to', () => {
+    assert.equal(raidHuntsRadars(scenarioById('solo-battery')), false,
+      'not one of its sixteen aircraft carries an anti-radiation round');
+    assert.equal(positionCanBeHunted(scenarioById('solo-battery')), false);
+    assert.equal(raidHuntsRadars(scenarioById('weasel-hour')), true,
+      'the suppression watch is the one where the exposure gauge means something');
+  });
+
+  test('and the wave table it is measured on has not moved', () => {
+    const waves = scenarioById('solo-battery').waves;
+    assert.deepEqual(waves.map((w) => [w.atS, w.type, w.count, w.distanceKm]), [
+      [25, 'striker', 3, 70],
+      [180, 'striker', 4, 80],
+      [330, 'cruise', 5, 85],
+      [470, 'striker', 4, 60],
+    ], 'seven alternatives were measured at thirty-two seeds and every one is worse');
   });
 });
