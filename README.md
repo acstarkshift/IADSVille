@@ -1273,9 +1273,10 @@ A few decisions worth knowing about if you read the source:
   console going quiet was being switched off by the console's own noise. Both
   now speak as `comms`, and the reporter's clock counts only the kinds that
   are the watch doing something to you, which is the same set the harness
-  counts. The reading over the same 896 runs, after the curve scrub: **not one
-  run of the eight hundred and ninety-six carries a stretch of thirty seconds
-  or more, and the longest coda in the campaign is 24.7 seconds** — against a
+  counts. The reading over the same 896 runs, re-measured after the residue
+  scrub: **not one run of the eight hundred and ninety-six carries a stretch of
+  thirty seconds or more, and the longest coda in the campaign is 24.7
+  seconds** — against a
   ninety-second bar, and against a White Noise that used to spend 301 seconds
   of every seed watching decoys expire. The act-two pass had it down to
   thirty-six runs with a hole in them, worst 89 seconds; act four's late
@@ -1445,14 +1446,18 @@ A few decisions worth knowing about if you read the source:
   points of held rate while moving the both seat by six. Neither was kept. The
   dividend is in held watches, not in score, and both are reported.
 
-  *Sixteen runs of eight hundred and ninety-six pass the eighteen-minute
-  ceiling, and fifteen of them are the walk-away.* A player who touches nothing
-  shoots nothing down, so every aircraft on the board flies its whole profile
-  and the night takes as long as the raid does — eleven White Noise runs, four
-  Ville Under Fire and one Reinforce the Capital, worst 19.1 minutes. The
-  sixteenth is a single competently-played White Noise seed at 18.0 minutes,
-  which is the ceiling to the tenth of a minute. No watch is lengthened for
-  anybody who is at the console.
+  *Twelve runs of eight hundred and ninety-six pass the eighteen-minute
+  ceiling, and every one of them is the walk-away.* A player who touches
+  nothing shoots nothing down, so every aircraft on the board flies its whole
+  profile and the night takes as long as the raid does — eleven White Noise
+  runs and one Reinforce the Capital, worst 19.1 minutes. It was sixteen before
+  the residue pass, and the four that left the list were Ville Under Fire's,
+  including the one competently-played seed in the whole set that ran over: the
+  main-effort watch's last package now arrives forty seconds later and sixteen
+  kilometres nearer, which is fifty seconds less ingress and fifty less egress,
+  and its longest seed of any policy fell from 18.5 minutes to 17.7. No watch
+  is lengthened for anybody who is at the console, and nothing at the console
+  passes the ceiling at all.
 
   *Two Cities is magazine-bound for half its length, and the store is not what
   fixes it.* The harness reports the magazine as the ONLY thing between the
@@ -1554,11 +1559,11 @@ A few decisions worth knowing about if you read the source:
   | White Noise | 0% | 6-69% | 81-94% | 75-88% |
   | Economy of Force | 0% | 31-88% | 81-88% | 63-75% |
   | Across the Line | 0-6% | 31-69% | 69-81% | 56-81% |
-  | Ville Under Fire | 0-44% | 0-44% | 63-88% | 75-100% |
-  | Four Sectors | 0% | 38% | 69% | 100% |
+  | Ville Under Fire | 0-13% | 0-56% | 81% | 75-81% |
+  | Four Sectors | 0% | 31% | 69% | 88% |
   | Reinforce the Capital | 0% | 56% | 69% | 94% |
-  | The Two Cities | 0% | 9-13% | 69-75% | 56% |
-  | The President's Flight | 9-31% | 34% | 66-75% | 78% |
+  | The Two Cities | 0% | 0-6% | 63-81% | 56-63% |
+  | The President's Flight | 6-38% | 38-44% | 63-75% | 69-88% |
 
   (Ranges are across the seats each watch offers; Solo Battery has only the
   cabin, and the last two only the net and both seats.)
@@ -1569,17 +1574,21 @@ A few decisions worth knowing about if you read the source:
   | Act | Watches | Competent HELD | Act mean |
   |---|---|--:|--:|
   | I — battalion | First Light \| Low Riders \| Solo Battery | 100%\* \| 81% \| 81% | **87.5%** |
-  | II — sector | Weasel Hour \| White Noise \| Economy of Force \| Across the Line \| Ville Under Fire | 75% \| 81% \| 81% \| 75% \| 69% | **76.3%** |
+  | II — sector | Weasel Hour \| White Noise \| Economy of Force \| Across the Line \| Ville Under Fire | 75% \| 81% \| 81% \| 75% \| 81% | **78.6%** |
   | III — district | Four Sectors \| Reinforce the Capital | 69% \| 69% | **68.8%** |
-  | IV — national | The Two Cities \| The President's Flight | 69% \| 75% | **72%** |
+  | IV — national | The Two Cities \| The President's Flight | 63% \| 75% | **69%** |
 
   \* the documented teaching exception, below.
 
   The rule is that no watch may be easier than the hardest watch of the act
-  before it, and each act clears it exactly: act one's hardest holds 81 and
-  act two's easiest holds 81; act two's hardest holds 69 and act three's
-  easiest holds 69; act three's hardest holds 69 and act four's easiest holds
-  69. The act means fall monotonically with it. It was not a staircase before this was measured: act two used
+  before it, and each act clears it: act one's hardest holds 81 and act two's
+  easiest holds 81; act two's hardest holds 75 and act three's easiest holds
+  69; act three's hardest holds 69 and act four's easiest holds 63. The act
+  means fall monotonically with it. One watch sits a rung above the act before
+  it — the sealed escort at 75 against act three's hardest 69, six points on a
+  sixteen-seed sample, inside the one-night slack the test allows and recorded
+  with its own six-row ladder in the exceptions above, because the alternative
+  arrangement of that raid puts it thirteen points higher still. It was not a staircase before this was measured: act two used
   to hold 100 / 88 / 100 / 100 / 88 against act one's 100 / 63 / 88, so the
   second act of four was the easiest thing in the game and three of its watches
   could not be lost by a competent player on any seat, while act four held 75
@@ -1749,6 +1758,19 @@ A few decisions worth knowing about if you read the source:
   of which fields an anti-radiation round — and the six where something really
   is hunting the antenna keep both. No measurement moves, because none of this
   touches the simulation.
+
+- **What the residue pass measured across the whole matrix, and what it left
+  open.** The 896-run campaign matrix — twelve watches, every seat, four player
+  models, eight seeds — was taken before and after. Every crewed seat in the
+  game now has its first legal shot inside the ninety-second bar: 38 to 79
+  seconds across the eight watches with a cabin, where Ville Under Fire's read
+  218. No run of the 896 carries a thirty-second stretch with nothing in it. No
+  run played by anybody at the console passes the eighteen-minute ceiling; the
+  twelve that do are all the walk-away. The last hostile of each watch arrives
+  at 52 to 72 per cent of its own median length, and the one under the 55 per
+  cent bar is Economy of Force at 52 — a three-point miss that predates this
+  pass and is the freeze watch's own shape, since the last package is the deck
+  run at the airbase the freeze is about.
 
 - **A watch that is lost says why it was lost.** Every losing watch used to end
   on the same three words — "WATCH ENDS — SECTOR PENETRATED" — whether four
