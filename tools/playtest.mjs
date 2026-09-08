@@ -421,6 +421,18 @@ function answerAfter(ctx, delayS, chooser) {
  * gets the battery it wants rather than whichever contact happened to be
  * higher up the list.
  */
+/*
+ * A note on what the SECTOR does not do here.
+ *
+ * The cabin's "wait for the tell" rule (see `crewLoop`) was measured on this
+ * pass at the net seat too, and it is wrong there: eight seeds of White Noise,
+ * expert against competent, +5.5% winning five became −4.2% winning three on
+ * the net and +7.6% winning seven became −11.9% winning two on both seats. The
+ * reason is the whole point of a long-range battalion — its value is depth, and
+ * a rule that forbids the outer half of a hundred-and-twenty-kilometre ring
+ * gives away more than the decoys cost. Discrimination is a medium battery's
+ * economy and a battalion's luxury.
+ */
 function assignPass(ctx, { greedy = false, salvo = false } = {}) {
   const { w } = ctx;
   const pairs = [];
@@ -665,16 +677,36 @@ function holdForRange(w, site, engagement, track) {
  * in their head — the tube lamps show the rails and the panel shows the
  * store — so the threshold is a rack-shaped quantity rather than an exact
  * fraction: "about one more full rack and that is all of it".
+ *
+ * "Started the night with" is `site.magazineIssued`, not the type's book
+ * figure. On a watch that issues half stores the book figure is twice the
+ * issue, so a floor computed from it holds back half the night's rounds
+ * instead of a quarter — measured on White Noise at half stores, that alone
+ * put the expert cabin ten per cent BELOW the competent one and lost it all
+ * eight seeds. The model was not worse than the competent player; it was
+ * husbanding against an inventory it had not been given.
  */
 function reserveFloor(site) {
   const rails = railsOf(site);
-  return Math.max(rails, Math.round((SAM_TYPES[site.type].magazine + rails) * 0.25));
+  const issued = site.magazineIssued ?? SAM_TYPES[site.type].magazine;
+  return Math.max(rails, Math.round((issued + rails) * 0.25));
 }
 
 function crewLoop(ctx, fireDelayS, craft = {}) {
   const { w, mem } = ctx;
   const site = ctx.crewed;
   if (!site?.alive || site.scootRemainingS > 0) return;
+
+  /*
+   * When the shootlist first prints DECOY beside a track number, the operator
+   * learns what kind of night this is. That is a thing a person remembers and
+   * a thing the console says out loud, so the model is allowed to remember it.
+   */
+  if (mem.sawDecoyAtS === undefined
+    && [...w.tracks.values()].some((t) => t.classification === 'decoy')) {
+    mem.sawDecoyAtS = w.t;
+    ctx.act('READS THE PICTURE — THERE ARE DECOYS IN THIS RAID');
+  }
 
   for (const engagement of [...site.engagements]) {
     if (engagement.state !== 'ready') continue;
@@ -790,6 +822,29 @@ function crewLoop(ctx, fireDelayS, craft = {}) {
           && !cannotEngageReason(w, other, track));
         if (coveredByAnother) continue;
       }
+      /*
+       * ONCE YOU HAVE SEEN ONE GHOST, DO NOT SPEND THE EDGE OF THE RING ON THE
+       * NEXT ONE.
+       *
+       * A decoy reads as a strike aircraft — the track says STRIKE, because
+       * that is what it is built to say — until it crosses forty kilometres of
+       * the sector centre, where its impossibly steady flight gives it away
+       * for free. Every round released outside that circle at an unresolved
+       * contact is a coin toss, and on a watch that issues twenty-two rounds
+       * against thirty-four objects the toss is the whole night.
+       *
+       * The trade is real and it is paid in geometry: waiting means taking the
+       * shot deeper, closer to the target's release point and with less room
+       * for a second one. So the rule is only about the OUTER half of the
+       * envelope, and it only switches on once the shootlist has actually
+       * relabelled something DECOY — which is the moment a person at the
+       * console learns what kind of night this is.
+       */
+      if (craft.decoyTell && mem.sawDecoyAtS !== undefined
+        && track.classification === 'striker'
+        && len(track.pos) > AIR_TYPES.decoy.tellRangeKm + 4
+        && dist(site.pos, track.pos) > SAM_TYPES[site.type].maxRangeKm * 0.55
+        && (track.ttiS ?? Infinity) > 40) continue;
       /*
        * The aeroplane before the bomb, and the sector says so out loud: an
        * enemy round on the plot is announced with "LOW SECTIONS TAKE IT",
@@ -1021,7 +1076,11 @@ export const POLICIES = {
         mem.lastPassS = w.t;
         assignPass(ctx, { greedy: true, salvo: true });
       }
-      if (ctx.crewed) crewLoop(ctx, 0, { topUp: true, sweetSpot: true, reserveForOurs: true, lookahead: true });
+      if (ctx.crewed) {
+        crewLoop(ctx, 0, {
+          topUp: true, sweetSpot: true, reserveForOurs: true, lookahead: true, decoyTell: true,
+        });
+      }
       expertDisplace(ctx);
       if (ctx.seat !== 'crew') {
         standInTheMainEffort(ctx);
@@ -1507,6 +1566,19 @@ export function playRun(job) {
     blindShare: r3(samples ? blindS / samples : 0),
     displacements: outcome.stats.displacements ?? 0,
     reserveReleased: w.reserve?.released ?? 0,
+    /*
+     * The decapitation, which the harness could not see at all.
+     *
+     * Ville Under Fire's whole brief is about the moment the fused picture
+     * dies, and there was no column for it — so the fact that it fired on
+     * ZERO of eight competent nights, and that where it fired the watch was
+     * already lost, had to be dug out of trace files by hand. `fusionLostAtS`
+     * is when the centre stopped reconciling; `criticalLost` is whether the
+     * building itself went. A watch where those two are the same number is a
+     * watch with two states and nothing in between.
+     */
+    fusionLostAtS: r1(w.c2LostAtS ?? null),
+    criticalLost: w.assets.some((a) => ASSET_TYPES[a.type].critical && a.destroyed),
     rounds: outcome.stats.roundsFired,
     ownRounds,
     kills: outcome.stats.kills,

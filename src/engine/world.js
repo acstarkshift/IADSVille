@@ -374,6 +374,19 @@ export class World {
           ? Math.round(type.magazine * this.modifiers.roundsMult
             * (this.scenario.storeMult ?? 1))
           : 0,
+        /**
+         * And what that store was at the top of the watch, kept because
+         * "a quarter of what we were issued tonight" is a real thought an
+         * operator has and the running total cannot answer it. Anything
+         * reasoning about husbanding rounds must read this and not the type's
+         * book figure: on a half-store watch the book figure is twice the
+         * issue, and a rule written against it holds back half the night's
+         * rounds instead of a quarter.
+         */
+        magazineIssued: this.modifiers.reloadsAllowed
+          ? Math.round(type.magazine * this.modifiers.roundsMult
+            * (this.scenario.storeMult ?? 1))
+          : 0,
         /** Seconds until the next round seats. See `stepLoading`. */
         reloadRemainingS: 0,
         /** True while the loaders are out: rails arrive one at a time. */
@@ -1093,6 +1106,16 @@ export class World {
     if (!aircraft.alive) return false;
     const type = AIR_TYPES[aircraft.type];
     if (type.friendly && !type.isVip) return false;
+    /*
+     * A decoy is not something the watch is waiting on. It carries nothing, it
+     * cannot arrive at anything, and it comes down on its own at the end of a
+     * thirteen-minute lifetime — so a watch held open for one is a watch held
+     * open for an egg timer. Measured on White Noise: the last decoy of the
+     * five-minute wave expired at 1116 s against a last engagement at 815 s,
+     * on every seed, and fifty-one of seventy-two non-spectator runs ran past
+     * the eighteen-minute ceiling on that alone.
+     */
+    if (aircraft.type === 'decoy') return false;
 
     if (aircraft.state === 'egress') {
       // Measured from the centre of the watch rather than from the map origin.

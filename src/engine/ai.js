@@ -263,9 +263,16 @@ function stepCruise(world, aircraft, dt) {
  * True while any strike aircraft — anything that is not an escort — remains
  * flying or still to come. Escorts read this to know when the war they are
  * escorting is over.
+ *
+ * A decoy counts as support, not as raid. It carries nothing, it cannot hurt
+ * anything on the ground, and it falls out of the sky by itself thirteen
+ * minutes after launch. Counting it as a striker deadlocked the end of every
+ * decoy watch: the jammers waited on the decoys, the decoys waited on their
+ * own lifetime, and White Noise ran three hundred seconds past its last
+ * engagement on every seed — five minutes of CONTACT FADED and nothing else.
  */
 function strikersRemain(world) {
-  const support = (t) => t === 'sead' || t === 'jammer';
+  const support = (t) => t === 'sead' || t === 'jammer' || t === 'decoy';
   return world.pendingWaves.some((w) => !AIR_TYPES[w.type].friendly && !support(w.type))
     || world.aircraft.some((a) => a.alive && !AIR_TYPES[a.type].friendly
       && !support(a.type) && a.state !== 'egress');
