@@ -170,19 +170,40 @@ describe('the playtest harness', () => {
    * actions on the console. An instrument that cannot press a control cannot
    * report on it, and reported silence as "the watch has no depth".
    */
-  test('the expert presses DISPLACE when the position itself is the objective', () => {
+  test('the expert presses DISPLACE when the position cannot be answered by fire', () => {
     /*
      * The finale's third axis comes for the ground the operator is standing
-     * on, and the forward post drives out with the battery. Measured across
-     * the finale's eight net seeds: every seed on which this model displaced
-     * held the sector, and every seed on which it did not was lost. That is
-     * the whole watch in one verb, and no player model had ever pressed it.
+     * on, and the forward post drives out with the battery.
+     *
+     * RE-ANCHORED, and tightened rather than loosened. This used to assert a
+     * displacement on one named seed, and the measurement behind it was made
+     * on a watch whose third axis released at about ten minutes against a
+     * battery that had been dry since five and a half: driving away was free,
+     * because there was nothing left to shoot with. The acts three and four
+     * scrub brought that package in to two and a half minutes with rounds
+     * still on the rails, and a player who can shoot it shoots it — three and
+     * a half minutes off the air is three and a half minutes the two cities do
+     * not have. Measured in the cabin before the guard existed, two seeds of
+     * eight conceded eleven leakers apiece to a displacement taken with a full
+     * rack and the package inside the ring.
+     *
+     * So the property is now the judgement rather than the reflex: the verb is
+     * still reached, and it is not reached often. Measured over the finale's
+     * eight seeds from both seats: one displacement, on p4.
      */
-    const moved = playRun({ mission: 'two-cities', seat: 'both', policy: 'expert', seed: 'p2' }).run;
-    assert.ok(moved.displacements >= 1,
-      'a raid tracking the post that travels with your battery is answered by moving');
-    const rooted = playRun({ mission: 'two-cities', seat: 'both', policy: 'competent', seed: 'p2' }).run;
-    assert.equal(rooted.displacements, 0,
+    const seeds = Array.from({ length: 8 }, (_, i) => `p${i + 1}`);
+    const expert = seeds.map((seed) => playRun({
+      mission: 'two-cities', seat: 'both', policy: 'expert', seed,
+    }).run);
+    const moved = expert.filter((r) => r.displacements >= 1).length;
+    assert.ok(moved >= 1,
+      'the verb is still reached on a watch whose third axis comes for the position');
+    assert.ok(moved <= 4,
+      `and it is a judgement, not a reflex (${moved} of 8 seeds displaced)`);
+    const rooted = seeds.map((seed) => playRun({
+      mission: 'two-cities', seat: 'both', policy: 'competent', seed,
+    }).run);
+    assert.ok(rooted.every((r) => r.displacements === 0),
       'and the competent model stays put — displacement is the craft, not the baseline');
 
     /*

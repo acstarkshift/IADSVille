@@ -124,8 +124,8 @@
  *   expenditureFreeze   economy-of-force       crew  1571 /96/ 8-8   1548 /76/ 8-8
  *   borderRestriction   across-the-line        net    950 /97/ 8-8    950 /72/ 8-8
  *   borderRestriction   across-the-line        crew  1053 /93/ 8-8   1053 /72/ 8-8
- *   withdrawBattalion   reinforce-the-capital  net   1448 /52/ 8-8   1323 / 8/ 8-8
- *   palacePriority      two-cities             net   −622 / 0/ 0-8   −622 / 0/ 0-8
+ *   withdrawBattalion   reinforce-the-capital  net   1741 /65/ 7-8   1302 / 8/ 7-8
+ *   palacePriority      two-cities             net   1985 /68/ 8-8   1985 /53/ 8-8
  *   engageCivil         ville-under-fire       net   1037 /62/ 8-8   1037 /50/ 8-8
  *   civilCorridor       white-noise            crew  1456 /92/ 8-8   1462 /94/ 8-8
  *   priority (routine)  white-noise            net   1453 /91/ 8-8   1453 /85/ 8-8
@@ -161,12 +161,19 @@
  *                       the district by hand rather than by greedy
  *                       `engagementValue` pairing: `test/echelon.test.js`
  *                       measures that one over eight seeds and refusal is
- *                       ahead 1662 to 1203, keeps weapons off the district on
- *                       all eight nights (23 leakers against 43), and loses
- *                       seven places against obedience's ten. Two player
+ *                       ahead 1562 to 1050, keeps weapons off the district on
+ *                       all eight nights (22 leakers against 37), and loses
+ *                       six places against obedience's eight. Two player
  *                       models, two answers, both measured; the harness
  *                       records its own and the README's claim rests on the
  *                       one with a person in it.
+ *
+ *                       The acts three and four scrub moved the order from 55 s
+ *                       to 165 s, so it is now answered with the battalion
+ *                       holding four tracks rather than on an empty night, and
+ *                       re-measured both arms: obedience 1741 and sixty-five
+ *                       points of standing against refusal's 1302 and eight.
+ *                       The margin widened and the sign did not change.
  *
  * There is not a single exception left in the table. Five of the ten rows are
  * identical to the decimal on both arms, four are worse for refusing, and the
@@ -272,8 +279,12 @@ import { fileURLToPath } from 'node:url';
 
 import { World } from '../src/engine/world.js';
 import { SCENARIOS } from '../src/engine/scenarios.js';
-import { cannotEngageReason, engagementValue, sortedTracks } from '../src/engine/threat.js';
-import { armTimeToImpact, channelsFor, railLoadS, railsOf } from '../src/engine/doctrine.js';
+import {
+  cannotEngageReason, engagementValue, huntsTheFlight, sortedTracks,
+} from '../src/engine/threat.js';
+import {
+  armTimeToImpact, channelsFor, railLoadS, railsOf, spanLimit, spanLoad,
+} from '../src/engine/doctrine.js';
 import { inEnvelope, timeToInRangeS } from '../src/engine/weapons.js';
 import { AIR_TYPES, ASSET_TYPES, DETECTION, ENGAGEMENT, SAM_TYPES } from '../src/engine/config.js';
 import { closureRate, dist, len } from '../src/engine/math.js';
@@ -433,14 +444,25 @@ function answerAfter(ctx, delayS, chooser) {
  * gives away more than the decoys cost. Discrimination is a medium battery's
  * economy and a battalion's luxury.
  */
-function assignPass(ctx, { greedy = false, salvo = false } = {}) {
+function assignPass(ctx, { greedy = false, salvo = false, holdCorridor = false } = {}) {
   const { w } = ctx;
   const pairs = [];
   for (const track of sortedTracks(w)) {
     if (!shootable(track) || track.threat < 1) continue;
     if (track.assignedTo.length > 0) continue;      // shoot-look-shoot
+    /*
+     * On the escort watch the battalion holding the corridor is not available
+     * for the city. That is the decision the brief puts in front of the
+     * operator in its own words — it cannot cover the corridor and the city at
+     * the same time — and it is the whole of the craft: a channel spent on the
+     * palace strike is a channel the fighters do not have to get past, and the
+     * palace has a sector of its own with three batteries in it.
+     */
+    const corridorTrack = holdCorridor
+      && (track.classification === 'interceptor' || huntsTheFlight(w, track));
     let best = null;
     for (const site of ctx.own) {
+      if (holdCorridor && !corridorTrack && w.formationOf(site.id)?.hq) continue;
       if (cannotEngageReason(w, site, track)) continue;
       const evaluation = engagementValue(w, site, track);
       if (!evaluation) continue;
@@ -511,7 +533,20 @@ function sizeSalvo(ctx, site, track) {
   const env = inEnvelope(site, track.pos, track.altM);
   const threatened = track.predictedAssetId ? ctx.w.assetById.get(track.predictedAssetId) : null;
   const assetType = threatened && !threatened.destroyed ? ASSET_TYPES[threatened.type] : null;
-  const precious = !!assetType && (assetType.critical || assetType.civilian);
+  /*
+   * A defended place, a place with people in it — or the aircraft.
+   *
+   * On the escort watch the most expensive thing on the board has wings, and
+   * this rule could not see it: `predictedAssetId` names ground, so the model
+   * doubled up on the palace strike and put single rounds on the fighters that
+   * were coming for STATE 01, which is the one target on that watch where a
+   * second round is unambiguously worth five points. `huntsTheFlight` is the
+   * console's own reading of it — the same fact the track detail prints — so
+   * the model acts on what the operator can see rather than on something it
+   * worked out privately.
+   */
+  const huntingTheFlight = huntsTheFlight(ctx.w, track);
+  const precious = huntingTheFlight || (!!assetType && (assetType.critical || assetType.civilian));
   const awkward = env.rangeKm > type.maxRangeKm * 0.75 || track.altM < type.minAltM * 3;
   /*
    * "Do I have rounds to spare for a second one?" is a question about the
@@ -1072,9 +1107,13 @@ export const POLICIES = {
       const { w, mem } = ctx;
       expertEmcon(ctx);
       answerAfter(ctx, 6, (id) => EXPERT_ANSWERS[id] ?? 'accepted');
+      // The corridor is claimed before the general pass, not after it: a
+      // channel spent on the palace is a channel the fighters do not have to
+      // get past, and this player has read the brief.
+      if (ctx.seat !== 'crew') guardTheCorridor(ctx);
       if (ctx.seat !== 'crew' && w.t - (mem.lastPassS ?? -99) >= 3) {
         mem.lastPassS = w.t;
-        assignPass(ctx, { greedy: true, salvo: true });
+        assignPass(ctx, { greedy: true, salvo: true, holdCorridor: w.scenario.epilogue === true });
       }
       if (ctx.crewed) {
         crewLoop(ctx, 0, {
@@ -1084,6 +1123,7 @@ export const POLICIES = {
       expertDisplace(ctx);
       if (ctx.seat !== 'crew') {
         standInTheMainEffort(ctx);
+        leaveStandingOrders(ctx);
         commitTheReserve(ctx);
       }
     },
@@ -1135,9 +1175,27 @@ function expertDisplace(ctx) {
 
     const travelsWithUs = w.assets
       .filter((a) => a.follows === site.id && !a.destroyed).map((a) => a.id);
-    const comingForUs = travelsWithUs.length > 0
-      && [...w.tracks.values()].some((t) => t.hostility === 'hostile' && !t.destroyed
-        && t.quality >= FIRM && travelsWithUs.includes(t.predictedAssetId));
+    const hunters = [...w.tracks.values()].filter((t) => t.hostility === 'hostile' && !t.destroyed
+      && t.quality >= FIRM && travelsWithUs.includes(t.predictedAssetId));
+    /*
+     * AND ONLY WHEN IT CANNOT BE ANSWERED WITH FIRE.
+     *
+     * Driving away is the last answer to a package coming for your grid, not
+     * the first. This model used to take it the moment anything turned in on
+     * the post, which was correct on a finale whose third axis released against
+     * an empty rack — and became wrong the moment that package started arriving
+     * while there were rounds on the rails. A player who can shoot it shoots
+     * it; a battery three and a half minutes off the air is three and a half
+     * minutes the cities do not have. Measured in the cabin before this guard,
+     * two seeds of eight conceded eleven leakers apiece to a displacement taken
+     * with a full rack and the package inside the ring.
+     */
+    const canAnswer = site.readyRounds > 0 && hunters.some((t) => {
+      if (inEnvelope(site, t.pos, t.altM).ok) return true;
+      const toRange = timeToInRangeS(site, t);
+      return Number.isFinite(toRange) && toRange < 60;
+    });
+    const comingForUs = hunters.length > 0 && !canAnswer;
 
     const sets = w.radarsOf(site);
     const hunted = sets.some((radar) => radar.alive
@@ -1172,7 +1230,11 @@ function commitTheReserve(ctx) {
   // finished watch. Held before the raid declares itself it goes nowhere useful.
   if (w.t < 120) return;
 
-  const subordinate = w.formations.filter((f) => !f.hq && w.sitesOf(f).length);
+  // Every formation with batteries, the headquarters battalion included: on the
+  // escort watch that battalion is the only one whose reach covers the filed
+  // route, and excluding it pointed the reserve away from the only thing the
+  // watch is about. The console's panel offers the same list.
+  const subordinate = w.formations.filter((f) => w.sitesOf(f).length);
   if (!subordinate.length) return;
   const mass = new Map(subordinate.map((f) => [f.id, 0]));
   for (const track of w.tracks.values()) {
@@ -1302,6 +1364,110 @@ function expertEmcon(ctx) {
       continue;
     }
     setGroup(ctx, group, false);
+  }
+}
+
+/**
+ * The fighters first, and before the aeroplane rolls.
+ *
+ * On the escort watch the brief opens by naming two flights already airborne
+ * for one aircraft, and the whole of the craft is acting on that sentence
+ * before there is anything on the threat list to justify it. `flightThreat`
+ * cannot help: it needs a state aircraft in the air to measure a closest
+ * approach against, and STATE 01 does not roll until sixty seconds in — so for
+ * the first minute the sort order puts the palace strike on top and the
+ * fighters holding north of the city score like loiterers, which is exactly
+ * the minute in which the battalion holding the corridor has a clear board and
+ * a full rack.
+ *
+ * A player who has read the brief does not need the sort order to tell them. So
+ * this model pairs every fighter to the best battery that can take it, from the
+ * first second one paints, and keeps doing it — which is the difference between
+ * stopping four of six short of their launch points and stopping two.
+ */
+function guardTheCorridor(ctx) {
+  const { w } = ctx;
+  if (!w.scenario.epilogue) return;
+  for (const track of sortedTracks(w)) {
+    if (track.hostility !== 'hostile' || track.destroyed) continue;
+    // Classified as a fighter, or — once the aeroplane is up — anything whose
+    // course will take it within twenty-five kilometres of it.
+    if (!(track.classification === 'interceptor' || huntsTheFlight(w, track))) continue;
+    if (track.assignedTo.length) continue;
+    let best = null;
+    let bestValue = -Infinity;
+    for (const site of ctx.own) {
+      const evaluation = engagementValue(w, site, track);
+      if (evaluation && evaluation.value > bestValue) {
+        bestValue = evaluation.value;
+        best = site;
+      }
+    }
+    if (best && w.assign(track.id, best.id)) ctx.act(`GUARD ${track.tn} → ${best.name}`);
+  }
+}
+
+/**
+ * The other half of the appointment: what you say to the sectors you cannot
+ * reach.
+ *
+ * A subordinate officer directs three engagements at a time (`commander.span`)
+ * and no more. When a package arrives on his sector together rather than in
+ * file, the fourth aircraft waits on his radio — and the only two answers are
+ * to go and stand there yourself, which this player already does for one
+ * sector, or to take the crews off his hand entirely: WEAPONS FREE, every crew
+ * engaging what enters its own envelope on its own authority.
+ *
+ * Free is not a better setting, it is a different one. The crews shoot nearest
+ * first rather than most dangerous first, they snap at the edge of the
+ * envelope instead of holding for the sweet spot, and they spend the store
+ * doing it — so this player frees a sector only while it is actually saturated
+ * and puts it back to TIGHT when its axis is spent, which is the whole of the
+ * craft here and the reason the order is worth pressing twice.
+ *
+ * No player model had ever called `setPosture`. D4 asks whether skill buys
+ * anything on a watch, and the district watches are built on this verb.
+ */
+function leaveStandingOrders(ctx) {
+  const { w, mem } = ctx;
+  if (w.formations.length < 2) return;
+  if (w.t - (mem.lastOrderS ?? -99) < 20) return;
+  mem.lastOrderS = w.t;
+
+  for (const formation of w.formations) {
+    if (formation.hq) continue;
+    const sites = w.sitesOf(formation).filter((s) => s.alive);
+    if (!sites.length) continue;
+
+    /*
+     * Work his sector cannot answer: firm hostiles nobody has, inside a
+     * reach one of his batteries actually has. Counted against his span
+     * rather than against a fixed number, because a sector with one battery
+     * and a sector with three saturate at different weights.
+     */
+    let pressing = 0;
+    for (const track of w.tracks.values()) {
+      if (track.hostility !== 'hostile' || track.destroyed) continue;
+      if (track.quality < FIRM || track.assignedTo.length) continue;
+      if (!sites.some((s) => {
+        const toRange = timeToInRangeS(s, track);
+        return inEnvelope(s, track.pos, track.altM).ok
+          || (Number.isFinite(toRange) && toRange < 40);
+      })) continue;
+      pressing++;
+    }
+
+    const span = spanLimit(formation);
+    const saturated = Number.isFinite(span) && spanLoad(w, formation) >= span;
+    const wantFree = pressing >= 2 || (saturated && pressing >= 1);
+
+    if (wantFree && formation.posture !== 'free') {
+      w.setPosture(formation.id, 'free');
+      ctx.act(`${formation.name} WEAPONS FREE`);
+    } else if (!wantFree && pressing === 0 && formation.posture === 'free') {
+      w.setPosture(formation.id, 'tight');
+      ctx.act(`${formation.name} WEAPONS TIGHT`);
+    }
   }
 }
 
