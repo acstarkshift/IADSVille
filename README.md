@@ -81,7 +81,7 @@ There is no posture that is right twice. Working out which lever each watch
 answers to is the job, and both shapes are measured into the regression tests
 so neither can quietly rot.
 Delegation is viable — over twenty-four seeds of White Noise the AI net laid
-over free crews scores 1.10 of what those crews score alone, where it used to
+over free crews scores 0.98 of what those crews score alone, where it used to
 subtract about twelve per cent — and one more thing about it is true: crews
 follow the orders you acknowledged. Accept the expenditure freeze and no
 battery on free will defend the hospital for you. Quiet insubordination
@@ -187,20 +187,28 @@ a deliberate defence saves it on all eight):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **90** | 652 |
-| Defend it anyway | 89 | **1850** |
-| Refuse the order outright | 76 | 1850 |
+| Obey the freeze | **51** | 48 |
+| Defend it anyway | 34 | **380** |
+| Refuse the order outright | 11 | 380 |
 
-Defending the hospital is worth twelve hundred points of actual value, and the
-file prices the whole transgression at one: a query for rounds expended outside
-the freeze, worth rather less than a leaker. A weapon that arrives at the
-struck-off place is billed at exactly nothing — the ledger cannot
-simultaneously declare a building undesignated and grieve for it — and the
-building's own loss appears on the state's books at nothing at all. Only the
-third row really moves. Refusing on the net, for the identical night's
-fighting, costs thirteen points more than quietly disobeying, plus a referral
-that stays in the file. Sector command barely prices what you did. It punishes
-having said no, and that is the whole lesson.
+Defending the hospital is worth about three hundred and thirty points of actual
+value — it is the difference between losing the building on eight nights of
+eight and on three — and the file prices the whole transgression at seventeen:
+a query for rounds expended outside the freeze, worth rather less than a
+leaker. A weapon that arrives at the struck-off place is billed at exactly
+nothing — the ledger cannot simultaneously declare a building undesignated and
+grieve for it — and the building's own loss appears on the state's books at
+nothing at all. Only the third row really moves. Refusing on the net, for the
+identical night's fighting, costs twenty-three points more than quietly
+disobeying, plus a referral that stays in the file. Sector command barely
+prices what you did. It punishes having said no, and that is the whole lesson.
+
+(Those figures fell a long way in the curve scrub, and both roads fell
+together. This watch now flies four on the deck at the airbase out of a bearing
+nothing has ever come from, so the freeze is finally an order about rounds
+somebody else needs; a night that costs the sector something costs both
+answers something. The three rows moved from 90 / 652, 89 / 1850 and 76 / 1850
+and kept their order and their signs, which is the part the campaign rests on.)
 
 **Across the Line** goes further. A cruise missile has strayed off course, west
 over the ridge and across the Listonian border, and it is going to come down on a
@@ -229,17 +237,20 @@ defended by you personally or not at all. Measured over eight seeded watches
 
 | | Camp destroyed | Dead | Standing | Score |
 |---|--:|--:|--:|--:|
-| Acknowledge the restriction | 100% | 173 | **94** | 708 |
-| Refuse it and take the shot | 0% | 0 | 69 | **1767** |
+| Acknowledge the restriction | 100% | 154 | **75** | 478 |
+| Refuse it and take the shot | 13% | 22 | 46 | **1502** |
 
-Twenty-five points of standing and a referral that stays in the file, against
-four hundred people and eleven hundred points the file does not recognise. And
-note which player model lets them burn: the harness's *expert*, who reads the
-sector's own `engagementValue` and pairs greedily on it, scores 19-24% BELOW
-the competent player on this watch, because the camp's value on that ledger is
-zero and a player optimising the ledger never assigns a battery to it. The one
-watch in the campaign where reading the state's arithmetic makes you worse at
-the job is the watch about what that arithmetic is for.
+Twenty-nine points of standing and a referral that stays in the file, against
+four hundred people and a thousand points the file does not recognise. And
+note which player model lets them burn: the harness's *expert*, who has the
+whole craft and eighteen rounds to spend it with, scores 30% BELOW the
+competent player here and holds nine watches of sixteen against its twelve.
+This is one of exactly two watches in the campaign where careful play is worse
+than competent play, and the other one is Economy of Force — the two with the
+smallest allocations, and the two the campaign turns on. What it costs itself
+is measured in the design notes: the pair of rounds it spends on the aeroplane
+in front of it, which is right on the ten watches with rounds to spare and
+wrong on the two without.
 
 Afterwards you look the grid reference up and find it handwritten inside the
 back cover of the sector target folder, in a folder that has no business
@@ -578,7 +589,7 @@ third on an empty rack. Measured over eight seeds on Four Sectors, standing in
 the main effort is worth 11% of the watch's score and the standing orders are
 worth 26%, and the one-click strategy that used to beat both hand players —
 set every sector free at the top of the watch and never touch another control —
-now finishes 4.6% behind an expert's hands.
+now finishes 3.3% behind an expert's hands.
 
 The political section's colonel is the fourth sector's whole point, and his
 obedience reaches his crews and not only his radio: a formation whose commander
@@ -595,12 +606,12 @@ long-range battalion — the only thing that reaches two of your four sectors �
 for a capital that is not under attack, has not been under attack all week, and
 whose air picture you are looking at. Obeying keeps your file and costs the
 district ground. Refusing saves it and ends your career. Measured over eight
-seeds with a commander who actually fights the district: obedience scores 1050
-against refusal's 1562, and thirty-nine points of standing against zero;
-refusal keeps weapons off the district on all eight nights — twenty-two leakers
-against thirty-seven — and loses six places against obedience's eight. The two
-documents disagree by about five hundred points and the Lozan power station on
-three nights of eight, and neither of them mentions the other.
+seeds with a commander who actually fights the district: obedience scores 1028
+against refusal's 1523, and thirty-six points of standing against zero;
+refusal keeps weapons off the district on all eight nights — twenty-nine
+arrivals against forty-one — and loses six places against obedience's eight.
+The two documents disagree by about five hundred points and the Lozan power
+station on two nights of eight, and neither of them mentions the other.
 
 The four officers on this watch are the district's own establishment and are
 deliberately left alone. Spans of control were tried here and taken out again:
@@ -654,9 +665,12 @@ two and a half minutes with rounds still on the rails, the net says so out loud
 city*), and every battery carries a small store behind its rack — a third, and a
 full refill for the battalion — because a watch decided by a hoist is not a
 watch about a choice. Measured over eight seeds: overrun in 73% of runs → 0% at
-competent play and above, competent 25% of watches held → 75% on the net, expert
-0 of 8 → 8 of 8, and the magazine's share of the cabin's watch down from 65% to
-52%.
+competent play and above, competent 25% of watches held → 69% on the net over
+sixteen seeds, expert 0 of 8 → 13 of 16, and the magazine's share of the
+cabin's watch down from 65% to 50%. (The last four figures are re-measured on
+the honest leaker count — nine of this board's twenty-eight aircraft are cruise
+missiles and none of them could fail the watch before the curve scrub — which
+is also why the allowance in the file reads four rather than three.)
 
 At national command the choice is sharper still, because you may stand in one
 city and not the other. The valley's sector commander is competent and has
@@ -733,8 +747,12 @@ hundred points, a little under the palace intact and more than anything else on
 that board; losing it reads STATE 01 WAS LOST; and the cause clause names who
 fired, because a round from these rails and a round from a fighter make the same
 wreckage and are not the same act. Measured over eight seeds: a competent player
-is now 29% ahead of one who touches nothing on the net and 39% from both seats,
-where it was 7% and 4%.
+is now 7% ahead of one who touches nothing on the net and 36% from both seats,
+and holds seven watches of eight against its four, where before the aeroplane
+was scored the two were 7% and 4% apart and the verdict could not tell them
+apart at all. On this watch the dividend is in watches held rather than in
+points: the aeroplane is worth six hundred and everything else on the board is
+worth the same to both of them.
 
 Nothing asks you which you meant. The tape only records what left the rails, and
 whose battery it left from.
@@ -996,8 +1014,8 @@ A few decisions worth knowing about if you read the source:
   exception until the ready rack started coming back a rail at a time, and
   then the district covered the ground without it; a commander who fights
   that district by hand rather than by greedy pairing still does better
-  refusing (`test/echelon.test.js`, eight seeds: 1562 against 1050, twenty-two
-  leakers against thirty-seven, and six places lost against eight). Two
+  refusing (`test/echelon.test.js`, eight seeds: 1523 against 1028, twenty-nine
+  arrivals against forty-one, and six places lost against eight). Two
   player models, two answers, both measured.
 
   The acts three and four scrub added three more verbs and one guard, all of
@@ -1034,10 +1052,10 @@ A few decisions worth knowing about if you read the source:
   them in eight seconds instead of sixty-two, tube lamps that go green one at
   a time, and a bar counting down to the next rail rather than to a full rack.
   Measured over eight seeds in the cabin, competently played, the share of a
-  watch with a legal target in reach and nothing on the rails is now 9% on
-  Solo Battery, 18% on Low Riders, 24% on Weasel Hour and 15% on First Light —
-  re-measured after the act-one pass grew two of those raids, which is where
-  the last two figures went up. Before the rack refilled a rail at a time the
+  watch with a legal target in reach and nothing on the rails is now 10% on
+  Solo Battery and on First Light, and 20% on Low Riders and on Weasel Hour —
+  re-measured after the act-one pass grew two of those raids and the curve
+  scrub grew one of them again. Before the rack refilled a rail at a time the
   same three watches read 15%, 35% and 40%, against raids half again smaller
   than the ones those figures are measured on now. First Light's is almost entirely the guidance pause
   below, on a tutorial whose reload multiplier is 0.35 — a rail there takes
@@ -1046,7 +1064,7 @@ A few decisions worth knowing about if you read the source:
   a while and nothing had ever read it.)
 
   The half of that number the loaders actually own is small, and the harness
-  now separates it (`reloadWaitShare`): six to fifteen per cent of a watch. The
+  now separates it (`reloadWaitShare`): ten to twenty per cent of a watch. The
   rest is a battery that has fired its whole allocation, which no amount of
   loading faster will touch. Where that was the binding constraint the
   *allocation* was fixed rather than the hoist — Weasel Hour and Low Riders
@@ -1194,15 +1212,13 @@ A few decisions worth knowing about if you read the source:
   console going quiet was being switched off by the console's own noise. Both
   now speak as `comms`, and the reporter's clock counts only the kinds that
   are the watch doing something to you, which is the same set the harness
-  counts. The reading over the same 896 runs, after the act-two pass: **36 runs
-  carry a stretch of thirty seconds or more, the worst is 89 seconds, the worst
-  watch spends 25% of itself inside one, and the longest coda in the campaign
-  is 24.6 seconds** — against a ninety-second bar, and against a White Noise
-  that used to spend 301 seconds of every seed watching decoys expire. Over act
-  one specifically — 320 runs — it is three runs, worst 71 seconds, and none
-  over a tenth of a watch; the three are the last ninety seconds of a night a
-  spectator or a beginner has already lost, where the plot is empty and sector
-  has said so once.
+  counts. The reading over the same 896 runs, after the curve scrub: **not one
+  run of the eight hundred and ninety-six carries a stretch of thirty seconds
+  or more, and the longest coda in the campaign is 24.7 seconds** — against a
+  ninety-second bar, and against a White Noise that used to spend 301 seconds
+  of every seed watching decoys expire. The act-two pass had it down to
+  thirty-six runs with a hole in them, worst 89 seconds; act four's late
+  packages and act two's second axes closed the last of them.
 
 - **A decoy is not something the watch waits for.** `strikersRemain` counted an
   air-launched decoy as a strike aircraft, so a jammer or a suppression
@@ -1219,8 +1235,8 @@ A few decisions worth knowing about if you read the source:
   the campaign's other decoy watch, from a 21.4-minute worst seed to 18.0.
 
 - **The watches are not all the same length, and one of them is deliberately
-  short.** Median watch length at 1x, competently fought, runs eleven to
-  thirteen minutes across the first four watches and eleven to sixteen later,
+  short.** Median watch length at 1x, competently fought, runs twelve to
+  thirteen minutes across the first four watches and thirteen to fifteen later,
   with two exceptions, both documented below. Act four was the third: Two Cities
   ran seventeen and a half minutes and is now fourteen to fifteen, and The
   President's Flight — a single escort problem that ends when the aircraft is
@@ -1256,13 +1272,15 @@ A few decisions worth knowing about if you read the source:
   last spawn sits at 60-73% of the median watch on the four, and no watch in
   the set ends more than a minute and a half after its last engagement
   resolves — no run of 896 does, where one Weasel Hour seed used to end 101 s
-  after its last action. Act one's four read 70 / 64 / 72 / 69 per cent, and
-  the act-two scrub closed the four that were worst in the campaign: Across
-  the Line 39% → 55-60%, Ville Under Fire 39-43% → 60-61%, White Noise 46% →
-  60-61%, Economy of Force 49-51% → 61-65%. The acts-three-and-four scrub closed
-  the last two and the two district watches with them: Two Cities 41% → 55-63%,
-  President's Flight 52% → 62-78%, Four Sectors 52% → 62-67%, Reinforce the
-  Capital 53% → 55-57%. Late packages are deliberately spawned at fifty to
+  after its last action. Re-measured across all twelve after the curve scrub,
+  the last spawn of each watch as a fraction of its own median length, played
+  competently on its primary seat: First Light 70%, Low Riders 59%, Solo
+  Battery 72%, Weasel Hour 68%, White Noise 60%, Economy of Force 53%, Across
+  the Line 56%, Ville Under Fire 61%, Four Sectors 62%, Reinforce the Capital
+  59%, Two Cities 61%, The President's Flight 70%. Every one is in the back
+  half; before the three scrubs they read 29 to 52 per cent and the back of
+  each watch was survivors being chased off the map. Late packages are
+  deliberately spawned at fifty to
   sixty-five kilometres rather than the engine's default hundred and fifty-five,
   because an ingress nobody can reach is not pressure, it is a countdown — and
   pulling Weasel Hour's whole raid inside BASTION's reach took its worst seed
@@ -1278,96 +1296,161 @@ A few decisions worth knowing about if you read the source:
   forty metres a second is the whole of the argument: the first legal claim
   lands at 214 s, and the first contact actually inside the ring at 573 s. What
   a point section must have instead is work when the work arrives, and it does
-  — engageable a quarter of the watch, ten distinct shot opportunities a seed,
-  the magazine the sole limiter for two per cent of it. The act-two scrub
+  — engageable a fifth of the watch, eleven distinct shot opportunities a seed,
+  and the magazine the sole limiter for none of it at all. The act-two scrub
   bought 64 s of the 214 by pulling the whole raid inside the rings (the
   close-in fight used to begin at minute thirteen of an eighteen-minute night);
   the rest is arithmetic, and moving the section forward off the town it
   defends would be a different watch.
 
-- **Three lines of the difficulty bar are missed on purpose in acts three and
-  four, and the reason is the instrument rather than the watch.** They are
-  recorded here because a bar that is quietly rounded off is not a bar.
+- **Lines of the difficulty bar that are missed on purpose, and why.** They are
+  recorded here because a bar that is quietly rounded off is not a bar. All
+  figures are sixteen seeds a seat.
+
+  *A beginner is shut out of the net seat of the big watches, and no allowance
+  can fix it.* The rule wants a novice holding a quarter to three-fifths of act
+  one and two; on the net seat of Low Riders, White Noise, Ville Under Fire and
+  Two Cities it holds 0 to 19 per cent. That is not a tuning miss, it is the
+  delegation ladder seen from the bottom: on the net a beginner IS the sector,
+  and the gap between handing out two targets at a time and re-pairing the
+  whole sector every three seconds is worth three to five arrivals a watch. The
+  two distributions are disjoint — on White Noise a beginner concedes five to
+  twelve where a competent player concedes nought to five — so no single number
+  can put one inside 25-60% and the other inside 60-90%. The cabin is where a
+  beginner is in band, and it is why the cabin seats exist: the same watches
+  read 44 to 88 per cent for a novice from the seat.
 
   *The careless player model is not separated from the careful one on
-  Reinforce the Capital* (novice holds 6 of 8, competent 5 of 8, against a rule
-  that wants the novice under half). On a thirteen-battery district board the
+  Reinforce the Capital* (novice holds 56%, competent 69%, against a rule that
+  wants the novice under half). On a thirteen-battery district board the
   competent model assigns by *nearest battery that can legally take it*, which
   is what a person with a scope and a mouse does — and on this board it
   pre-empts four subordinate officers with a worse pairing, so it leaks a
-  shade MORE than the careless model that leaves them alone: 5.1 against 4.8
-  over eight seeds. The watch itself is sound (the expert holds 7 of 8 and is
-  31% ahead), and the fix is a better competent model rather than a heavier
-  raid, which would only widen the gap between the two by making both worse.
+  shade MORE than the careless model that leaves them alone. The watch itself
+  is sound (the expert holds 94% and is well ahead), and the fix is a better
+  competent model rather than a heavier raid, which would only widen the gap
+  between the two by making both worse.
 
-  *The attention dividend on The President's Flight is +7.7% on the net and
-  −1.0% from both seats* against a bar of +10%. It is a seven-minute escort
+  *The attention dividend on The President's Flight is +5.8% on the net and
+  −1.9% from both seats* against a bar of +10%. It is a seven-minute escort
   with one decision in it — the corridor or the city — and once a model makes
   that decision correctly there is very little left above it: the expert holds
-  8 of 8 against the competent player's 6 and is still only a few per cent
+  75% against the competent player's 63% and is still only a few per cent
   ahead, because the thing they differ on is worth six hundred points and they
   both usually get it. The dividend is in held watches, not in score, and both
   are reported.
 
-  *One Reinforce the Capital seed runs 18.7 minutes*, against an
-  eighteen-minute ceiling — and it is the walk-away. A player who touches
-  nothing shoots nothing down, so every aircraft on the board flies its whole
-  profile; the same seed played competently ends at 15.6 and the longest of the
-  thirty-two played seeds is 16.6. The watch is not lengthened for anybody who
-  is at the console.
+  *Sixteen runs of eight hundred and ninety-six pass the eighteen-minute
+  ceiling, and fifteen of them are the walk-away.* A player who touches nothing
+  shoots nothing down, so every aircraft on the board flies its whole profile
+  and the night takes as long as the raid does — eleven White Noise runs, four
+  Ville Under Fire and one Reinforce the Capital, worst 19.1 minutes. The
+  sixteenth is a single competently-played White Noise seed at 18.0 minutes,
+  which is the ceiling to the tenth of a minute. No watch is lengthened for
+  anybody who is at the console.
 
-  *Two Cities from both seats holds 8 of 8 competently played*, against a
-  60-90% rule, where the same player on the net holds 6. The `both` seat is a
+  *Two Cities from both seats holds 94% competently played*, against a 60-90%
+  rule, where the same player on the net holds 69%. The `both` seat is a
   commander who is also crewing the one battery that reaches either city; that
   it is the easier seat is the watch's own arithmetic and not an accident, and
   bringing it inside the band by tightening the leaker allowance further would
-  put the net seat below the floor (measured: at a tolerance of two, net
-  competent falls to 4 of 8).
+  put the net seat below the floor (measured: at a tolerance of three, net
+  competent falls to 25%).
 
-- **On Across the Line the expert player model loses, and that is the watch
-  working.** The attention dividend is positive or neutral everywhere else in
-  act two; here the expert scores 19-24% BELOW the competent player on every
-  seat. The expert pairs greedily on `engagementValue`, which reads the state's
-  own schedule of defended places, and on that schedule the refugee camp is
-  worth zero. So the model never assigns a battery to the stray, the camp
-  burns, and the SCORE — which values it at seventy, higher than anything else
-  on the board — takes four hundred points off him for it. A negative dividend
-  is normally a watch with no depth in it. This one is the campaign's thesis
-  arriving as a number: the better you are at the ledger, the worse you are at
-  the job.
+  *Economy of Force's cabin holds 81% and its careful player 75%*, and both are
+  the same fact about the same watch — see the note on the ledger tax above.
+  LANCE WEST covers the hospital road and the airbase approach at once, so a
+  person sitting in it does not have to choose between them the way the sector
+  does; and the model that orders its queue by the state's own valuation spends
+  its twelve rounds where the state says they are worth most, which on this
+  night is not where the arrivals are.
 
-- **How hard each watch is, measured rather than asserted.** Held rate,
-  `tools/playtest.mjs --policy all`. The first four watches are quoted over
-  **thirty-two** seeds a seat, because the act-one scrub found that at eight
-  one watch is twelve and a half points and every difficulty finding on Low
-  Riders and Solo Battery reversed itself between blocks; the rest are still
-  eight-seed readings and say so.
+- **On the two moral watches the careful player model loses, and it is the pair
+  of rounds that does it.** The attention dividend is positive on ten watches
+  of twelve — from +2% on White Noise to +47% on Reinforce the Capital — and
+  negative on exactly two: Economy of Force at −37% (ten watches held of
+  sixteen against a competent thirteen) and Across the Line at −30% (nine
+  against twelve). Those are the two act-two watches with the smallest
+  allocations in the campaign, twelve rounds and eighteen.
 
-  | Watch | seeds | nothing | novice | competent | expert |
-  |---|--:|--:|--:|--:|--:|
-  | First Light | 8 | 0-75% | 100% | 100% | 100% |
-  | Low Riders | 32 | 0% | 0-63% | 59-72% | 63-81% |
-  | Solo Battery | 32 | 0% | 41% | 75% | 81% |
-  | Weasel Hour | 32 | 0% | 19-84% | 88-94% | 84-94% |
-  | White Noise | 8 | 0-13% | 38-100% | 88-100% | 100% |
-  | Economy of Force | 8 | 0-100% | 100% | 100% | 100% |
-  | Across the Line | 8 | 0-75% | 100% | 100% | 100% |
-  | Ville Under Fire | 8 | 0-38% | 13-63% | 88-100% | 88-100% |
+  Four verbs were ablated one at a time over sixteen seeds to find out which,
+  because a negative dividend is normally a watch with no depth in it and this
+  claim should not rest on a story. The emissions duty cycle, standing in the
+  main effort and the displacement rule move nothing at all on either watch.
+  Replacing the value ordering with nearest-battery moves each by one watch, in
+  opposite directions. What moves it is the salvo: with two-round salvos
+  removed entirely, Economy of Force goes from ten watches held to eleven and
+  its mean score from 347 to 918. A pair costs ten points and buys a better
+  chance at one aeroplane; on twelve rounds against nineteen it is the whole
+  difference between covering the raid and not, and the model spends it before
+  the deck package out of the east has appeared.
 
-  (Ranges are across the three seats; Solo Battery has only the cabin.)
+  The salvo stays, because it is worth 22% on Low Riders, 34% on Four Sectors
+  and 47% on Reinforce the Capital — watches with rounds to spare. Two
+  allocation-aware rules for withholding it were measured and both cost more
+  than they bought (stop doubling once the remaining allocation is under the
+  live contact count: Low Riders −5 points of held rate, Economy of Force's
+  score −48%; under one and a half times it: Low Riders three watches lost).
+  So the careful player goes on being punished on the two nights the campaign
+  turns on, for doing on those what works on the other ten — which, on a watch
+  whose subject is an expenditure order, is the game agreeing with its own
+  brief.
 
-  **Act two's four are still too easy, and the act-two scrub says so rather
-  than pretending otherwise.** That pass was a design pass — the end
-  conditions, the two moral hinges, the reach the briefing promises, the
-  decapitation — and the timing bar it was measured against is met on every one
-  of the twelve seat-cells bar two. The held rate is not: the sector fields
-  five or six batteries against a raid it can absorb, and calibrating the
-  campaign's curve act by act is a separate piece of work with the whole
-  twelve-watch table in front of it. What that pass did move, deliberately, is
-  White Noise from 100% held at every seat to 88-100% with a raid of
-  nineteen strike aircraft on two axes instead of twelve on one, and Ville
-  Under Fire's net seat from 75% to 88% while making the thing that watch is
-  named for actually happen.
+- **How hard each watch is, measured rather than asserted.** Held rate over
+  **sixteen** seeds a seat, every watch, reproduced by:
+
+  ```
+  node tools/playtest.mjs --mission all --seat all --policy all \
+    --seeds 16 --jobs 3 --md /tmp/campaign.md
+  ```
+
+  | Watch | nothing | novice | competent | expert |
+  |---|--:|--:|--:|--:|
+  | First Light | 0-75% | 100% | 100% | 100% |
+  | Low Riders | 0% | 0-88% | 75-81% | 88-100% |
+  | Solo Battery | 0% | 44% | 81% | 88% |
+  | Weasel Hour | 0% | 6-69% | 75-88% | 81% |
+  | White Noise | 0% | 6-69% | 81-94% | 75-88% |
+  | Economy of Force | 0% | 31-88% | 81-88% | 63-75% |
+  | Across the Line | 0-6% | 31-69% | 69-81% | 56-81% |
+  | Ville Under Fire | 0-31% | 0-56% | 69-81% | 81-94% |
+  | Four Sectors | 0% | 38% | 69% | 100% |
+  | Reinforce the Capital | 0% | 56% | 69% | 94% |
+  | The Two Cities | 0% | 6-13% | 69-94% | 63-81% |
+  | The President's Flight | 19-31% | 38% | 63-69% | 63-75% |
+
+  (Ranges are across the seats each watch offers; Solo Battery has only the
+  cabin, and the last two only the net and both seats.)
+
+- **The campaign is a staircase, and this is it.** Competent play, each watch's
+  own primary seat, the same sixteen seeds:
+
+  | Act | Watches | Competent HELD | Act mean |
+  |---|---|--:|--:|
+  | I — battalion | First Light \| Low Riders \| Solo Battery | 100%\* \| 81% \| 81% | **87.5%** |
+  | II — sector | Weasel Hour \| White Noise \| Economy of Force \| Across the Line \| Ville Under Fire | 75% \| 81% \| 81% \| 75% \| 69% | **76.3%** |
+  | III — district | Four Sectors \| Reinforce the Capital | 69% \| 69% | **68.8%** |
+  | IV — national | The Two Cities \| The President's Flight | 69% \| 63% | **65.6%** |
+
+  \* the documented teaching exception, below.
+
+  Every act's *easiest* watch is at or below the hardest watch of the act
+  before it — 81 ≥ 81, 69 ≥ 69, 69 ≥ 69 — and the act means fall
+  monotonically. It was not a staircase before this was measured: act two used
+  to hold 100 / 88 / 100 / 100 / 88 against act one's 100 / 63 / 88, so the
+  second act of four was the easiest thing in the game and three of its watches
+  could not be lost by a competent player on any seat, while act four held 75
+  and 75 against act three's 63.
+
+  **Sixteen seeds and not eight, and the reason is arithmetic rather than
+  taste.** At eight a held rate can only be a multiple of twelve and a half,
+  and the difficulty band is sixty to ninety per cent: three rungs for four
+  acts, before any noise. The escort watch is the plainest case — its verdict
+  is one binary event, and the identical build reads 50% on the first eight
+  seeds and 62% on sixteen. Run the table above at `--seeds 8` and two of the
+  twelve watches land a rung away from where sixteen puts them, which is enough
+  to make the staircase read out of order. That is a property of the sample,
+  not of the game, and it is why this document quotes sixteen.
 
   Three things in that table are deliberate and worth stating plainly, because
   they are the exceptions to the campaign's own difficulty rule (competent
@@ -1386,7 +1469,7 @@ A few decisions worth knowing about if you read the source:
   **And nothing on it is worth being expert about, which is also deliberate
   and had to be measured before it could be said.** The attention dividend —
   does careful play beat competent play — reads +0.1% on the net, +0.7% in the
-  cabin and −0.2% from both seats over eight seeds, and it cannot read anything
+  cabin and +0.3% from both seats over eight seeds, and it cannot read anything
   else, because the watch has no room above competent play. Six aircraft, three
   batteries, nothing shooting back: a competent operator kills all six, loses
   nothing, and scores 1209 against a ceiling of about 1212 — eleven hundred and
@@ -1400,13 +1483,18 @@ A few decisions worth knowing about if you read the source:
   number it reports is the truth about the watch: the teaching watch is where
   skill is acquired, not where it pays.
 
-  **Low Riders forgives one leaker, not two, and its raid was nine aircraft
-  larger than its own file said.** Counted out of the built world during the
-  scrub: thirty aircraft in seven packages on five axes, seventeen of them
-  under BASTION's hundred-and-twenty-metre floor — the file and this document
-  had both been saying nineteen on four axes since the watch was written.
-  Forgiving two leakers made a watch competent play held 24 of 24 times. At one
-  it holds 59-72% over thirty-two seeds, which is a watch you can fail.
+  **Low Riders forgives three leakers, and every one of them is real.** Counted
+  out of the built world: twenty-eight aircraft in seven packages on five axes,
+  fifteen of them under BASTION's hundred-and-twenty-metre floor — the file and
+  this document had both been saying nineteen on four axes since the watch was
+  written, and the act-one scrub corrected that to thirty before the curve
+  scrub found that twelve of the thirty were cruise missiles the verdict could
+  not see. "One" therefore meant one bomb and twelve free missiles. The last
+  package is four of them at fifty metres rather than six, because six arriving
+  together on the one axis the battalion cannot see under is the single largest
+  source of arrivals on the watch and nothing was counting them. On the honest
+  count at sixteen seeds it holds 56% at an allowance of two, 81% at three and
+  94% at four; three is the top of the band and the top of the campaign.
 
   It is also nine minutes shorter at the back and two aircraft heavier at the
   front, for two separate measured reasons. The two low packages spawn at a
@@ -1422,7 +1510,9 @@ A few decisions worth knowing about if you read the source:
   being thought about. Thirty-two seeds, every seat: competent 81 / 94 / 94 per
   cent held becomes 72 / 59 / 66, a beginner in the cabin 81% becomes 63%, and
   the cabin's attention dividend goes from 8 of 16 seeds and +4.5% to 24 of 32
-  and +20.1%.
+  and +20.1%. (Those two figures were taken before the missiles were counted;
+  on the honest count at sixteen seeds the watch reads 81 / 75 / 75 competent
+  and 100 / 88 / 88 expert.)
 
   **Weasel Hour is now a watch a beginner can lose, and it costs a competent
   net seat four points of the ceiling.** Fifteen aircraft against four
@@ -1442,8 +1532,24 @@ A few decisions worth knowing about if you read the source:
   thirty-two seeds each: at twenty aircraft competent play holds 94-100% and
   the watch is not a test, at twenty-two 81-97%, at twenty-three the competent
   band is perfect at 81-84% but a beginner falls to 3-13% on two seats and the
-  expert to 69% in the cabin. Twenty-one is the least bad of the four and the
-  net seat's 94% is what it costs.
+  expert to 69% in the cabin.
+
+  **It flies twenty-two now, and the twenty-second is a missile.** Every one of
+  those raid sizes was chosen against a count that could not see a cruise
+  missile arrive, and eight of this watch's aircraft are cruise missiles, so
+  "an allowance of two" meant two bombs and eight free rounds. Counted
+  honestly at twenty-one aircraft the net seat holds 88% and the cabin 94% —
+  the top of the band on the third watch of the game, above act one's hardest,
+  which breaks the curve at the first step of act two. The fix is one more
+  missile on the late run at the operations centre, the package that arrives
+  after the allocation has been spent, and an allowance of three: 75 / 88 / 81
+  over sixteen seeds with the store left where the act-one pass put it, and the
+  cabin's magazine-limited share unmoved at twenty per cent, because a missile
+  at sixty metres is a horizon problem and not a store problem. Three
+  twenty-two-aircraft variants were measured before this one was kept — an
+  extra low striker instead reads 75 / 88 / 75 but takes the careful player
+  down to 69 / 75 / 75, and twenty-three costs the cabin's expert twenty-six
+  points of held rate.
 
   **Solo Battery's attention dividend is capped by a ceiling and a single
   building, and the wave table is not the problem.** Over thirty-two seeds the
