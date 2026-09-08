@@ -1036,8 +1036,8 @@ export const SCENARIOS = [
      *
      * So the allocation stays a ledger constraint — twenty-two rounds against
      * a raid of thirty-odd objects, priced at five points a round — and the
-     * difficulty comes from the raid: two axes instead of one, and twenty-one
-     * strike aircraft instead of twelve.
+     * difficulty comes from the raid: two axes instead of one, and nineteen
+     * strike aircraft in the table instead of twelve.
      */
     /*
      * The EW picket speaks first, because on this watch the noise arrives

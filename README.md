@@ -55,34 +55,37 @@ contact whose impossibly steady flight a well-held track has already given away,
 re-engages after a miss while the shot is still its own, and hands a runner off
 to the next layer in when it is not. Measured over sixteen seeded watches of
 White Noise, a commander who works the picture beats one who sets everything
-free and walks away by **10% on the mean, winning fourteen of sixteen seeds, on
-a quarter fewer rounds, half the decoys and one leaker against ten** — and
-beats one who does nothing at all by a thousand points.
+free and walks away by **30% on the mean, winning fourteen of sixteen seeds, on
+29% fewer rounds, 39% of the decoys, six leakers against twenty-five and one
+structure lost against ten** — and beats one who does nothing at all by
+two thousand points.
 
-That first figure was 22% until the scrub repaired the picture the crews are
-working from, and the honest reading of where it went is worth stating,
-because it is not the commander who got worse. Paired on the same sixteen
-seeds, hand play scores 23976 against 23988 — unchanged to a tenth of a per
-cent — while the walk-away arm climbed from 19614 to 21808 and its leakers
-fell from sixteen to ten. A correlator that issued four hundred track numbers
-for thirty aeroplanes, and a battery that could never radiate again once its
-acquisition antenna died, were costing the AI crews far more than they were
-costing a person, because a person compensates and a duty cycle does not.
-Some of the dividend was the machine being crippled. The part of it that is
-real — a quarter fewer rounds, half the decoys, and the leakers — is
-unchanged, and buying the score gap back up is a design job for the watches,
-not a reason to break the crews again.
+That figure was 22% before the instruments scrub, then fell to 10% when the
+scrub repaired the picture the AI crews are working from — a correlator issuing
+four hundred track numbers for thirty aeroplanes, and a battery that could
+never radiate again once its acquisition antenna died, were costing a duty
+cycle far more than they were costing a person, because a person compensates.
+The note left at the time said that buying the gap back up was a design job for
+the watches and not a reason to break the crews again, and the act-two pass is
+where that was done: White Noise now runs two axes and nineteen strike
+aircraft instead of one axis and twelve, so there is a real pairing decision in
+it and the walk-away arm concedes twenty-five leakers to the commander's six.
+The margin is honest work by the player, not a handicapped machine.
 
-And then Ville Under Fire kills the operations centre mid-watch, cueing dies
-with it, and the same sixteen seeds run the other way: the released crews take
-the mean and the two postures trade per-seed wins, exactly as the brief warns —
-*anything you delegated becomes nobody's job*. There is no posture that is
-right twice. Working out which lever each watch answers to is the job, and both
-shapes are measured into the regression tests so neither can quietly rot.
-Delegation is viable — the AI net over free crews now adds value instead of
-taxing them — and one more thing about it is true: crews follow the orders you
-acknowledged. Accept the expenditure freeze and no battery on free will defend
-the hospital for you. Quiet insubordination requires the pen.
+And then Ville Under Fire takes the operations centre off the air mid-watch —
+one weapon through the roof is enough, and the building need not fall for the
+fused picture to — cueing dies with it, and the same sixteen seeds run the other
+way: the released crews take the mean and the two postures trade per-seed wins,
+exactly as the brief warns — *anything you delegated becomes nobody's job*.
+There is no posture that is right twice. Working out which lever each watch
+answers to is the job, and both shapes are measured into the regression tests
+so neither can quietly rot.
+Delegation is viable — over twenty-four seeds of White Noise the AI net laid
+over free crews scores 1.10 of what those crews score alone, where it used to
+subtract about twelve per cent — and one more thing about it is true: crews
+follow the orders you acknowledged. Accept the expenditure freeze and no
+battery on free will defend the hospital for you. Quiet insubordination
+requires the pen.
 
 ## The four appointments
 
@@ -1063,13 +1066,15 @@ A few decisions worth knowing about if you read the source:
   console going quiet was being switched off by the console's own noise. Both
   now speak as `comms`, and the reporter's clock counts only the kinds that
   are the watch doing something to you, which is the same set the harness
-  counts. The reading over the same 896 runs: **40 runs carry a stretch of
-  thirty seconds or more, the worst is 89 seconds, the worst watch spends 25%
-  of itself inside one, and no run in the campaign ends more than ninety
-  seconds after its last action.** Over act one specifically — 320 runs — it
-  is three runs, worst 71 seconds, and none over a tenth of a watch; the three
-  are the last ninety seconds of a night a spectator or a beginner has already
-  lost, where the plot is empty and sector has said so once.
+  counts. The reading over the same 896 runs, after the act-two pass: **36 runs
+  carry a stretch of thirty seconds or more, the worst is 89 seconds, the worst
+  watch spends 25% of itself inside one, and the longest coda in the campaign
+  is 24.6 seconds** — against a ninety-second bar, and against a White Noise
+  that used to spend 301 seconds of every seed watching decoys expire. Over act
+  one specifically — 320 runs — it is three runs, worst 71 seconds, and none
+  over a tenth of a watch; the three are the last ninety seconds of a night a
+  spectator or a beginner has already lost, where the plot is empty and sector
+  has said so once.
 
 - **A decoy is not something the watch waits for.** `strikersRemain` counted an
   air-launched decoy as a strike aircraft, so a jammer or a suppression
@@ -1086,9 +1091,10 @@ A few decisions worth knowing about if you read the source:
   the campaign's other decoy watch, from a 21.4-minute worst seed to 18.0.
 
 - **The watches are not all the same length, and one of them is deliberately
-  short.** Median watch length at 1x runs eleven to thirteen minutes across the
-  first four watches and eleven to fifteen later, with two documented
-  exceptions. The President's Flight is a single escort problem and ends when
+  short.** Median watch length at 1x, competently fought, runs eleven to
+  thirteen minutes across the first four watches and eleven to sixteen later,
+  with three exceptions — two documented below and Two Cities at seventeen and
+  a half, which is the finale and is the pacing work act four still owes. The President's Flight is a single escort problem and ends when
   the aircraft is down or away, at nine minutes. **First Light is
   four contacts and then two, high and unhurried, with a five-step interactive
   tutorial in whichever seat you took, a cut-down console and a reload
@@ -1182,7 +1188,7 @@ A few decisions worth knowing about if you read the source:
   campaign's curve act by act is a separate piece of work with the whole
   twelve-watch table in front of it. What that pass did move, deliberately, is
   White Noise from 100% held at every seat to 88-100% with a raid of
-  twenty-one strike aircraft on two axes instead of twelve on one, and Ville
+  nineteen strike aircraft on two axes instead of twelve on one, and Ville
   Under Fire's net seat from 75% to 88% while making the thing that watch is
   named for actually happen.
 

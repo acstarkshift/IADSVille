@@ -56,9 +56,11 @@ function handTick(w) {
 describe('attention matters at sector level', () => {
   /*
    * The structural fix, measured. Over twelve seeds the hand player beats
-   * set-free-and-walk-away by 20.0% mean score on White Noise, winning eleven
-   * seeds of twelve, on 79% of the rounds, 47% of the decoys, no leakers
-   * against eleven and no ground lost against two. Per-seed noise makes a small-sample score
+   * set-free-and-walk-away by 22.4% mean score on White Noise, winning ten
+   * seeds of twelve, on 73% of the rounds, 41% of the decoys, four leakers
+   * against nineteen and one structure lost against eight; over sixteen the
+   * same figures read 30.3%, fourteen seeds, 71%, 39%, six against
+   * twenty-five and one against ten. Per-seed noise makes a small-sample score
    * assertion flappy, so this test pins the STABLE part of the dividend — no
    * worse a defence on far fewer rounds and half the decoys — plus a loose
    * guard on the score itself. Before the fix the two strategies were
@@ -83,6 +85,14 @@ describe('attention matters at sector level', () => {
    * worth more to a commander who is choosing its targets than to a crew
    * left on free, because the free crew spends the extra rounds at the edge
    * of its envelope on whatever it can see.
+   *
+   * The act-two pass moved it again, and this time by changing the WATCH
+   * rather than the machinery: White Noise runs two axes and nineteen strike
+   * aircraft instead of one axis and twelve, so there is a pairing decision in
+   * it that there was not before. Sixteen seeds: 22.3% → 30.3%, fourteen seeds
+   * won, and the walk-away arm's leakers go from ten to twenty-five while the
+   * commander's fall to six. Half stores were tried as the alternative lever
+   * and INVERT this trade — see the note in the scenario file.
    */
   const seeds = Array.from({ length: 12 }, (_, i) => `g${i + 1}`);
   const totals = { free: null, hand: null };
@@ -114,7 +124,7 @@ describe('attention matters at sector level', () => {
       `a fifth fewer rounds at least (${totals.hand.rounds} vs ${totals.free.rounds})`);
     assert.ok(totals.hand.decoys < totals.free.decoys * 0.55,
       `discrimination is real (${totals.hand.decoys} vs ${totals.free.decoys} decoys engaged)`);
-    // Measured +22.3% mean over 16 seeds winning 15 of them; asserted at +5%
+    // Measured +30.3% mean over 16 seeds winning 14 of them; asserted at +5%
     // so seed noise cannot flap the build while a real regression still fails.
     assert.ok(totals.hand.score > totals.free.score * 1.05,
       `working the picture must clearly beat walking away (${totals.hand.score} vs ${totals.free.score})`);
@@ -134,7 +144,10 @@ describe('attention matters at sector level', () => {
      * A twelve-seed sample was pinning the sample. (It measured 0.997 before
      * the ready rack began refilling a rail at a time, and 1.044 after: the
      * net gained more from batteries that come back quickly than free crews
-     * did, which is the right direction for a ladder to move.)
+     * did, which is the right direction for a ladder to move. The act-two
+     * wave table takes it to 1.10. Two of that pass's candidate levers moved
+     * it the other way and were dropped for it: half stores plus a larger
+     * raid reads 0.91, eight-tenths stores 0.91.)
      * Forty seconds of build time is the price of the campaign's load-bearing
      * property being measured rather than sampled.
      */
