@@ -241,6 +241,26 @@ function stepCruise(world, aircraft, dt) {
   // It detonates where it was sent. Whether the target is still there is a
   // separate question, and one the missile is in no position to ask.
   if (dist(aircraft.pos, aim) < 0.6 && dist(aircraft.pos, asset.pos) < 0.9) {
+    /*
+     * And it is a leaker, which for eleven watches it never was.
+     *
+     * `registerLeaker` lived in `releaseWeapons` — the moment a strike
+     * aircraft lets go of what it is carrying. A cruise missile IS what it is
+     * carrying: it flies to the grid reference and detonates, and nothing in
+     * that path ever told the file a weapon had arrived. So the allowance in
+     * every scenario that fields one was counting a fraction of its own raid.
+     * Counted out of the built worlds: twelve of Low Riders' twenty-eight
+     * aircraft, nine of Four Sectors' thirty-four, nine of the finale's
+     * twenty-eight, eight of Ville Under Fire's thirty, eight of Weasel
+     * Hour's twenty-two, six of Reinforce the Capital's twenty-seven, five of
+     * Solo Battery's sixteen — all of them free. The debrief printed
+     * LEAKERS 0 over a destroyed town.
+     *
+     * The empty-ground branch below deliberately does not: a weapon that
+     * arrives at a field the target has driven out of has not got through, and
+     * displacing is supposed to be worth something.
+     */
+    world.registerLeaker(aircraft, asset);
     world.damageAsset(asset, AIR_TYPES.cruise.weaponDamage, aircraft);
     aircraft.alive = false;
     aircraft.impacted = true;

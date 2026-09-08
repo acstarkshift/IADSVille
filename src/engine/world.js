@@ -1235,7 +1235,25 @@ export class World {
      * inverted by a constant.
      */
     const type = ASSET_TYPES[asset.type];
-    const excluded = this.command.constraints.freezeExcludedId === asset.id;
+    /*
+     * Two ways the file declines to know a place, and they are the same rule.
+     *
+     * The first is the freeze, which strikes a building off for one night. The
+     * second is permanent and is written into the schedule itself: an asset
+     * whose `value` is zero is one the state does not recognise at all. Only
+     * the refugee encampment across the Listonian border carries that, and it
+     * carries it deliberately — `scoreValue: 70`, higher than anything else on
+     * that board, against a schedule value of nothing.
+     *
+     * Until cruise arrivals were counted, the second clause was unnecessary
+     * because the camp is only ever attacked by strays and strays registered
+     * nothing. Now they do, and without this the verdict of Across the Line
+     * would be decided by the camp — which would make the state's own
+     * SECTOR HELD grieve for a place its schedule refuses to list, and hand
+     * the watch's whole argument back the other way.
+     */
+    const excluded = this.command.constraints.freezeExcludedId === asset.id
+      || (type.value ?? 0) === 0;
     /*
      * And the file's own leaker count follows the same recognition. The
      * no-leakers settle used to bill every arrival at three points a head,

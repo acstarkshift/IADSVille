@@ -359,6 +359,72 @@ describe('scoring', () => {
   });
 });
 
+describe('a weapon that arrives is a leaker, whatever carried it', () => {
+  /*
+   * `registerLeaker` was called from `releaseWeapons` — the moment a strike
+   * aircraft lets go of what it is carrying. A cruise missile IS what it is
+   * carrying: `stepCruise` damaged the asset directly and nothing on that path
+   * ever told the file a weapon had arrived. Nine of the twelve watches field
+   * cruise packages, so the debrief printed LEAKERS 0 over a destroyed town
+   * and every `leakerTolerance` in the game was an allowance of N bombs and
+   * however many missiles the raid happened to carry.
+   */
+  /*
+   * A real missile off a real wave table, walked onto the grid reference it
+   * was briefed on. Nothing is hand-built: the point of the test is the path
+   * the engine actually takes when one of these arrives.
+   */
+  function flyCruiseInto(missionId, { displace = false } = {}) {
+    const world = new World(scenarioById(missionId), { role: 'net', seed: 'leak' });
+    for (const site of world.sites) world.setWeaponsState(site.id, 'hold');
+    let cruise = null;
+    for (let i = 0; i < 12000 && !cruise; i++) {
+      world.step(0.1);
+      cruise = world.aircraft.find((a) => a.alive && a.type === 'cruise' && a.targetAssetId);
+    }
+    assert.ok(cruise, 'the watch flies cruise missiles');
+    const asset = world.assetById.get(cruise.targetAssetId);
+    const aim = cruise.briefedPos ?? asset.pos;
+    cruise.pos = { x: aim.x, y: aim.y };
+    // The weapon flies to the grid reference it was briefed on. If the target
+    // has driven out of it, that is the one arrival that is not an arrival.
+    if (displace) asset.pos = { x: asset.pos.x + 40, y: asset.pos.y + 40 };
+    const before = world.stats.leakers;
+    run(world, 0.5);
+    return { world, gained: world.stats.leakers - before };
+  }
+
+  test('a cruise missile that arrives is counted', () => {
+    assert.equal(flyCruiseInto('low-riders').gained, 1, 'the file saw the weapon arrive');
+  });
+
+  test('one that arrives at a field the target has left is not', () => {
+    assert.equal(flyCruiseInto('low-riders', { displace: true }).gained, 0,
+      'displacing has to be worth something, so empty ground is not an arrival');
+  });
+
+  test('an arrival at a place the schedule values at nothing is not in the count', () => {
+    /*
+     * The refugee encampment carries `value: 0` and `scoreValue: 70` — the one
+     * asset in the game where the two disagree completely, and the whole
+     * subject of the watch it appears on. The state's own verdict cannot
+     * grieve for a place its schedule refuses to list, so the arrival is
+     * registered, is charged in full to the SCORE, and is excluded from the
+     * count the leaker allowance is read against.
+     */
+    const world = new World(scenarioById('across-the-line'), { role: 'net', seed: 'camp' });
+    const camp = world.assets.find((a) => a.type === 'camp');
+    assert.ok(camp, 'the watch has an encampment on it');
+    world.registerLeaker({ name: 'VAMPIRE STRAY' }, camp);
+    assert.equal(world.stats.leakers, 1, 'the night counts it');
+    assert.equal(world.stats.leakersUnrecognized, 1, 'the file does not');
+    world.finish('raid-spent');
+    assert.equal(world.outcome.headline, 'SECTOR HELD',
+      'the camp cannot decide a verdict written by the schedule that omits it');
+    assert.ok(world.outcome.breakdown.leakers < 0, 'and the score is charged for it in full');
+  });
+});
+
 describe('the loaders work for the battery with a person in it', () => {
   /*
    * The bug this pins was the whole of the original report: the automatic

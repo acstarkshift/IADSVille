@@ -312,6 +312,22 @@ export function renderDebrief(host, state, result, entry) {
   const cell = (label, value, mood = '') =>
     `<div class="score-cell ${mood}"><label>${esc(label)}</label><b>${esc(value)}</b></div>`;
 
+  /*
+   * The leaker count, in the two currencies this debrief closes on.
+   *
+   * `stats.leakers` is every weapon that arrived somewhere. The verdict is
+   * read against the count the FILE recognises — arrivals at a place tonight's
+   * freeze struck off, or at one the schedule values at nothing, are not in
+   * it — so on Economy of Force and Across the Line the cell was printing one
+   * number beside a cause clause quoting another, with nothing to say why. It
+   * now reads "1 (+1 UNCOUNTED)" when the two disagree, and the ground table
+   * below already names the building.
+   */
+  const unrecognised = s.leakersUnrecognized ?? 0;
+  const leakerCell = unrecognised > 0
+    ? `${s.leakers - unrecognised} (+${unrecognised} UNCOUNTED)`
+    : `${s.leakers}`;
+
   // Filtered on what the state CHARGED, not what it could still collect — the
   // account at its floor keeps being billed, and the bill is the point.
   const ledger = result.ledger
@@ -359,7 +375,7 @@ export function renderDebrief(host, state, result, entry) {
         ${cell('TOTAL', result.score, result.score > 0 ? 'is-good' : 'is-bad')}
         ${cell('KILLS', s.kills)}
         ${cell('TURNED BACK', s.turnedBack, s.turnedBack ? 'is-good' : '')}
-        ${cell('LEAKERS', s.leakers, s.leakers ? 'is-bad' : 'is-good')}
+        ${cell('LEAKERS', leakerCell, s.leakers ? 'is-bad' : 'is-good')}
         ${cell('ROUNDS', `${s.roundsFired}`)}
         ${cell('ASSETS LOST', s.assetsLost, s.assetsLost ? 'is-bad' : 'is-good')}
       </div>

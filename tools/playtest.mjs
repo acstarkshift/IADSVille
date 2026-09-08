@@ -1749,6 +1749,22 @@ export function playRun(job) {
     ownRounds,
     kills: outcome.stats.kills,
     leakers: outcome.stats.leakers,
+    /*
+     * And the number the VERDICT is read against, which is not the same one.
+     *
+     * `leakers` is every weapon that arrived somewhere. The file only counts
+     * arrivals at places its own schedule recognises — a building struck off
+     * by tonight's freeze, or one valued at nothing permanently — so on the two
+     * watches that carry such a place the raw count is not what
+     * `leakerTolerance` is compared with. The curve pass was choosing
+     * allowances off the raw column and getting Economy of Force and Across
+     * the Line wrong by a whole rung in the forgiving direction, because a
+     * hospital arrival and a camp arrival both sit in `leakers` and neither
+     * can lose the watch. Both columns are here now: the night's count and the
+     * file's, which is the same pair of ledgers the debrief closes on.
+     */
+    leakersCounted: outcome.stats.leakers - (outcome.stats.leakersUnrecognized ?? 0),
+    leakersUnrecognized: outcome.stats.leakersUnrecognized ?? 0,
     assetsLost: outcome.stats.assetsLost,
     score: outcome.score,
     standing: outcome.standing,
