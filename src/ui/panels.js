@@ -10,11 +10,15 @@
 
 import { SIM, SAM_TYPES, ASSET_TYPES, AIR_TYPES, COMMAND, DEFENCE_CLASSES } from '../engine/config.js';
 import { bearing, dist, len, clockString, clamp01 } from '../engine/math.js';
-import { sortedTracks, cannotEngageReason } from '../engine/threat.js';
+import { sortedTracks, cannotEngageReason, huntsTheFlight } from '../engine/threat.js';
 import { trackProfile } from '../engine/detection.js';
 import { engagementStatus } from './console.js';
-import { armTimeToImpact, canStartLoading, channelsFor, railLoadS, railsOf } from '../engine/doctrine.js';
-import { CONTROLS, STATUS, EQUIPMENT, PLATES, legend, pair, pairHtml } from './lexicon.js';
+import {
+  armTimeToImpact, canStartLoading, channelsFor, railLoadS, railsOf, spanLimit, spanLoad,
+} from '../engine/doctrine.js';
+import {
+  CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, pair, pairHtml,
+} from './lexicon.js';
 import { rankOf } from '../engine/character.js';
 import { raidHuntsRadars, positionCanBeHunted } from '../engine/scenarios.js';
 
@@ -456,7 +460,9 @@ function renderTrackDetail(world, ui, els) {
     · ${esc(track.classification === 'unknown' ? `ID ${idPct}%` : AIR_TYPES[track.classification]?.name ?? '')}<br>
     ${speedKts} kt · ${Math.round(track.altM)} m · quality ${Math.round(track.quality * 100)}%
     ${track.coasting ? '· <em style="color:var(--warn)">COASTING</em>' : ''}<br>
-    ${asset ? `Tracking toward <b>${esc(asset.label)}</b>, ${tti} out.` : 'No obvious objective.'}
+    ${huntsTheFlight(world, track)
+    ? `Tracking toward <b>${esc(world.vipAircraft()?.name ?? 'THE STATE AIRCRAFT')}</b>.`
+    : asset ? `Tracking toward <b>${esc(asset.label)}</b>, ${tti} out.` : 'No obvious objective.'}
     ${track.assignedTo.length ? `<br>Assigned: <b>${esc(track.assignedTo.map((id) => world.siteById.get(id)?.name).join(', '))}</b>` : ''}`;
 }
 
@@ -490,26 +496,43 @@ export function renderFormations(world, ui, els) {
     const handover = Math.max(0, formation.handoverUntilS - world.t);
     const state = handover > 0 ? 'handover' : formation.hq ? 'hq' : formation.direct ? 'direct' : 'detached';
     const postureEntry = CONTROLS[formation.posture];
+    const nextEntry = CONTROLS[POSTURE_CYCLE[(POSTURE_CYCLE.indexOf(formation.posture) + 1) % 3]];
+    /*
+     * How much of his own sector the officer is actually holding.
+     *
+     * A subordinate commander directs a fixed number of engagements at once —
+     * one officer, one radio, one map — and when a package arrives together
+     * rather than in file the rest of it waits on him. The card said ENGAGED 4
+     * and gave no way to tell a sector fighting hard from a sector that has run
+     * out of hands, which is the single thing this appointment is deciding
+     * between. Now it says 3/3 and turns, and the two answers are on the two
+     * buttons underneath it.
+     */
+    const limit = spanLimit(formation);
+    const held = spanLoad(world, formation);
+    const showSpan = Number.isFinite(limit) && !formation.direct && handover <= 0;
+    const saturated = showSpan && held >= limit;
 
-    return `<div class="fmn is-${state}" data-formation="${formation.id}">
+    return `<div class="fmn is-${state}${saturated ? ' is-saturated' : ''}" data-formation="${formation.id}">
       <div class="fmn-head">
         <span class="lg"><b>${esc(formation.tm)}</b><i>${esc(formation.en)}</i></span>
         <span class="fmn-state">${esc(
     handover > 0 ? `ПЕРЕДАЧА · HANDOVER ${Math.ceil(handover)}s`
       : formation.hq ? 'ВАШ ДИВИЗИОН · YOURS'
         : formation.direct ? 'ПОД ВАШЕЙ РУКОЙ · DIRECT'
-          : `${formation.commander?.tm ?? ''} · ${formation.commander?.name ?? 'SUBORDINATE'}`)}</span>
+          : saturated ? 'РУКИ ЗАНЯТЫ · HANDS FULL'
+            : `${formation.commander?.tm ?? ''} · ${formation.commander?.name ?? 'SUBORDINATE'}`)}</span>
       </div>
       <div class="fmn-figures">
         <span><label>BTY</label>${alive.length}/${sites.length}</span>
         <span><label>ROUNDS</label>${rounds}</span>
-        <span><label>ENGAGED</label>${engaged}</span>
+        <span><label>ENGAGED</label>${showSpan ? `${held}/${limit}` : engaged}</span>
         <span><label>ORDER</label>${esc(postureEntry.en)}</span>
       </div>
       <div class="fmn-controls">
         <button class="pb" data-act="posture" data-formation="${formation.id}"
-          title="The standing order this formation fights on while you are elsewhere">
-          <span class="lg"><b>${esc(postureEntry.tm)}</b><i>WEAPONS ${esc(postureEntry.en)}</i></span>
+          title="Now WEAPONS ${esc(postureEntry.en)}. Press to order WEAPONS ${esc(nextEntry.en)} — the standing order this formation fights on while you are elsewhere.">
+          <span class="lg"><b>${esc(nextEntry.tm)}</b><i>ORDER WEAPONS ${esc(nextEntry.en)}</i></span>
         </button>
         ${formation.hq ? '' : `<button class="pb ${formation.direct ? 'is-down' : ''}"
           data-act="direct" data-formation="${formation.id}"
@@ -535,6 +558,15 @@ export function renderFormations(world, ui, els) {
  *
  * Rounds nobody below you can move, four minutes of road between the order and
  * a rail, and not enough of them to cover two of anything.
+ *
+ * Every formation that has batteries, including your own headquarters
+ * battalion. It used to exclude the headquarters — `!f.hq` — on the reasoning
+ * that your own battalion is already yours, which is true and irrelevant: on
+ * the escort watch BASTION TAVROV is the ONLY battery whose reach covers the
+ * filed route, it sits in the headquarters formation, and the epilogue's own
+ * verb could therefore not be pointed at the thing the epilogue is about. Six
+ * rounds and four minutes of road is a decision either way; the panel's job is
+ * to let it be made.
  */
 function renderReserve(world) {
   if (!world.reserve.rounds && !world.reserve.released) return '';
@@ -549,7 +581,7 @@ function renderReserve(world) {
     </div>
     ${transit ? `<div class="fmn-figures"><span><label>ON THE ROAD</label>${transit}</span></div>` : ''}
     <div class="fmn-controls">
-      ${world.formations.filter((f) => !f.hq).map((f) => `<button class="pb"
+      ${world.formations.filter((f) => world.sitesOf(f).length).map((f) => `<button class="pb"
         data-act="reserve" data-formation="${f.id}" ${world.reserve.rounds <= 0 ? 'disabled' : ''}
         title="Release four rounds to ${esc(f.name)}. They take four minutes to arrive.">
         <span class="lg"><b>4 → ${esc(f.tm)}</b><i>RELEASE TO ${esc(f.en.toUpperCase())}</i></span>
@@ -560,8 +592,29 @@ function renderReserve(world) {
 
 /* ------------------------------------------------------------- weapons */
 
+/**
+ * The batteries, in the order the panel lists them and the keys address them.
+ *
+ * Your own battery is first. The list used to be in scenario order, which put
+ * the district and national watches' home battery third or fourth inside a
+ * scrolling column — measured at 1600×950 on the finale, `#battery-list` is
+ * 144 px tall against 2406 px of cards, and BASTION's DISPLACE cap sat 364 px
+ * below the fold on the one watch whose whole third axis is aimed at that
+ * battery. A player cannot be expected to scroll for the control that decides
+ * whether they live, and nothing on the net tells them to look.
+ *
+ * `world.sites` itself is untouched, so the engine and every seeded
+ * measurement are unaffected; the panel and the keyboard read this instead, so
+ * the number on a card is the number that selects it.
+ */
+export function batteryOrder(world) {
+  const rank = (s) => (world.control.crewedBatteryId === s.id ? 0
+    : world.homeBatteryId === s.id ? 1 : 2);
+  return [...world.sites].sort((a, b) => rank(a) - rank(b));
+}
+
 export function renderBatteries(world, ui, els) {
-  const units = world.sites.map((site, index) => {
+  const units = batteryOrder(world).map((site, index) => {
     const type = SAM_TYPES[site.type];
     /*
      * The battery's emissions lamp and switch follow whichever set is still

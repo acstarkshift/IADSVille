@@ -26,8 +26,9 @@ import { CrewConsole } from './console.js';
 import { Audio } from './audio.js';
 import {
   renderTopbar, renderTrackList, renderFlightStrip, renderFormations, renderBatteries, renderCrewConsole,
-  renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, RANGE_SCALES,
+  renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, RANGE_SCALES, batteryOrder,
 } from './panels.js';
+import { POSTURE_CYCLE } from './lexicon.js';
 import { renderMenu, renderBriefing, renderDebrief, renderControls } from './screens.js';
 import { renderEnlistment, renderDossier } from './dossier.js';
 import { learnSkill } from '../engine/character.js';
@@ -1119,9 +1120,11 @@ function runAction(act, siteId, radarId, formationId) {
       }
       break;
     case 'posture': {
+      // The cap on the card is labelled with the state this press produces, so
+      // the two must read the same list. See POSTURE_CYCLE.
       if (!formation) break;
-      const order = ['hold', 'tight', 'free'];
-      world.setPosture(formation.id, order[(order.indexOf(formation.posture) + 1) % 3]);
+      world.setPosture(formation.id,
+        POSTURE_CYCLE[(POSTURE_CYCLE.indexOf(formation.posture) + 1) % POSTURE_CYCLE.length]);
       break;
     }
     case 'reserve': if (formation) world.commitReserve(formation.id, 4); break;
@@ -1209,7 +1212,9 @@ function wireGlobalInput() {
             else world.takeDirect(target.id);
           }
         } else if (e.shiftKey) {
-          const target = world.sites[n];
+          // The same order the panel numbers its cards in — your own battery
+          // first — so Shift+1 selects the card marked 1.
+          const target = batteryOrder(world)[n];
           if (target) { ui.selectedSiteId = target.id; assignSelected(target.id); }
         } else {
           setSpeed([1, 2, 4, 0][n] ?? 1);

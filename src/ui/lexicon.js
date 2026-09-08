@@ -75,6 +75,21 @@ export const CONTROLS = {
   abort: { tm: 'СДАТЬ ПОСТ', en: 'LEAVE POST' },
 };
 
+/**
+ * The order the three weapons states cycle in, shared by the panel that draws
+ * the cap and the handler that presses it.
+ *
+ * They used to be two separate literals, and the cap printed the state the
+ * formation was IN while the click moved it to the next one — so a player who
+ * read a sector's card as TIGHT and pressed twice to reach FREE landed on HOLD,
+ * and disarmed the sector the briefing had just told them was under attack.
+ * Measured in a browser watch of Four Sectors: two sectors sat on HOLD with
+ * twenty-eight rounds apiece through the last five minutes of the raid, with
+ * one small ticker line to say so. The cap now says what pressing it will DO;
+ * the card's ORDER figure still says what the formation is on.
+ */
+export const POSTURE_CYCLE = ['hold', 'tight', 'free'];
+
 /** Lamps and status legends — the things that light up at you. */
 export const STATUS = {
   ready: { tm: 'ГОТОВ', en: 'READY' },

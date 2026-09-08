@@ -417,6 +417,9 @@ kbd {
 .fmn.is-handover { border-style: dashed; border-color: var(--warn); opacity: .8; }
 .fmn.is-detached { opacity: .72; }
 .fmn.is-reserve { border-color: var(--friendly); }
+/* An officer with every engagement he can personally hold already running. */
+.fmn.is-saturated { border-color: var(--warn); opacity: 1; }
+.fmn.is-saturated .fmn-state { color: var(--warn); }
 .fmn-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
 .fmn-state { color: var(--ink-dim); font-size: 10px; letter-spacing: .06em; text-align: right; }
 .fmn-figures { display: flex; gap: 12px; margin: 5px 0; flex-wrap: wrap; }

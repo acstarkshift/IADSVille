@@ -470,6 +470,28 @@ export function runAiBattleManager(world, dt) {
   }
 }
 
+/**
+ * How many engagements this officer is personally directing right now.
+ *
+ * Only what he ordered (`origin: 'formation'`). A crew shooting on its own
+ * initiative under WEAPONS FREE is not on his radio, and a cue to the player's
+ * own crewed battery is the player's engagement, not his.
+ */
+export function spanLoad(world, formation) {
+  let n = 0;
+  for (const site of world.sitesOf(formation)) {
+    for (const engagement of site.engagements) {
+      if (engagement.origin === 'formation') n++;
+    }
+  }
+  return n;
+}
+
+/** The limit on that, or Infinity where the watch does not declare one. */
+export function spanLimit(formation) {
+  return formation.commander?.span ?? Infinity;
+}
+
 function runFormationCommander(world, formation, dt) {
   if (!world.fusionOnline) return;      // no centre, no assignment
   if (world.t < formation.handoverUntilS) return;   // nobody has this one yet
@@ -497,6 +519,34 @@ function runFormationCommander(world, formation, dt) {
 
   const sites = world.sitesOf(formation);
   if (!sites.length) return;
+
+  /*
+   * SPAN OF CONTROL — the third thing an officer is, and the only one that
+   * scales with the raid.
+   *
+   * Competence is two rate limits: how often he looks at his board, and how
+   * dangerous a contact has to be before he spends a round on it. Neither
+   * cares how much is coming, so a sector answered a two-aircraft raid and a
+   * six-aircraft raid equally well and the subordinates out-fought the seat
+   * exactly where the weight was — which is the reverse of what an appointment
+   * that can only be in one place is supposed to feel like.
+   *
+   * An officer runs his sector on one radio with one map. He can personally
+   * direct `span` engagements at a time and no more; the rest wait for a
+   * channel to come free. A commander STANDING in the sector is limited only
+   * by the batteries' channels, because being there is what "talking to the
+   * crews yourself" means — that gap is the value of the appointment's first
+   * verb, and it opens exactly when the sector is under the main effort.
+   *
+   * It counts only what the officer himself directed (`origin: 'formation'`).
+   * Crews on WEAPONS FREE fight on their own initiative and are not on his
+   * radio, so the standing order is the other way out of a saturated sector —
+   * throughput bought with discrimination and rounds, which is the appointment's
+   * second verb and the reason it is now worth pressing.
+   */
+  const span = formation.commander?.span ?? Infinity;
+  let directed = spanLoad(world, formation);
+  if (directed >= span) return;
 
   // Never below the base filter: a good officer is quicker off the mark, not
   // willing to spend rounds on contacts that are not worth one.
@@ -562,13 +612,18 @@ function runFormationCommander(world, formation, dt) {
      * player's own crewed battery, where the human still pulls the trigger.
      */
     if (best) {
-      beginEngagement(world, best.site, track, {
+      // His radio is full. What is left on the board waits for a channel to
+      // come free, or for somebody to stand in this sector, or for the
+      // standing order to let the crews take it themselves.
+      if (!best.manual && directed >= span) return;
+      const started = beginEngagement(world, best.site, track, {
         manual: best.manual,
         origin: best.manual ? 'assigned' : 'formation',
         // The net knows it is the one transmitting. Your own LOCK does not
         // set this, which is how the cabin tells a cue from its own decision.
         cued: true,
       });
+      if (started && !best.manual) directed++;
     }
   }
 }
@@ -600,6 +655,27 @@ export function freeCrewCovers(world, track) {
  * of fires — not because he is a coward but because he has read the same order
  * you have and, unlike you, has never once considered not obeying it.
  */
+/**
+ * The politically reliable officer says so, once, on the net.
+ *
+ * The device the district act is built on — an officer who will not expend a
+ * round outside the priority of fires — was invisible from the seat: his sector
+ * simply did not shoot, and the only way to know why was to have remembered a
+ * line in the brief. He now transmits his reason the first time he declines,
+ * naming the place he is declining to defend, so the player can connect the
+ * order they acknowledged to the sector that has gone quiet and do something
+ * about it while there is still time.
+ */
+function announceStandDown(world, formation, track) {
+  if (formation.declinedOnce) return;
+  formation.declinedOnce = true;
+  const place = world.assetById.get(track.predictedAssetId);
+  world.comms?.(formation.commander?.name ?? formation.name,
+    `${place?.label ?? 'THAT CONTACT'} IS NOT ON THE PRIORITY OF FIRES. `
+    + 'THIS SECTOR WILL NOT EXPEND ROUNDS OUTSIDE THE ORDER.',
+    { urgent: true, formationId: formation.id });
+}
+
 export function commanderWillEngage(world, formation, track) {
   // Weapons tight in that sector, as ordered. Nobody on this net takes a shot
   // inside an accepted civil corridor on their own authority.
@@ -625,7 +701,10 @@ export function commanderWillEngage(world, formation, track) {
       // defending and call it obedience.
       const priorityCluster = world.assetById.get(priority)?.cluster;
       const trackCluster = world.assetById.get(track.predictedAssetId)?.cluster;
-      if (!priorityCluster || priorityCluster !== trackCluster) return false;
+      if (!priorityCluster || priorityCluster !== trackCluster) {
+        announceStandDown(world, formation, track);
+        return false;
+      }
     }
   }
   if (formation.posture !== 'tight') return true;
@@ -965,6 +1044,22 @@ export function runBatteryCrews(world, dt) {
        */
       const struckOff = world.command.constraints.freezeExcludedId ?? null;
       const acrossBorder = world.command.constraints.borderExcludedId ?? null;
+      /*
+       * And an officer's reading of his orders reaches his crews, not only his
+       * own radio.
+       *
+       * WEAPONS FREE used to erase the political section's colonel entirely:
+       * one press of the standing order and the man who will not spend a round
+       * outside the priority of fires had a sector full of crews doing exactly
+       * that on their own authority. The device the district and the finale are
+       * both built on was a button away from not existing. His crews are his
+       * crews; the order he has read is the order they fight on; and the only
+       * way to defend what the order leaves out is to go and stand there
+       * yourself.
+       */
+      const formation = world.formationOf(site.id);
+      const boundByOfficer = formation && !world.formationIsHumanRun(formation)
+        && formation.commander?.political;
       const available = [...world.tracks.values()]
         .filter((t) => {
           if (t.hostility !== 'hostile' || t.destroyed) return false;
@@ -972,6 +1067,7 @@ export function runBatteryCrews(world, dt) {
           if (struckOff !== null && t.predictedAssetId === struckOff) return false;
           if (acrossBorder !== null && t.predictedAssetId === acrossBorder) return false;
           if (world.inCivilCorridor(t)) return false;
+          if (boundByOfficer && !commanderWillEngage(world, formation, t)) return false;
           if (!world.fusionOnline
             && !world.radarsOf(site).some((r) => t.sources.includes(r.id))) return false;
           const env = inEnvelope(site, t.pos, t.altM);

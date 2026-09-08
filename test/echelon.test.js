@@ -24,6 +24,7 @@ import { emptyCampaign, appointTo } from '../src/engine/campaign.js';
 import { createCharacter, RANKS, rankIndexOf } from '../src/engine/character.js';
 import { DIRECTIVES, issueDirective, answerDirective } from '../src/engine/command.js';
 import { sortedTracks, engagementValue } from '../src/engine/threat.js';
+import { commanderWillEngage, spanLimit, spanLoad } from '../src/engine/doctrine.js';
 import { DETECTION } from '../src/engine/config.js';
 
 /** A record that has stood every watch at or below the given echelon. */
@@ -279,6 +280,94 @@ describe('district command', () => {
     assert.ok(results.free.stats.roundsFired > 0);
     assert.ok(results.free.score > results.hold.score,
       'and a district that fought beats a district that did not');
+  });
+
+  test('an officer runs three engagements at a time, and the fourth waits', () => {
+    /*
+     * Span of control, which is the load-bearing half of what an appointment
+     * takes away from you. Competence is a rate — how often he looks at his
+     * board, and how dangerous a contact must be before he spends a round —
+     * and a rate does not care how much is coming, so a sector answered a
+     * two-aircraft raid and a six-aircraft raid equally well and the officers
+     * out-fought the seat exactly where the weight was.
+     *
+     * One officer, one radio, one map: three at once. The assertion is on what
+     * HE directed (`origin: 'formation'`), because crews on WEAPONS FREE fight
+     * on their own initiative and are not on his radio — that is the other way
+     * out of a saturated sector and the reason the standing order is worth
+     * pressing.
+     */
+    const w = new World(scenarioById('four-sectors'), { role: 'net', seed: 'span' });
+    w.formations.forEach((f) => { if (!f.hq) { f.direct = false; f.handoverUntilS = 0; } });
+    for (const formation of w.formations) w.setPosture(formation.id, 'tight');
+
+    const officers = w.formations.filter((f) => Number.isFinite(spanLimit(f)));
+    assert.ok(officers.length >= 3, 'the district watch declares spans for its officers');
+
+    let sawSaturation = false;
+    let n = 0;
+    while (w.phase === 'running' && n < 40000) {
+      for (const radar of w.radars) if (radar.alive && !radar.siteId) radar.on = true;
+      w.step(0.1);
+      if (w.command.pending) w.answer('accepted');
+      for (const formation of officers) {
+        const load = spanLoad(w, formation);
+        assert.ok(load <= spanLimit(formation),
+          `${formation.name} is directing ${load} of ${spanLimit(formation)}`);
+        if (load === spanLimit(formation)) sawSaturation = true;
+      }
+      n++;
+    }
+    assert.ok(sawSaturation,
+      'and the raid is heavy enough that at least one of them runs out of hands');
+  });
+
+  test('standing in the sector lifts that limit, because you are the radio', () => {
+    const w = new World(scenarioById('four-sectors'), { role: 'net', seed: 'span-direct' });
+    const formation = w.formationById.get('f_lozan');
+    assert.ok(Number.isFinite(spanLimit(formation)), 'the officer has a span');
+    w.takeDirect('f_lozan');
+    w.t = formation.handoverUntilS + 0.1;
+    assert.ok(w.formationIsHumanRun(formation), 'and you are standing in it');
+
+    // Nothing the officer would have started is started, because he is not
+    // running it — every engagement in a held sector is the player's.
+    let n = 0;
+    while (w.phase === 'running' && n < 6000) {
+      for (const radar of w.radars) if (radar.alive && !radar.siteId) radar.on = true;
+      w.step(0.1);
+      if (w.command.pending) w.answer('accepted');
+      for (const site of w.sitesOf(formation)) {
+        assert.ok(site.engagements.every((e) => e.origin !== 'formation'),
+          'a sector under your hand takes no orders from its officer');
+      }
+      n++;
+    }
+  });
+
+  test('a politically reliable officer’s crews read the same order he does', () => {
+    /*
+     * The district act's device, and it used to be a button away from not
+     * existing: WEAPONS FREE put his crews on their own authority and they
+     * engaged whatever came, priority of fires or no. His sector is his sector.
+     */
+    const w = new World(scenarioById('four-sectors'), { role: 'net', seed: 'political' });
+    const formation = w.formations.find((f) => f.commander?.political);
+    assert.ok(formation, 'the district has one');
+    w.setPosture(formation.id, 'free');
+    const other = w.assets.find((a) => a.cluster && a.cluster !== 'brasov' && a.type !== 'c2');
+    w.command.constraints.priorityOfFiresId = w.assets.find((a) => a.cluster === 'lozan').id;
+
+    const track = {
+      id: 't1', tn: 'T-001', hostility: 'hostile', destroyed: false, quality: 1,
+      pos: { ...formation.pos }, vel: { x: 0, y: -0.2 }, altM: 4000, assignedTo: [], sources: [],
+      predictedAssetId: other.id,
+    };
+    assert.equal(commanderWillEngage(w, formation, track), false,
+      'he will not spend a round outside the order');
+    track.predictedAssetId = w.command.constraints.priorityOfFiresId;
+    assert.equal(commanderWillEngage(w, formation, track), true,
+      'and he will spend every round he has inside it');
   });
 
   test('your hands are faster than your subordinates’ — measured, not asserted', () => {
