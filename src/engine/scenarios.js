@@ -238,6 +238,24 @@ const DISTRICT_FORMATIONS = [
   },
 ];
 
+/**
+ * The same four officers, with the competences one watch needs.
+ *
+ * The values above are the district's own establishment and two watches read
+ * them. Four Sectors is the watch about the appointment itself, and it needs
+ * its officers pitched against a person's own hand pass rather than against
+ * each other: measured on the shipped values, three of the four answered their
+ * boards faster than a competent player did, standing in a sector was worth
+ * −12% of the watch's score, and a spectator who set four buttons and walked
+ * away beat both hand players. Scoped here rather than edited in place because
+ * Reinforce the Capital's moral trade is measured against the establishment
+ * values and a district-wide change degrades it.
+ */
+const districtFormationsWith = (competence) => DISTRICT_FORMATIONS.map((formation) => (
+  formation.commander && competence[formation.id]
+    ? { ...formation, commander: { ...formation.commander, ...competence[formation.id] } }
+    : formation));
+
 /*
  * A civil airliner crossing the sector, oblivious.
  *
@@ -1326,11 +1344,31 @@ export const SCENARIOS = [
     echelon: 'region',
     roles: ['net'],
     seed: 'four-sectors-01',
-    leakerTolerance: 8,
+    /*
+     * Six, not eight. The district is a big board and eight was written when
+     * four sectors between them presented twenty-six aircraft; the raid is
+     * denser now, and a tolerance that forgave eight weapons arriving on the
+     * places you are responsible for made the verdict agree with the spectator
+     * on more than half the seeds. Measured across eight: at eight the
+     * competent player held seven of eight and the novice four; at six it is
+     * five and one, which is the shape an act-three watch is supposed to have.
+     */
+    leakerTolerance: 6,
     playerBatteryId: 's_bastion_d',
     roundAllowance: 40,
     centre: { x: 4, y: 6 },
     scopeRangeKm: 260,
+    /*
+     * Twelve rounds behind each rack instead of sixteen.
+     *
+     * Thirteen batteries with a full store between them is why "set every
+     * sector WEAPONS FREE and never touch another control" out-scored both
+     * hand players: nobody ever ran out, so the standing order cost nothing
+     * whichever way it was left. At three quarters the sector left free meets
+     * the third package on an empty rack, and the order becomes a decision
+     * with a bill.
+     */
+    storeMult: 0.75,
     brief: [
       'You are appointed to command of the district. Four sectors, a hundred and ninety kilometres of'
         + ' ground, and thirteen batteries that are no longer yours to point.',
@@ -1354,29 +1392,56 @@ export const SCENARIOS = [
       DISTRICT_GROUND.brasovCity, DISTRICT_GROUND.brasovDepot,
       DISTRICT_GROUND.districtPost,
     ],
-    formations: DISTRICT_FORMATIONS,
+    /*
+     * The officers, pitched for this watch.
+     *
+     * Measured on the establishment values: Lenko answered 100% of contacts,
+     * Voloh 96%, Strelnik 89% — all three of them faster and less discriminate
+     * than a person's own three-second pass — and the appointment's first verb
+     * was worth −12%. These four are good and are not better than you: each of
+     * them will take the contacts his sector is built for and will be one beat
+     * behind on the marginal ones.
+     *
+     * And each runs his sector on one radio. THREE engagements at a time is
+     * what an officer with a map and a handset can personally direct; the
+     * fourth aircraft of a package waits for a channel, for the standing order
+     * to let his crews take it, or for you to come and stand there.
+     */
+    formations: districtFormationsWith({
+      f_ville: { competence: 0.88, span: 3 },
+      f_kubin: { competence: 0.62, span: 3 },
+      f_lozan: { competence: 0.8, span: 3 },
+      f_brasov: { competence: 0.72, span: 3 },
+    }),
     /** You open holding the valley and the district battalion. The rest are on their own. */
     openInFormations: ['f_ville'],
     sites: Object.values(DISTRICT_SITES),
     radars: DISTRICT_RADARS,
     waves: [
-      // Lozan, first and heaviest — it is nearest the frontier and it always is.
+      /*
+       * Lozan, first and heaviest — it is nearest the frontier and it always
+       * is. The packages arrive tighter than they used to (eleven and nine
+       * seconds between aircraft, against eighteen and fourteen) because a
+       * sector's officer answers three at a time: a package that arrives in
+       * file is four separate problems he can solve one after another, and a
+       * package that arrives together is the one the appointment is about.
+       */
       { atS: 25, type: 'sead', count: 2, bearingDeg: 20, spreadDeg: 30, spacingS: 24, distanceKm: 165 },
-      { atS: 70, type: 'striker', count: 5, bearingDeg: 15, spreadDeg: 24, spacingS: 18, altM: 6200,
+      { atS: 70, type: 'striker', count: 6, bearingDeg: 15, spreadDeg: 24, spacingS: 11, altM: 6200,
         distanceKm: 145, targetAssetId: 'a_lozan_power' },
-      { atS: 210, type: 'cruise', count: 4, bearingDeg: 22, spreadDeg: 26, spacingS: 14, altM: 90,
+      { atS: 210, type: 'cruise', count: 5, bearingDeg: 22, spreadDeg: 26, spacingS: 9, altM: 90,
         distanceKm: 145, targetAssetId: 'a_lozan' },
 
       // Kubin, second, and from a bearing the western gapfiller is poor against.
-      { atS: 120, type: 'striker', count: 4, bearingDeg: 300, spreadDeg: 26, spacingS: 20, altM: 5600,
+      { atS: 120, type: 'striker', count: 5, bearingDeg: 300, spreadDeg: 26, spacingS: 12, altM: 5600,
         distanceKm: 145, targetAssetId: 'a_kubin_depot' },
-      { atS: 265, type: 'striker', count: 4, bearingDeg: 288, spreadDeg: 22, spacingS: 18, altM: 170,
+      { atS: 265, type: 'striker', count: 5, bearingDeg: 288, spreadDeg: 22, spacingS: 11, altM: 170,
         distanceKm: 145, targetAssetId: 'a_kubin' },
 
       // And the valley, which is small, and which you will want to take anyway.
       { atS: 175, type: 'striker', count: 3, bearingDeg: 345, spreadDeg: 24, spacingS: 22, altM: 5200,
         distanceKm: 140, targetAssetId: 'a_bridge' },
-      { atS: 320, type: 'cruise', count: 3, bearingDeg: 350, spreadDeg: 24, spacingS: 16, altM: 85,
+      { atS: 320, type: 'cruise', count: 4, bearingDeg: 350, spreadDeg: 24, spacingS: 12, altM: 85,
         distanceKm: 140, targetAssetId: 'a_town' },
 
       /*
@@ -1391,8 +1456,13 @@ export const SCENARIOS = [
        * to exist rather than a fourth thing to watch in the first eight
        * minutes, and small, because it is a raid of opportunity on the flank
        * everyone had written off.
+       *
+       * At 430 s it was the last aeroplane of the night at 54% of the watch,
+       * which put the whole back half of a fifteen-minute raid into the chase.
+       * At 500 it lands past the halfway mark and the sector that has been
+       * scenery all night is the thing the last four minutes are about.
        */
-      { atS: 430, type: 'striker', count: 3, bearingDeg: 162, spreadDeg: 20, spacingS: 20, altM: 4800,
+      { atS: 500, type: 'striker', count: 4, bearingDeg: 162, spreadDeg: 20, spacingS: 14, altM: 4800,
         distanceKm: 150, targetAssetId: 'a_brasov_depot' },
     ],
   },
@@ -1405,13 +1475,40 @@ export const SCENARIOS = [
     echelon: 'region',
     roles: ['net'],
     seed: 'reinforce-01',
-    leakerTolerance: 9,
+    /*
+     * Seven, not nine. A verdict that survived two destroyed places and five
+     * hundred and twenty-three civilian dead — measured, in a browser watch
+     * that printed SECTOR HELD over both — is not a verdict, and the watch
+     * whose lesson is what an order COSTS cannot be the one watch where the
+     * cost does not reach the headline. Measured over eight seeds: at nine, all
+     * three player models held every seed; at five the competent player holds
+     * five and the expert seven, which is the shape an act-three watch wants.
+     * (The novice holds six, which is more than the bar allows and is not a
+     * property of this watch — see the note in the README: on a thirteen-battery
+     * district board the harness's competent model assigns by nearest-capable
+     * battery and pre-empts the officers with a worse pairing, so it leaks a
+     * shade MORE than the careless model that leaves them alone. It is the
+     * instrument that cannot separate them here, not the raid.)
+     */
+    leakerTolerance: 5,
     playerBatteryId: 's_bastion_d',
     roundAllowance: 36,
     centre: { x: 4, y: 6 },
     scopeRangeKm: 260,
     /** The hinge: the ministry wants your battalion. */
     withdrawalOrder: true,
+    /*
+     * And it comes when the battalion is in the middle of something.
+     *
+     * The order used to arrive at fifty-five seconds, before BASTION DISTRICT
+     * had fired a round — so "give me your long-range battalion" was a form to
+     * sign rather than a thing to lose, and the brief's promise of the order
+     * "in the next few minutes" was false by two minutes. At a hundred and
+     * sixty-five it lands with the battalion holding four tracks and its
+     * channels full, which is the sentence the watch is actually about: give me
+     * the battery that is currently firing.
+     */
+    withdrawalOrderAtS: 165,
     brief: [
       'The ministry has assessed a threat to the capital and is drawing long-range assets from the'
         + ' districts. You will receive the order in the next few minutes and you will be asked to'
@@ -1435,6 +1532,19 @@ export const SCENARIOS = [
       DISTRICT_GROUND.brasovCity, DISTRICT_GROUND.brasovDepot,
       DISTRICT_GROUND.districtPost,
     ],
+    /*
+     * The district's own establishment, untouched — the same four officers at
+     * the competences their files give them, and no span declared.
+     *
+     * This watch is the campaign's measured moral hinge and the officers are
+     * what it is calibrated against. Spans were tried here and taken out
+     * again: over eight seeds of the hand-fought model in `test/echelon.test.js`
+     * they moved the district's ground outcome from six places lost refusing
+     * against eight obeying to TEN against four — the officers holding fewer
+     * engagements pushes more of the fight onto crews the withdrawn battalion
+     * was covering, and the trade the level exists to state inverts. Four
+     * Sectors is the watch about the appointment; this one is about the order.
+     */
     formations: DISTRICT_FORMATIONS,
     openInFormations: ['f_kubin'],
     sites: Object.values(DISTRICT_SITES),
@@ -1451,13 +1561,25 @@ export const SCENARIOS = [
         distanceKm: 145, targetAssetId: 'a_kubin_depot' },
       { atS: 250, type: 'cruise', count: 6, bearingDeg: 18, spreadDeg: 26, spacingS: 14, altM: 90,
         distanceKm: 145, targetAssetId: 'a_lozan' },
-      { atS: 315, type: 'striker', count: 4, bearingDeg: 12, spreadDeg: 24, spacingS: 18, altM: 5400,
+      /*
+       * Three, not four. Eight weapons on the Lozan power station behind a
+       * six-round cruise stream took it on eight seeds of eight whatever the
+       * commander did with the battalion — which made the district's ground
+       * outcome a constant and the withdrawal's whole cost invisible in it.
+       * Measured over eight seeds of the hand-fought model: at four aircraft,
+       * refusing lost NINE places against obedience's eight; at three, it loses
+       * six against eight, which is the sentence the level is about.
+       */
+      { atS: 315, type: 'striker', count: 3, bearingDeg: 12, spreadDeg: 24, spacingS: 18, altM: 5400,
         distanceKm: 145, targetAssetId: 'a_lozan_power' },
       { atS: 380, type: 'striker', count: 3, bearingDeg: 348, spreadDeg: 22, spacingS: 22, altM: 5000,
         distanceKm: 140, targetAssetId: 'a_c2' },
       // Brasov again, and on this watch it is the sector the withdrawn
-      // battalion used to reach. See the note on the district watch.
-      { atS: 455, type: 'striker', count: 3, bearingDeg: 165, spreadDeg: 20, spacingS: 20, altM: 4600,
+      // battalion used to reach. See the note on the district watch. At 455 s
+      // it was the last aeroplane of the night at 53% of the watch; at 500 it
+      // lands past the halfway mark, which is where the bar wants it and where
+      // the sector that has been quiet all night earns the last four minutes.
+      { atS: 500, type: 'striker', count: 3, bearingDeg: 165, spreadDeg: 20, spacingS: 20, altM: 4600,
         distanceKm: 150, targetAssetId: 'a_brasov' },
     ],
   },
@@ -1474,15 +1596,50 @@ export const SCENARIOS = [
     echelon: 'national',
     roles: ['net', 'both'],
     seed: 'two-cities-final',
-    leakerTolerance: 6,
+    /*
+     * Three. Twenty-eight aircraft carry something like forty-four weapons at
+     * two places and a post, and a verdict that forgave six of them arriving
+     * was one the careless player model met on three quarters of its seeds.
+     * Measured over eight: at three the novice holds three, the competent six
+     * and the expert eight, which is what the last watch of the campaign is
+     * supposed to look like.
+     */
+    leakerTolerance: 3,
     playerBatteryId: 's_bastion',
     roundAllowance: 26,
     /**
-     * The depots are committed to the capital. There is no resupply and the
-     * rails are short, which is what turns "defend both" from a matter of
-     * attention into a matter of arithmetic.
+     * The depots are committed to the capital. There is no resupply, and what
+     * a battery has tonight is what it was issued — the rails, and one refill
+     * behind them.
+     *
+     * It used to be the rails and nothing else, and the arithmetic that made
+     * was not the one the level wanted. Measured in the cabin: the magazine was
+     * the ONLY thing between the operator and a legal shot for sixty-five per
+     * cent of the watch, engageable share fell to fifteen, and BASTION — the
+     * battery the brief is about — was dry at five minutes and never fired
+     * again, so the third axis arrived at a rack that had been empty for six
+     * minutes. That is not scarcity, it is a watch that ends at minute five and
+     * takes another eleven to admit it. Half a store keeps the total honest —
+     * sixteen rounds on the long battalion against eighteen aircraft — and
+     * gives the cabin back the one piece of craft this watch is for, which is
+     * knowing when to send the loaders out.
      */
-    supply: { roundsMult: 1, reloadsAllowed: false },
+    supply: { roundsMult: 1, reloadsAllowed: true },
+    /*
+     * A third of a rack behind each, and no more.
+     *
+     * The finale's lesson is that the equipment was never the constraint, and
+     * for a while its arithmetic said the opposite: with nothing behind the
+     * rails the magazine was the ONLY thing between the operator and a legal
+     * shot for two thirds of the watch, the crewed battery was dry at five
+     * minutes of a sixteen-minute night, and the harness's careless player
+     * model out-held its careful one on both seats because the careful one
+     * spent its rails early and the watch had no way back. A watch decided by
+     * a hoist is not a watch about a choice. So there is enough to fight with,
+     * the raid is what is heavy, and the constraint is where the level says it
+     * is: two places, three axes, and one of you.
+     */
+    storeMult: 0.35,
     /**
      * The national reserve, on the night it matters.
      *
@@ -1504,9 +1661,9 @@ export const SCENARIOS = [
       'Sector command has already transmitted its priority of fires. You will receive it shortly and'
         + ' you will be asked to acknowledge it on the net, in the clear, with the log running.',
       'BASTION sits between the two cities and can reach either. There is no resupply tonight — the'
-        + ' depots are committed to the capital — so every battery fights with what is on its rails and'
-        + ' nothing more. Nine aircraft on each axis, and six more for this post. Every strike aircraft'
-        + ' carries two weapons.',
+        + ' depots are committed to the capital, so BASTION has one refill in its own store and every'
+        + ' other battery has a third of one. Eleven aircraft on each axis, and six more for this'
+        + ' post. Every strike aircraft carries two weapons.',
     ],
     teaches: 'That the equipment was never the constraint.',
     /**
@@ -1531,6 +1688,15 @@ export const SCENARIOS = [
     chatter: [
       { atS: 46, text: 'FRONTIER POSTS REPORT ENGINE NOISE ON THREE BEARINGS. THE SETS HAVE NOTHING YET.' },
       { atS: 62, text: 'LOZAN EXCHANGE HAS STOPPED ANSWERING. THE LINE IS NOT REPORTED CUT.', pressureOnly: true },
+      /*
+       * The one thing this watch never said out loud. The third axis is aimed
+       * at the post the player is sitting in, and the only way to know that was
+       * to select each contact and read the destination line. A player who is
+       * told at two minutes forty-eight that a formation has turned in on THEM
+       * has time to shoot it, or to displace, or to decide not to — which is
+       * the trilemma the brief promises and the watch was not delivering.
+       */
+      { atS: 168, text: 'THE THIRD FORMATION HAS TURNED IN ON THIS POST. IT IS NOT TRACKING EITHER CITY.' },
       { atS: 385, text: 'THE NORTHERN FORMATION HAS PASSED ITS RELEASE LINE. THE WESTERN ONE HAS NOT TURNED YET.' },
       { atS: 745, text: 'FORMATIONS REPORT ROUNDS REMAINING BY SECTION. THE FIGURES GO TO THE MINISTRY AS TRANSMITTED.' },
       { atS: 850, text: 'DISTRICT EXCHANGE REQUESTS LINE CAPACITY FOR CASUALTY TRAFFIC. GRANTED ON THE SECOND REQUEST.', pressureOnly: true },
@@ -1578,19 +1744,42 @@ export const SCENARIOS = [
       {
         id: 'f_valley', name: 'VALLEY SECTOR', tm: 'СЕКТОР ДОЛИНЫ', en: 'Valley sector',
         pos: { x: -8, y: 4 }, posture: 'tight',
-        commander: { name: 'CAPT. RADU', tm: 'КАПИТАН РАДУ', competence: 0.85 },
+        /*
+         * Two engagements at a time, each, and that is the finale's whole
+         * argument as a number. A sector commander with one radio and one map
+         * can hold two problems; the packages arrive in fours. Whichever of the
+         * two sectors you are not standing in will be a beat behind all night,
+         * and there is no arrangement of your own hands that covers both.
+         */
+        commander: { name: 'CAPT. RADU', tm: 'КАПИТАН РАДУ', competence: 0.85, span: 2 },
       },
       {
         id: 'f_capital', name: 'CAPITAL SECTOR', tm: 'СЕКТОР СТОЛИЦЫ', en: 'Capital sector',
         pos: { x: 104, y: 68 }, posture: 'tight',
         // He will hold the palace beautifully and let the valley burn, and he
         // will be right, in the only sense the word is used in this service.
-        commander: { name: 'COL. STRELNIK', tm: 'ПОЛКОВНИК СТРЕЛЬНИК', competence: 1.0, political: true },
+        commander: {
+          name: 'COL. STRELNIK', tm: 'ПОЛКОВНИК СТРЕЛЬНИК', competence: 1.0, political: true, span: 2,
+        },
       },
     ],
     openInFormations: ['f_valley'],
     sites: [
-      { ...SITES.bastionCentre, formation: 'f_hq' },
+      /*
+       * The one store on the board. Eight rounds on the rails and eight behind
+       * them, for the only battery that reaches either city — and nothing for
+       * anybody else, which is what "the depots are committed to the capital"
+       * means when you are the one holding the long battalion.
+       *
+       * Measured with no store at all: the magazine was the only thing between
+       * the operator and a legal shot for two thirds of the watch, BASTION was
+       * dry at five minutes of a sixteen-minute night, and the harness's
+       * careless player model out-held its careful one on both seats because
+       * the careful one spent its rails early and the watch had no way back.
+       * Measured with a second rack for every battery instead: eighty-eight
+       * extra rounds, and all four player models held all eight seeds.
+       */
+      { ...SITES.bastionCentre, formation: 'f_hq', storeMult: 0.5 },   // one full refill
       { ...SITES.lanceVille, formation: 'f_valley' },
       { ...SITES.thistleVille, formation: 'f_valley' },
       { ...SITES.hammer, formation: 'f_valley' },
@@ -1606,16 +1795,22 @@ export const SCENARIOS = [
       /*
        * Northern axis: the capital. Suppression first, as it always is.
        *
-       * Nine aircraft a side is the number the whole watch is balanced on: a
+       * Eleven aircraft a side is the number the whole watch is balanced on: a
        * committed defence with everything on one side's rails can just about
-       * stop nine, and cannot come close to stopping eighteen. Remember that a
-       * strike aircraft carries two weapons, so nine aircraft is closer to
-       * fifteen impacts than to nine.
+       * stop eleven, and cannot come close to stopping twenty-two. Remember
+       * that a strike aircraft carries two weapons, so eleven aircraft is
+       * closer to eighteen impacts than to eleven.
+       *
+       * It was nine a side, spread wider, against batteries with nothing behind
+       * their racks. That version was decided by the hoist rather than by the
+       * choice: see the note on `storeMult` above. The rounds are now there and
+       * the packages arrive together, which moves the constraint from the
+       * magazine to the pair of hands.
        */
-      { atS: 70, type: 'striker', count: 5, bearingDeg: 25, spreadDeg: 22, spacingS: 20, altM: 6400,
+      { atS: 70, type: 'striker', count: 6, bearingDeg: 25, spreadDeg: 22, spacingS: 14, altM: 6400,
         targetAssetId: 'a_palace' },
-      { atS: 250, type: 'cruise', count: 4, bearingDeg: 30, spreadDeg: 20, spacingS: 14, altM: 90,
-        targetAssetId: 'a_palace' },
+      { atS: 250, type: 'cruise', count: 5, bearingDeg: 30, spreadDeg: 20, spacingS: 10, altM: 90,
+        distanceKm: 130, targetAssetId: 'a_palace' },
 
       /*
        * Western axis: the valley, and the village in it. Deliberately smaller
@@ -1623,12 +1818,19 @@ export const SCENARIOS = [
        * committed to the Ville can cycle its channels and genuinely hold —
        * the choice has to be a choice, not a foregone loss dressed up as one.
        */
-      { atS: 175, type: 'striker', count: 4, bearingDeg: 285, spreadDeg: 24, spacingS: 26, altM: 5800,
+      { atS: 175, type: 'striker', count: 5, bearingDeg: 285, spreadDeg: 24, spacingS: 16, altM: 5800,
         targetAssetId: 'a_town' },
-      { atS: 295, type: 'cruise', count: 3, bearingDeg: 292, spreadDeg: 26, spacingS: 18, altM: 85,
-        targetAssetId: 'a_town' },
-      { atS: 415, type: 'striker', count: 2, bearingDeg: 300, spreadDeg: 22, spacingS: 24, altM: 160,
-        targetAssetId: 'a_town' },
+      /*
+       * Later, and spawned close in. On the default hundred-and-fifty-five
+       * kilometre ring the last western package released at 770-824 s and its
+       * weapons arrived at 948 — five hundred and thirty seconds of transit
+       * after a spawn that was already only 41% of the way through the watch.
+       * The valley's raid now finishes inside the watch it belongs to.
+       */
+      { atS: 320, type: 'cruise', count: 4, bearingDeg: 292, spreadDeg: 26, spacingS: 12, altM: 85,
+        distanceKm: 115, targetAssetId: 'a_town' },
+      { atS: 500, type: 'striker', count: 2, bearingDeg: 300, spreadDeg: 22, spacingS: 20, altM: 160,
+        distanceKm: 95, targetAssetId: 'a_town' },
 
       /*
        * And the third axis, which is for you. They know where the forward post
@@ -1641,10 +1843,31 @@ export const SCENARIOS = [
        * loss and made all three places indefensible at once, which is a
        * different problem from the one this watch is supposed to pose.
        */
-      { atS: 90, type: 'sead', count: 2, bearingDeg: 55, spreadDeg: 20, spacingS: 24, distanceKm: 160,
+      /*
+       * The suppression pair comes first and comes early — at forty-five
+       * seconds rather than ninety, which is also the watch's first contact.
+       * T1 wants something on the tube inside a minute and the capital's raid
+       * cannot be pulled forward to provide it: measured over three variants,
+       * every earlier northern package drains BASTION earlier and costs the
+       * competent player held seeds. An independent early contact is the right
+       * repair, and the aircraft coming to blind you is the honest one.
+       */
+      { atS: 45, type: 'sead', count: 2, bearingDeg: 55, spreadDeg: 20, spacingS: 24, distanceKm: 160,
         scalable: false },
-      { atS: 210, type: 'striker', count: 4, bearingDeg: 60, spreadDeg: 18, spacingS: 20, altM: 4200,
-        targetAssetId: 'a_post', scalable: false },
+      /*
+       * And the strike package for this post arrives at two and a half minutes
+       * with three aircraft, not at three and a half with four.
+       *
+       * This is the change the whole watch turned on. BASTION was dry at 320 s
+       * against a post-strike release at 571-604 s, so YOUR POSITION WAS
+       * OVERRUN happened at every skill level, in seventy-three per cent of
+       * runs, including the walk-away — a scripted death with one hidden save.
+       * Arriving while there are rounds on the rails makes the third axis a
+       * thing you can answer with fire, or duck by displacing, or decide to
+       * ignore in favour of a city. That is the trilemma the brief describes.
+       */
+      { atS: 150, type: 'striker', count: 4, bearingDeg: 60, spreadDeg: 18, spacingS: 20, altM: 4200,
+        distanceKm: 128, targetAssetId: 'a_post', scalable: false },
     ],
   },
 
@@ -1718,11 +1941,13 @@ export const SCENARIOS = [
       'At 0410 a state aircraft, callsign STATE 01, will lift from Demobodedovo and route south-east for'
         + ' the frontier. The passenger list is not being transmitted. Sector command has ordered the'
         + ' aircraft protected at all cost, and has used those words.',
-      'Two pairs of enemy fighters are already airborne to the north. They are not interested in the'
-        + ' palace, the city, or you. They are interested in one aeroplane, and they carry two rounds each.',
+      'Two flights of enemy fighters are already airborne to the north. They are not interested in the'
+        + ' palace, the city, or you. They are interested in one aeroplane, and they carry one round'
+        + ' each, off one pass, from twenty kilometres.',
       'There is also a strike package coming for the palace and the field, and you have one battalion'
         + ' that can cover the corridor. It cannot cover the corridor and the city at the same time.',
-      'STATE 01 will be on your scope, identified, for eight minutes.',
+      'STATE 01 will be on your scope, identified, until it is out of national airspace or it is'
+        + ' not. Nothing else on this watch matters beside that.',
     ],
     teaches: 'That the last decision was never about a building either.',
     briefIfKnown: {
@@ -1755,12 +1980,24 @@ export const SCENARIOS = [
       {
         id: 'f_city', name: 'CAPITAL SECTOR', tm: 'СЕКТОР СТОЛИЦЫ', en: 'Capital sector',
         pos: { x: 102, y: 60 }, posture: 'tight',
-        commander: { name: 'COL. STRELNIK', tm: 'ПОЛКОВНИК СТРЕЛЬНИК', competence: 1.0, political: true },
+        commander: {
+          name: 'COL. STRELNIK', tm: 'ПОЛКОВНИК СТРЕЛЬНИК', competence: 1.0, political: true, span: 2,
+        },
       },
       {
+        /*
+         * The far end of the corridor, and it is on WEAPONS TIGHT.
+         *
+         * It used to open free, which meant the section fought the second pair
+         * on its own initiative and the operator's only job was to watch. The
+         * two officers on this watch each hold two engagements at a time; the
+         * standing order is what decides whether this one is fighting what it
+         * can see or waiting to be told, and it is the first thing worth
+         * pressing on the panel.
+         */
         id: 'f_corridor', name: 'TAVROV SECTION', tm: 'ТАВРОВСКИЙ УЧАСТОК', en: 'Tavrov section',
-        pos: { x: 160, y: -20 }, posture: 'free',
-        commander: { name: 'CAPT. VOLOH', tm: 'КАПИТАН ВОЛОХ', competence: 0.9 },
+        pos: { x: 160, y: -20 }, posture: 'tight',
+        commander: { name: 'CAPT. VOLOH', tm: 'КАПИТАН ВОЛОХ', competence: 0.9, span: 2 },
       },
     ],
     openInFormations: ['f_corridor'],
@@ -1777,12 +2014,18 @@ export const SCENARIOS = [
     ],
     waves: [
       /*
-       * The first pair, crossing the frontier north of the city while the
+       * The first flight, crossing the frontier north of the city while the
        * aircraft they came for is still on the ground. They hold north of
        * Mostrograd until it rolls, which gives the operator four minutes of
        * knowing exactly what is about to happen and being unable to start it.
+       *
+       * Three, not two, and the same at the far end — six fighters carrying one
+       * shorter-legged round each rather than four carrying a long one. The
+       * arithmetic against a defence that does nothing is unchanged; what
+       * changes is that stopping fighters now subtracts something. See
+       * AIR_TYPES.interceptor for the measurement that moved these numbers.
        */
-      { atS: 20, type: 'interceptor', count: 2, spacingKm: 16, scalable: false,
+      { atS: 20, type: 'interceptor', count: 3, spacingKm: 16, scalable: false,
         pos: { x: 150, y: 142 }, waypoints: [{ x: 150, y: 100 }] },
 
       /*
@@ -1815,11 +2058,11 @@ export const SCENARIOS = [
         distanceKm: 150, scalable: false },
 
       /*
-       * The second pair, from the north-east, timed for the far end of the
+       * The second flight, from the north-east, timed for the far end of the
        * corridor where one battalion's coverage runs out and the reloads have
        * not come back yet.
        */
-      { atS: 290, type: 'interceptor', count: 2, spacingKm: 16, scalable: false,
+      { atS: 290, type: 'interceptor', count: 3, spacingKm: 16, scalable: false,
         pos: { x: 196, y: 40 }, waypoints: [{ x: 186, y: -6 }] },
     ],
   },

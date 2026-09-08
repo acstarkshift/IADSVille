@@ -253,18 +253,30 @@ export const AIR_TYPES = {
     evadeDurationS: 16,
     threatWeight: 1.4,
     /**
-     * One round each, off one pass, from twenty-six kilometres.
+     * One round each, off one pass, from twenty kilometres.
      *
-     * Four fighters is therefore four launches and no more, which is what makes
+     * Six fighters is therefore six launches and no more, which is what makes
      * the corridor defensible at all: every fighter stopped before it reaches
      * its launch point is a round that is never in the air, and the difference
-     * between stopping three of them and stopping none is the difference
+     * between stopping four of them and stopping none is the difference
      * between a fair chance and none.
+     *
+     * The numbers moved once, and they moved because the shape was wrong rather
+     * than the difficulty. At four fighters releasing from twenty-six
+     * kilometres at a kill probability of 0.55, the best corridor play the
+     * console allows still let exactly one round leave a rail on eight seeds of
+     * eight — so the aeroplane's fate was one coin flip, identical for a player
+     * who stopped three fighters and a player who stopped none, and no amount
+     * of skill moved it. Six shorter-legged rounds at 0.38 is the same expected
+     * number of hits against a defence that does nothing, and a gradient
+     * underneath it: each fighter killed short of twenty kilometres is a real
+     * subtraction, and the last twenty kilometres of every intercept is now
+     * inside the reach of the battalion holding the corridor.
      */
     airToAir: 1,
-    airToAirRangeKm: 26,
+    airToAirRangeKm: 20,
     /** Probability one round kills what it was fired at. */
-    airToAirPk: 0.55,
+    airToAirPk: 0.38,
   },
 
   /**

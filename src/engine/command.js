@@ -291,13 +291,6 @@ export const DIRECTIVES = {
   },
 
   /**
-   * The last watch's order, and the hinge the campaign turns on.
-   *
-   * It arrives before the western axis is anywhere near detection range, so it
-   * is accepted — or refused — without knowing yet what it will cost. That is
-   * deliberate, and it is how these orders actually work.
-   */
-  /**
    * District command's hinge, and the first order that costs you equipment
    * rather than rounds.
    *
@@ -320,7 +313,21 @@ export const DIRECTIVES = {
       + 'effect and will move tonight. You will acknowledge receipt on the net.',
     plain: (w, site) => `SECTOR: ${site?.name ?? 'The district battalion'} is redeployed to the capital `
       + 'with immediate effect. Acknowledge.',
-    trigger: (w) => w.scenario.withdrawalOrder === true && w.t > 55,
+    /*
+     * And it arrives after the battalion has done something you could miss.
+     *
+     * It used to fire at fifty-five seconds — fourteen seconds after the first
+     * contact, a hundred before any battery had a legal shot, and with the
+     * expenditure counter reading 0 of 36. The whole watch is "what does a
+     * redeployment order cost", and the player was being asked to answer it on
+     * an empty night: measured, obeying then cost the seat its own first shot
+     * (148 s against a spectator's 78 s, the campaign's worst) and BOTH harness
+     * player models scored better for obeying, which inverts the trade the
+     * level is built on. The scenario names the second, so a watch that wants
+     * the order cold can still have it; the default is the old fifty-five.
+     */
+    trigger: (w) => w.scenario.withdrawalOrder === true
+      && w.t > (w.scenario.withdrawalOrderAtS ?? 55),
     onAccept: (w, site) => {
       w.command.constraints.battalionReleased = true;
       if (site) w.withdrawSite(site.id, 'redeployed to the capital');
@@ -361,6 +368,17 @@ export const DIRECTIVES = {
     onRefuse: (w) => { w.command.constraints.flightOrderRefused = true; },
   },
 
+  /**
+   * The last watch's order, and the hinge the campaign turns on.
+   *
+   * It arrives before the western axis is anywhere near detection range, so it
+   * is accepted — or refused — without knowing yet what it will cost. That is
+   * deliberate, and it is how these orders actually work. (This block had
+   * drifted up the file to sit above `withdrawBattalion`, where it read as a
+   * documented exception excusing that order's arrival on an empty night. It
+   * describes the western axis, which is this watch's geography and not the
+   * district's.)
+   */
   palacePriority: {
     id: 'palacePriority',
     label: 'the priority of fires to the palace',
