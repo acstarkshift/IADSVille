@@ -1015,26 +1015,79 @@ export const SCENARIOS = [
     ],
     teaches: 'Jamming, burnthrough, decoys, and ammunition discipline.',
     /*
-     * The longest routine silence in the campaign used to sit right here —
-     * seventy-five to eighty-five seconds of one slow contact and nothing
-     * else, between first paint and the decoy stream. The net talks through
-     * it, because a sector EW picture filling with noise is not actually a
-     * quiet room.
+     * NO STORE CUT ON THIS WATCH, AND THE MEASUREMENT THAT SETTLED IT.
+     *
+     * The obvious way to make "there are more contacts than that" mechanically
+     * true is to shorten the sector's stores, and it was tried three ways:
+     * half stores, six tenths, seven tenths. All three invert the property
+     * this watch exists to carry, and this is the watch two of the campaign's
+     * load-bearing measurements are taken on. Twelve seeds, hand play against
+     * set-free-and-walk-away: at full stores the commander concedes ten
+     * leakers against the walk-away's nineteen and loses three structures
+     * against eight; at seven tenths it concedes twenty-two against
+     * twenty-two, loses eleven against four, and the score dividend goes
+     * NEGATIVE. Scarcity punishes the player who is choosing targets across
+     * the whole sector far harder than it punishes crews who only ever shoot
+     * what wanders into their own ring, because the commander's reach — the
+     * exact thing attention buys here — is what he can no longer afford.
+     * Slower reloads do the same thing to the delegation ladder: with the
+     * store at eight tenths the AI net over free crews fell to 0.91 of free
+     * crews alone against a 0.95 floor.
+     *
+     * So the allocation stays a ledger constraint — twenty-two rounds against
+     * a raid of thirty-odd objects, priced at five points a round — and the
+     * difficulty comes from the raid: two axes instead of one, and twenty-one
+     * strike aircraft instead of twelve.
+     */
+    /*
+     * The EW picket speaks first, because on this watch the noise arrives
+     * before the aeroplanes do and that is the whole subject. The old order
+     * had the net reporting a held contact at 52 s against a first paint at
+     * 86 s — the room describing something that did not exist yet.
      */
     chatter: [
-      { atS: 52, text: 'WIDE EYE HOLDS ONE CONTACT, SLOW, NOT CLOSING. NOTHING BEHIND IT YET.' },
-      { atS: 86, text: 'EW PICKET REPORTS SWEEP JAMMING RISING ON THE NORTHERN BEARINGS. EXPECT A DIRTY PICTURE.' },
+      { atS: 24, text: 'EW PICKET REPORTS SWEEP JAMMING RISING ON THE NORTHERN BEARINGS. EXPECT A DIRTY PICTURE.' },
+      { atS: 96, text: 'WIDE EYE HOLDS A STREAM ON THE NORTHERN AXIS. NOT ALL OF THAT IS AEROPLANES.' },
     ],
     assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, GROUND.depot, GROUND.bridge],
     sites: [SITES.bastion, SITES.lanceWest, SITES.lanceEast, SITES.thistleTown, SITES.hammer],
     radars: [RADARS.ewrNorth, RADARS.gapSouth],
     waves: [
-      { atS: 10, type: 'jammer', count: 2, bearingDeg: 0, spreadDeg: 70, spacingS: 20, distanceKm: 175, scalable: false },
-      { atS: 70, type: 'decoy', count: 6, bearingDeg: 350, spreadDeg: 40, spacingS: 14, altM: 5200 },
-      { atS: 130, type: 'striker', count: 5, bearingDeg: 10, spreadDeg: 34, spacingS: 22, altM: 5600 },
+      { atS: 6, type: 'jammer', count: 2, bearingDeg: 0, spreadDeg: 70, spacingS: 20, distanceKm: 158, scalable: false },
+      { atS: 30, type: 'decoy', count: 6, bearingDeg: 350, spreadDeg: 40, spacingS: 14, altM: 5200 },
+      { atS: 130, type: 'striker', count: 6, bearingDeg: 10, spreadDeg: 34, spacingS: 20, altM: 5600,
+        distanceKm: 134 },
+      /*
+       * The western stream, down the Kubin road at the power station.
+       *
+       * LANCE WEST is the battery this file names and it sits twenty-four
+       * kilometres west of the centre with a forty-two-kilometre reach, so a
+       * raid that runs entirely down the northern axis never enters its
+       * envelope: measured, the designated cabin's first legal shot was at
+       * 469.5 s and its first own round at 659 s on a watch that averaged
+       * fifteen minutes. This stream passes within eight kilometres of it.
+       *
+       * That it is decoys first is the point. The cabin's first shot of the
+       * night is spent on a lie, and the rails are half-empty when the real
+       * package comes down the same road four minutes later — which is this
+       * watch's lesson arriving in the seat instead of in the debrief.
+       */
+      { atS: 44, type: 'decoy', count: 3, bearingDeg: 288, spreadDeg: 16, spacingS: 16, altM: 4600,
+        distanceKm: 86, targetAssetId: 'a_power' },
       civilTransit(240),
       { atS: 300, type: 'decoy', count: 4, bearingDeg: 20, spreadDeg: 30, spacingS: 12, altM: 4800 },
-      { atS: 355, type: 'striker', count: 4, bearingDeg: 340, spreadDeg: 28, spacingS: 20, altM: 180 },
+      { atS: 300, type: 'striker', count: 4, bearingDeg: 292, spreadDeg: 18, spacingS: 18, altM: 900,
+        distanceKm: 104, targetAssetId: 'a_power' },
+      /*
+       * The low package. It used to spawn at the engine's default hundred and
+       * fifty-five kilometres, which is eleven minutes of transit at a hundred
+       * and eighty metres — so the last aircraft of it was still being chased
+       * at 1040 s and it, not the raid, was what set the length of the watch.
+       * At a hundred and four it crosses the horizon at seventy-eight and the
+       * fight over it happens inside the rings.
+       */
+      { atS: 355, type: 'striker', count: 5, bearingDeg: 340, spreadDeg: 28, spacingS: 18, altM: 180,
+        distanceKm: 98 },
       /*
        * And a late package, because the back half had nothing in it.
        * Measured: the last spawn used to land at forty per cent of the
@@ -1044,7 +1097,8 @@ export const SCENARIOS = [
        * spent, which is the ammunition lesson arriving as a raid instead of
        * as a number in the debrief.
        */
-      { atS: 470, type: 'striker', count: 3, bearingDeg: 5, spreadDeg: 26, spacingS: 18, altM: 5200 },
+      { atS: 480, type: 'striker', count: 4, bearingDeg: 5, spreadDeg: 26, spacingS: 16, altM: 5200,
+        distanceKm: 96 },
     ],
   },
 
@@ -1076,6 +1130,27 @@ export const SCENARIOS = [
     waves: [
       { atS: 25, type: 'striker', count: 3, bearingDeg: 350, spreadDeg: 22, spacingS: 26, altM: 6200,
         targetAssetId: 'a_airbase' },
+      /*
+       * The probe up the Kubin road, and the reason the whole watch works.
+       *
+       * LANCE WEST is the battery the brief is about — "twenty-one kilometres
+       * from LANCE WEST and well inside its envelope" — and on the shipped
+       * table it never fired. Measured over eight competent seeds: the crewed
+       * cabin's first legal shot came at 464 s against a 90 s bar, its
+       * engageable share was ten per cent, and on five of the eight seeds no
+       * hostile entered its envelope AT ALL. The seat the moral geometry is
+       * built around was a chair with a view of somebody else's fight.
+       *
+       * This one comes in close, low and early on the same road the hospital
+       * package will use later, so the cabin is already fighting the western
+       * axis when the freeze arrives — and the order is therefore about a
+       * battery with rounds in the air rather than about a bearing on a map.
+       * Bearing 310 rather than 300 keeps its ray nine kilometres clear of the
+       * hospital rather than three and a half, so the prediction column does
+       * not label it early and give the decision away.
+       */
+      { atS: 35, type: 'striker', count: 4, bearingDeg: 310, spreadDeg: 22, spacingS: 15, altM: 1500,
+        distanceKm: 62, targetAssetId: 'a_power' },
       // The hospital package and the power station package arrive together, so
       // the rounds genuinely compete and the freeze is not a free order to obey.
       // On the deck, down the Kubin road: the horizon hides it until it is
@@ -1086,14 +1161,19 @@ export const SCENARIOS = [
       { atS: 150, type: 'striker', count: 3, bearingDeg: 288, spreadDeg: 14, spacingS: 24, altM: 320,
         targetAssetId: 'a_hospital' },
       { atS: 195, type: 'striker', count: 3, bearingDeg: 20, spreadDeg: 20, spacingS: 24, altM: 260,
-        targetAssetId: 'a_power' },
+        distanceKm: 120, targetAssetId: 'a_power' },
       // Same deck as the first package: at 180 m the covering battery's
       // low-altitude penalty stacked with evasion into a tail that a
       // deliberate westward watch could not actually kill — measured, the
       // defence lost the building three nights in eight with rounds to spare.
       // The freeze, not the physics, is meant to be what loses the hospital.
-      { atS: 330, type: 'striker', count: 2, bearingDeg: 292, spreadDeg: 14, spacingS: 20, altM: 320,
-        targetAssetId: 'a_hospital' },
+      //
+      // And it comes late, at four hundred seconds rather than three hundred
+      // and thirty: the last spawn used to land at half the median watch, so
+      // the back third was a chase. Now the second half of the night is the
+      // half the order is about.
+      { atS: 400, type: 'striker', count: 2, bearingDeg: 292, spreadDeg: 14, spacingS: 20, altM: 320,
+        distanceKm: 132, targetAssetId: 'a_hospital' },
     ],
   },
 
@@ -1107,7 +1187,7 @@ export const SCENARIOS = [
     seed: 'across-11',
     leakerTolerance: 2,
     playerBatteryId: 's_lance_w',
-    roundAllowance: 14,
+    roundAllowance: 18,
     brief: [
       'One of tonight\'s cruise missiles is not tracking anything in this sector. Its course takes it'
         + ' west, over the ridge, across the Listonian border, and down near Gorna. A second one will'
@@ -1129,16 +1209,48 @@ export const SCENARIOS = [
     waves: [
       { atS: 20, type: 'striker', count: 3, bearingDeg: 355, spreadDeg: 24, spacingS: 26, altM: 6000,
         targetAssetId: 'a_power' },
-      // The stray. It comes in on the northern axis with the rest and then turns
-      // west, which is why it reads as an ordinary contact until it does not.
-      { atS: 120, type: 'cruise', count: 1, bearingDeg: 340, spreadDeg: 0, altM: 110,
-        targetAssetId: 'a_camp', scalable: false, name: 'VAMPIRE STRAY' },
-      { atS: 240, type: 'striker', count: 3, bearingDeg: 15, spreadDeg: 22, spacingS: 24, altM: 240,
-        targetAssetId: 'a_bridge' },
+      /*
+       * The western package, early and close, because LANCE WEST is the cabin
+       * this watch designates and on the shipped table its first legal shot was
+       * at 522 s of an 850 s watch. Down the Kubin road at eighty-two
+       * kilometres it is inside the battery's ring inside two minutes.
+       */
+      { atS: 45, type: 'striker', count: 3, bearingDeg: 288, spreadDeg: 20, spacingS: 20, altM: 210,
+        distanceKm: 82, targetAssetId: 'a_power' },
+      /*
+       * The stray, and the height it comes in at.
+       *
+       * It used to fly at a hundred and ten metres. BASTION's floor is a
+       * hundred and twenty. So the battery the briefing names in the same
+       * sentence as "reaches it with sixty to spare" could not legally engage
+       * it at any range, ever — the only seconds in which the console said
+       * otherwise were the altitude estimate's own hundred-metre noise lifting
+       * the target over a floor it was under. The whole watch is built on the
+       * claim that you COULD have stopped this, and the claim was false in the
+       * range column's blind spot. Measured over eight seeds, weapons on hold:
+       * LANCE WEST's legal window on the first stray was a median 55 s and
+       * zero seconds on one seed; BASTION's was noise.
+       *
+       * At a hundred and seventy metres both named batteries hold it properly.
+       * And it spawns at ninety-five kilometres instead of the engine's default
+       * hundred and fifty-five, because a cruise missile at two hundred and
+       * fifty metres a second took the better part of ten minutes to arrive and
+       * was not tracked until 456-597 s — the watch's subject spent most of the
+       * watch off the tube. `test/revelations.test.js` now asserts both halves
+       * of the reach, range and height, for every wave aimed at the camp.
+       */
+      { atS: 130, type: 'cruise', count: 1, bearingDeg: 352, spreadDeg: 0, altM: 170,
+        distanceKm: 95, targetAssetId: 'a_camp', scalable: false, name: 'VAMPIRE STRAY' },
+      { atS: 240, type: 'striker', count: 4, bearingDeg: 15, spreadDeg: 24, spacingS: 22, altM: 240,
+        distanceKm: 132, targetAssetId: 'a_bridge' },
+      { atS: 320, type: 'striker', count: 3, bearingDeg: 297, spreadDeg: 22, spacingS: 18, altM: 220,
+        distanceKm: 130, targetAssetId: 'a_town' },
       // A second one goes the same way later. By then you have already decided
-      // what you are, and the only question is whether you do it twice.
-      { atS: 330, type: 'cruise', count: 1, bearingDeg: 345, spreadDeg: 0, altM: 95,
-        targetAssetId: 'a_camp', scalable: false, name: 'VAMPIRE STRAY 2' },
+      // what you are, and the only question is whether you do it twice. It sits
+      // at 430 s rather than 330 because the last spawn used to land at 39% of
+      // the watch and the last quarter was one missile crossing an empty map.
+      { atS: 430, type: 'cruise', count: 1, bearingDeg: 348, spreadDeg: 0, altM: 160,
+        distanceKm: 95, targetAssetId: 'a_camp', scalable: false, name: 'VAMPIRE STRAY 2' },
     ],
   },
 
@@ -1175,16 +1287,30 @@ export const SCENARIOS = [
       SITES.thistleTown, SITES.thistleBase, SITES.hammer,
     ],
     radars: [RADARS.ewrNorth, RADARS.gapSouth],
+    /*
+     * The whole raid is pulled inside the rings.
+     *
+     * Measured on the shipped table: the close-in fight — the best-designed
+     * part of this watch, everything inside forty kilometres with the point
+     * sections firing — began at minute thirteen of an eighteen-minute night,
+     * and the nine minutes before it were sixteen aircraft on the plot with
+     * one battery in reach of any of them. The last hostile spawned at 39-43%
+     * of the median. Every package now arrives at a range the sector can
+     * answer, and the last one arrives at 430 s instead of 360 s.
+     */
     waves: [
-      { atS: 15, type: 'sead', count: 2, bearingDeg: 355, spreadDeg: 50, spacingS: 30, distanceKm: 165 },
-      { atS: 60, type: 'jammer', count: 2, bearingDeg: 10, spreadDeg: 60, spacingS: 25, distanceKm: 180, scalable: false },
-      { atS: 130, type: 'decoy', count: 5, bearingDeg: 0, spreadDeg: 44, spacingS: 12, altM: 5000 },
+      { atS: 15, type: 'sead', count: 2, bearingDeg: 355, spreadDeg: 50, spacingS: 30, distanceKm: 148 },
+      { atS: 60, type: 'jammer', count: 2, bearingDeg: 10, spreadDeg: 60, spacingS: 25, distanceKm: 168, scalable: false },
+      { atS: 130, type: 'decoy', count: 5, bearingDeg: 0, spreadDeg: 44, spacingS: 12, altM: 5000,
+        distanceKm: 132 },
       { atS: 165, type: 'striker', count: 5, bearingDeg: 345, spreadDeg: 30, spacingS: 18, altM: 6200,
-        targetAssetId: 'a_c2' },
+        distanceKm: 132, targetAssetId: 'a_c2' },
       civilTransit(210),
-      { atS: 250, type: 'cruise', count: 8, bearingDeg: 20, spreadDeg: 46, spacingS: 8, altM: 85 },
-      { atS: 300, type: 'sead', count: 2, bearingDeg: 30, spreadDeg: 30, spacingS: 20, distanceKm: 160 },
-      { atS: 360, type: 'striker', count: 5, bearingDeg: 5, spreadDeg: 40, spacingS: 16, altM: 160 },
+      { atS: 250, type: 'cruise', count: 8, bearingDeg: 20, spreadDeg: 46, spacingS: 8, altM: 85,
+        distanceKm: 92 },
+      { atS: 300, type: 'sead', count: 2, bearingDeg: 30, spreadDeg: 30, spacingS: 20, distanceKm: 130 },
+      { atS: 430, type: 'striker', count: 5, bearingDeg: 5, spreadDeg: 40, spacingS: 16, altM: 160,
+        distanceKm: 82 },
     ],
   },
 

@@ -313,6 +313,35 @@ describe('the border order', () => {
     assert.ok(canReach.length >= 2, `expected at least two batteries to hold it, got ${canReach.length}`);
   });
 
+  test('and both batteries can reach the HEIGHT the strays come in at', () => {
+    /*
+     * The half of "you could have stopped it" that nobody had ever asserted,
+     * and that the shipped table failed.
+     *
+     * An envelope is a shell, not a circle. The strays used to fly at 110 m and
+     * 95 m; BASTION's floor is 120 m. So the battery the briefing names in the
+     * same breath as "reaches it with sixty to spare" could not legally engage
+     * either one at any range, ever, and the only seconds in which the console
+     * said otherwise were the altitude estimate's own noise lifting the target
+     * over a floor it was under. The watch's whole moral hinge — that this is a
+     * decision and not a physics problem — was false in the range column's
+     * blind spot.
+     */
+    const scenario = scenarioById('across-the-line');
+    const camp = scenario.assets.find((a) => a.type === 'camp');
+    for (const wave of scenario.waves.filter((w) => w.targetAssetId === camp.id)) {
+      const altM = wave.altM ?? 0;
+      const canTake = scenario.sites.filter((s) => {
+        const type = SAM_TYPES[s.type];
+        return dist(s.pos, camp.pos) <= type.maxRangeKm
+          && altM >= type.minAltM && altM <= type.maxAltM;
+      });
+      assert.ok(canTake.length >= 2,
+        `${wave.name ?? wave.type} comes in at ${altM} m, which only ${canTake.length}`
+        + ' battery/batteries can legally engage over the camp');
+    }
+  });
+
   test('the camp is on the far side of the border', () => {
     const camp = scenarioById('across-the-line').assets.find((a) => a.type === 'camp');
     const nearest = MAP.border.reduce((best, b) =>

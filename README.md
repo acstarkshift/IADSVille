@@ -169,28 +169,35 @@ from a battery that covers it comfortably, with rounds on the rails.
 You do not know where a contact is going until it commits — so obeying is not
 declining to assign. It is calling a battery off a target it is already tracking.
 
+The order arrives at a hundred seconds, with the western probe committed and
+the covering battery firing. It used to arrive at forty-five — fifteen seconds
+after first contact, with one aircraft on the plot at a hundred and fifty
+kilometres and the first hospital-bound track still a hundred and five seconds
+from existing. The campaign's central decision was being answered before there
+was anything on the board to weigh, and a player pressed Y and felt nothing.
+
 Then the debrief shows you two numbers that have agreed all campaign and now do
 not (means over eight seeded watches, competently fought — reproduce them with
 `node tools/measure-moral.mjs`; the hospital package comes in on the deck, down
-the Kubin road, and obedience loses the building on five nights of eight while
+the Kubin road, and obedience loses the building on four nights of eight while
 a deliberate defence saves it on all eight):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **93** | 664 |
-| Defend it anyway | 91 | **1533** |
-| Refuse the order outright | 68 | 1533 |
+| Obey the freeze | **90** | 652 |
+| Defend it anyway | 89 | **1850** |
+| Refuse the order outright | 76 | 1850 |
 
-Defending the hospital is worth eight hundred and seventy points of actual
-value, and the file prices the whole transgression at two: a query for rounds
-expended outside the freeze, worth rather less than a leaker. A weapon that
-arrives at the struck-off place is billed at exactly nothing — the ledger
-cannot simultaneously declare a building undesignated and grieve for it — and
-the building's own loss appears on the state's books at nothing at all. Only
-the third row really moves. Refusing on the net, for the identical night's
-fighting, costs twenty-three points more than quietly disobeying, plus a
-referral that stays in the file. Sector command barely prices what you did.
-It punishes having said no, and that is the whole lesson.
+Defending the hospital is worth twelve hundred points of actual value, and the
+file prices the whole transgression at one: a query for rounds expended outside
+the freeze, worth rather less than a leaker. A weapon that arrives at the
+struck-off place is billed at exactly nothing — the ledger cannot
+simultaneously declare a building undesignated and grieve for it — and the
+building's own loss appears on the state's books at nothing at all. Only the
+third row really moves. Refusing on the net, for the identical night's
+fighting, costs thirteen points more than quietly disobeying, plus a referral
+that stays in the file. Sector command barely prices what you did. It punishes
+having said no, and that is the whole lesson.
 
 **Across the Line** goes further. A cruise missile has strayed off course, west
 over the ridge and across the Listonian border, and it is going to come down on a
@@ -199,16 +206,42 @@ continued existence the ministry does not enjoy. Two batteries hold it
 comfortably. Sector command's position is that engaging outside national
 territory is a border incident.
 
+Two batteries hold it, and until the act-two scrub that sentence was a lie the
+engine would not honour. The strays flew at 110 m and 95 m; BASTION's altitude
+floor is 120 m, so the battery the brief names in the same breath as "reaches
+it with sixty to spare" could not legally engage either one at any range, ever,
+and the only seconds in which the console said otherwise were the altitude
+estimate's own noise lifting the target over a floor it was under. LANCE WEST's
+legal window was a median fifty-five seconds and, on one seed of eight, zero.
+The strays now come in at 170 m and 160 m, and `test/revelations.test.js`
+asserts both halves of the reach — range **and** height — for every wave aimed
+at the camp, so the briefing cannot make that promise again without the wave
+table keeping it.
+
 Acknowledging it stands your own subordinates down: no officer and no crew on
 weapons free takes that shot on its own authority afterwards, so the camp is
 defended by you personally or not at all. Measured over eight seeded watches
-(`c1`…`c8`) with everything on free and nobody at the console, obeying leaves
-the camp 68% destroyed and kills a hundred and ten people; refusing leaves it
-15% destroyed and kills twenty-five, and costs twenty-five points of standing
-plus the referral, which stays in the file. Afterwards you look the grid reference up and
-find it handwritten inside the back cover of the sector target folder, in a
-folder that has no business containing a point in Listonia at all. The word for
-what happened over Gorna is not "stray".
+(`c1`…`c8`) by the same scripted hand on both roads — reproduce it with
+`node tools/measure-border.mjs`:
+
+| | Camp destroyed | Dead | Standing | Score |
+|---|--:|--:|--:|--:|
+| Acknowledge the restriction | 100% | 173 | **94** | 708 |
+| Refuse it and take the shot | 0% | 0 | 69 | **1767** |
+
+Twenty-five points of standing and a referral that stays in the file, against
+four hundred people and eleven hundred points the file does not recognise. And
+note which player model lets them burn: the harness's *expert*, who reads the
+sector's own `engagementValue` and pairs greedily on it, scores 19-24% BELOW
+the competent player on this watch, because the camp's value on that ledger is
+zero and a player optimising the ledger never assigns a battery to it. The one
+watch in the campaign where reading the state's arithmetic makes you worse at
+the job is the watch about what that arithmetic is for.
+
+Afterwards you look the grid reference up and find it handwritten inside the
+back cover of the sector target folder, in a folder that has no business
+containing a point in Listonia at all. The word for what happened over Gorna is
+not "stray".
 
 And in the chaos of **Ville Under Fire**, the political section comes on the net
 about the scheduled civil transit. There is a passenger aboard subject to a
@@ -221,6 +254,26 @@ and the ceiling is lifted, the referral does not happen, and your standing goes
 *up*, from 18 to 31. The score does not move an inch: four hundred points and
 several hundred people. The rule was never a principle. It was an exposure, and
 the order removes the exposure.
+
+And the other thing that watch promises — *"when it goes, the picture stops
+being one picture… finish the watch anyway"* — did not happen. `loseCentralControl`
+ran only when the operations centre was **destroyed**, and a destroyed critical
+asset is an automatic SECTOR PENETRATED, so the decapitation and the defeat were
+the same event and the watch had exactly two states. Measured over eight seeds
+and all twelve cells: SECTOR OPS OFF THE AIR fired on **zero** of eight
+competent nights on the net, zero of eight expert nights, and zero of eight
+expert nights in the cabin. The lesson was unreachable by anyone who could hold
+the sector.
+
+A critical place now loses its function before it loses its walls
+(`ASSET_TYPES.c2.offAirFrac`): at forty per cent of the building's hit points —
+one weapon through — the fused plot stops being reconciled, cueing stops, and
+anything you delegated becomes nobody's job, while the building itself still
+stands and the watch is still winnable. Same eight seeds: the picture now dies
+on **five of eight** competent nights on the net with the building lost on one,
+four of eight from both seats with the building lost on one, and three of eight
+in the cabin with the building lost on none. The decapitation happens, and you
+finish the watch.
 
 After that the documents start turning up: an allocation spent before the quarter
 began, a depot return properly countersigned at three levels showing four hundred
@@ -1018,9 +1071,23 @@ A few decisions worth knowing about if you read the source:
   are the last ninety seconds of a night a spectator or a beginner has already
   lost, where the plot is empty and sector has said so once.
 
+- **A decoy is not something the watch waits for.** `strikersRemain` counted an
+  air-launched decoy as a strike aircraft, so a jammer or a suppression
+  aircraft would not turn for home while one was still in the air; and
+  `holdsWatchOpen` counted the decoy itself. A decoy carries nothing, can
+  arrive at nothing and falls out of the sky by itself after thirteen minutes,
+  so both of those amounted to holding the watch open for an egg timer.
+  Measured on White Noise: the last engagement of a seed resolved at 815 s and
+  the debrief printed at 1116 s — five dead minutes of CONTACT FADED on every
+  seed, and **fifty-one of seventy-two non-spectator runs past the
+  eighteen-minute ceiling on that alone**. After: none of seventy-two, the
+  median down from 18.4 to 14.6 minutes, and the watch ending a tenth of a
+  second after its last action. The same two lines shortened Ville Under Fire,
+  the campaign's other decoy watch, from a 21.4-minute worst seed to 18.0.
+
 - **The watches are not all the same length, and one of them is deliberately
   short.** Median watch length at 1x runs eleven to thirteen minutes across the
-  first four watches and twelve to eighteen later, with two documented
+  first four watches and eleven to fifteen later, with two documented
   exceptions. The President's Flight is a single escort problem and ends when
   the aircraft is down or away, at nine minutes. **First Light is
   four contacts and then two, high and unhurried, with a five-step interactive
@@ -1047,16 +1114,44 @@ A few decisions worth knowing about if you read the source:
   last spawn sits at 60-73% of the median watch on the four, and no watch in
   the set ends more than a minute and a half after its last engagement
   resolves — no run of 896 does, where one Weasel Hour seed used to end 101 s
-  after its last action. Across the campaign the last-spawn figure runs 39-72%,
-  and the six watches under 55% — Across the Line at 39%, Two Cities at 41%,
-  Ville Under Fire at 42%, White Noise at 46%, Economy of Force at 50%,
-  President's Flight at 52% — are front-loaded raids with long codas, which is
-  the pacing work those watches still owe. Act one's four now read 70 / 64 / 72
-  / 69 per cent. Late packages are deliberately spawned at fifty to
+  after its last action. Act one's four read 70 / 64 / 72 / 69 per cent, and
+  the act-two scrub closed the four that were worst in the campaign: Across
+  the Line 39% → 55-60%, Ville Under Fire 39-43% → 60-61%, White Noise 46% →
+  60-61%, Economy of Force 49-51% → 61-65%. Two Cities at 41% and President's
+  Flight at 52% are the pacing work still owing. Late packages are deliberately spawned at fifty to
   sixty-five kilometres rather than the engine's default hundred and fifty-five,
   because an ingress nobody can reach is not pressure, it is a countdown — and
   pulling Weasel Hour's whole raid inside BASTION's reach took its worst seed
   from 22.6 minutes to 18.9.
+
+- **A point-defence cabin cannot have its first shot in ninety seconds, and
+  Ville Under Fire is where that is stated rather than papered over.** The
+  campaign's rule is that a crewed seat gets a legal shot inside a minute and a
+  half. Every other cabin in the game is a medium or long-range battery and
+  meets it; the main-effort watch designates THISTLE TOWN, a twelve-kilometre
+  point-defence section, and its raid is a hundred and thirty kilometres away
+  when the watch is handed over. Twelve kilometres divided by two hundred and
+  forty metres a second is the whole of the argument: the first legal claim
+  lands at 214 s, and the first contact actually inside the ring at 573 s. What
+  a point section must have instead is work when the work arrives, and it does
+  — engageable a quarter of the watch, ten distinct shot opportunities a seed,
+  the magazine the sole limiter for two per cent of it. The act-two scrub
+  bought 64 s of the 214 by pulling the whole raid inside the rings (the
+  close-in fight used to begin at minute thirteen of an eighteen-minute night);
+  the rest is arithmetic, and moving the section forward off the town it
+  defends would be a different watch.
+
+- **On Across the Line the expert player model loses, and that is the watch
+  working.** The attention dividend is positive or neutral everywhere else in
+  act two; here the expert scores 19-24% BELOW the competent player on every
+  seat. The expert pairs greedily on `engagementValue`, which reads the state's
+  own schedule of defended places, and on that schedule the refugee camp is
+  worth zero. So the model never assigns a battery to the stray, the camp
+  burns, and the SCORE — which values it at seventy, higher than anything else
+  on the board — takes four hundred points off him for it. A negative dividend
+  is normally a watch with no depth in it. This one is the campaign's thesis
+  arriving as a number: the better you are at the ledger, the worse you are at
+  the job.
 
 - **How hard each watch is, measured rather than asserted.** Held rate,
   `tools/playtest.mjs --policy all`. The first four watches are quoted over
@@ -1071,8 +1166,25 @@ A few decisions worth knowing about if you read the source:
   | Low Riders | 32 | 0% | 0-63% | 59-72% | 63-81% |
   | Solo Battery | 32 | 0% | 41% | 75% | 81% |
   | Weasel Hour | 32 | 0% | 19-84% | 88-94% | 84-94% |
+  | White Noise | 8 | 0-13% | 38-100% | 88-100% | 100% |
+  | Economy of Force | 8 | 0-100% | 100% | 100% | 100% |
+  | Across the Line | 8 | 0-75% | 100% | 100% | 100% |
+  | Ville Under Fire | 8 | 0-38% | 13-63% | 88-100% | 88-100% |
 
   (Ranges are across the three seats; Solo Battery has only the cabin.)
+
+  **Act two's four are still too easy, and the act-two scrub says so rather
+  than pretending otherwise.** That pass was a design pass — the end
+  conditions, the two moral hinges, the reach the briefing promises, the
+  decapitation — and the timing bar it was measured against is met on every one
+  of the twelve seat-cells bar two. The held rate is not: the sector fields
+  five or six batteries against a raid it can absorb, and calibrating the
+  campaign's curve act by act is a separate piece of work with the whole
+  twelve-watch table in front of it. What that pass did move, deliberately, is
+  White Noise from 100% held at every seat to 88-100% with a raid of
+  twenty-one strike aircraft on two axes instead of twelve on one, and Ville
+  Under Fire's net seat from 75% to 88% while making the thing that watch is
+  named for actually happen.
 
   Three things in that table are deliberate and worth stating plainly, because
   they are the exceptions to the campaign's own difficulty rule (competent

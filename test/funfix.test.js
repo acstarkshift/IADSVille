@@ -472,19 +472,52 @@ describe('the file bills what you decided', () => {
   });
 
   test('obeying the freeze is not billed for it; defending it is', () => {
-    function freezeWatch(mode) {
-      const w = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'bill-1' });
+    /*
+     * The defending road has to be a DEFENCE, not a hand that happens to shoot
+     * a hospital-bound track on the way past. That distinction is the watch's
+     * own design — "a defence that saved the hospital by accident was
+     * answering the order with a shrug instead of a decision" — and the test
+     * used to blur it: its defender picked whatever scored highest on
+     * `engagementValue`, which reads the state's own schedule, on which the
+     * hospital is worth eight. Once the act-two scrub gave the watch a western
+     * probe and moved the second hospital package out to a hundred and
+     * thirty-two kilometres, that hand stopped breaching the freeze at all on
+     * one seed of three (one round billed against a bar of three) — which
+     * measured the hand, not the ledger. The defender now does what
+     * `tools/measure-moral.mjs` does: it watches the west and claims anything
+     * committed to the struck-off place as soon as the track is worth
+     * believing. Measured over the three seeds below, that road is billed
+     * 4 / 8 / 13 rounds against the obedient road's 0 / 0 / 0; the bar is set
+     * at nine of the twenty-five so seed noise cannot flap the build.
+     */
+    function freezeWatch(mode, seed) {
+      const w = new World(scenarioById('economy-of-force'), { role: 'net', seed });
       w.control.netIsHuman = true;
       const hospital = w.assets.find((a) => a.type === 'hospital');
       drive(w, {
         onTick: (world) => {
           for (const t of world.tracks.values()) {
             if (t.destroyed || t.hostility !== 'hostile') continue;
-            if ((t.quality ?? 0) < 0.5 || t.assignedTo.length) continue;
             // The obedient road declines the struck-off place and anything
             // whose destination the picture cannot yet name.
             if (mode === 'obey'
-              && (!t.predictedAssetId || t.predictedAssetId === hospital.id)) continue;
+              && (!t.predictedAssetId || t.predictedAssetId === hospital.id)) {
+              for (const siteId of [...t.assignedTo]) world.unassign(t.id, siteId);
+              continue;
+            }
+            if (t.assignedTo.length) continue;
+            // The deliberate defence: the west is watched, and a track running
+            // in on the hospital is claimed before the generic firmness bar.
+            const towardHospital = t.predictedAssetId === hospital.id
+              || (t.altM < 1500 && dist(t.pos, hospital.pos) < 70);
+            if (mode === 'defend' && towardHospital && (t.quality ?? 0) >= 0.35) {
+              const taker = world.sites
+                .filter((s) => world.commandable(s.id) && engagementValue(world, s, t))
+                .sort((a, b) => dist(a.pos, t.pos) - dist(b.pos, t.pos))[0];
+              if (taker) world.assign(t.id, taker.id, { salvo: 2 });
+              continue;
+            }
+            if ((t.quality ?? 0) < 0.5) continue;
             let best = null;
             let bestValue = -Infinity;
             for (const site of world.sites) {
@@ -501,11 +534,12 @@ describe('the file bills what you decided', () => {
       });
       return w.stats.roundsAgainstFreeze;
     }
-    const obeyed = freezeWatch('obey');
-    const defended = freezeWatch('defend');
+    const seeds = ['bill-1', 'bill-2', 'bill-3'];
+    const obeyed = seeds.reduce((n, s) => n + freezeWatch('obey', s), 0);
+    const defended = seeds.reduce((n, s) => n + freezeWatch('defend', s), 0);
     assert.ok(obeyed <= 2,
       `an obedient watch was billed ${obeyed} rounds against the freeze`);
-    assert.ok(defended >= 3,
+    assert.ok(defended >= 9,
       `a deliberate defence was billed only ${defended} rounds — the breach went unseen`);
     assert.ok(defended > obeyed, 'the two roads must read differently in the file');
   });
