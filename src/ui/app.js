@@ -175,11 +175,38 @@ function boot() {
   requestAnimationFrame(frame);
 }
 
+/**
+ * Seat the operator in the battery this watch is about.
+ *
+ * The old rule kept whatever battery was selected as long as it appeared
+ * somewhere in the new mission's site list, which sounds harmless and is not:
+ * BASTION is in the site list of nine watches, so anybody who played First
+ * Light and then chose White Noise, Economy of Force, Across the Line or Ville
+ * Under Fire was silently seated in BASTION — while every one of those four
+ * files names a different cabin, three of the four briefs are written about
+ * that cabin, and on Across the Line the battery you were given is the one
+ * whose altitude floor makes the watch's own moral hinge unreachable.
+ *
+ * So the selection is remembered together with the watch it was made for. Stay
+ * where you put yourself for as long as you are on that watch; change watch and
+ * you arrive in the cabin the file names, which you may then change.
+ */
+let batteryChosenFor = null;
+
 function ensureBattery() {
   const sites = state.mission.sites;
-  if (!sites.some((s) => s.id === state.batteryId)) {
+  const stale = batteryChosenFor !== state.missionId
+    || !sites.some((s) => s.id === state.batteryId);
+  if (stale) {
     state.batteryId = state.mission.playerBatteryId ?? sites[0].id;
+    batteryChosenFor = state.missionId;
   }
+}
+
+/** The operator picked a battery by hand: that choice owns this watch. */
+function chooseBattery(id) {
+  state.batteryId = id;
+  batteryChosenFor = state.missionId;
 }
 
 /* -------------------------------------------------------------- screens */
@@ -281,7 +308,7 @@ function wireMenu() {
   });
 
   const batteryPick = host.querySelector('#battery-pick');
-  if (batteryPick) batteryPick.onchange = () => { state.batteryId = batteryPick.value; saveSettings(); };
+  if (batteryPick) batteryPick.onchange = () => { chooseBattery(batteryPick.value); saveSettings(); };
 
   host.querySelector('#opt-pressure').onchange = (e) => {
     state.narrativePressure = e.target.checked; saveSettings();
