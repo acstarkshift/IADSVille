@@ -738,9 +738,9 @@ outscore a competent player here. The capital's priority of fires — the palace
 settled two days ago, by the same section — is now in force from the handover,
 and an aeroplane is not on any list of buildings. He says so on the net, once,
 the first time he declines: *that contact is not tracking a designated defended
-place. This sector holds the priority of fires. The corridor is yours.* Sixteen
-seeds after: a player who touches nothing holds 13% of the net's watches against
-a competent player's 75%, and outscores nobody.
+place. This sector holds the priority of fires. The corridor is yours.*
+Thirty-two seeds after: a player who touches nothing holds 31% of the net's
+watches against a competent player's 75%, and outscores nobody by 51%.
 
 And twice in those seven minutes, the net brings you what STATE 01 wants to
 know: the delay in the corridor (there is no delay in the corridor), then the
@@ -768,9 +768,9 @@ wreckage and are not the same act. Measured over eight seeds: a competent player
 is now 7% ahead of one who touches nothing on the net and 36% from both seats,
 and holds seven watches of eight against its four, where before the aeroplane
 was scored the two were 7% and 4% apart and the verdict could not tell them
-apart at all. Re-measured over sixteen seeds after the corridor was handed
-back, a competent player is 69% ahead of the spectator on the net and 54% from
-both seats, and holds twelve watches of sixteen against its two.
+apart at all. Re-measured over thirty-two seeds after the corridor was handed
+back, a competent player is 51% ahead of the spectator on the net and 61% from
+both seats, and holds twenty-four of thirty-two watches against its ten.
 
 Nothing asks you which you meant. The tape only records what left the rails, and
 whose battery it left from.
@@ -1162,6 +1162,25 @@ A few decisions worth knowing about if you read the source:
   scheduled. A watch either says the thing or says the other thing; it does not
   say the false one and it does not go quiet.
 
+- **A hinge jumps the queue; it does not land on the answer to the last order.**
+  Routine traffic keeps ninety seconds between transmissions and the orders a
+  watch turns on are exempt from that, which is right — a hinge must not wait
+  its turn behind a leaker order. But exempt from the cadence had become exempt
+  from the room: traced on Ville Under Fire's cabin, four of four runs carried
+  a directive pair seventy to seventy-six seconds apart, the POLITICAL
+  SECTION's order about the civil transit arriving on top of the
+  acknowledgement of a routine one. A hinge now waits for a clear minute after
+  whatever went out last. It binds only where a hinge waits on something in the
+  air: the expenditure freeze, the border restriction and the withdrawal of the
+  battalion all hold the net clear until they have gone out, so nothing routine
+  precedes them and the guard never fires there.
+
+  The order to protect the state aircraft waits with it. It used to trigger on
+  the wheels leaving Demobodedovo at sixty seconds, with the fighters painting
+  at eleven — forty-nine seconds of fighting behind the escort watch's one
+  hinge, against a bar of sixty. It now waits the minute out; the aircraft is
+  still climbing and the order has lost nothing.
+
 - **An order about a fight waits for the fight, not for the clock.** Sector
   command holds off the net for a scenario's opening minutes so the first
   interactive decision is an assignment rather than a loyalty test. That grace
@@ -1172,10 +1191,17 @@ A few decisions worth knowing about if you read the source:
   the first contact instead, and act 1 sets it to sixty on all four watches.
   Measured on Solo Battery with the sets up, the same eight seeds: the first
   order lands at 95-107 s with 60 to 78 s of fighting behind it and never less
-  than sixty, and the routine cadence between orders is unchanged. It is scoped
-  to the four watches it has been measured on; a scenario that does not set the
-  field is bit-identical, and a test asserts that none of the other eight
-  carries one.
+  than sixty, and the routine cadence between orders is unchanged. A scenario
+  that does not set the field is bit-identical, and a test asserts that only
+  the watches measured with one carry one.
+
+  Two more were measured onto it by the residue pass, and both were plain
+  misses. Four Sectors traced first contact at 31 s and its first directive at
+  43 s — twelve seconds of fighting, confirmed in the browser at 4x where
+  SECTOR ACTUAL's order about the river line lands at 0:42 with one contact on
+  the scope. Ville Under Fire traced 15 s and 43 s. With the field set to sixty
+  on both, the same traces read 66 s and 63-75 s of fighting behind the first
+  order, and no two routine orders inside ninety seconds anywhere.
 
 - **The safety reaches the cabin.** A watch that starts its surveillance set
   cold names the moment sector stops waiting for you and brings it up — and
@@ -1384,14 +1410,16 @@ A few decisions worth knowing about if you read the source:
   competent model rather than a heavier raid, which would only widen the gap
   between the two by making both worse.
 
-  *The attention dividend on The President's Flight is +9.1% on the net and
-  +0.9% from both seats* against a bar of +10%. It is a seven-minute escort
+  *The attention dividend on The President's Flight is +7.5% on the net and
+  +0.6% from both seats* against a bar of +10%. It is a seven-minute escort
   with one decision in it — the corridor or the city — and once a model makes
   that decision correctly there is very little left above it: the expert holds
-  88% against the competent player's 75% on the net and is still only a few per
+  94% against the competent player's 81% on the net and is still only a few per
   cent ahead, because the thing they differ on is worth six hundred points and
-  they both usually get it. From both seats the expert holds 63% against 75%,
-  and the cause is named rather than excused: the model swaps the formation it
+  they both usually get it. From both seats the two are level at 94% and 91%,
+  and the one point over the ceiling there is the same fact as the finale's:
+  the `both` seat is a national commander who is also crewing the one battery
+  that reaches the corridor. An earlier miss on that seat had a nameable cause: the model swaps the formation it
   is standing in when threat mass moves, and on this watch the mass sits over
   the capital while the fight it must not lose is eighty kilometres down the
   corridor. Two rewrites of that rule were measured on sixteen seeds — owning a
@@ -1477,7 +1505,7 @@ A few decisions worth knowing about if you read the source:
   | Four Sectors | 0% | 38% | 69% | 100% |
   | Reinforce the Capital | 0% | 56% | 69% | 94% |
   | The Two Cities | 0% | 6-13% | 69-94% | 63-81% |
-  | The President's Flight | 6-13% | 13-44% | 75% | 63-88% |
+  | The President's Flight | 9-31% | 34% | 66-75% | 78% |
 
   (Ranges are across the seats each watch offers; Solo Battery has only the
   cabin, and the last two only the net and both seats.)

@@ -112,7 +112,7 @@ describe('the safety reaches the cabin', () => {
 
 describe('an order about a fight waits for the fight', () => {
   test('routine traffic holds until the contact grace has run from first contact', () => {
-    for (const id of ['first-light', 'low-riders', 'solo-battery', 'weasel-hour']) {
+    for (const id of ['first-light', 'low-riders', 'solo-battery', 'weasel-hour', 'four-sectors', 'ville-under-fire']) {
       const scenario = scenarioById(id);
       const grace = scenario.directiveContactGraceS;
       assert.ok(grace >= 60, `${id} owes the operator a clear minute of fighting`);
@@ -134,7 +134,9 @@ describe('an order about a fight waits for the fight', () => {
 
   test('a scenario that sets no contact grace behaves exactly as before', () => {
     for (const scenario of SCENARIOS) {
-      if (['first-light', 'low-riders', 'solo-battery', 'weasel-hour'].includes(scenario.id)) continue;
+      const measured = ['first-light', 'low-riders', 'solo-battery', 'weasel-hour',
+        'four-sectors', 'ville-under-fire'];
+      if (measured.includes(scenario.id)) continue;
       assert.equal(scenario.directiveContactGraceS, undefined,
         `${scenario.id} has not been measured with a contact grace — it must not carry one`);
     }

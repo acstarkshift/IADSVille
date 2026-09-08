@@ -165,11 +165,14 @@ describe('the corridor', () => {
      * rail on eight seeds of eight — the aeroplane's fate was one coin flip and
      * no amount of skill moved it. Six shorter-legged rounds at 0.38 gave the
      * same expected hits against a defence that does nothing, with a gradient
-     * underneath it. Eight is what the corridor needs now that the capital
-     * sector's colonel has stopped defending it for free: at six a competent
-     * net seat held sixteen watches of sixteen. The property this test exists
-     * for is unchanged and is asserted below: one pass, one round, so every
-     * fighter stopped short of its launch point is a launch that never happens.
+     * underneath it. Eight at 0.33 is what the corridor needs now that the
+     * capital sector's colonel has stopped defending it for free: at six a
+     * competent net seat held thirty-two watches of thirty-two, and at seven
+     * the last watch of the campaign came out easier than the hardest watch of
+     * act three. `AIR_TYPES.interceptor` carries the six-row ladder. The
+     * property this test exists for is unchanged and is asserted below: one
+     * pass, one round, so every fighter stopped short of its launch point is a
+     * launch that never happens.
      */
     const fighters = epilogue.waves.filter((w) => w.type === 'interceptor');
     const total = fighters.reduce((n, w) => n + w.count, 0);

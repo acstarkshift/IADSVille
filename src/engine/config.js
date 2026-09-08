@@ -261,11 +261,30 @@ export const AIR_TYPES = {
      * difference between stopping five of them and stopping none is the
      * difference between a fair chance and none.
      *
-     * It was six until the residue pass took the capital sector's colonel off
-     * the corridor, where he had been shooting the fighters down on his own
-     * initiative for nothing. With the corridor genuinely the operator's, six
-     * left a competent net seat holding every watch of sixteen; eight puts it
-     * at 75 per cent, which is the band.
+     * THE PAIR OF NUMBERS MOVED TOGETHER, AND HERE IS THE LADDER THEY WERE
+     * CHOSEN ON. It was six at 0.38 until the residue pass took the capital
+     * sector's colonel off the corridor, where he had been shooting the
+     * fighters down on his own initiative for nothing. With the corridor
+     * genuinely the operator's, thirty-two seeds a cell on the net seat:
+     *
+     *   six at 0.38     competent 100%  expert  —    the watch cannot be lost
+     *   seven at 0.38   competent  88%  expert 97%   over the band, and over
+     *                                                act three's hardest watch
+     *   seven at 0.44   competent  81%  expert 94%   still breaks the curve
+     *   eight at 0.28   competent  75%  expert 78%
+     *   eight at 0.33   competent  63%  expert 75%   but 50% on the sixteen
+     *                                                seeds the curve test uses
+     *   eight at 0.38   competent  59%  expert 72%
+     *
+     * Eight at 0.28 is the row kept, and the trade it makes is stated in the
+     * README rather than hidden: careful play is one watch of thirty-two ahead
+     * of competent play and four per cent ahead on score, which is under the
+     * rule that wants seven watches in eight. Seven fighters at any
+     * kill probability puts the last watch of the campaign above the hardest
+     * watch of act three, which breaks the staircase the whole campaign is
+     * measured on, and a difficulty rule that inverts the campaign's shape is
+     * the wrong rule to satisfy. Expected hits against a defence that does
+     * nothing: 2.2, against six at 0.38's 2.3.
      *
      * The numbers moved once, and they moved because the shape was wrong rather
      * than the difficulty. At four fighters releasing from twenty-six
@@ -282,7 +301,7 @@ export const AIR_TYPES = {
     airToAir: 1,
     airToAirRangeKm: 20,
     /** Probability one round kills what it was fired at. */
-    airToAirPk: 0.38,
+    airToAirPk: 0.28,
   },
 
   /**

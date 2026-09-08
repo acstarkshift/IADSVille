@@ -363,7 +363,15 @@ export const DIRECTIVES = {
       + 'contact that threatens it. You will answer for it personally. Acknowledge on the net.',
     plain: (w, vip) => `SECTOR: ${vip?.name ?? 'STATE 01'} is airborne and is the priority of fires. `
       + 'Protect it with everything in the sector. Acknowledge.',
-    trigger: (w) => w.scenario.epilogue === true && !!w.vipAircraft(),
+    /*
+     * Airborne, and a clear minute of fighting behind it. The aircraft rolls at
+     * four minutes and the fighters paint at eleven seconds, so triggering on
+     * the wheels alone put the watch's one hinge at 60 s with 49 s of fighting
+     * behind it, under the design bar. It waits for the minute; the aircraft is
+     * still climbing out and the order has lost nothing.
+     */
+    trigger: (w) => w.scenario.epilogue === true && !!w.vipAircraft()
+      && w.firstContactAtS !== null && w.t > w.firstContactAtS + 60,
     onAccept: (w) => { w.command.constraints.flightOrderAccepted = true; },
     onRefuse: (w) => { w.command.constraints.flightOrderRefused = true; },
   },
@@ -692,6 +700,11 @@ export function issueDirective(world, template) {
   world.command.pending = directive;
   world.command.log.push(directive);
   world.command.issuedAtS[template.id] = world.t;
+  /* When ANY order last went out, hinge or routine. The hinge spacing below
+   * reads it; `lastRoutineAtS` cannot, because it only knows about routine
+   * traffic and the crowding this fixes is a hinge landing on a routine
+   * order's acknowledgement. */
+  world.command.lastIssuedAtS = world.t;
   world.command.issuedCount = world.command.issuedCount ?? {};
   world.command.issuedCount[template.id] = (world.command.issuedCount[template.id] ?? 0) + 1;
   if (template.once) world.command.issuedOnce[template.id] = true;
@@ -792,9 +805,29 @@ export function stepCommand(world, dt) {
    * place, and partly because the whole point is that you commit to it before
    * you know what it will cost.
    */
+  /*
+   * A hinge jumps the queue; it does not land on the answer to the last order.
+   *
+   * Routine traffic keeps ninety seconds between transmissions and hinges are
+   * exempt from that, which is right — a watch turns on one of them and it
+   * must not wait its turn behind a leaker order. But exempt from the cadence
+   * became exempt from the room: measured on Ville Under Fire's cabin, four of
+   * four traced runs carried a directive pair seventy to seventy-six seconds
+   * apart, the POLITICAL SECTION's order about the civil transit arriving on
+   * top of the acknowledgement of a routine one. A minute is the same clear
+   * air the routine cadence gives the operator either side of it, less the
+   * thirty seconds a hinge is allowed to buy with its own urgency. It binds
+   * only where a
+   * hinge waits on something in the air — the freeze, the border restriction
+   * and the withdrawal all hold the net clear until they have gone out, so
+   * nothing routine precedes them and this guard never fires there.
+   */
+  const HINGE_CLEAR_S = 60;
+  const sinceLastOrder = world.t - (world.command.lastIssuedAtS ?? -999);
   for (const hinge of HINGE_DIRECTIVES) {
     if (world.command.issuedOnce[hinge.id]) continue;
     if (!hinge.trigger(world)) continue;
+    if (sinceLastOrder < HINGE_CLEAR_S) return;
     issueDirective(world, hinge);
     // The hinge also resets the routine clock: ninety seconds of quiet
     // after the transmission a watch turns on, not a leaker order thirty

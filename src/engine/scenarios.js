@@ -1512,6 +1512,18 @@ export const SCENARIOS = [
     leakerTolerance: 3,
     playerBatteryId: 's_thistle_t',
     roundAllowance: 30,
+    /*
+     * A clear minute of fighting before sector command's first routine order.
+     *
+     * Traced on all three seats: first contact at 15 s and the first directive
+     * at 43 s, so the watch that opens with "this is the main effort" asked for
+     * an opinion after twenty-eight seconds of it. Act one has carried this
+     * field since the instruments pass and the district watch was given it in
+     * the same change as this one; the measurement is the same in all three
+     * places, and it is the first contact that starts the clock, not the
+     * handover.
+     */
+    directiveContactGraceS: 60,
     brief: [
       'This is the main effort. Suppression first, then jamming, then decoys, then everything they have.',
       'The axis of it runs down the valley, and at the bottom of the valley is the Ville. The'
@@ -1599,7 +1611,7 @@ export const SCENARIOS = [
        * floor with the cabin's fight kept: sixteen seeds, net 69, cabin 88,
        * both seats 88.
        */
-      { atS: 250, type: 'cruise', count: 6, bearingDeg: 20, spreadDeg: 46, spacingS: 8, altM: 85,
+      { atS: 250, type: 'cruise', count: 7, bearingDeg: 20, spreadDeg: 46, spacingS: 8, altM: 85,
         distanceKm: 92 },
       { atS: 300, type: 'sead', count: 2, bearingDeg: 30, spreadDeg: 30, spacingS: 20, distanceKm: 130 },
       /*
@@ -1665,6 +1677,19 @@ export const SCENARIOS = [
      * with a bill.
      */
     storeMult: 0.75,
+    /*
+     * A clear minute of fighting before the first order, counted from the
+     * contact and not from the clock.
+     *
+     * Act one has carried this since the instruments pass; this watch had it
+     * measured and did not have it set. Traced on the net seat: first contact
+     * at 31 s, first directive at 43 s — twelve seconds of fighting against a
+     * sixty-second bar, and confirmed in the browser at 4x, where SECTOR
+     * ACTUAL's routine order about the river line lands at 0:42 with one
+     * contact on the scope. An order about a fight you are not yet having is
+     * an order you answer without an opinion.
+     */
+    directiveContactGraceS: 60,
     brief: [
       'You are appointed to command of the district. Four sectors, a hundred and ninety kilometres of'
         + ' ground, and thirteen batteries that are no longer yours to point.',
@@ -2365,13 +2390,14 @@ export const SCENARIOS = [
        * shorter-legged round each rather than four carrying a long one. The
        * arithmetic against a defence that does nothing is unchanged; what
        * changes is that stopping fighters now subtracts something. See
-       * AIR_TYPES.interceptor for the measurement that moved these numbers.
+       * AIR_TYPES.interceptor for the six-row ladder that set the count and
+       * the kill probability together.
        *
        * They went from three a flight to four when the priority of fires above
        * took COL. STRELNIK off the corridor: with the fighters facing only the
        * batteries the operator actually commands, six of them left a competent
-       * net seat holding 16 of 16. Sixteen seeds, eight fighters: nothing 13%,
-       * novice 44%, competent 75%, expert 88%.
+       * net seat holding 32 of 32. Thirty-two seeds at eight and 0.33: net
+       * nothing 25%, novice 28%, competent 63%, expert 75%.
        */
       { atS: 20, type: 'interceptor', count: 4, spacingKm: 16, scalable: false,
         pos: { x: 150, y: 142 }, waypoints: [{ x: 150, y: 100 }] },
