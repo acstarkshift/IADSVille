@@ -556,14 +556,71 @@ and an officer. They are interchangeable in every respect except which one you
 are from, and the two watches at this level are about discovering that the
 ranking you are being asked to do is not the arithmetic you think it is.
 
+An officer is three things, and the third one is what makes the appointment a
+decision. He looks at his board every second or two rather than continuously;
+he waits for a contact to look properly dangerous before he spends a round on
+it; and **he can personally direct three engagements at a time and no more** —
+one man, one radio, one map. The first two are rates and do not care how much
+is coming. The third does: a package that arrives in file is four problems he
+can solve one after another, and a package that arrives together is four
+problems of which he can hold three. His card says so, and turns, and says
+HANDS FULL.
+
+That leaves exactly two answers, which are the appointment's two verbs. Go and
+stand in the sector yourself — a formation under your own hand takes no orders
+from its officer and is limited only by its batteries' channels — or take the
+crews off his hand entirely with WEAPONS FREE, and let them engage what enters
+their own envelopes on their own authority. Free is not a better setting. The
+crews shoot nearest-first rather than most-dangerous-first, they snap at the
+edge of the envelope instead of holding for the sweet spot, and they spend the
+store doing it; a sector left free through the first two packages meets the
+third on an empty rack. Measured over eight seeds on Four Sectors, standing in
+the main effort is worth 11% of the watch's score and the standing orders are
+worth 26%, and the one-click strategy that used to beat both hand players —
+set every sector free at the top of the watch and never touch another control —
+now finishes 4.6% behind an expert's hands.
+
+The political section's colonel is the fourth sector's whole point, and his
+obedience reaches his crews and not only his radio: a formation whose commander
+will not expend a round outside the priority of fires does not expend one on
+WEAPONS FREE either. Until that was true, one press of the standing order
+deleted the device the district act is built on. He says so on the net, once,
+naming the place he is declining to defend, so the connection between the order
+you acknowledged and the sector that has gone quiet is available to be made
+while there is still time to do something about it.
+
 **Reinforce the Capital** is where the corruption arc stops being about your
 own conscience and starts being about equipment. The directorate withdraws your
 long-range battalion — the only thing that reaches two of your four sectors —
 for a capital that is not under attack, has not been under attack all week, and
-whose air picture you are looking at. Obeying keeps your file and costs a
-district town. Refusing saves the town and ends your career. The two documents
-disagree by about two hundred points and a place with people in it, and neither
-of them mentions the other.
+whose air picture you are looking at. Obeying keeps your file and costs the
+district ground. Refusing saves it and ends your career. Measured over eight
+seeds with a commander who actually fights the district: obedience scores 1050
+against refusal's 1562, and thirty-nine points of standing against zero;
+refusal keeps weapons off the district on all eight nights — twenty-two leakers
+against thirty-seven — and loses six places against obedience's eight. The two
+documents disagree by about five hundred points and the Lozan power station on
+three nights of eight, and neither of them mentions the other.
+
+The four officers on this watch are the district's own establishment and are
+deliberately left alone. Spans of control were tried here and taken out again:
+an officer holding fewer engagements at once pushes more of the fight onto the
+crews the withdrawn battalion was covering, and over the same eight seeds the
+district's ground outcome inverted — ten places lost refusing against four
+obeying, which is the opposite of what this level exists to say. Four Sectors is
+the watch about the appointment. This one is about the order.
+
+**The order now arrives with the battalion in the middle of something.** It used
+to fire at fifty-five seconds — fourteen after the first contact, a hundred
+before any battery had a legal shot, with the expenditure counter reading 0 of
+36 — so the watch whose whole subject is what a redeployment order COSTS asked
+you to answer it on an empty night, and obeying then cost the seat its own first
+shot: a hundred and forty-eight seconds against a spectator's seventy-eight, the
+worst first shot in the campaign. It now lands at a hundred and sixty-five, with
+BASTION DISTRICT holding four tracks and its channels full, the brief's promise
+of the order "in the next few minutes" finally true, and the sentence being put
+to you the one the watch is about — *give me the battery that is currently
+firing*. First legal shot: 148 s → 78 s.
 
 ### The last watch
 
@@ -574,15 +631,32 @@ village.
 
 The two are 117 kilometres apart. No medium battery covers both. Exactly one
 does — the long-range battalion sitting halfway between them — and it has four
-channels and eight rounds against eighteen aircraft, which is the point of it
-being there. There is no resupply: the depots are committed to the capital, so
-every battery fights with what is on its rails.
+channels and sixteen rounds against twenty-two aircraft, which is the point of
+it being there. There is no resupply: the depots are committed to the capital,
+so the battalion has one refill in its own store and every other battery has a
+third of one.
 
 And a third formation is tracking the post you are sitting in, which is where
 that battalion is. Answering it spends the rounds the cities need; displacing to
 survive takes the only battery that reaches either city off the air for three
 and a half minutes. There is no arrangement of those rounds that serves all
 three.
+
+It has to be answerable, and for a long time it was not. The package for the
+post released at about ten minutes, and BASTION — the battery the post travels
+with, and the only one that reaches either city — was dry at five and a half:
+YOUR POSITION WAS OVERRUN happened at every skill level, in seventy-three per
+cent of runs including the walk-away, and the one thing that saved it was a
+single press of DISPLACE which cost nothing because the rack was empty anyway.
+A trilemma with one free answer is not a trilemma. The third axis now arrives at
+two and a half minutes with rounds still on the rails, the net says so out loud
+(*the third formation has turned in on this post; it is not tracking either
+city*), and every battery carries a small store behind its rack — a third, and a
+full refill for the battalion — because a watch decided by a hoist is not a
+watch about a choice. Measured over eight seeds: overrun in 73% of runs → 0% at
+competent play and above, competent 25% of watches held → 75% on the net, expert
+0 of 8 → 8 of 8, and the magazine's share of the cabin's watch down from 65% to
+52%.
 
 At national command the choice is sharper still, because you may stand in one
 city and not the other. The valley's sector commander is competent and has
@@ -597,7 +671,7 @@ spent your rounds before you learn what the western axis is for.
 
 Nothing ever asks you to choose. The game reads your choice off what you
 actually shot at — rounds are attributed to a side of the sector as they leave
-the rails — and there are five endings, **none of which is clean**. Obedience is
+the rails — and there are seven endings, **none of which is clean**. Obedience is
 rewarded, decorated, and costs you the village. Defiance saves it and ends
 everything else. Splitting your fires does neither well. And the near-impossible
 outcome where both cities are held is not a victory either: there is no
@@ -621,15 +695,22 @@ same sector command that told you which city was allowed to matter now tells you
 that this aircraft is protected **at all cost**, and asks you to acknowledge it
 on the net.
 
-Four enemy fighters are already up for it. They ignore the ground entirely — no
-radars, no batteries, no city — and fly lead pursuit on the one aircraft they
-came for, one round each from twenty-six kilometres. Every fighter you stop
-before its launch point is a round that never leaves the rail. Meanwhile a
+Six enemy fighters are already up for it, in two flights. They ignore the ground
+entirely — no radars, no batteries, no city — and fly lead pursuit on the one
+aircraft they came for, one round each, off one pass, from twenty kilometres.
+Every fighter you stop before its launch point is a round that never leaves the
+rail, and twenty kilometres is inside the reach of the battalion holding the
+corridor, so stopping them is a shooting problem and not a hope. It was four
+fighters releasing from twenty-six kilometres at a kill probability of 0.55, and
+that arithmetic made the ending a coin flip: with the best corridor play the
+console allows, exactly one round still left a rail on eight seeds of eight, and
+a player who stopped three fighters and a player who stopped none faced the same
+draw. Meanwhile a
 strike package is coming for the palace and the field, and the long-range
 battalion that reaches the whole departure corridor is the same battalion those
 raids need.
 
-And twice in those eight minutes, the net brings you what STATE 01 wants to
+And twice in those seven minutes, the net brings you what STATE 01 wants to
 know: the delay in the corridor (there is no delay in the corridor), then the
 damage figure for the palace, with the advisory that the aircraft is carrying
 people who matter. He never transmits to you and is never named — everything
@@ -642,6 +723,18 @@ corridor open and watch him go. Defend the city instead and let the fighters do
 what fighters do. Or select a track your own system has already identified as
 friendly and give a fire order against it — which is a thing the interface will
 let you do, without comment.
+
+**And the file finally knows which one happened.** The watch's verdict used to be
+read off the reason, the critical places and the leaker count — none of which the
+corridor touches — so on thirty runs of sixty-four the debrief printed SECTOR
+HELD beside a flight strip reading DESTROYED, with no cause given, and the
+aircraft was worth nothing at all in the score. The aeroplane is now worth six
+hundred points, a little under the palace intact and more than anything else on
+that board; losing it reads STATE 01 WAS LOST; and the cause clause names who
+fired, because a round from these rails and a round from a fighter make the same
+wreckage and are not the same act. Measured over eight seeds: a competent player
+is now 29% ahead of one who touches nothing on the net and 39% from both seats,
+where it was 7% and 4%.
 
 Nothing asks you which you meant. The tape only records what left the rails, and
 whose battery it left from.
@@ -754,6 +847,18 @@ A few decisions worth knowing about if you read the source:
   you do changes either. That is the actual experience of commanding through
   other people, and it is why the only lever you have is what you said before
   you left.
+- **An officer has a span of control, and it is the only one of his limits that
+  scales with the raid.** `commander.span` — how many engagements he can
+  personally direct at once, three at district and two on the last two watches.
+  His competence is two rates (how often he looks at his board, and how
+  dangerous a contact must be before he spends a round) and neither of them
+  cares how much is coming, so before this existed a sector answered a
+  two-aircraft package and a six-aircraft one equally well, and the officers
+  out-fought the seat exactly where the weight was. It counts only what HE
+  ordered: crews on WEAPONS FREE are on their own authority and not on his
+  radio, which is why the standing order is the other way out of a saturated
+  sector and why it is now worth pressing twice. His card prints the load
+  against the limit and says HANDS FULL when he is out of them.
 - **Eagerness is the price of delegation.** Crews on weapons free snap the
   earliest shot at whatever is nearest; net assignments hold for the sweet spot
   when the target's time-to-impact allows and fire instantly when it does not —
@@ -891,9 +996,26 @@ A few decisions worth knowing about if you read the source:
   exception until the ready rack started coming back a rail at a time, and
   then the district covered the ground without it; a commander who fights
   that district by hand rather than by greedy pairing still does better
-  refusing (`test/echelon.test.js`, eight seeds: 1616 against 916, thirty-one
-  leakers against forty-seven, and six places lost against ten). Two
+  refusing (`test/echelon.test.js`, eight seeds: 1562 against 1050, twenty-two
+  leakers against thirty-seven, and six places lost against eight). Two
   player models, two answers, both measured.
+
+  The acts three and four scrub added three more verbs and one guard, all of
+  them measured. The expert now leaves **standing orders** — the sector it
+  cannot stand in goes WEAPONS FREE while it is saturated and back to TIGHT
+  when its axis is spent — which no model had ever pressed on the two watches
+  built around that order; on Four Sectors it is worth 26% of the watch's
+  score, against 11% for standing in the main effort. It **guards the
+  corridor** on the escort watch, pairing every fighter to a battery from the
+  first second one paints and holding the headquarters battalion off the city
+  entirely, which is the brief's own sentence about what that battalion cannot
+  do twice; it takes the expert from 5 of 8 watches held to 8 of 8. And it
+  **displaces only when the position cannot be answered with fire**: driving
+  away used to be the reflex the moment anything turned in on the post, which
+  was right when the finale's third axis released against an empty rack and
+  wrong the moment it started arriving while there were rounds on the rails —
+  measured in the cabin, two seeds of eight conceded eleven leakers apiece to a
+  displacement taken with a full rack and the package inside the ring.
   Reproduce a watch's table with:
 
   ```
@@ -928,7 +1050,13 @@ A few decisions worth knowing about if you read the source:
   rest is a battery that has fired its whole allocation, which no amount of
   loading faster will touch. Where that was the binding constraint the
   *allocation* was fixed rather than the hoist — Weasel Hour and Low Riders
-  carry a `storeMult` in their own files, because sixteen rounds behind an
+  carry a `storeMult` in their own files, and so do the two watches the acts
+  three and four scrub retuned — Four Sectors at three quarters, because
+  thirteen batteries with a full store between them made "set every sector
+  WEAPONS FREE and never touch another control" cost nothing whichever way the
+  order was left, and Two Cities at a third with the long battalion carrying its
+  own figure of a half, which is the one place in the game a battery declares a
+  store of its own. Sixteen rounds behind an
   eight-round rack is right for the watches those numbers were written for and
   not for a suppression watch with sixteen aeroplanes and six anti-radiation
   rounds on it. Weasel Hour's cabin was spending all twenty-four of its rounds
@@ -1093,9 +1221,17 @@ A few decisions worth knowing about if you read the source:
 - **The watches are not all the same length, and one of them is deliberately
   short.** Median watch length at 1x, competently fought, runs eleven to
   thirteen minutes across the first four watches and eleven to sixteen later,
-  with three exceptions — two documented below and Two Cities at seventeen and
-  a half, which is the finale and is the pacing work act four still owes. The President's Flight is a single escort problem and ends when
-  the aircraft is down or away, at nine minutes. **First Light is
+  with two exceptions, both documented below. Act four was the third: Two Cities
+  ran seventeen and a half minutes and is now fourteen to fifteen, and The
+  President's Flight — a single escort problem that ends when the aircraft is
+  down or away — ran nine and is now **seven**, which is below the eight-minute
+  floor and is the one watch allowed to be. It holds one aeroplane for eight
+  minutes of filed route and there is nothing to do after it: the watch used to
+  stay open until STATE 01 crossed the two-hundred-and-ten-kilometre world rim
+  at a quarter of a kilometre a second, which bought fifty to a hundred and
+  ninety seconds of one friendly symbol crawling across an empty scope, every
+  dead-air hole in the watch, and a last hostile spawn stranded at half the run
+  time. It now ends when there is nothing left in the corridor, and says so. **First Light is
   four contacts and then two, high and unhurried, with a five-step interactive
   tutorial in whichever seat you took, a cut-down console and a reload
   multiplier of 0.35** — it is the watch that teaches the scope, and it runs
@@ -1123,8 +1259,10 @@ A few decisions worth knowing about if you read the source:
   after its last action. Act one's four read 70 / 64 / 72 / 69 per cent, and
   the act-two scrub closed the four that were worst in the campaign: Across
   the Line 39% → 55-60%, Ville Under Fire 39-43% → 60-61%, White Noise 46% →
-  60-61%, Economy of Force 49-51% → 61-65%. Two Cities at 41% and President's
-  Flight at 52% are the pacing work still owing. Late packages are deliberately spawned at fifty to
+  60-61%, Economy of Force 49-51% → 61-65%. The acts-three-and-four scrub closed
+  the last two and the two district watches with them: Two Cities 41% → 55-63%,
+  President's Flight 52% → 62-78%, Four Sectors 52% → 62-67%, Reinforce the
+  Capital 53% → 55-57%. Late packages are deliberately spawned at fifty to
   sixty-five kilometres rather than the engine's default hundred and fifty-five,
   because an ingress nobody can reach is not pressure, it is a countdown — and
   pulling Weasel Hour's whole raid inside BASTION's reach took its worst seed
@@ -1146,6 +1284,38 @@ A few decisions worth knowing about if you read the source:
   close-in fight used to begin at minute thirteen of an eighteen-minute night);
   the rest is arithmetic, and moving the section forward off the town it
   defends would be a different watch.
+
+- **Three lines of the difficulty bar are missed on purpose in acts three and
+  four, and the reason is the instrument rather than the watch.** They are
+  recorded here because a bar that is quietly rounded off is not a bar.
+
+  *The careless player model is not separated from the careful one on
+  Reinforce the Capital* (novice holds 6 of 8, competent 5 of 8, against a rule
+  that wants the novice under half). On a thirteen-battery district board the
+  competent model assigns by *nearest battery that can legally take it*, which
+  is what a person with a scope and a mouse does — and on this board it
+  pre-empts four subordinate officers with a worse pairing, so it leaks a
+  shade MORE than the careless model that leaves them alone: 5.1 against 4.8
+  over eight seeds. The watch itself is sound (the expert holds 7 of 8 and is
+  31% ahead), and the fix is a better competent model rather than a heavier
+  raid, which would only widen the gap between the two by making both worse.
+
+  *The attention dividend on The President's Flight is +7.7% on the net and
+  −1.0% from both seats* against a bar of +10%. It is a seven-minute escort
+  with one decision in it — the corridor or the city — and once a model makes
+  that decision correctly there is very little left above it: the expert holds
+  8 of 8 against the competent player's 6 and is still only a few per cent
+  ahead, because the thing they differ on is worth six hundred points and they
+  both usually get it. The dividend is in held watches, not in score, and both
+  are reported.
+
+  *Two Cities from both seats holds 8 of 8 competently played*, against a
+  60-90% rule, where the same player on the net holds 6. The `both` seat is a
+  commander who is also crewing the one battery that reaches either city; that
+  it is the easier seat is the watch's own arithmetic and not an accident, and
+  bringing it inside the band by tightening the leaker allowance further would
+  put the net seat below the floor (measured: at a tolerance of two, net
+  competent falls to 4 of 8).
 
 - **On Across the Line the expert player model loses, and that is the watch
   working.** The attention dividend is positive or neutral everywhere else in
