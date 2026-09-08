@@ -794,9 +794,21 @@ export function runSurveillanceEmcon(world) {
       radar.on = false;
       radar.blinkUntilS = world.t + 25;
     } else if (!radar.on && world.t >= (radar.blinkUntilS ?? 0)) {
-      // Nothing is homing on it any more, and it has served its blink.
+      /*
+       * Nothing is homing on it any more, and it has served its blink — but
+       * only a set that actually ducked can report an all-clear. A cold set
+       * being raised for the first time in the watch was announcing "SKY
+       * CLEAR — BACK UP", which is a report about a threat that never
+       * happened: on the teaching watch's cabin it landed at 0.1 s in four of
+       * four traced cells, eleven and a half seconds before the same watch's
+       * chatter told the player their set was dark. `armDuckLoggedAtS` is set
+       * only by the shutdown above, so it is the honest test of whether this
+       * antenna has anything to be clear of.
+       */
+      const ducked = radar.armDuckLoggedAtS != null;
       radar.on = true;
-      world.comms?.(radar.label, 'SKY CLEAR — BACK UP.', { radarId: radar.id });
+      if (ducked) world.comms?.(radar.label, 'SKY CLEAR — BACK UP.', { radarId: radar.id });
+      else world.log('info', `${radar.label} — RADIATING`, { radarId: radar.id });
     }
   }
 }

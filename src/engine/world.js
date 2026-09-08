@@ -117,6 +117,14 @@ export class World {
      * `rememberGhost` in detection.js.
      */
     this.trackGhosts = [];
+    /**
+     * When the first contact of the night appeared on the plot, or null while
+     * the tube is still empty. The command net reads it: an order is timed
+     * from the start of the fighting rather than from the handover, because
+     * first contact moves by two-thirds of a minute across a watch's seeds and
+     * a grace counted from t=0 does not. See `stepCommand`.
+     */
+    this.firstContactAtS = null;
     this.events = [];
     this.effects = [];
     this.plots = [];
@@ -1576,10 +1584,54 @@ export class World {
     return chatter.sort((a, b) => a.atS - b.atS);
   }
 
+  /**
+   * Is this line still true when its second arrives?
+   *
+   * A scripted line is written months before the watch it lands in, and two of
+   * them on the teaching watch were being said into a room that had already
+   * answered them: "THE SET IS NOT RADIATING" printed in twelve of twelve
+   * traced cells and was true in four, and in the cabin — where the sector's
+   * own crews raise the surveillance set a tenth of a second in — it was never
+   * true at all. A watch that narrates a state has to read the state.
+   *
+   * Two predicates, because there are two sets and they are not the same
+   * lesson. `whileCold` is the net's: nothing sector owns is radiating, so
+   * nothing is painting. `whileOwnCold` is the cabin's: this battery's own
+   * antennas are dark, whoever else can see. A line the world has outrun is
+   * not dropped into silence — every conditional line in the campaign is
+   * written as a pair, and `insteadText` carries the other true sentence for
+   * the same slot.
+   */
+  chatterHolds(line) {
+    if (line.whileCold && this.radars.some((r) => !r.siteId && r.alive && r.on)) return false;
+    if (line.whileOwnCold) {
+      const own = this.control.crewedBatteryId
+        ? this.radars.filter((r) => r.siteId === this.control.crewedBatteryId)
+        : [];
+      if (!own.length || own.some((r) => r.alive && r.on)) return false;
+    }
+    return true;
+  }
+
   spawnDue() {
     while (this.pendingChatter.length && this.pendingChatter[0].atS <= this.t) {
       const line = this.pendingChatter.shift();
-      this.log(line.kind ?? 'info', line.text, line.opts ?? {});
+      const holds = this.chatterHolds(line);
+      const text = holds ? line.text : line.insteadText;
+      if (!text) continue;
+      /*
+       * Scripted chatter is somebody on the radio, and the console has always
+       * said so — `kind-comms` renders italic with a ▸, which is exactly what
+       * "SECTOR: YOU ARE THE ONLY SET LEFT IN THIS SQUARE" is. It logged as
+       * `info` — the kind reserved for the echo of the operator's own
+       * switches — and the consequence was not cosmetic: the dead-air detector
+       * counts the kinds a watch does TO you and ignores the kinds it does
+       * BECAUSE of you, so Solo Battery's eleven pacing lines, written and
+       * measured to fill that watch's structural silences, were worth nothing
+       * in the reading that judged them. The bar's own definition of a hole
+       * says a scripted chatter line breaks it. Now the log agrees with both.
+       */
+      this.log(line.kind ?? 'comms', text, line.opts ?? {});
     }
     while (this.pendingWaves.length && this.pendingWaves[0].atS <= this.t) {
       const spec = this.pendingWaves.shift();
@@ -1645,6 +1697,7 @@ export class World {
 
     this.spawnDue();
     this.plots = stepDetection(this, dt);
+    if (this.firstContactAtS === null && this.tracks.size > 0) this.firstContactAtS = this.t;
     scoreAllTracks(this);
 
     // Always: it runs the formations the player is not personally commanding,
@@ -1713,32 +1766,33 @@ export class World {
       if (flipped) {
         this.log('warn', 'SECTOR HAS BROUGHT THE SURVEILLANCE SET UP REMOTELY. THE SWITCH IS YOURS TO KEEP.',
           { severity: 'high' });
-      } else if (!this.radars.some((r) => r.alive && r.on)) {
-        /*
-         * And on a watch with no surveillance set at all, the safety is your
-         * own crew rather than sector — there is nobody else to flip.
-         *
-         * Solo Battery is the case: no early-warning radar, one battery, and
-         * an operator who touches nothing sat blind for three minutes with an
-         * empty scope that could not tell them which of "nothing is out there"
-         * and "you have not switched the set on" they were looking at.
-         * Measured: first contact 180 s median, first legal shot 256 s. A crew
-         * alone in a cabin under an air raid warning does not sit in the dark
-         * waiting to be told; they come up, and they say why.
-         *
-         * Only when NOTHING at all is radiating, so an operator who has
-         * deliberately gone dark — which is the entire subject of the watch
-         * after this one — is never overruled by a safety.
-         */
-        const own = this.control.crewedBatteryId
-          ? this.radars.filter((r) => r.alive && r.siteId === this.control.crewedBatteryId)
-          : [];
-        if (own.length) {
-          for (const radar of own) radar.on = true;
-          this.log('warn', 'CREW HAS BROUGHT THE SET UP ON ITS OWN AUTHORITY — NOBODY ELSE IS LOOKING.',
-            { severity: 'high' });
-          this.comms?.('CREW CHIEF', 'WE CANNOT SEE ANYTHING WITH THE SET COLD. IT IS UP.');
-        }
+      }
+      /*
+       * And the cabin's own set, which sector cannot reach.
+       *
+       * The safety used to end at the sets sector owns, and on a watch that
+       * has any of those the clause below never ran — so on the teaching
+       * watch, whose second lesson is that the battery you are sitting in has
+       * a switch of its own, an operator who never found it sat through the
+       * whole night on somebody else's picture with the tube in front of them
+       * dark. On Low Riders that cost 450 seconds with twenty aircraft on the
+       * plot, measured in the browser. A crew alone in a cabin under an air
+       * raid warning does not sit in the dark waiting to be told; they come
+       * up, and they say why.
+       *
+       * Only when EVERY set of this battery is cold, so an operator who has
+       * deliberately gone dark — which is the entire subject of Weasel Hour —
+       * is never overruled by a safety. Weasel Hour sets no `radarSafetyAtS`
+       * at all, and that is why.
+       */
+      const own = this.control.crewedBatteryId
+        ? this.radars.filter((r) => r.alive && r.siteId === this.control.crewedBatteryId)
+        : [];
+      if (own.length && !own.some((r) => r.on)) {
+        for (const radar of own) radar.on = true;
+        this.log('warn', 'CREW HAS BROUGHT THE SET UP ON ITS OWN AUTHORITY — NOBODY ELSE CAN SEE FOR YOU.',
+          { severity: 'high' });
+        this.comms?.('CREW CHIEF', 'WE CANNOT SEE ANYTHING WITH THE SET COLD. IT IS UP.');
       }
     }
 

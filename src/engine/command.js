@@ -768,6 +768,29 @@ export function stepCommand(world, dt) {
   // the teaching watch runs its lesson before sector command runs its test.
   if (world.t < (world.scenario.directiveGraceS ?? 0)) return;
 
+  /*
+   * And a clear minute of FIGHTING, which is not the same as a clear minute.
+   *
+   * `directiveGraceS` is counted from the handover, and every one of the four
+   * act-1 watches was tuned by taking the seed's first-contact time, adding a
+   * minute, and rounding. That works until first contact moves, and it moves
+   * by seed: Solo Battery paints between 26 s and 43 s across its eight, so a
+   * grace of 95 gave the operator 86 seconds of fighting on one seed and 52 on
+   * another, against a bar that asks for sixty. The order is meant to arrive
+   * about a fight you are already having and to ask you for an opinion you
+   * have had time to form, and that clock starts when the first contact
+   * paints, not when the previous watch handed over.
+   *
+   * Measured from the contact and not from the clock, the same eight Solo
+   * Battery seeds give 110-128 s and never less than 69 s of fighting first.
+   * A watch that does not set the field keeps the old behaviour exactly — this
+   * gate cannot fire without it — so it is scoped to the watches it has been
+   * measured on and the rest of the campaign is bit-identical.
+   */
+  const contactGrace = world.scenario.directiveContactGraceS ?? 0;
+  if (contactGrace > 0 && world.firstContactAtS !== null
+    && world.t < world.firstContactAtS + contactGrace) return;
+
   world.command.thinkTimerS = (world.command.thinkTimerS ?? 0) - dt;
   if (world.command.thinkTimerS > 0) return;
   world.command.thinkTimerS = 6;

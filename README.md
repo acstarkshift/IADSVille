@@ -791,6 +791,12 @@ A few decisions worth knowing about if you read the source:
   the way, how much of *that* was the loaders rather than an empty store, and
   how much of it the seat spent with no surviving guidance antenna anywhere.
 
+  A model may only press what the seat has, and that is a rule of the harness
+  and not a detail. The expert was selecting two-round salvos on First Light,
+  whose `basicConsole` strips the salvo switch off the battery card — so the
+  measured dividend on the teaching watch was, in its entirety, the cost of an
+  imaginary button. `sizeSalvo` is now a no-op on a cut-down console.
+
   Two of those verbs were added by the scrub, and the reason is worth keeping:
   no player model had ever pressed DISPLACE or released the reserve, so the
   line of the difficulty bar that asks whether skill buys anything was being
@@ -889,6 +895,57 @@ A few decisions worth knowing about if you read the source:
   half — both measured *worse* than leaving it alone, because they spend the
   store into a lull.
 
+- **A scripted line is somebody on the radio, and the room reads the room.**
+  Every watch can script its own traffic — word from a border post, the town
+  warden, the crew chief, logistics — and Solo Battery is built on eleven of
+  them, because a battery alone in a valley has nobody to talk to but the room.
+  Two things about them were wrong. They logged as `info`, the kind reserved
+  for the echo of the operator's own switches, so the console rendered them
+  like machine chatter and the dead-air detector — which counts what the watch
+  does TO you and ignores what it does BECAUSE of you — scored them as silence.
+  Eleven lines written and measured as pacing were worth nothing in the reading
+  that judged them. They are `comms` now, which is what the console has always
+  called radio traffic and what they always were.
+
+  And a scripted line can be outrun by the watch it lands in. The teaching
+  watch told you your set was dark at twelve seconds and where the switch was
+  at thirty, whether or not you had already found it — measured, "THE SET IS
+  NOT RADIATING" printed in twelve of twelve traced cells and was true in four,
+  and in the cabin, where the sector's own crews raise the surveillance set a
+  tenth of a second in, it was never true at all. Conditional lines now read
+  the state their sentence claims (`whileCold` for the sets sector owns,
+  `whileOwnCold` for the battery you are sitting in) and carry the OTHER true
+  sentence for the same slot rather than leaving a hole where a line was
+  scheduled. A watch either says the thing or says the other thing; it does not
+  say the false one and it does not go quiet.
+
+- **An order about a fight waits for the fight, not for the clock.** Sector
+  command holds off the net for a scenario's opening minutes so the first
+  interactive decision is an assignment rather than a loyalty test. That grace
+  was counted from the handover, and first contact is not: Solo Battery paints
+  anywhere between 26 s and 43 s across its eight seeds, so an operator got 86
+  seconds of fighting before the first order on one and 52 on another, against
+  a design bar of sixty. `directiveContactGraceS` counts the same minute from
+  the first contact instead, and act 1 sets it to sixty on all four watches.
+  Measured on Solo Battery with the sets up, the same eight seeds: the first
+  order lands at 95-107 s with 60 to 78 s of fighting behind it and never less
+  than sixty, and the routine cadence between orders is unchanged. It is scoped
+  to the four watches it has been measured on; a scenario that does not set the
+  field is bit-identical, and a test asserts that none of the other eight
+  carries one.
+
+- **The safety reaches the cabin.** A watch that starts its surveillance set
+  cold names the moment sector stops waiting for you and brings it up — and
+  that safety stopped at the sets sector owns. On the teaching watch the second
+  half of the lesson is that the battery you are sitting in has an antenna of
+  its own, and an operator who never found it rode the whole night on somebody
+  else's picture with their own tube dark and nothing saying why. On Low Riders
+  that was measured in the browser at 450 seconds with twenty aircraft on the
+  plot. The crew chief now brings the cabin's own set up at the same moment,
+  and says so — but only when EVERY set of that battery is cold, so an operator
+  who has deliberately gone dark is never overruled. Weasel Hour, whose whole
+  subject is going dark, sets no safety at all, and that is why.
+
 - **The net does not go quiet, and it says why.** Every watch has stretches
   with nothing shootable in them — a package turns for home, one straggler
   drifts thirty kilometres outside everybody's ring and takes three minutes to
@@ -931,9 +988,13 @@ A few decisions worth knowing about if you read the source:
   exceptions. The President's Flight is a single escort problem and ends when
   the aircraft is down or away, at just under eight minutes. **First Light is
   four contacts and then two, high and unhurried, with a five-step interactive
-  tutorial, a cut-down console and a reload multiplier of 0.35** — it is the
-  watch that teaches the scope, and it runs five and a half minutes on
-  purpose. It was measured at eight minutes once, and one seed in five ended
+  tutorial in whichever seat you took, a cut-down console and a reload
+  multiplier of 0.35** — it is the watch that teaches the scope, and it runs
+  five and a half minutes on purpose. (The walk-through used to be gated off
+  for the cabin entirely, on the watch whose whole job is teaching the
+  controls. The cabin has its own five now — radiate your own set, designate,
+  lock, launch, answer the net — and every step times out, because a card
+  still reading "2 / 5" at t=630 s of a 660 s watch is furniture.) It was measured at eight minutes once, and one seed in five ended
   the first watch of the game on a ninety-five-second reload bar with a single
   blip on the scope; that multiplier is what stops it, and until the
   instruments scrub wired it, nothing read it.
@@ -982,11 +1043,27 @@ A few decisions worth knowing about if you read the source:
   brief that says nothing is shooting back at you tonight. A teaching watch that
   fails a learner is a teaching watch that has failed. What it must do instead
   is fail the *spectator*, and it does: a player who touches nothing holds none
-  of eight seeds on the net or from both seats and loses five aircraft, while
-  a player who so much as brings a set up and assigns holds all eight from
-  every seat. The empty cabin is the exception at 6 of 8 — the sector's own
-  crews fight the watch around a silent battery — and it is the reason the
-  tutorial seats the player at the net.
+  of eight seeds on the net or from both seats and concedes five to six
+  aircraft, while a player who so much as brings a set up and assigns holds all
+  eight from every seat. The empty cabin is the exception at 6 of 8 — the
+  sector's own crews fight the watch around a silent battery.
+
+  **And nothing on it is worth being expert about, which is also deliberate
+  and had to be measured before it could be said.** The attention dividend —
+  does careful play beat competent play — reads +0.1% on the net, +0.7% in the
+  cabin and −0.2% from both seats over eight seeds, and it cannot read anything
+  else, because the watch has no room above competent play. Six aircraft, three
+  batteries, nothing shooting back: a competent operator kills all six, loses
+  nothing, and scores 1209 against a ceiling of about 1212 — eleven hundred and
+  twenty points of intact ground, a hundred and twenty of kills, forty back for
+  the rounds. There is no leaker to prevent, no antenna to save and no round to
+  economise. The one thing that used to separate the two models was the expert
+  selecting salvos of two, and *`basicConsole` removes the salvo switch from
+  this console*: the model was pressing a control the player does not have and
+  paying five points a round for it, which read as a NEGATIVE dividend of −1.7%
+  and −1.8% on two seats. The model now presses only what the seat has, and the
+  number it reports is the truth about the watch: the teaching watch is where
+  skill is acquired, not where it pays.
 
   **Low Riders now forgives one leaker, not two.** With nineteen aircraft on
   four axes, forgiving two made an act-2 watch that competent play held 24 of

@@ -481,8 +481,20 @@ function assignPass(ctx, { greedy = false, salvo = false } = {}) {
  * only ever right when the shot is bad or the place behind it is expensive.
  * Both halves of that are checkable from the seat: what the contact is going
  * for is on the shootlist, and how good the shot is, is the range ring.
+ *
+ * AND NOT ON A WATCH WHOSE CONSOLE HAS NO SALVO SWITCH. `basicConsole` strips
+ * displacement, salvo, RIDE and the exposure gauge off the battery card so
+ * that a new operator has two controls in front of them and not ten
+ * (`panels.js`, gated on the same flag). The expert model was selecting pairs
+ * anyway, which is not a skilled player — it is a player pressing a button
+ * that is not on the panel, and paying five points a round for it. Measured on
+ * First Light, eight seeds: the expert fired 12.5 rounds against the competent
+ * player's 8 for the same six kills, and the entire attention dividend on the
+ * net and both-seats configurations was that difference — −1.7% and −1.8%
+ * against a bar of +10%. A model must only press what the seat has.
  */
 function sizeSalvo(ctx, site, track) {
+  if (ctx.w.scenario.basicConsole) return;
   const type = SAM_TYPES[site.type];
   const env = inEnvelope(site, track.pos, track.altM);
   const threatened = track.predictedAssetId ? ctx.w.assetById.get(track.predictedAssetId) : null;
@@ -1425,19 +1437,35 @@ export function playRun(job) {
   return trace ? { run, trace } : { run };
 }
 
+/**
+ * And WHERE they are, not only how long the worst one was.
+ *
+ * The count and the worst length say a watch has a hundred-second silence in
+ * it; they do not say whether that silence is the minute before the second
+ * package or the four minutes after the last one, and those want opposite
+ * repairs — one is a wave that arrives too late, the other is a watch that
+ * ends too late. `windows` is every hole of thirty seconds or more as a
+ * `[startS, endS]` pair, in the JSON only (the table has no room for them and
+ * they are a working number, not a headline). Act 1's pacing pass was written
+ * against this column: solo-battery's competent hole turned out to be
+ * 300-400 s, between the second package turning for home and the cruise
+ * stream painting, which is a chatter problem, and weasel-hour's both-seat
+ * hole turned out to be the last two minutes, which is not.
+ */
 function holeStats(flags, watchS) {
   let count = 0;
   let longestS = 0;
   let insideS = 0;
   let run = 0;
-  const close = () => {
+  const windows = [];
+  const close = (endIndex) => {
     if (run > longestS) longestS = run;
-    if (run >= HOLE_S) { count++; insideS += run; }
+    if (run >= HOLE_S) { count++; insideS += run; windows.push([endIndex - run, endIndex]); }
     run = 0;
   };
-  for (const flag of flags) { if (flag) run++; else close(); }
-  close();
-  return { count, longestS, shareOver30s: r3(watchS > 0 ? insideS / watchS : 0) };
+  flags.forEach((flag, i) => { if (flag) run++; else close(i); });
+  close(flags.length);
+  return { count, longestS, shareOver30s: r3(watchS > 0 ? insideS / watchS : 0), windows };
 }
 
 /* ------------------------------------------------------------------ *

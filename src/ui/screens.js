@@ -467,8 +467,17 @@ export function renderDebrief(host, state, result, entry) {
 
 /* ------------------------------------------------------------- help */
 
-export function renderControls(host) {
+/**
+ * `basic` is the teaching watch's cut-down console, and this screen has to
+ * agree with it. `scenarios.js` sets `basicConsole` on First Light and
+ * `panels.js` reads it to strip displacement, salvo and RIDE off the battery
+ * card — while this page went on listing S, G and X as things to press. A
+ * help screen that names keys the console has removed is worse than no help
+ * screen: it sends a new operator hunting for a control that is not there.
+ */
+export function renderControls(host, { basic = false } = {}) {
   const key = (k, d) => `<div><b>${esc(k)}</b><span>${esc(d)}</span></div>`;
+  const unless = (cond, row) => (cond ? '' : row);
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title" style="font-size:28px">CONTROLS</h1>
     <div class="card">
@@ -491,9 +500,9 @@ export function renderControls(host) {
         ${key('Q / W', 'weapons hold / tight on the selected battery')}
         ${key('Shift+E', 'weapons free on the selected battery')}
         ${key('E', 'toggle the selected battery’s radar — careful: this silences your own set')}
-        ${key('G', 'RIDE — hold emissions through guidance with an ARM inbound (the crew never will)')}
+        ${unless(basic, key('G', 'RIDE — hold emissions through guidance with an ARM inbound (the crew never will)'))}
         ${key('R', 'loaders out — start the selected battery’s rack filling now, short or not')}
-        ${key('X', 'displace the selected battery')}
+        ${unless(basic, key('X', 'displace the selected battery'))}
         ${key('`', 'toggle every surveillance radar')}
       </div>
     </div>
@@ -504,9 +513,9 @@ export function renderControls(host) {
         ${key('L', 'lock — start the engagement sequence')}
         ${key('F', 'fire')}
         ${key('E', 'radiate / shut down (this is the whole game)')}
-        ${key('S', 'salvo size')}
+        ${unless(basic, key('S', 'salvo size'))}
         ${key('R', 'loaders out — top the rack up now, instead of waiting for the rails to go bare')}
-        ${key('X', 'displace')}
+        ${unless(basic, key('X', 'displace'))}
       </div>
     </div>
     <div class="card">

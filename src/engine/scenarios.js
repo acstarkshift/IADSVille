@@ -289,12 +289,21 @@ export const SCENARIOS = [
      * before the first contact had even classified hostile.
      */
     directiveGraceS: 95,
+    /** And a clear minute of fighting, whenever the first contact paints. */
+    directiveContactGraceS: 60,
     /*
      * The brief promises "a radar has to be radiating to see", and then the
      * early-warning set used to come up lit and the lesson never happened.
      * WIDE EYE starts cold; the net talks the player to the switch; and if
      * nobody touches it, sector brings the set up remotely at one minute —
      * a safety, logged as exactly what it is.
+     *
+     * The same safety now reaches BASTION's own antennas, which is the second
+     * half of the same lesson and was missing from the seat that needed it.
+     * A cabin sits behind somebody else's picture until it radiates, and on
+     * this watch the sector's crews raise WIDE EYE a tenth of a second in — so
+     * the crew seat could ride the whole teaching watch on a set it never
+     * switched on, with its own tube dark and nothing saying why.
      */
     radarSafetyAtS: 60,
     /*
@@ -313,9 +322,50 @@ export const SCENARIOS = [
      * game, doubling to eight minutes, its final act a countdown.
      */
     reloadMult: 0.35,
+    /*
+     * THE LESSON, AND THE OTHER TRUE SENTENCE FOR THE SAME SLOT.
+     *
+     * Both radiate lines used to fire unconditionally, so a player who found
+     * the switch at one second was told at twelve that their set was dark and
+     * at thirty where the switch was: measured, "THE SET IS NOT RADIATING"
+     * printed in twelve of twelve traced cells and was true in four. A
+     * teaching watch that contradicts its own lesson teaches the player to
+     * stop reading the net, which is the one habit this watch cannot afford
+     * to build.
+     *
+     * So each line is a pair. `whileCold` reads the surveillance sets and
+     * `whileOwnCold` reads the battery you are sitting in; when the world has
+     * outrun the sentence, `insteadText` says the other true thing rather than
+     * leaving a hole where a line was scheduled. The cabin gets its own pair
+     * because in the cabin the lesson is a different antenna: sector's crews
+     * raise WIDE EYE at once and the tube in front of you stays dark until you
+     * throw the switch yourself.
+     *
+     * The last three are the room, not the lesson. Measured on the spectator
+     * cabin — a player who touches nothing while the sector's crews fight —
+     * the watch went silent from 141 s to 188 s and again from 238 s to 431 s,
+     * three minutes and a quarter of a teaching watch with nothing said in it.
+     */
     chatter: [
-      { atS: 12, text: 'WIDE EYE REPORTS READY. THE SET IS NOT RADIATING — NOTHING WILL PAINT UNTIL IT IS.' },
-      { atS: 30, text: 'THE RADIATE SWITCH IS ON THE RIGHT PANEL, UNDER WIDE EYE. THE BORDER POSTS CAN HEAR THEM COMING.' },
+      { atS: 12,
+        whileCold: true,
+        text: 'WIDE EYE REPORTS READY. THE SET IS NOT RADIATING — NOTHING WILL PAINT UNTIL IT IS.',
+        insteadText: 'WIDE EYE IS RADIATING AND THE TUBE IS YOURS. EVERYTHING NORTH OF THE RIVER IS OURS TO SORT.' },
+      { atS: 30,
+        whileCold: true,
+        text: 'THE RADIATE SWITCH IS ON THE RIGHT PANEL, UNDER WIDE EYE. THE BORDER POSTS CAN HEAR THEM COMING.',
+        insteadText: 'THE BORDER POSTS CAN HEAR THEM COMING. WHATEVER PAINTS, HAND IT TO A BATTERY THAT REACHES IT.' },
+      { atS: 22,
+        whileOwnCold: true,
+        text: 'YOUR OWN SET IS COLD. SECTOR CAN SEE THEM; YOU CANNOT SHOOT WHAT YOU ARE NOT HOLDING.',
+        insteadText: 'YOUR SET IS UP AND THE BATTALION IS ON THE RAILS. WAIT FOR SOMETHING THAT COMES INSIDE YOUR RING.' },
+      { atS: 46,
+        whileOwnCold: true,
+        text: 'RADIATE WHEN YOU ARE READY — THE CAP MARKED ИЗЛУЧЕНЬ · RADIATE, AND IT IS YOURS.',
+        insteadText: 'BATTALION REPORTS FOUR ON THE RAILS AND A CLEAR ARC. NOTHING IS SHOOTING BACK TONIGHT.' },
+      { atS: 150, text: 'BORDER POST FOUR REPORTS THE FIRST PASS TURNING NORTH. THEY ARE NOT HURRYING.' },
+      { atS: 250, text: 'RANGE CONTROL: SECOND ELEMENT LIFTED TWENTY MINUTES AGO OUT OF THE NORTH-EAST. TWO OF THEM.' },
+      { atS: 340, text: 'STAFF WANTS A COUNT WHEN YOU HAVE ONE. NOBODY UP HERE HAS DONE THIS EITHER.' },
     ],
     /*
      * The crew seat sits at BASTION, because BASTION is the battery this
@@ -396,6 +446,8 @@ export const SCENARIOS = [
      * seventy-four.
      */
     directiveGraceS: 85,
+    /** And a clear minute of fighting, whenever the first contact paints. */
+    directiveContactGraceS: 60,
     /*
      * The seat is BASTION, not the point-defence section.
      *
@@ -538,8 +590,15 @@ export const SCENARIOS = [
      * the first directive used to land at fifty-three — twenty-two seconds of
      * fighting, on the watch where the player is also learning the lock-and-
      * launch sequence for the first time.
+     *
+     * And sixty of those seconds are counted from the first contact rather
+     * than from the handover, because this watch's first paint moves between
+     * twenty-six and forty-three seconds across its eight seeds — the same
+     * absolute grace gave one operator eighty-six seconds of fighting before
+     * the first order and another fifty-two.
      */
     directiveGraceS: 95,
+    directiveContactGraceS: 60,
     brief: [
       'Sector has stripped the area to reinforce the coast. What is left is you.',
       'You will acquire, you will lock, you will launch, and you will keep the set radiating until the round',
@@ -687,6 +746,8 @@ export const SCENARIOS = [
      * its trigger fires and not before.
      */
     directiveGraceS: 90,
+    /** And a clear minute of fighting, whenever the first contact paints. */
+    directiveContactGraceS: 60,
     brief: [
       'Suppression aircraft are working the sector. They need roughly twelve seconds of your emissions to',
       'build a firing solution, and they carry two rounds each.',

@@ -324,7 +324,11 @@ function showBriefing() {
 function showHelp(back) {
   helpReturn = back;
   state.phase = 'help';
-  showScreen(renderControls);
+  // The key list belongs to the watch you are on: the teaching watch strips
+  // salvo, RIDE and displacement off the console, so this page must not go on
+  // telling a new operator to press S, G and X.
+  const basic = !!state.mission?.basicConsole;
+  showScreen((host) => renderControls(host, { basic }));
   els.screen.querySelector('#btn-close-help').onclick = () => helpReturn();
 }
 
@@ -354,9 +358,11 @@ function startMission() {
   ui.speedHintShown = false;
   ui.netPauseNoted = false;
   ui.hoverInfo = null;
-  // The guided walk-through runs on the teaching watch's net seat; the crew
-  // seat has its own legend line and a different set of two controls.
-  ui.tutorialStep = world.scenario.tutorial && state.role !== 'crew' ? 0 : -1;
+  // The guided walk-through runs on the teaching watch, in whichever seat the
+  // player took: the net gets the picture-and-assignment five, the cabin gets
+  // the acquire-lock-launch five. It used to be gated off for `crew` entirely,
+  // on the watch that exists to teach the controls.
+  ui.tutorialStep = world.scenario.tutorial ? 0 : -1;
   ui.tutorialStepAtS = 0;
   ui.tutorialRendered = null;
   if (els.tutorialCard) els.tutorialCard.hidden = true;
@@ -758,24 +764,24 @@ function describeEntity(hit) {
  * but an instruction that waits until you have done it is the only kind a
  * first watch reliably reads. Dismissable, and it never touches the sim.
  */
-const TUTORIAL_STEPS = [
+const NET_TUTORIAL_STEPS = [
   {
     id: 'radiate',
     en: 'The surveillance set is cold and nothing will paint. Find WIDE EYE on the right panel and press RADIATE.',
     tm: 'ВКЛЮЧИТЕ ИЗЛУЧЕНИЕ',
-    done: (w) => w.radars.some((r) => !r.siteId && r.on),
+    done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > 120,
   },
   {
     id: 'select',
     en: 'Contacts paint as the beam sweeps. Click a contact on the scope, or a row in the TRACKS list.',
     tm: 'ВЫБЕРИТЕ ЦЕЛЬ',
-    done: (w, u) => !!u.selectedTrackId,
+    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
   },
   {
     id: 'assign',
     en: 'Hand it to a battery: drag the contact onto a battery symbol, or press Shift+1. The battery answers on the log.',
     tm: 'НАЗНАЧЬТЕ БАТАРЕЮ',
-    done: (w) => [...w.tracks.values()].some((t) => t.assignedTo.length > 0),
+    done: (w, u, sinceS) => [...w.tracks.values()].some((t) => t.assignedTo.length > 0) || sinceS > 150,
   },
   {
     id: 'intercept',
@@ -791,29 +797,86 @@ const TUTORIAL_STEPS = [
   },
 ];
 
+/*
+ * And the cabin's five, which did not exist.
+ *
+ * The teaching watch advertises three seats and gated the whole walk-through
+ * off for the third of them, so a player who chose SAM OPERATOR on the watch
+ * whose entire job is teaching the controls got no cards at all. The cabin is
+ * not the net with fewer buttons: its lesson is that the battery you are
+ * sitting in has an antenna of its own, and that the sequence is
+ * acquire → lock → wait → launch. Same five-step shape, same dismiss button,
+ * same rule that a step is cleared by doing the thing.
+ *
+ * Every step also times out. Measured before this: a player who left the
+ * scope alone was still reading "2 / 5" at t=630 s of a 660 s watch, because
+ * the arrival arc on this raid is 300-345° and steps one to three had no way
+ * out but success. A card that is still up when the watch has moved on is
+ * furniture.
+ */
+const CREW_TUTORIAL_STEPS = [
+  {
+    id: 'radiate-own',
+    en: 'Your own set is cold, and sector’s picture is not a firing solution. Press RADIATE on your battery.',
+    tm: 'ВКЛЮЧИТЕ ИЗЛУЧЕНИЕ',
+    done: (w, u, sinceS) => w.radarsOf(w.siteById.get(w.control.crewedBatteryId) ?? {})
+      .some((r) => r.on) || sinceS > 120,
+  },
+  {
+    id: 'designate',
+    en: 'Contacts paint as the beam sweeps. Click one on the scope, or a row in the shootlist, to designate it.',
+    tm: 'ВЫБЕРИТЕ ЦЕЛЬ',
+    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
+  },
+  {
+    id: 'lock',
+    en: 'Press LOCK to put a channel on it. The battalion refuses in plain words when it cannot — read the refusal.',
+    tm: 'ЗАХВАТ ЦЕЛИ',
+    done: (w, u, sinceS) => (w.siteById.get(w.control.crewedBatteryId)?.engagements.length ?? 0) > 0
+      || sinceS > 150,
+  },
+  {
+    id: 'launch',
+    en: 'The cap lights when the solution is ready. LAUNCH — and keep the set radiating until the round arrives.',
+    tm: 'ПУСК',
+    done: (w, u, sinceS) => w.stats.roundsFired > 0 || sinceS > 150,
+  },
+  {
+    id: 'net-crew',
+    en: 'When sector command transmits, Y acknowledges and N refuses. Both are recorded. The rest of the watch is yours.',
+    tm: 'СЕТЬ ВАША',
+    done: (w, u, sinceS) => sinceS > 16,
+  },
+];
+
+function tutorialSteps() {
+  return state.role === 'crew' ? CREW_TUTORIAL_STEPS : NET_TUTORIAL_STEPS;
+}
+
 function renderTutorial() {
   if (!els.tutorialCard) return;
-  if (ui.tutorialStep < 0 || ui.tutorialStep >= TUTORIAL_STEPS.length) {
+  const steps = tutorialSteps();
+  if (ui.tutorialStep < 0 || ui.tutorialStep >= steps.length) {
     els.tutorialCard.hidden = true;
     return;
   }
-  while (ui.tutorialStep < TUTORIAL_STEPS.length
-    && TUTORIAL_STEPS[ui.tutorialStep].done(world, ui, world.t - ui.tutorialStepAtS)) {
+  while (ui.tutorialStep < steps.length
+    && steps[ui.tutorialStep].done(world, ui, world.t - ui.tutorialStepAtS)) {
     ui.tutorialStep++;
     ui.tutorialStepAtS = world.t;
     ui.tutorialRendered = null;
   }
-  if (ui.tutorialStep >= TUTORIAL_STEPS.length) {
+  if (ui.tutorialStep >= steps.length) {
     els.tutorialCard.hidden = true;
     return;
   }
-  const step = TUTORIAL_STEPS[ui.tutorialStep];
+  const step = steps[ui.tutorialStep];
   if (ui.tutorialRendered === step.id) return;
   ui.tutorialRendered = step.id;
   els.tutorialCard.hidden = false;
   els.tutorialCard.innerHTML = `
     <button class="tut-skip" id="tut-skip" title="Dismiss the tutorial">×</button>
-    <span class="tut-step">${ui.tutorialStep + 1} / ${TUTORIAL_STEPS.length}</span>
+    <span class="tut-step">${ui.tutorialStep + 1} / ${steps.length}</span>
     <b>${step.en}</b><i>${step.tm}</i>`;
   els.tutorialCard.querySelector('#tut-skip').onclick = () => {
     ui.tutorialStep = -1;
