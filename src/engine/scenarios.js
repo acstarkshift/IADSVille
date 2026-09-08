@@ -423,9 +423,13 @@ export const SCENARIOS = [
      * ONE, and this is the watch where the number starts mattering.
      *
      * First Light forgives two because it is the watch you learn the controls
-     * on. This one is the second act and it has nineteen aircraft on four
-     * axes, two of them under everybody's horizon; forgiving two of those made
-     * it impossible to lose. Measured, eight seeds a seat, competent play
+     * on. This one is the second watch and it has THIRTY aircraft in seven
+     * packages on five axes, seventeen of them under BASTION's own horizon;
+     * forgiving two of those made it impossible to lose. (The sentence above
+     * used to say nineteen on four axes, and it was eleven aircraft and an
+     * axis out — counted from the built world during the gameplay scrub:
+     * 3+5+3+4+4+5+6 on bearings 350, 340, 330, about 20, and 255.) Measured,
+     * eight seeds a seat, competent play
      * conceded nought to two leakers and held 24 of 24 watches — an act-2
      * mission with no losing outcome at all. At one it holds 5 to 7 of 8
      * depending on the seat, which is a watch you can fail, and the novice
@@ -449,6 +453,26 @@ export const SCENARIOS = [
     /** And a clear minute of fighting, whenever the first contact paints. */
     directiveContactGraceS: 60,
     /*
+     * SEVENTY-FIVE, and this watch nearly did without one.
+     *
+     * `radarSafetyAtS` is the teaching watch's safety and it belongs here for
+     * a different reason. This is the one watch whose cabin sits in a
+     * long-range set behind somebody else's picture: two early-warning sets
+     * are up from the first second, so the sector's plot fills whether or not
+     * the operator ever throws their own switch — and the engine's blind-crew
+     * line only fires when NOTHING at all is radiating, so it never fired
+     * here. Measured in the browser: a crew watch spent 450 seconds dark with
+     * twenty aircraft on the plot, guided by two sets that cannot see the
+     * deck, and the only thing telling the operator was an amber lamp.
+     *
+     * Seventy-five and not sixty, because this is not the watch that teaches
+     * the switch — it teaches the horizon — and an operator who has read the
+     * console legend deserves the credit for finding it themselves. First
+     * contact paints at eighteen seconds, so seventy-five is a clear minute of
+     * a raid they can see and cannot touch, which is the argument.
+     */
+    radarSafetyAtS: 75,
+    /*
      * The seat is BASTION, not the point-defence section.
      *
      * It used to be `s_thistle_t`, a twelve-kilometre set — and measured over
@@ -466,8 +490,11 @@ export const SCENARIOS = [
      * Seven tenths again in every store, and the reason is the same arithmetic
      * as Weasel Hour's — see the long note there.
      *
-     * Twenty aircraft arrive on five axes and the crewed BASTION reaches most
-     * of them. Measured, cabin, competent, before this: it fired all
+     * Thirty aircraft arrive on five axes and the crewed BASTION reaches
+     * THIRTEEN of them — the other seventeen are under its hundred-and-twenty
+     * metre floor, which is the watch's whole argument and the reason the
+     * cabin sits in the long-range set rather than in the point-defence
+     * section. Measured, cabin, competent, before this: it fired all
      * twenty-four of its rounds and then spent 30% of the watch with the
      * magazine as the ONLY thing between it and a legal shot, of which just
      * 10% was actually waiting on the loaders. The other twenty points were an
@@ -485,13 +512,62 @@ export const SCENARIOS = [
       'not one metre further. You will get very little warning. Put the short-range sections where it matters.',
     ],
     teaches: 'Radar horizon. Low contacts appear close and stay close.',
+    /*
+     * The valley talks, because this watch had nothing to say for fourteen
+     * minutes.
+     *
+     * Solo Battery carries eleven scripted lines and this carried none, on a
+     * watch half again as long. Measured with the hole windows the scrub added
+     * to the harness: the spectator cabin went silent from 366 s to 439 s, and
+     * the back end of a played watch from 818 s to 895 s. Chatter draws no
+     * random numbers and costs no rounds, so it is the one pacing instrument
+     * that cannot move the balance — but it is only worth having if the lines
+     * are the watch's own argument rather than filler, so every one of these
+     * is either the horizon lesson arriving as information or somebody on the
+     * ground who can hear what the sets cannot see.
+     */
+    chatter: [
+      { atS: 26, text: 'WIDE EYE HAS THE HIGH PACKAGE. GAP SOUTH IS CLEAR — WHICH IS NOT THE SAME AS EMPTY.' },
+      { atS: 62, text: 'BASTION REPORTS ITS FLOOR AT A HUNDRED AND TWENTY METRES. UNDER THAT IT IS A SPECTATOR.' },
+      { atS: 118, text: 'FRONTIER POST: SOMETHING WENT OVER THE RIDGE LOW ENOUGH TO RATTLE THE WINDOWS. NOTHING ON ANY SET.' },
+      { atS: 176, text: 'THISTLE TOWN AND HAMMER MANNED. TWELVE KILOMETRES OF SKY EACH, AND THEY ARE WHAT IS LEFT UNDER THE HORIZON.' },
+      { atS: 232, text: 'TOWN WARDEN REPORTS THE SIRENS SOUNDED. THE MARKET IS EMPTY AND THE SCHOOL IS FULL.' },
+      { atS: 288, text: 'GAP SOUTH REPORTS CLUTTER RISING ON THE WESTERN BEARINGS. THAT IS EITHER WEATHER OR IT IS NOT.' },
+      { atS: 344, text: 'RIVER CROSSING ASKS WHETHER THE BRIDGE IS COVERED. SECTOR SAYS IT IS. SECTOR IS NOT LOOKING AT YOUR PLOT.' },
+      { atS: 400, text: 'HAMMER SECTION HAS EYES ON THE LOW APPROACHES. THEY CAN HEAR ENGINES AND SEE NOTHING.' },
+      { atS: 470, text: 'AIRFIELD ASKS WHETHER TO DISPERSE. TELL THEM WHAT YOU CAN REACH AND WHAT YOU CANNOT.' },
+      { atS: 545, text: 'SECTOR WANTS A COUNT. WHATEVER GOT UNDER YOU IS STILL DOWN THERE SOMEWHERE.' },
+      { atS: 620, text: 'BORDER POSTS REPORT THEM CROSSING BACK NORTH, LOW AND FAST, THE WAY THEY CAME.' },
+      { atS: 700, text: 'TOWN WARDEN ASKS WHETHER IT IS OVER. NOBODY UP HERE WILL SAY SO YET.' },
+    ],
     assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, GROUND.bridge],
     sites: [SITES.bastion, SITES.lanceWest, SITES.lanceEast, SITES.thistleTown, SITES.hammer],
     radars: [RADARS.ewrNorth, RADARS.gapSouth],
     waves: [
+      /*
+       * THE TWO LOW PACKAGES COME IN FROM A HUNDRED AND THIRTY-FIVE, NOT FROM
+       * THE ENGINE'S DEFAULT HUNDRED AND FIFTY-FIVE.
+       *
+       * Not to shorten the ingress — under the horizon it makes no difference
+       * to when they paint — but to shorten the EGRESS. The watch stays open
+       * while a hostile is inside a hundred and ten kilometres of the centre
+       * AND inside six tenths of some battery's reach, and a striker at a
+       * hundred and thirty metres that has dropped its weapons and turned for
+       * home crawls out through exactly that band. Measured with the hole
+       * windows the scrub added, sixteen seeds and every seat: three of the
+       * long watches ended with three low strikers at eighty-five to
+       * ninety-four kilometres, weapons gone, nothing left to decide, and six
+       * runs of a hundred and ninety-two passed the eighteen-minute ceiling.
+       * From a hundred and thirty-five the medians fall from 13.8 to 12.9
+       * minutes and the tail is six runs in three hundred and eighty-four,
+       * all of them on the do-nothing and beginner paths that never clear
+       * anything at all.
+       */
       { atS: 15, type: 'striker', count: 3, bearingDeg: 350, spreadDeg: 20, spacingS: 30, altM: 7200 },
-      { atS: 90, type: 'striker', count: 5, bearingDeg: 20, spreadDeg: 34, spacingS: 26, altM: 130 },
-      { atS: 260, type: 'striker', count: 3, bearingDeg: 330, spreadDeg: 18, spacingS: 24, altM: 110 },
+      { atS: 90, type: 'striker', count: 5, bearingDeg: 20, spreadDeg: 34, spacingS: 26, altM: 130,
+        distanceKm: 135 },
+      { atS: 260, type: 'striker', count: 3, bearingDeg: 330, spreadDeg: 18, spacingS: 24, altM: 110,
+        distanceKm: 130 },
 
       /*
        * And something that actually reaches the town, so the point-defence
@@ -539,7 +615,31 @@ export const SCENARIOS = [
        * five these arrive four minutes after everything else has stopped, and
        * the silence they are here to fill is the silence they create.
        */
-      { atS: 300, type: 'striker', count: 3, bearingDeg: 25, spreadDeg: 18, spacingS: 24, altM: 6900,
+      /*
+       * AND FIVE AT HEIGHT, NOT THREE, ARRIVING SIXTEEN SECONDS APART.
+       *
+       * This is the only package on the watch that belongs to the cabin. Of
+       * the twenty-eight aircraft, seventeen are under BASTION's floor and
+       * most of the rest are inside a LANCE's ring as well — but a strike
+       * package at six thousand nine hundred metres on the north-east axis is
+       * the long-range battalion's problem and nobody else's, and at three
+       * aircraft with twenty-four seconds between them it was a problem four
+       * channels solved without being thought about.
+       *
+       * Measured over thirty-two seeds and every seat, against the same watch
+       * with three: a competently played watch falls from 81 / 94 / 94 per
+       * cent held to 72 / 59 / 66, which is the sixty-to-ninety band the
+       * campaign asks an act-one watch to sit in and which this one was above
+       * on two seats of three; a beginner in the cabin falls from 81% to 63%;
+       * and the cabin's attention dividend — the thing this watch had least of
+       * — goes from eight seeds of sixteen and +4.5% to twenty-four of
+       * thirty-two and +20.1%, because five at height is a saturation problem
+       * and saturation is what rewards planning ahead. What it costs is the
+       * expert's hold rate, which falls to 81 / 81 / 63 against a bar of
+       * seven in eight; that is written up in the README with the four
+       * alternatives that were measured against it.
+       */
+      { atS: 300, type: 'striker', count: 5, bearingDeg: 25, spreadDeg: 18, spacingS: 16, altM: 6900,
         distanceKm: 100, targetAssetId: 'a_airbase' },
       { atS: 435, type: 'cruise', count: 6, bearingDeg: 255, spreadDeg: 20, spacingS: 12, altM: 50,
         distanceKm: 50, targetAssetId: 'a_bridge' },

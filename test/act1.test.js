@@ -14,6 +14,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
 import { scenarioById, SCENARIOS } from '../src/engine/scenarios.js';
+import { SAM_TYPES } from '../src/engine/config.js';
 
 /** Run to `untilS`, keeping every set the AI owns radiating. */
 function run(w, untilS, { crewRadiates = false } = {}) {
@@ -135,5 +136,72 @@ describe('an order about a fight waits for the fight', () => {
       assert.equal(scenario.directiveContactGraceS, undefined,
         `${scenario.id} has not been measured with a contact grace — it must not carry one`);
     }
+  });
+});
+
+describe('the net measures silence the way the bar does', () => {
+  test('the machinery narrating itself does not count as the watch talking', () => {
+    const w = new World(scenarioById('low-riders'), { role: 'crew', seed: 'lull-1' });
+    run(w, 60);
+    w._lastActionAtS = 0;
+    w.log('info', 'BASTION ACQ — RADIATING');
+    assert.equal(w._lastActionAtS, 0,
+      'an antenna reporting itself is an echo of the machinery, not a thing to do');
+    w.log('comms', 'SECTOR: SOMETHING AN OPERATOR WOULD LOOK UP FOR');
+    assert.equal(w._lastActionAtS, w.t, 'the radio is the watch talking to you');
+  });
+
+  test('a scripted chatter line resets the silence clock', () => {
+    const w = new World(scenarioById('low-riders'), { role: 'net', seed: 'lull-2' });
+    // The 26 s line is the first scripted one on this watch.
+    run(w, 20);
+    w._lastActionAtS = 0;
+    run(w, 30);
+    assert.ok(w._lastActionAtS > 0, 'the room talking is activity');
+  });
+
+  test('an empty plot is not narrated on a metronome', () => {
+    const w = new World(scenarioById('first-light'), { role: 'net', seed: 'lull-3' });
+    const clears = [];
+    const real = w.log.bind(w);
+    w.log = (kind, text, meta) => {
+      if (/PLOT CLEAR|NOTHING AIRBORNE|THAT APPEARS TO BE ALL OF IT/.test(text)) clears.push(w.t);
+      return real(kind, text, meta);
+    };
+    while (w.phase === 'running') w.step(0.1);
+    for (let i = 1; i < clears.length; i++) {
+      assert.ok(clears[i] - clears[i - 1] >= 89,
+        `reassurance repeated is not reassurance: ${clears[i - 1].toFixed(0)}s then `
+          + `${clears[i].toFixed(0)}s`);
+    }
+  });
+});
+
+describe('the raid the cabin owns', () => {
+  test('Low Riders flies thirty aircraft in seven packages, as its file says', () => {
+    const scenario = scenarioById('low-riders');
+    const total = scenario.waves.reduce((n, wave) => n + wave.count, 0);
+    assert.equal(total, 30, 'the count in the scenario comment must match the table');
+    assert.equal(scenario.waves.length, 7, 'seven packages');
+    // Five distinct axes: 350 / 340 / 330 out of the north-west, about 20 out
+    // of the north-east (three packages share it), and 255 from the west. The
+    // file's comment says five, and it had been eleven aircraft and an axis
+    // out for three passes before the scrub counted them.
+    const axes = new Set(scenario.waves.map((wave) => (wave.bearingDeg < 45 ? 'ne' : wave.bearingDeg)));
+    assert.equal(axes.size, 5, [...axes].join(','));
+  });
+
+  test('the high package is the one thing only the long-range battalion reaches', () => {
+    const scenario = scenarioById('low-riders');
+    const high = scenario.waves.filter((wave) => wave.altM > 6000);
+    assert.ok(high.length >= 2, 'there is work above the horizon');
+    const w = new World(scenario, { role: 'crew', seed: 'lr-floor' });
+    const bastion = w.siteById.get(scenario.playerBatteryId);
+    const floor = SAM_TYPES[bastion.type].minAltM;
+    const under = scenario.waves
+      .filter((wave) => wave.altM !== undefined && wave.altM < floor)
+      .reduce((n, wave) => n + wave.count, 0);
+    assert.ok(under >= 14,
+      `most of this raid must be under the crewed battery's ${floor} m floor, got ${under}`);
   });
 });

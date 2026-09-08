@@ -635,6 +635,19 @@ function holdForRange(w, site, engagement, track) {
   return env.rangeKm > type.maxRangeKm * ENGAGEMENT.holdFireFraction;
 }
 
+/**
+ * A quarter of what this battery started the night with, rounded to a rack.
+ *
+ * The store is not readable from the seat as a number the player has to hold
+ * in their head — the tube lamps show the rails and the panel shows the
+ * store — so the threshold is a rack-shaped quantity rather than an exact
+ * fraction: "about one more full rack and that is all of it".
+ */
+function reserveFloor(site) {
+  const rails = railsOf(site);
+  return Math.max(rails, Math.round((SAM_TYPES[site.type].magazine + rails) * 0.25));
+}
+
 function crewLoop(ctx, fireDelayS, craft = {}) {
   const { w, mem } = ctx;
   const site = ctx.crewed;
@@ -703,7 +716,57 @@ function crewLoop(ctx, fireDelayS, craft = {}) {
       if (cannotEngageReason(w, site, track)) continue;
       const evaluation = engagementValue(w, site, track);
       if (!evaluation) continue;
-      if (!evaluation.inEnvelope && !(evaluation.timeToRangeS <= 30)) continue;
+      /*
+       * WHAT IS COMING, NOT ONLY WHAT IS HERE — and this is the cabin's
+       * biggest single skill, hiding in a column the console already prints.
+       *
+       * A channel takes the reaction sequence to build whether the target is
+       * in the envelope or thirty kilometres short of it, so a crew that
+       * starts the sequence on a contact that will be in reach in a minute is
+       * ready when it arrives, while a crew that waits until it is inside the
+       * ring pays the timer with the aircraft already crossing. The console
+       * says exactly how long: the shootlist's IN RANGE IN column, and the
+       * battery card's refusal line, "CANNOT LOCK T-002 — OUT OF REACH FOR
+       * 68S". `cannotEngageReason` will accept a lock forty-five seconds plus
+       * four tenths of the battery's reach ahead of time, which is a minute
+       * and a half for a long-range battalion, and the sector's own officers
+       * have always planned that far. The cabin never did.
+       *
+       * Measured on Low Riders, sixteen seeds: this is the difference between
+       * a competent cabin that scores below a novice one and an expert cabin
+       * that beats both. The novice's apparent advantage was never frugality —
+       * it was that a slow operator leaves their channels for the net above
+       * them to fill, and the net was planning ahead while the cabin was not.
+       */
+      const horizon = craft.lookahead ? 45 + SAM_TYPES[site.type].maxRangeKm * 0.4 : 30;
+      if (!evaluation.inEnvelope && !(evaluation.timeToRangeS <= horizon)) continue;
+      /*
+       * DOWN TO THE LAST QUARTER, THE ROUNDS BELONG TO WHAT ONLY YOU CAN
+       * REACH. This is the cabin's version of the decision the net makes with
+       * a priority of fires, and it is the one judgement Low Riders is
+       * actually about from the inside of a long-range set.
+       *
+       * A battalion with a hundred-and-twenty-metre floor reaches eleven of
+       * that watch's twenty-eight aircraft; the other seventeen are the
+       * point-defence sections' problem and nothing the cabin does changes
+       * that. Which means every round the cabin spends on something a gun
+       * section could also have taken is a round missing when the next high
+       * package arrives — and the high packages are the ONLY ones the cabin
+       * can answer. Both halves are on the console: the shootlist is grouped
+       * by which battery can take what, and the tube lamps and store readout
+       * say how much is left.
+       *
+       * The bar is a quarter of the allocation, because above that there is
+       * enough for both and hoarding is just timidity. Below it, an aircraft
+       * sitting inside a friendly ring that is not this one is somebody
+       * else's, and the cabin waits.
+       */
+      if (craft.reserveForOurs && site.readyRounds + site.magazine <= reserveFloor(site)) {
+        const coveredByAnother = w.sites.some((other) => other.id !== site.id
+          && other.alive && other.readyRounds > 0
+          && !cannotEngageReason(w, other, track));
+        if (coveredByAnother) continue;
+      }
       /*
        * The aeroplane before the bomb, and the sector says so out loud: an
        * enemy round on the plot is announced with "LOW SECTIONS TAKE IT",
@@ -926,7 +989,7 @@ export const POLICIES = {
 
   expert: {
     id: 'expert',
-    blurb: 'greedy priority, salvo sizing, EMCON discipline, stands in the main effort',
+    blurb: 'greedy priority, salvo, EMCON, plans a channel ahead, holds the last rack',
     tick(ctx) {
       const { w, mem } = ctx;
       expertEmcon(ctx);
@@ -935,7 +998,7 @@ export const POLICIES = {
         mem.lastPassS = w.t;
         assignPass(ctx, { greedy: true, salvo: true });
       }
-      if (ctx.crewed) crewLoop(ctx, 0, { salvo: true, topUp: true, sweetSpot: true });
+      if (ctx.crewed) crewLoop(ctx, 0, { topUp: true, sweetSpot: true, reserveForOurs: true, lookahead: true });
       expertDisplace(ctx);
       if (ctx.seat !== 'crew') {
         standInTheMainEffort(ctx);

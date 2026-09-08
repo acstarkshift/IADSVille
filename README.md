@@ -1065,10 +1065,29 @@ A few decisions worth knowing about if you read the source:
   number it reports is the truth about the watch: the teaching watch is where
   skill is acquired, not where it pays.
 
-  **Low Riders now forgives one leaker, not two.** With nineteen aircraft on
-  four axes, forgiving two made an act-2 watch that competent play held 24 of
-  24 times — no losing outcome at all. At one it holds 63-100% at eight seeds
-  and 75-88% at sixteen, which is a watch you can fail.
+  **Low Riders forgives one leaker, not two, and its raid was nine aircraft
+  larger than its own file said.** Counted out of the built world during the
+  scrub: thirty aircraft in seven packages on five axes, seventeen of them
+  under BASTION's hundred-and-twenty-metre floor — the file and this document
+  had both been saying nineteen on four axes since the watch was written.
+  Forgiving two leakers made a watch competent play held 24 of 24 times. At one
+  it holds 59-72% over thirty-two seeds, which is a watch you can fail.
+
+  It is also nine minutes shorter at the back and two aircraft heavier at the
+  front, for two separate measured reasons. The two low packages spawn at a
+  hundred and thirty-five kilometres instead of the engine's default hundred
+  and fifty-five: under the horizon that changes nothing about when they paint,
+  but a striker at a hundred and thirty metres with its weapons gone crawls
+  home through the band that holds the watch open, and six runs of a hundred
+  and ninety-two used to pass the eighteen-minute ceiling doing it. And the
+  high package on the north-east axis is five aircraft sixteen seconds apart
+  rather than three at twenty-four, because it is the only package the crewed
+  battalion owns — everything else is under its floor or inside somebody's
+  gun section — and at three it was a problem four channels solved without
+  being thought about. Thirty-two seeds, every seat: competent 81 / 94 / 94 per
+  cent held becomes 72 / 59 / 66, a beginner in the cabin 81% becomes 63%, and
+  the cabin's attention dividend goes from 8 of 16 seeds and +4.5% to 24 of 32
+  and +20.1%.
 
   **Novice is shut out on the net seat of the two biggest watches** (0 of 8 on
   Low Riders' net and both-seats, against 88% in the cabin, where the sector's

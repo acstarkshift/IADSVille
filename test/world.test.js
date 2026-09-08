@@ -531,7 +531,12 @@ describe('the quiet net gives advice, not the opposite of it', () => {
     assert.ok(pair, 'the watch put a legal, in-ring shot on the plot');
 
     // A lull is silence, so silence the ticker and let the net fill it.
+    // `_lastActionAtS` is the clock the reporter actually reads — it counts
+    // only the kinds that are the watch doing something to you, so emptying
+    // the event list is no longer enough on its own to say "nothing has been
+    // said". Clearing both is what "the ticker is silent" now means.
     world.events = [];
+    world._lastActionAtS = 0;
     world._lullTrackAtS = {};
     world._lullLast = null;
     const said = saidBy(world, () => world.reportTheLull());
@@ -568,6 +573,7 @@ describe('the quiet net gives advice, not the opposite of it', () => {
     // Empty the rails: now the reason is real, and the net must name it.
     pair.bestSite.readyRounds = 0;
     world.events = [];
+    world._lastActionAtS = 0;
     world._lullTrackAtS = {};
     world._lullLast = null;
     const said = saidBy(world, () => world.reportTheLull());

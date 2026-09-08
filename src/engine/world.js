@@ -43,6 +43,20 @@ import { composeFlightEnding } from './epilogue.js';
 /** Minutes on a road, in seconds. The reserve is not an inventory screen. */
 const RESERVE_TRANSIT_S = 240;
 
+/**
+ * Log kinds that are the watch doing something TO the operator.
+ *
+ * A launch, a kill, an alarm, a warning, an order, somebody on the radio. NOT
+ * `info`, which is the console echoing the operator's own switches and the
+ * machinery narrating itself — a set warming up, a channel claimed, an
+ * antenna reporting that it is radiating. The distinction exists because the
+ * anti-silence device below was being switched off by exactly that noise, and
+ * it is the same set `tools/playtest.mjs` counts when it measures dead air, on
+ * purpose: the mechanism and the instrument that judges it must not disagree
+ * about what a quiet console is.
+ */
+export const ACTION_KINDS = new Set(['launch', 'good', 'alert', 'warn', 'command', 'comms']);
+
 export class World {
   constructor(scenario, options = {}) {
     this.scenario = scenario;
@@ -852,6 +866,14 @@ export class World {
     const event = { seq: ++this.eventSeq, t: this.t, kind, text, ...meta };
     this.events.push(event);
     if (this.events.length > 300) this.events.shift();
+    /*
+     * When the watch last did something TO the operator, as opposed to echoing
+     * something the machinery did. `reportTheLull` reads this rather than the
+     * timestamp of the last line of any kind — see the note there — and it is
+     * the same set of kinds the measurement harness counts as activity, so the
+     * engine and the instrument cannot disagree about what silence is.
+     */
+    if (ACTION_KINDS.has(kind)) this._lastActionAtS = this.t;
     return event;
   }
 
@@ -1862,8 +1884,23 @@ export class World {
    * contact after a minute, and phrases itself differently when it does.
    */
   reportTheLull() {
-    const last = this.events[this.events.length - 1];
-    if (this.t - (last ? last.t : 0) < COMMAND.lullReportS) return;
+    /*
+     * Silence measured the way the bar measures it, and not the way the log
+     * happened to be written.
+     *
+     * This clock read the timestamp of the last line of ANY kind, and a quiet
+     * watch is not a watch with no lines in it. A battery warming an antenna,
+     * a crew claiming a channel, a set reporting that it is radiating: all
+     * `info`, all echoes of the machinery rather than the watch giving anybody
+     * something to do, and all of them reset this timer. So the one device in
+     * the engine whose entire job is to stop the console going quiet was being
+     * switched off by the console's own noise. Measured on Low Riders'
+     * spectator cabin, where it matters most: eight seeds of eight carried
+     * stretches of 34 to 74 seconds — one of them 15% of the whole watch — in
+     * which nothing was engageable, nothing was in flight and nothing was
+     * said, while this function sat below its threshold the entire time.
+     */
+    if (this.t - (this._lastActionAtS ?? 0) < COMMAND.lullReportS) return;
 
     const mine = this.sites.filter((s) => s.alive
       && (s.id === this.control.crewedBatteryId || this.commandable(s.id)));
@@ -1999,6 +2036,19 @@ export class World {
         'NO CONTACTS. USE IT — RACKS, EMISSIONS, WHATEVER IS SHORT.',
       ]);
     } else {
+      /*
+       * An empty plot with nothing left to spawn is the one case where this
+       * device has genuinely nothing to say, and saying it on a twenty-five
+       * second metronome is worse than the silence it is filling — measured
+       * on the teaching watch's spectator path, three "PLOT CLEAR" variants
+       * cycling at 774, 799, 878, 903 and 928 seconds, which is a tape loop
+       * with a countdown behind it. Every other branch of this function
+       * carries something the operator can act on: a contact, a range, a
+       * battery, a reason they are blind. This one carries reassurance, and
+       * reassurance repeated is not reassurance. Once every ninety seconds.
+       */
+      if (this.t - (this._lullClearAtS ?? -999) < 90) return;
+      this._lullClearAtS = this.t;
       text = say([
         'PLOT CLEAR. STAY UP UNTIL SECTOR STANDS YOU DOWN.',
         'NOTHING AIRBORNE THAT WE CAN SEE. HOLD YOUR POSITION.',
@@ -2007,7 +2057,11 @@ export class World {
     }
     this._lullCount = (this._lullCount ?? 0) + 1;
     this._lullLast = text;
-    this.log('info', `SECTOR: ${text}`);
+    // Sector on the radio, which is what this is and what the console has
+    // always rendered `comms` as. It logged as `info` — the kind that means
+    // "a machine did something" — so the one line in the engine written to
+    // break a silence did not, as far as anything measuring silence knew.
+    this.log('comms', `SECTOR: ${text}`);
   }
 
   /** The raid is over when there is nothing left to spawn, fly, or resolve. */
