@@ -1465,7 +1465,18 @@ export class World {
         { siteId: radar.siteId, radarId: radar.id });
       return;
     }
+    /*
+     * A switch that is already where you are putting it is not news. The line
+     * below is the console echoing an order, and it was printed on every call
+     * whether or not anything moved — so anything that reasserts an emissions
+     * state each tick (a player model, a script, a finger on the key) filled
+     * the ticker with "BASTION ACQ — RADIATING" twice a second. Found by
+     * playing the teaching watch in a browser at 4x, where it was most of the
+     * log. Nothing changed, nothing said.
+     */
+    const moved = family.some((r) => r.on !== on);
     for (const r of family) r.on = on;
+    if (!moved) return;
     /*
      * And the order sticks. Every battery nobody is sitting in runs
      * `runAiEmcon` once a tick, which used to rewrite `radar.on`

@@ -270,3 +270,20 @@ describe('the act-one examination', () => {
     }
   });
 });
+
+describe('the console does not echo a switch that did not move', () => {
+  test('setting a radar to the state it is already in says nothing', () => {
+    const w = new World(scenarioById('first-light'), { role: 'crew', seed: 'echo-1' });
+    const said = [];
+    const real = w.log.bind(w);
+    w.log = (kind, text, meta) => {
+      if (/— (RADIATING|SILENT)$/.test(text)) said.push(text);
+      return real(kind, text, meta);
+    };
+    const radar = w.radars.find((r) => r.siteId === w.control.crewedBatteryId);
+    for (let i = 0; i < 40; i++) w.setRadar(radar.id, true);
+    assert.equal(said.length, 1, `one order, one line — got ${said.length}`);
+    w.setRadar(radar.id, false);
+    assert.equal(said.length, 2, 'and the order that moves it does say so');
+  });
+});

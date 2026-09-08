@@ -177,18 +177,18 @@ a deliberate defence saves it on all eight):
 
 | | Standing | Score |
 |---|---|---|
-| Obey the freeze | **93** | 657 |
-| Defend it anyway | 91 | **1644** |
-| Refuse the order outright | 77 | 1644 |
+| Obey the freeze | **93** | 664 |
+| Defend it anyway | 91 | **1533** |
+| Refuse the order outright | 68 | 1533 |
 
-Defending the hospital is worth a thousand points of actual value, and the
-file prices the whole transgression at two: a query for rounds
+Defending the hospital is worth eight hundred and seventy points of actual
+value, and the file prices the whole transgression at two: a query for rounds
 expended outside the freeze, worth rather less than a leaker. A weapon that
 arrives at the struck-off place is billed at exactly nothing — the ledger
 cannot simultaneously declare a building undesignated and grieve for it — and
 the building's own loss appears on the state's books at nothing at all. Only
 the third row really moves. Refusing on the net, for the identical night's
-fighting, costs fourteen points more than quietly disobeying, plus a
+fighting, costs twenty-three points more than quietly disobeying, plus a
 referral that stays in the file. Sector command barely prices what you did.
 It punishes having said no, and that is the whole lesson.
 
@@ -856,18 +856,19 @@ A few decisions worth knowing about if you read the source:
   them in eight seconds instead of sixty-two, tube lamps that go green one at
   a time, and a bar counting down to the next rail rather than to a full rack.
   Measured over eight seeds in the cabin, competently played, the share of a
-  watch with a legal target in reach and nothing on the rails is now 10% on
-  Solo Battery, 10% on Low Riders, 20% on Weasel Hour and 10% on First Light.
-  Before the rack refilled a rail at a time the same three watches read 15%,
-  35% and 40%, against raids half again smaller than the ones those figures
-  are measured on now. First Light's is almost entirely the guidance pause
+  watch with a legal target in reach and nothing on the rails is now 9% on
+  Solo Battery, 18% on Low Riders, 24% on Weasel Hour and 15% on First Light —
+  re-measured after the act-one pass grew two of those raids, which is where
+  the last two figures went up. Before the rack refilled a rail at a time the
+  same three watches read 15%, 35% and 40%, against raids half again smaller
+  than the ones those figures are measured on now. First Light's is almost entirely the guidance pause
   below, on a tutorial whose reload multiplier is 0.35 — a rail there takes
   4.2 seconds, so it is a tenth of a watch in four-second pieces. (That knob
   was wired during the instruments scrub; the README had been quoting it for
   a while and nothing had ever read it.)
 
   The half of that number the loaders actually own is small, and the harness
-  now separates it (`reloadWaitShare`): six to eleven per cent of a watch. The
+  now separates it (`reloadWaitShare`): six to fifteen per cent of a watch. The
   rest is a battery that has fired its whole allocation, which no amount of
   loading faster will touch. Where that was the binding constraint the
   *allocation* was fixed rather than the hoist — Weasel Hour and Low Riders
@@ -990,25 +991,38 @@ A few decisions worth knowing about if you read the source:
   different words.
 
   **How much silence is actually left, honestly measured.** The figures above
-  were taken with a detector that counted ANY logged line as activity —
+  were once taken with a detector that counted ANY logged line as activity —
   including the `info` echo of the operator's own switch, and including a
   fresh NEW CONTACT every few seconds from a correlator that was inventing
-  aeroplanes. Against 896 runs it reported zero holes and a worst silence of
-  twenty-five seconds everywhere, on watches the playtesters described in
-  prose as five minutes of nothing. The instruments pass of the gameplay
-  scrub fixed both ends of that. The reading now: 457 of 896 runs carry a
-  stretch of thirty seconds or more in which nothing was engageable, nothing
-  was in flight, no order was pending and nothing an operator would look up
-  for reached the ticker; the worst single stretch is 398 seconds; the worst
-  watch spends 51% of itself inside one. That is not new behaviour — it is
-  the first honest reading of behaviour that was always there, and it is what
-  the pacing work now has to answer to.
+  aeroplanes. Against 896 runs it reported zero holes everywhere, on watches
+  the playtesters described in prose as five minutes of nothing. The
+  instruments pass fixed the detector and the honest reading was ugly: 457 of
+  896 runs carried a stretch of thirty seconds or more in which nothing was
+  engageable, nothing was in flight, no order was pending and nothing an
+  operator would look up for reached the ticker, the worst being 398 seconds
+  and the worst watch spending 51% of itself inside one.
+
+  The act-one pass then found the cause, and it was not the raids. Two of the
+  three devices that exist to fill those stretches were invisible to the
+  detector and, worse, to the console: scripted chatter logged as `info`, and
+  the quiet-net reporter both logged as `info` AND waited on a clock that any
+  `info` line reset — so the one function in the engine written to stop the
+  console going quiet was being switched off by the console's own noise. Both
+  now speak as `comms`, and the reporter's clock counts only the kinds that
+  are the watch doing something to you, which is the same set the harness
+  counts. The reading over the same 896 runs: **40 runs carry a stretch of
+  thirty seconds or more, the worst is 89 seconds, the worst watch spends 25%
+  of itself inside one, and no run in the campaign ends more than ninety
+  seconds after its last action.** Over act one specifically — 320 runs — it
+  is three runs, worst 71 seconds, and none over a tenth of a watch; the three
+  are the last ninety seconds of a night a spectator or a beginner has already
+  lost, where the plot is empty and sector has said so once.
 
 - **The watches are not all the same length, and one of them is deliberately
-  short.** Median watch length at 1x runs twelve to fourteen minutes across the
-  first four watches and fourteen to eighteen later, with two documented
+  short.** Median watch length at 1x runs eleven to thirteen minutes across the
+  first four watches and twelve to eighteen later, with two documented
   exceptions. The President's Flight is a single escort problem and ends when
-  the aircraft is down or away, at just under eight minutes. **First Light is
+  the aircraft is down or away, at nine minutes. **First Light is
   four contacts and then two, high and unhurried, with a five-step interactive
   tutorial in whichever seat you took, a cut-down console and a reload
   multiplier of 0.35** — it is the watch that teaches the scope, and it runs
@@ -1032,11 +1046,13 @@ A few decisions worth knowing about if you read the source:
   element that arrives close in and is engageable the moment it appears: the
   last spawn sits at 60-73% of the median watch on the four, and no watch in
   the set ends more than a minute and a half after its last engagement
-  resolves except one Weasel Hour seed at 101 s. Across the campaign the same
-  figure runs 39-73%, and the five watches under 55% — Across the Line and
-  Ville Under Fire at 39%, Two Cities at 39%, White Noise at 46%, Economy of
-  Force at 50% — are front-loaded raids with long codas, which is the pacing
-  work those watches still owe. Late packages are deliberately spawned at fifty to
+  resolves — no run of 896 does, where one Weasel Hour seed used to end 101 s
+  after its last action. Across the campaign the last-spawn figure runs 39-72%,
+  and the six watches under 55% — Across the Line at 39%, Two Cities at 41%,
+  Ville Under Fire at 42%, White Noise at 46%, Economy of Force at 50%,
+  President's Flight at 52% — are front-loaded raids with long codas, which is
+  the pacing work those watches still owe. Act one's four now read 70 / 64 / 72
+  / 69 per cent. Late packages are deliberately spawned at fifty to
   sixty-five kilometres rather than the engine's default hundred and fifty-five,
   because an ingress nobody can reach is not pressure, it is a countdown — and
   pulling Weasel Hour's whole raid inside BASTION's reach took its worst seed
