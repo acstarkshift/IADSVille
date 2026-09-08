@@ -439,22 +439,28 @@ export const SCENARIOS = [
     roles: ['net', 'crew', 'both'],
     seed: 'low-riders-04',
     /*
-     * ONE, and this is the watch where the number starts mattering.
+     * THREE, and the number moved because the count under it did.
      *
      * First Light forgives two because it is the watch you learn the controls
-     * on. This one is the second watch and it has THIRTY aircraft in seven
-     * packages on five axes, seventeen of them under BASTION's own horizon;
-     * forgiving two of those made it impossible to lose. (The sentence above
-     * used to say nineteen on four axes, and it was eleven aircraft and an
-     * axis out — counted from the built world during the gameplay scrub:
-     * 3+5+3+4+4+5+6 on bearings 350, 340, 330, about 20, and 255.) Measured,
-     * eight seeds a seat, competent play
-     * conceded nought to two leakers and held 24 of 24 watches — an act-2
-     * mission with no losing outcome at all. At one it holds 5 to 7 of 8
-     * depending on the seat, which is a watch you can fail, and the novice
-     * falls to about a third, which is a watch you can learn from.
+     * on. This one is the second watch and it has TWENTY-EIGHT aircraft in
+     * seven packages on five axes, fifteen of them under BASTION's own
+     * horizon. It forgave two, then one — and both of those numbers were
+     * written against a leaker count that omitted every cruise missile in the
+     * raid, which on this watch is twelve of the twenty-eight. The engine now
+     * counts a missile that arrives the same way it counts a bomb that is
+     * dropped (see `stepCruise`), so "one" was in truth an allowance of one
+     * bomb and twelve missiles, and the watch could not be lost the way its
+     * own file said it could.
+     *
+     * On the honest count, sixteen seeds a seat, competent play concedes a
+     * median of two: at an allowance of two the net holds 56 per cent, at
+     * three 81, at four 94. Three is the top of the difficulty band, which is
+     * where the second watch of the teaching act belongs, and it is the number
+     * that makes act one the easiest act rather than the hardest. The raid,
+     * the store and the five axes are untouched; what changed is that the
+     * number in this line now means what it says.
      */
-    leakerTolerance: 1,
+    leakerTolerance: 3,
     /*
      * Eighty-five seconds before sector command starts testing you, for the
      * same reason the teaching watch waits ninety-five. The first contact on
@@ -660,7 +666,17 @@ export const SCENARIOS = [
        */
       { atS: 300, type: 'striker', count: 5, bearingDeg: 25, spreadDeg: 18, spacingS: 16, altM: 6900,
         distanceKm: 100, targetAssetId: 'a_airbase' },
-      { atS: 435, type: 'cruise', count: 6, bearingDeg: 255, spreadDeg: 20, spacingS: 12, altM: 50,
+      /*
+       * FOUR, not six. Six missiles at fifty metres from fifty kilometres,
+       * arriving together on the one axis the long-range battalion cannot see
+       * under, is the single largest source of arrivals on this watch — and
+       * until the scrub made a missile that arrives a leaker, all six of them
+       * were free. Measured on the honest count at six: a competent net seat
+       * conceded 0 1 1 2 3 5 6 6 across the eight seeds, a spread wide enough
+       * that no allowance at all put the watch in the sixty-to-ninety band.
+       * At four the tail comes in and the beat is unchanged.
+       */
+      { atS: 435, type: 'cruise', count: 4, bearingDeg: 255, spreadDeg: 20, spacingS: 12, altM: 50,
         distanceKm: 50, targetAssetId: 'a_bridge' },
     ],
   },
@@ -673,7 +689,25 @@ export const SCENARIOS = [
     echelon: 'battalion',
     roles: ['crew'],
     seed: 'solo-battery-09',
-    leakerTolerance: 2,
+    /*
+     * FOUR, re-based on the honest count and with the wave table untouched.
+     *
+     * Five of this watch's sixteen aircraft are cruise missiles, and until the
+     * curve scrub made an arriving missile a leaker they could not fail the
+     * watch however many of them landed. At the old allowance of two the
+     * honest count holds six seeds of sixteen — below the band, on the watch
+     * whose seven alternative wave tables are all recorded below as worse.
+     *
+     * FIVE, and not four, and the reason is the operations centre rather than
+     * the count. SECTOR OPS is marked critical and its loss converts the
+     * verdict on its own, so three seeds of sixteen are lost before the
+     * allowance is consulted at all: this watch's held rate is capped at 81
+     * per cent whatever is forgiven, and it reaches that cap at five. That cap
+     * is what sets the ceiling for the whole of act two — no later watch may
+     * be easier than the hardest watch of the act before it — and it is the
+     * single most load-bearing number in the campaign's difficulty curve.
+     */
+    leakerTolerance: 5,
     playerBatteryId: 's_lance_e',
     /*
      * The crew brings its own set up at forty-five seconds if nobody has.
@@ -858,7 +892,28 @@ export const SCENARIOS = [
     echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'weasel-hour-02',
-    leakerTolerance: 2,
+    /*
+     * THREE, against a raid of twenty-two, and both numbers moved together.
+     *
+     * The act-one pass measured four raid sizes here and settled on twenty-one
+     * — but it settled on them against a leaker count that could not see a
+     * cruise missile arrive, and eight of this raid's twenty-two aircraft are
+     * cruise missiles. "Two" meant two bombs and eight missiles. Counted
+     * honestly at twenty-one aircraft and an allowance of two, sixteen seeds a
+     * seat, the net holds 88 per cent and the cabin 94 — the top of the band
+     * on the third watch of the game, which puts it above act one's hardest
+     * and breaks the curve at the first step of act two.
+     *
+     * The fix is one more missile on the late run at the power station (see
+     * the wave) and an allowance of three: net 75, cabin 88, both seats 81,
+     * with the store left where the act-one pass put it. Three raid sizes were
+     * measured at sixteen seeds before this one was kept — twenty-one holds
+     * 88/94/81, twenty-two with an extra LOW STRIKER holds 75/88/75 but takes
+     * the careful player down to 69/75/75, and twenty-three holds 94/81/88 and
+     * costs the cabin's expert twenty-six points. The extra missile is the
+     * least bad of the four and it lands where the invisible arrivals were.
+     */
+    leakerTolerance: 3,
     playerBatteryId: 's_bastion',
     roundAllowance: 18,
     /*
@@ -1009,7 +1064,24 @@ export const SCENARIOS = [
       { atS: 300, type: 'sead', count: 1, bearingDeg: 330, spacingS: 0, distanceKm: 125 },
       { atS: 340, type: 'striker', count: 5, bearingDeg: 15, spreadDeg: 24, spacingS: 24, altM: 200,
         distanceKm: 80, targetAssetId: 'a_bridge' },
-      { atS: 455, type: 'cruise', count: 4, bearingDeg: 305, spreadDeg: 20, spacingS: 12, altM: 60,
+      /*
+       * FIVE, not four, and this is where the honest count went.
+       *
+       * The late run at the operations centre is the last thing that happens
+       * on this watch and every round of it used to be free: `registerLeaker`
+       * was called from the moment a strike aircraft let go of what it was
+       * carrying, and a cruise missile IS what it is carrying. So the file
+       * could not see the one package that arrives after the allocation has
+       * been spent — which is the whole argument of a watch that issues
+       * eighteen rounds against twenty-two aircraft. One more of them, on the
+       * axis the suppression pair has been working all night, is what takes
+       * the net seat off the top of the difficulty band and puts act two
+       * below act one where it belongs. Measured at sixteen seeds: 88 per
+       * cent held becomes 75, and the cabin's magazine-limited share does not
+       * move (twenty per cent), because a missile at sixty metres is a
+       * horizon problem and not a store problem.
+       */
+      { atS: 455, type: 'cruise', count: 5, bearingDeg: 305, spreadDeg: 20, spacingS: 12, altM: 60,
         distanceKm: 65, targetAssetId: 'a_c2' },
     ],
   },
@@ -1022,7 +1094,42 @@ export const SCENARIOS = [
     echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'white-noise-07',
-    leakerTolerance: 3,
+    /*
+     * ONE, AND THE WAVE TABLE IS NOT TO BE GROWN. READ THIS BEFORE TOUCHING IT.
+     *
+     * This is the watch that carries the campaign's load-bearing property —
+     * that a commander choosing targets beats crews left to themselves — and
+     * `test/funfix.test.js` measures it here in two forms: hand play against
+     * set-free-and-walk-away, and an AI battle manager laid over free crews
+     * against those crews alone. The second is a ratio with a floor of 0.95.
+     *
+     * The curve scrub tried three times to make this watch harder by adding a
+     * fourth axis, and every version broke that ratio. Twenty-four seeds, the
+     * test's own construction: shipped table 0.977; four aeroplanes on the deck
+     * out of 248° 0.858; the same four at nine hundred metres 0.858; at four
+     * thousand two hundred metres and a hundred and ten kilometres 0.723;
+     * moving them to 196° so the crewed battery could not cover them 0.700.
+     * Even growing the existing low package from five aircraft to six and
+     * pulling it six kilometres closer reads 0.896. The mechanism is the same
+     * every time and it is worth writing down: MORE RAID ON THIS WATCH HELPS
+     * THE CREWS AND HURTS THE COMMANDER. A free crew shoots what enters its
+     * own ring and needs no picture to do it; a commander pairing the whole
+     * sector is the one who runs out of channels, and a package that arrives
+     * while he is already saturated is answered by whoever happens to be
+     * pointing at it. On the deck it was worse still — hand play scored 42.8
+     * per cent BELOW the walk-away — because he cannot pair what he has not
+     * seen.
+     *
+     * So the difficulty here is the STANDARD and not the aeroplanes, and one
+     * is what the standard has to be. Sixteen seeds a seat on the shipped
+     * table: competent play concedes nothing at all on eleven nights of
+     * sixteen, and holds 69 / 63 / 81 per cent at an allowance of none,
+     * 81 / 88 / 94 at one and 94 / 100 / 94 at two. One is the number, and on
+     * a watch whose whole subject is whether you can SEE what is coming, "one
+     * got through" being the difference between held and penetrated is the
+     * right sentence for it to end on.
+     */
+    leakerTolerance: 1,
     playerBatteryId: 's_lance_w',
     roundAllowance: 22,
     brief: [
@@ -1128,7 +1235,27 @@ export const SCENARIOS = [
     echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'economy-08',
-    leakerTolerance: 3,
+    /*
+     * TWO, and the standard is about designated places only.
+     *
+     * This is the campaign's measured moral hinge — `tools/measure-moral.mjs`
+     * reproduces the README's table off this raid — so its difficulty had to
+     * be built without turning the hospital into a difficulty knob. It cannot
+     * be one: the freeze strikes the building off the schedule, and
+     * `registerLeaker` follows the same recognition, so a weapon that arrives
+     * there is not in the count the verdict is read against. That is how this
+     * watch can print SECTOR HELD over the building it lost obeying, and it
+     * is the sentence the whole watch is for.
+     *
+     * So the pressure is on the places the schedule DOES name, and it arrives
+     * as the east package below. At three the watch held all twenty-four
+     * competent cells before that package existed; with it, sixteen seeds a
+     * seat, the honest count runs nought to four and the readings are
+     * 25 / 50 / 38 per cent at an allowance of one, 81 / 81 / 88 at two and
+     * 88 / 94 / 100 at three. Two is the rung, and all three seats sit inside
+     * the band on it.
+     */
+    leakerTolerance: 2,
     playerBatteryId: 's_lance_w',
     roundAllowance: 12,
     brief: [
@@ -1190,6 +1317,40 @@ export const SCENARIOS = [
       // and thirty: the last spawn used to land at half the median watch, so
       // the back third was a chase. Now the second half of the night is the
       // half the order is about.
+      /*
+       * THE EAST PACKAGE, AND IT IS WHY THE FREEZE COSTS ANYTHING.
+       *
+       * Every aeroplane on this watch used to arrive between 288° and 20°, so
+       * the whole sector could watch one half of the sky and the order to
+       * abandon the hospital was an order to give up rounds it had no other
+       * use for. Measured over eight seeds a seat, competent play let NOTHING
+       * designated through: nought arrivals on twenty-three of the twenty-four
+       * cells, at every allowance from three down to none.
+       *
+       * The airbase is a designated defended place, it is nineteen kilometres
+       * east of BASTION with nothing but HAMMER between it and the frontier,
+       * and nothing has ever come at it from that side. Four on the deck at
+       * seventy-eight kilometres, at three hundred and thirty seconds, means
+       * the sector is committed east while the western probe is still running
+       * — and the freeze is finally an order about rounds somebody else needs.
+       *
+       * The size, the height and the timing were all chosen by measurement,
+       * sixteen seeds a seat, and every direction cost something real. Six of
+       * them at two hundred and sixty metres puts all three seats on the same
+       * rung (75 / 75 / 75) and destroys the airbase on half the nights: mean
+       * score falls from 553 to 361 and the watch becomes one you hold while
+       * losing most of the ground, which is not what SECTOR HELD is supposed
+       * to mean. Pulling the second hospital package forward from 400 s to
+       * 355 s so the two arrive together reads 69 / 100 / 75 and takes the
+       * moral table with it — obedience's mean score falls from 48 to −24 and
+       * the cabin stops being able to lose the watch at all. Four on the deck
+       * at 330 s against the hospital package at 400 s is the version that
+       * leaves both the curve and the table intact: 81 / 81 / 88 held, and
+       * `node tools/measure-moral.mjs` still reads obey 51/48, defend 34/380,
+       * refuse 11/380.
+       */
+      { atS: 330, type: 'striker', count: 4, bearingDeg: 78, spreadDeg: 20, spacingS: 16, altM: 140,
+        distanceKm: 78, targetAssetId: 'a_airbase' },
       { atS: 400, type: 'striker', count: 2, bearingDeg: 292, spreadDeg: 14, spacingS: 20, altM: 320,
         distanceKm: 132, targetAssetId: 'a_hospital' },
     ],
@@ -1203,7 +1364,28 @@ export const SCENARIOS = [
     echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'across-11',
-    leakerTolerance: 2,
+    /*
+     * ONE, and the camp is not in the count.
+     *
+     * A leaker the file recognises is one at a place the schedule values, and
+     * the encampment is valued at nothing — deliberately, which is the whole
+     * watch. So both strays can come down at Gorna and the verdict will still
+     * read SECTOR HELD; what they cost is four hundred points of score and
+     * whatever you think of yourself. That was free until the curve scrub,
+     * because a cruise missile that arrived registered nothing at all; now it
+     * registers, and `registerLeaker` declines to count it at a place the
+     * schedule values at nothing — the same recognition the freeze uses one
+     * watch earlier. The debrief prints "1 (+1 UNCOUNTED)" and the ground
+     * table underneath names the camp.
+     *
+     * The allowance is therefore about the power station, the crossing and the
+     * town. At two a competent sector held every one of twenty-four seeds. At
+     * one, sixteen seeds a seat with the south-eastern package below in the
+     * table, it holds 75 / 69 / 81 — and a beginner holds 63 / 69 / 31, which
+     * is the only watch in act two where the net seat's novice is inside the
+     * band at all.
+     */
+    leakerTolerance: 1,
     playerBatteryId: 's_lance_w',
     roundAllowance: 18,
     brief: [
@@ -1263,6 +1445,34 @@ export const SCENARIOS = [
         distanceKm: 132, targetAssetId: 'a_bridge' },
       { atS: 320, type: 'striker', count: 3, bearingDeg: 297, spreadDeg: 22, spacingS: 18, altM: 220,
         distanceKm: 130, targetAssetId: 'a_town' },
+      /*
+       * THE CROSSING, FROM THE SOUTH-EAST, WHILE THE SECOND STRAY IS RUNNING.
+       *
+       * The point of this watch is that you decide twice, and the second
+       * decision has to cost something the first one did not. It did not:
+       * measured over eight seeds a seat, competent play conceded nought or
+       * one recognised arrival and held every one of twenty-four cells at
+       * every allowance down to one, so the second stray was answered by a
+       * sector with nothing else on its hands.
+       *
+       * Two low out of 118° at three hundred and sixty seconds, on the one
+       * bearing nothing has come from tonight. The crossing is twenty-three
+       * kilometres east of the town; only BASTION reaches it, and only once
+       * they are over its horizon, so this is a pair of contacts that appear
+       * late and have to be answered at once. They are still being fought when
+       * VAMPIRE STRAY 2 crosses the ridge at four hundred and thirty, which is
+       * the whole question asked a second time with the sector's hands full.
+       *
+       * TWO, and it was four first. Four took the watch to nought of eight
+       * held at an allowance of one — the hardest cell in the campaign, on the
+       * watch whose point is a choice rather than a workload — and the height
+       * went from 130 m to 160 m for the same reason the strays did: a
+       * hundred and twenty metres is BASTION's floor, and a package the one
+       * battery that reaches the crossing cannot legally engage is not a
+       * decision, it is a countdown.
+       */
+      { atS: 360, type: 'striker', count: 2, bearingDeg: 118, spreadDeg: 20, spacingS: 16, altM: 160,
+        distanceKm: 84, targetAssetId: 'a_bridge' },
       // A second one goes the same way later. By then you have already decided
       // what you are, and the only question is whether you do it twice. It sits
       // at 430 s rather than 330 because the last spawn used to land at 39% of
@@ -1282,7 +1492,19 @@ export const SCENARIOS = [
     seed: 'ville-under-fire-11',
     /** The political section has an interest in tonight's scheduled transit. */
     civilOrder: true,
-    leakerTolerance: 4,
+    /*
+     * THREE, on the honest count, and it is act two's hardest watch.
+     *
+     * Eight of this raid's thirty aircraft are cruise missiles on the deck and
+     * every one of them was free until the curve scrub counted an arriving
+     * missile as an arrival; four was written against a raid a quarter of
+     * which could not fail the watch. Sixteen seeds a seat on the honest
+     * count: 50 / 63 / 44 per cent held at two, 69 / 81 / 75 at three, 81 / 94
+     * / 81 at four. Three is the number, and the net seat's 69 is the floor of
+     * act two — which is what lets the district watches sit at 69 without
+     * being easier than the act before them.
+     */
+    leakerTolerance: 3,
     playerBatteryId: 's_thistle_t',
     roundAllowance: 30,
     brief: [
@@ -1352,8 +1574,19 @@ export const SCENARIOS = [
      * on more than half the seeds. Measured across eight: at eight the
      * competent player held seven of eight and the novice four; at six it is
      * five and one, which is the shape an act-three watch is supposed to have.
+     *
+     * EIGHT on the honest count. Nine of the thirty-four aircraft here are
+     * cruise missiles, and until the curve scrub none of them could ever be an
+     * arrival — so "six" meant six of the twenty-three strike aircraft, with
+     * the two low missile streams on Lozan and the valley free. Counted
+     * properly, sixteen seeds, competent play concedes a median of seven and
+     * the readings are 31 per cent held at six, 56 at seven, 69 at eight and
+     * 81 at nine. Eight is the rung, and eight is also what the district's own
+     * arithmetic says: thirteen batteries across a hundred and ninety
+     * kilometres, four of them under an officer who will not spend a round
+     * outside the priority of fires.
      */
-    leakerTolerance: 6,
+    leakerTolerance: 8,
     playerBatteryId: 's_bastion_d',
     roundAllowance: 40,
     centre: { x: 4, y: 6 },
@@ -1489,8 +1722,16 @@ export const SCENARIOS = [
      * battery and pre-empts the officers with a worse pairing, so it leaks a
      * shade MORE than the careless model that leaves them alone. It is the
      * instrument that cannot separate them here, not the raid.)
+     *
+     * SIX on the honest count. Six of the twenty-seven aircraft here are
+     * cruise missiles and none of them could ever be an arrival before the
+     * curve scrub. Sixteen seeds: competent play concedes a median of five and
+     * the readings are 19 per cent held at four, 56 at five, 69 at six and 81
+     * at seven. Six puts this watch level with Four Sectors, which is what an
+     * act wants — the two district watches are the same problem asked twice,
+     * once about the appointment and once about the order.
      */
-    leakerTolerance: 5,
+    leakerTolerance: 6,
     playerBatteryId: 's_bastion_d',
     roundAllowance: 36,
     centre: { x: 4, y: 6 },
@@ -1603,8 +1844,23 @@ export const SCENARIOS = [
      * Measured over eight: at three the novice holds three, the competent six
      * and the expert eight, which is what the last watch of the campaign is
      * supposed to look like.
+     *
+     * FOUR on the honest count. Nine of the twenty-eight aircraft on this
+     * board are cruise missiles — five at the palace and four in the valley —
+     * and every one of them arrived for nothing until the curve scrub counted
+     * it. Sixteen seeds on the net: 25 per cent held at three, 69 at four, 75
+     * at five. Four is the number, and it has to be four rather than five
+     * because the district watches hold 69 and nothing in act four may be
+     * easier than act three's hardest.
+     *
+     * From both seats the same night holds 94 per cent, which is above the
+     * band and is the watch's own arithmetic rather than an accident: the
+     * `both` seat is a national commander who is also crewing the one battery
+     * that reaches either city. Tightening further to bring it in would put
+     * the net seat under the floor — measured, at an allowance of three the
+     * net holds 4 of 16 — so the exception is recorded in the README instead.
      */
-    leakerTolerance: 3,
+    leakerTolerance: 4,
     playerBatteryId: 's_bastion',
     roundAllowance: 26,
     /**
@@ -1897,6 +2153,13 @@ export const SCENARIOS = [
     echelon: 'national',
     roles: ['net', 'both'],
     seed: 'presidents-flight-01',
+    /*
+     * The allowance is here for form's sake and decides nothing. This watch's
+     * verdict is the aeroplane: `result()` reads STATE 01 first, and over
+     * sixteen seeds a competent net seat concedes ZERO arrivals on every one
+     * of them. Its difficulty lives entirely in how many rounds the city takes
+     * off the corridor — see the palace package in the wave table.
+     */
     leakerTolerance: 4,
     playerBatteryId: 's_bastion_se',
     roundAllowance: 20,
@@ -2044,7 +2307,33 @@ export const SCENARIOS = [
        * is a round that is not available eighty kilometres to the south-east
        * four minutes later.
        */
-      { atS: 0, type: 'striker', count: 3, bearingDeg: 340, spreadDeg: 26, spacingS: 20,
+      /*
+       * FOUR at the palace, not three, and the reason is the curve rather than
+       * the corridor.
+       *
+       * This watch's verdict is the aeroplane and nothing else — no leaker
+       * allowance can touch it — so its difficulty lives entirely in how many
+       * rounds the city takes off the corridor. At three it was the easiest
+       * watch of the last two acts: sixteen seeds, competent play brought
+       * STATE 01 out on 88 per cent of nights against the district watches'
+       * 69, so the campaign got easier at exactly the point it is supposed to
+       * be hardest. At four it is 62 per cent, which is the bottom of the
+       * band and the bottom of the campaign, which is where the sealed watch
+       * belongs.
+       *
+       * A fourth FIGHTER at the far end of the corridor was tried first and
+       * answers the wrong question — the watch is not about whether you can
+       * shoot fighters, it is about whether you can afford to. A fifth striker
+       * over Mostrograd was tried too and took the competent seat to 50 per
+       * cent, under the floor. One more aeroplane over the city is the same
+       * pressure arriving where the brief puts it.
+       *
+       * AND THIS WATCH IS QUOTED AT SIXTEEN SEEDS FOR A REASON. Its verdict is
+       * one binary event, so eight seeds can only report it in twelve-and-a-
+       * half point steps and the same build reads 50 per cent on the first
+       * eight seeds and 62 on sixteen. The README's table says which.
+       */
+      { atS: 0, type: 'striker', count: 4, bearingDeg: 340, spreadDeg: 26, spacingS: 20,
         distanceKm: 100, altM: 6100, targetAssetId: 'a_palace' },
       { atS: 60, type: 'cruise', count: 3, bearingDeg: 355, spreadDeg: 22, spacingS: 14,
         distanceKm: 95, altM: 90, targetAssetId: 'a_airport' },

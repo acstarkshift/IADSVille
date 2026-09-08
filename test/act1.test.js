@@ -180,10 +180,15 @@ describe('the net measures silence the way the bar does', () => {
 });
 
 describe('the raid the cabin owns', () => {
-  test('Low Riders flies thirty aircraft in seven packages, as its file says', () => {
+  test('Low Riders flies twenty-eight aircraft in seven packages, as its file says', () => {
     const scenario = scenarioById('low-riders');
     const total = scenario.waves.reduce((n, wave) => n + wave.count, 0);
-    assert.equal(total, 30, 'the count in the scenario comment must match the table');
+    // Thirty until the curve scrub, when a cruise missile that arrives became
+    // a leaker the file counts. Six of them at fifty metres on the one axis
+    // BASTION cannot see under were the largest single source of arrivals on
+    // the watch and had been free; at four the beat is unchanged and the
+    // allowance means what it says.
+    assert.equal(total, 28, 'the count in the scenario comment must match the table');
     assert.equal(scenario.waves.length, 7, 'seven packages');
     // Five distinct axes: 350 / 340 / 330 out of the north-west, about 20 out
     // of the north-east (three packages share it), and 255 from the west. The
@@ -239,10 +244,15 @@ describe('a gauge with nothing behind it is dead weight', () => {
 });
 
 describe('the act-one examination', () => {
-  test('Weasel Hour flies twenty-one aircraft, and its comment says so', () => {
+  test('Weasel Hour flies twenty-two aircraft, and its comment says so', () => {
     const scenario = scenarioById('weasel-hour');
     const total = scenario.waves.reduce((n, wave) => n + wave.count, 0);
-    assert.equal(total, 21,
+    // Fifteen could not be failed by a beginner; twenty-one could not be
+    // failed by a competent net once arriving cruise missiles were counted
+    // (88% held at sixteen seeds, above act one's hardest watch). The
+    // twenty-second is one more missile on the late run at the operations
+    // centre — the package that arrives after the allocation is spent.
+    assert.equal(total, 22,
       'fifteen aircraft against four batteries could not be failed by a beginner');
   });
 
