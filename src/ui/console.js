@@ -569,8 +569,16 @@ export function engagementStatus(world, site, track) {
     };
   }
 
+  /*
+   * And no estimate at all from a battery whose guidance antenna is
+   * wreckage. Seen in a real watch: the cabin reading EST KILL PROB 80% and
+   * IN ENVELOPE 42 KM beside "FIRE CONTROL DESTROYED — THIS BATTERY CANNOT
+   * GUIDE A ROUND". The geometry was true and the promise was not, and a
+   * console that prices a shot it cannot take is the same lie in a different
+   * font.
+   */
   let pkEstimate = null;
-  if (track && env?.ok) {
+  if (track && env?.ok && radar?.alive) {
     const known = AIR_TYPES[track.classification] ? track.classification : 'striker';
     pkEstimate = computeSamPk(site, { pos: track.pos, altM: track.altM, type: known },
       null, world.difficulty);
