@@ -397,7 +397,23 @@ export const DIRECTIVES = {
       + 'Acknowledge on the net.',
     plain: () => 'SECTOR: Priority of fires is the presidential palace, Mostrograd. '
       + 'All batteries. Acknowledge.',
-    trigger: (w) => w.scenario.finale === true && w.t > 35,
+    /*
+     * IT LANDS WHEN THE THING IT IS ABOUT IS ON THE BOARD.
+     *
+     * It used to fire on the clock at thirty-five seconds. Traced on the
+     * finale's net seat, first hostile contact is at forty-five: the campaign's
+     * central order about which of two cities is allowed to matter arrived ten
+     * seconds BEFORE either raid existed, and answering it cost nothing because
+     * there was nothing yet to weigh. It now waits for a contact the picture
+     * calls hostile and a minute after the first one painted, which on the same
+     * seeds puts it at 105 s with both axes developing — and still a long way
+     * inside the western axis's own spawn, so the brief's promise that you
+     * commit before you know what committing costs is kept.
+     */
+    trigger: (w) => w.scenario.finale === true
+      && w.firstContactAtS !== null
+      && w.t > w.firstContactAtS + 60
+      && [...w.tracks.values()].some((t) => t.hostility === 'hostile' && !t.destroyed),
     onAccept: (w) => {
       const palace = w.assets.find((a) => a.type === 'palace');
       w.command.constraints.priorityOfFiresId = palace?.id ?? null;

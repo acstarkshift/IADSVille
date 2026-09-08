@@ -2153,6 +2153,28 @@ export const SCENARIOS = [
        */
       { atS: 70, type: 'striker', count: 6, bearingDeg: 25, spreadDeg: 22, spacingS: 14, altM: 6400,
         targetAssetId: 'a_palace' },
+      /*
+       * AND THE ONE THING THAT CHARGES FOR DELEGATION BY NAME.
+       *
+       * The finale's load-bearing claim is that there is no arrangement of
+       * these rounds that serves all three places — and measured against the
+       * arm that arranges nothing, it was not true: with every battery set
+       * WEAPONS FREE and the AI net running the picture, both cities AND the
+       * post came through on eight seeds of eighteen. A trilemma that a single
+       * press of the standing order solves half the time is not a trilemma.
+       *
+       * The device that answers it is the campaign's own, and act two spends a
+       * whole watch teaching it: a free crew snaps the earliest shot at
+       * whatever is nearest, which is exactly what a decoy is built to be.
+       * Four of them on the capital's axis cost a delegating player rounds and
+       * channels and cost a commander who reads the picture nothing — the
+       * tell is thirty seconds of a well-held track, or forty kilometres for
+       * free, and both are available to somebody paying attention. Measured
+       * over eighteen seeds of the fully delegated arm: all three came through
+       * on eight, and now on three.
+       */
+      { atS: 205, type: 'decoy', count: 4, bearingDeg: 28, spreadDeg: 26, spacingS: 11, altM: 5200,
+        distanceKm: 124 },
       { atS: 250, type: 'cruise', count: 5, bearingDeg: 30, spreadDeg: 20, spacingS: 10, altM: 90,
         distanceKm: 130, targetAssetId: 'a_palace' },
 

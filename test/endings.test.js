@@ -137,12 +137,31 @@ describe('the scenario itself', () => {
 describe('the order', () => {
   const world = () => new World(scenarioById(FINALE_ID), { role: 'net' });
 
-  test('it arrives before the western axis could possibly be detected', () => {
+  test('it arrives on a fight, and still before the western axis exists', () => {
+    /*
+     * Both halves matter and they used to be in tension only because the order
+     * fired on the clock. At t > 35 it landed ten seconds BEFORE the first
+     * hostile contact of the watch, so the campaign's central question was put
+     * to an empty scope. It now waits for a hostile track and a minute of
+     * fighting behind it — and the western axis, which is what makes the
+     * answer expensive, is still a long way from existing when it arrives.
+     */
     const w = world();
     const westernSpawn = Math.min(...w.pendingWaves
       .filter((p) => p.bearingDeg > 250 && p.bearingDeg < 320).map((p) => p.atS));
-    assert.ok(DIRECTIVES.palacePriority.trigger({ ...w, t: 60 }));
-    assert.ok(westernSpawn > 60,
+    let firedAtS = null;
+    let n = 0;
+    while (w.phase === 'running' && firedAtS === null && n < 4000) {
+      for (const radar of w.radars) if (radar.alive) radar.on = true;
+      w.step(0.1);
+      if (w.command.pending?.id === 'palacePriority') firedAtS = w.t;
+      n++;
+    }
+    assert.ok(firedAtS !== null, 'the order goes out');
+    assert.ok(w.firstContactAtS !== null && firedAtS >= w.firstContactAtS + 60,
+      `the order arrived at ${Math.round(firedAtS)}s against a first contact at `
+      + `${Math.round(w.firstContactAtS)}s — a hinge lands on a fight`);
+    assert.ok(westernSpawn > firedAtS,
       'you are asked to commit before you know what committing costs');
   });
 
@@ -425,6 +444,17 @@ describe('the last watch, played', () => {
       }
       if (world.outcome.endingId === 'exemplary') allThree++;
     }
+    /*
+     * Re-measured, and the number it is measured against moved.
+     *
+     * The residue pass found this property broken at eighteen seeds and passing
+     * at six by luck: with every battery WEAPONS FREE and the AI net running
+     * the picture, all three came through on EIGHT nights of eighteen. The fix
+     * is the campaign's own device rather than a bigger raid — four air-launched
+     * decoys on the capital's axis, which cost a crew that snaps the earliest
+     * shot at whatever is nearest and cost a commander who reads the shootlist
+     * nothing. Eighteen seeds after: one.
+     */
     assert.ok(allThree <= seeds.length / 3,
       `both cities and the post came through on ${allThree} of ${seeds.length} seeds with everything`
       + ' delegated; the raid is no longer big enough for the choice to be a choice');

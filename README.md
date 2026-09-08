@@ -653,6 +653,23 @@ survive takes the only battery that reaches either city off the air for three
 and a half minutes. There is no arrangement of those rounds that serves all
 three.
 
+**And that sentence had stopped being true against the player who arranges
+nothing.** Measured over eighteen seeds with every battery set WEAPONS FREE and
+the AI net running the picture — the one-click strategy — both cities AND the
+post came through on eight of them. A trilemma a standing order solves half the
+time is not a trilemma, and the six-seed regression test that guards the
+property was passing on the seeds it happened to draw. The answer is the
+campaign's own device rather than a heavier raid: four air-launched decoys now
+come down the capital's axis at three and a half minutes, a hundred and twenty
+kilometres out and forty-five seconds ahead of the missiles behind them. A crew
+on weapons free snaps the earliest shot at whatever is nearest, which is
+precisely what a decoy is built to be; a commander reading the shootlist pays
+nothing, because the tell is thirty seconds of a well-held track or forty
+kilometres for free. Eighteen seeds after: **one**. Nothing else about the raid
+or the store moved, the net seat holds 69% competently played over sixteen
+seeds exactly as before, and its score spread fell from a coefficient of
+variation of 0.55 to 0.31.
+
 It has to be answerable, and for a long time it was not. The package for the
 post released at about ten minutes, and BASTION — the battery the post travels
 with, and the only one that reaches either city — was dry at five and a half:
@@ -1437,13 +1454,30 @@ A few decisions worth knowing about if you read the source:
   which is the ceiling to the tenth of a minute. No watch is lengthened for
   anybody who is at the console.
 
-  *Two Cities from both seats holds 94% competently played*, against a 60-90%
-  rule, where the same player on the net holds 69%. The `both` seat is a
-  commander who is also crewing the one battery that reaches either city; that
-  it is the easier seat is the watch's own arithmetic and not an accident, and
-  bringing it inside the band by tightening the leaker allowance further would
-  put the net seat below the floor (measured: at a tolerance of three, net
-  competent falls to 25%).
+  *Two Cities is magazine-bound for half its length, and the store is not what
+  fixes it.* The harness reports the magazine as the ONLY thing between the
+  operator and a legal shot for 50% of that watch, against a 25% ceiling. The
+  obvious answer is a bigger store, and it was measured: raising `storeMult`
+  from a third to a half and the long battalion's from a half to two thirds
+  moves the sole-limiter share **not at all** — it reads 50% before and 50%
+  after — while it does move the difficulty (net competent 69% to 100% over
+  sixteen seeds) and it re-breaks the property below. What that share is
+  measuring on this watch is tempo: three axes, thirty-one aircraft and
+  seventy rounds fired means a battery is cycling its rack almost continuously,
+  and most of the residue is the guidance pause the design notes above pay for
+  knowingly (the loaders do not work while the launcher is guiding). The share
+  stays, because the alternative is a watch about a hoist.
+
+  *And careful play falls behind competent play there, at 56% against 69% over
+  thirty-two seeds.* The cause is nameable: the expert model has the decoy tell
+  in the cabin and not on the net, so its greedy pairing spends channels on the
+  capital's decoy stream. Putting the tell on the net was re-measured this pass
+  on thirty-two seeds and is catastrophic elsewhere — White Noise's net expert
+  falls from 75% held to 9% — because that watch's decoys arrive alongside the
+  strike and waiting hands the sector back its own release ring. The verb the
+  finale wants and White Noise refuses is the same verb, and no version of it
+  has been found that pays on both. It is a model gap, it is written here, and
+  it is the next pass's.
 
   *Economy of Force's cabin holds 81% and its careful player 75%*, and both are
   the same fact about the same watch — see the note on the ledger tax above.
@@ -1504,7 +1538,7 @@ A few decisions worth knowing about if you read the source:
   | Ville Under Fire | 0-44% | 0-44% | 63-88% | 75-100% |
   | Four Sectors | 0% | 38% | 69% | 100% |
   | Reinforce the Capital | 0% | 56% | 69% | 94% |
-  | The Two Cities | 0% | 6-13% | 69-94% | 63-81% |
+  | The Two Cities | 0% | 9-13% | 69-75% | 56% |
   | The President's Flight | 9-31% | 34% | 66-75% | 78% |
 
   (Ranges are across the seats each watch offers; Solo Battery has only the
