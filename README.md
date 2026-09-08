@@ -1434,9 +1434,11 @@ A few decisions worth knowing about if you read the source:
 
   \* the documented teaching exception, below.
 
-  Every act's *easiest* watch is at or below the hardest watch of the act
-  before it — 81 ≥ 81, 69 ≥ 69, 69 ≥ 69 — and the act means fall
-  monotonically. It was not a staircase before this was measured: act two used
+  The rule is that no watch may be easier than the hardest watch of the act
+  before it, and each act clears it exactly: act one's hardest holds 81 and
+  act two's easiest holds 81; act two's hardest holds 69 and act three's
+  easiest holds 69; act three's hardest holds 69 and act four's easiest holds
+  69. The act means fall monotonically with it. It was not a staircase before this was measured: act two used
   to hold 100 / 88 / 100 / 100 / 88 against act one's 100 / 63 / 88, so the
   second act of four was the easiest thing in the game and three of its watches
   could not be lost by a competent player on any seat, while act four held 75
