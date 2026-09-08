@@ -141,7 +141,7 @@ describe('the corridor', () => {
      * Deliberately, and for the same reason as the last watch: the constraint
      * has never been the equipment. One battalion reaches the whole departure
      * route, and has four channels, eight rounds on the rails and a ninety-five
-     * second reload against four fighters and two more packages going for the
+     * second reload against six fighters and two more packages going for the
      * city and the field. The geometry says yes and the arithmetic says no.
      */
     const bastion = epilogue.sites.find((s) => SAM_TYPES[s.type].class === 'long');
@@ -156,12 +156,26 @@ describe('the corridor', () => {
       'and there are far more contacts than it has channels to hold them with');
   });
 
-  test('there are four fighters and they carry one round each', () => {
+  test('there are six fighters and they carry one round each', () => {
+    /*
+     * Six, not four. Re-anchored on measurement, not loosened: at four
+     * fighters releasing from twenty-six kilometres at a kill probability of
+     * 0.55, the best corridor play the console allows still let exactly one
+     * round leave a rail on eight seeds of eight — the aeroplane's fate was one
+     * coin flip and no amount of skill moved it. Six shorter-legged rounds at
+     * 0.38 is the same expected number of hits against a defence that does
+     * nothing, with a gradient underneath it. The property this test exists for
+     * is unchanged and is asserted below: one pass, one round, so every fighter
+     * stopped short of its launch point is a launch that never happens.
+     */
     const fighters = epilogue.waves.filter((w) => w.type === 'interceptor');
     const total = fighters.reduce((n, w) => n + w.count, 0);
-    assert.equal(total, 4);
+    assert.equal(total, 6);
     assert.equal(AIR_TYPES.interceptor.airToAir, 1,
       'one pass, one round — so every fighter stopped is a launch prevented');
+    assert.ok(AIR_TYPES.interceptor.airToAirRangeKm
+      < SAM_TYPES.bastion.maxRangeKm,
+    'and the release point is inside the reach of the battalion holding the corridor');
     assert.ok(AIR_TYPES.interceptor.speed > AIR_TYPES.vip.speed * 1.5,
       'a fighter that cannot run down what it is chasing is an escort');
   });
@@ -170,6 +184,59 @@ describe('the corridor', () => {
     const ground = epilogue.waves.filter((w) => w.type === 'striker' || w.type === 'cruise');
     assert.ok(ground.length >= 2, 'something is also coming for the city and the field');
     assert.ok(ground.every((w) => w.targetAssetId), 'and it is aimed at named places');
+  });
+});
+
+describe('the verdict reads the aeroplane', () => {
+  /*
+   * The watch exists to protect one aircraft, and for a long time its own file
+   * did not know that: `success` was computed from the reason, the critical
+   * places and the leaker count, none of which the corridor touches. Measured
+   * over sixty-four runs, every one of them reported held=true and thirty of
+   * them had destroyed the aeroplane — SECTOR HELD printed beside a flight
+   * strip reading DESTROYED, with `cause: null`.
+   */
+  const escort = () => new World(scenarioById('presidents-flight'), { role: 'net', seed: 'verdict' });
+
+  test('an aeroplane that got out is a watch held', () => {
+    const held = escort().result('raid-spent');
+    assert.equal(held.success, true);
+    assert.equal(held.headline, 'SECTOR HELD');
+    assert.equal(held.cause, null);
+  });
+
+  test('an aeroplane that did not is a watch lost, and the headline says which', () => {
+    const w = escort();
+    w.stats.vipDown = true;
+    w.stats.vipDownedBy = 'enemy';
+    const lost = w.result('raid-spent');
+    assert.equal(lost.success, false);
+    assert.equal(lost.headline, 'STATE 01 WAS LOST');
+    assert.match(lost.cause, /STATE 01 WAS DESTROYED IN THE CORRIDOR/);
+  });
+
+  test('and a round from this sector is a different sentence', () => {
+    const w = escort();
+    w.stats.vipDown = true;
+    w.stats.vipDownedBy = 'operator';
+    assert.match(w.result('raid-spent').cause, /A ROUND FROM THIS SECTOR/);
+  });
+
+  test('the aeroplane is worth more than anything else on the board', () => {
+    const w = escort();
+    const held = w.result('raid-spent').score;
+    w.stats.vipDown = true;
+    const lost = w.result('raid-spent').score;
+    assert.ok(held - lost >= 600,
+      `the flight is scored (held ${held}, lost ${lost})`);
+  });
+
+  test('no other watch is scored on an aircraft it does not have', () => {
+    const w = new World(scenarioById('first-light'), { role: 'net', seed: 'verdict' });
+    const before = w.result('raid-spent').score;
+    w.stats.vipDown = true;
+    assert.equal(w.result('raid-spent').score, before);
+    assert.equal(w.result('raid-spent').headline, 'SECTOR HELD');
   });
 });
 

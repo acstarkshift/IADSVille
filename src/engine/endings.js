@@ -60,6 +60,8 @@ export function readFinale(result) {
     postHarm,
     /** You were not there at the end of it. */
     overrun: !!result.stats.postOverrun,
+    /** How long the raid actually ran on afterwards, so the text can say so. */
+    playedOutS: result.stats.playedOutS ?? 0,
     /** You moved your own position out of the way, deliberately. */
     displaced: !!result.stats.displacedToSurvive,
     // "Held" means the place is still standing and still working. A defended
@@ -287,7 +289,7 @@ export const ENDINGS = {
     standing: 6,
     lines: (r, character) => [
       `The palace is intact. The Ville is standing${r.casualties ? `, with ${r.casualties} casualties recorded` : ' and no casualties are recorded'}.`
-        + ' Twenty-seven aircraft were committed against this sector and both places were held.',
+        + ' Twenty-eight aircraft were committed against this sector and both places were held.',
       'The state broadcast describes the defence of the capital. It does not mention the valley, because'
         + ' the valley contains no designated defended places and therefore nothing happened there.',
       r.againstOrder
@@ -317,11 +319,20 @@ export const ENDINGS = {
     plainSummary: (r) => `You displaced and the post was not hit. The palace took ${Math.round(r.palaceHarm * 100)}% damage and the Ville ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties.`,
     standing: -38,
     lines: (r, character) => [
+      /*
+       * Two figures in this ending used to be invented. The strike package did
+       * not arrive "forty minutes later" — it arrived in the minutes after the
+       * column left — and BASTION did not need "eleven minutes afterwards to
+       * set up and acquire", because the engine applies the displacement time
+       * and a twelve-second warm-up and nothing else. A debrief is the one
+       * place in this game that must not make up its own arithmetic.
+       */
       'You ordered the displacement at the point where the third axis was committed, and the strike'
-        + ' package arrived over an empty field forty minutes later. The post is intact. Every man and'
-        + ' woman on it is intact.',
-      `BASTION was off the air for the three and a half minutes that took, and for the eleven it needed`
-        + ' afterwards to set up and acquire. Both raids ran through that window.',
+        + ' package arrived over a field with wheel ruts in it and nothing else. The post is intact.'
+        + ' Every man and woman on it is intact.',
+      'BASTION was off the air for the three and a half minutes that took, and for the time after it'
+        + ' while the set warmed and the crews found the picture again. Both raids ran through that'
+        + ' window.',
       `The palace is assessed at ${Math.round(r.palaceHarm * 100)}% damage. The Ville is assessed at`
         + ` ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties recorded in the valley.`,
       r.homeDistrictHit
@@ -348,7 +359,8 @@ export const ENDINGS = {
     standing: -55,
     lines: (r, character) => [
       'The third axis was not engaged in time. The forward post was struck while the battalion was'
-        + ' still guiding, and the watch continued for another nineteen minutes without anybody on it.',
+        + ` still guiding, and the watch continued for another ${Math.max(1, Math.round(r.playedOutS / 60))}`
+        + ' minutes without anybody on it.',
       `In that time the palace reached ${Math.round(r.palaceHarm * 100)}% damage and the Ville`
         + ` ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties in the valley. The`
         + ' batteries that were already engaged finished their engagements and then stopped, because'

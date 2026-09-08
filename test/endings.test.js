@@ -97,11 +97,29 @@ describe('the scenario itself', () => {
     }
   });
 
-  test('there is no resupply, so the rails are the whole allowance', () => {
-    assert.equal(finale.supply.reloadsAllowed, false);
+  test('there is no resupply: the store is what the batteries carried in', () => {
+    /*
+     * RE-ANCHORED, and it is a tightening rather than a loosening.
+     *
+     * This used to assert `reloadsAllowed === false` — no store at all, the
+     * rails and nothing behind them. Measured, that made the watch a hoist
+     * problem instead of a choice: the magazine was the only thing between the
+     * operator and a legal shot for two thirds of it, the crewed battery was
+     * dry at five minutes of a sixteen-minute night, and the harness's careless
+     * player model out-held its careful one on both seats. There is a store
+     * now, and it is small and declared per battery in the scenario file. The
+     * property the test defends is the one that was always the point: nothing
+     * arrives from outside, and what a battery has tonight is a fraction of
+     * what it would carry on any other night.
+     */
     const world = new World(finale, { role: 'net' });
-    assert.ok(world.sites.every((s) => s.magazine === 0));
-    assert.equal(world.reload(world.sites[0].id), false);
+    const bastion = world.sites.find((s) => SAM_TYPES[s.type].class === 'long');
+    assert.ok(bastion.magazine > 0 && bastion.magazine <= bastion.rails,
+      `the long battalion has one refill and no more (${bastion.magazine} behind ${bastion.rails})`);
+    for (const site of world.sites) {
+      assert.ok(site.magazine <= SAM_TYPES[site.type].magazine * 0.5,
+        `${site.name} carries a fraction of a rack, not a depot (${site.magazine})`);
+    }
   });
 
   test('the scenario supply only ever tightens what the campaign granted', () => {
@@ -109,8 +127,10 @@ describe('the scenario itself', () => {
       role: 'net',
       modifiers: { roundsMult: 1.3, reloadsAllowed: true },
     });
-    assert.equal(spoiled.modifiers.reloadsAllowed, false,
-      'a favoured operator still gets no resupply on this watch');
+    for (const site of spoiled.sites) {
+      assert.ok(site.magazine < SAM_TYPES[site.type].magazine,
+        `a favoured operator still fights on a fraction of a rack (${site.name} ${site.magazine})`);
+    }
   });
 });
 

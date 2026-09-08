@@ -121,7 +121,23 @@ const PROTECTED_FLIGHT_VALUE = 82;
  * scored — by how near this contact will pass and how soon — so the same sort
  * order that serves the operator serves the batteries.
  */
-function flightThreat(world, track) {
+/**
+ * Is this contact hunting the aircraft, rather than merely airborne near it?
+ *
+ * `flightThreat` is a continuous number and is non-zero for anything at all
+ * while the state aircraft is up, which makes it a sort key and not a fact. A
+ * fact is what the console prints and what a player decides on: this contact
+ * will pass within twenty-five kilometres of STATE 01, and inside five minutes.
+ * Every fighter on the escort watch answers it and nothing else does.
+ */
+export function huntsTheFlight(world, track) {
+  const vip = world.vipAircraft?.();
+  if (!vip) return false;
+  const cpa = closestApproachBetween(track, vip);
+  return Number.isFinite(cpa.ttiS) && cpa.missKm < 25 && cpa.ttiS < 300;
+}
+
+export function flightThreat(world, track) {
   const vip = world.vipAircraft?.();
   if (!vip) return 0;
   const cpa = closestApproachBetween(track, vip);

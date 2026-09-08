@@ -44,6 +44,24 @@ import { composeFlightEnding } from './epilogue.js';
 const RESERVE_TRANSIT_S = 240;
 
 /**
+ * What the aeroplane is worth, on the one watch that is about an aeroplane.
+ *
+ * Six hundred, which is a little under the presidential palace intact (70 × 10)
+ * and a good deal more than anything else on that board. Sector command's order
+ * is "at all cost" and the score is where an order becomes a number.
+ *
+ * Until this existed the escort watch scored exactly as if STATE 01 were
+ * scenery: the file printed SECTOR HELD over its wreck on thirty runs of
+ * sixty-four, and a competent player was seven per cent ahead of one who
+ * touched nothing, because the only thing either of them could change was worth
+ * nothing at all. At four hundred the ladder existed but was flat — the careful
+ * player and the expert differed by five per cent on a watch where one of them
+ * brought the aeroplane home twice as often. Six hundred prices the difference
+ * at what the watch says it is.
+ */
+const FLIGHT_VALUE = 600;
+
+/**
  * Log kinds that are the watch doing something TO the operator.
  *
  * A launch, a kill, an alarm, a warning, an order, somebody on the radio. NOT
@@ -173,6 +191,16 @@ export class World {
       displacedToSurvive: false,
       /** Set if it was overrun anyway. */
       postOverrun: false,
+      /**
+       * Seconds the raid ran on after the post fell, for the debrief to quote.
+       *
+       * The overrun ending used to assert "another nineteen minutes" over a
+       * clock that never once agreed with it — measured across twenty-eight
+       * overrun runs the remainder is five and a half to eight and a half. A
+       * debrief that invents its own arithmetic is the one part of this game
+       * that must not.
+       */
+      playedOutS: 0,
       /**
        * Rounds expended, attributed to the defended place the target appeared to
        * be going for. On the last watch this is the record of what you chose,
@@ -370,9 +398,17 @@ export class World {
          * because the type's sixteen rounds are right for the watches that
          * were built around them.
          */
+        /*
+         * A battery may also carry its own figure, which is how a watch says
+         * "the depots are committed elsewhere and the long battalion has one
+         * refill in its own store". Scenario-wide multipliers are a blunt
+         * instrument on a board of seven batteries: measured on the finale,
+         * giving every battery a second rack added eighty-eight rounds against
+         * a twenty-three-aircraft raid and every player model held every seed.
+         */
         magazine: this.modifiers.reloadsAllowed
           ? Math.round(type.magazine * this.modifiers.roundsMult
-            * (this.scenario.storeMult ?? 1))
+            * (spec.storeMult ?? this.scenario.storeMult ?? 1))
           : 0,
         /**
          * And what that store was at the top of the watch, kept because
@@ -385,7 +421,7 @@ export class World {
          */
         magazineIssued: this.modifiers.reloadsAllowed
           ? Math.round(type.magazine * this.modifiers.roundsMult
-            * (this.scenario.storeMult ?? 1))
+            * (spec.storeMult ?? this.scenario.storeMult ?? 1))
           : 0,
         /** Seconds until the next round seats. See `stepLoading`. */
         reloadRemainingS: 0,
@@ -1097,15 +1133,23 @@ export class World {
    * Does this contact hold the watch open?
    *
    * Everything hostile does, until it is a hundred kilometres out and running.
-   * Civil traffic never does — the watch is not waiting on an airliner to leave
-   * the corridor. The state aircraft does, and is the only friendly that ever
-   * has: the entire question of that watch is whether it gets out, so ending it
-   * the moment the last fighter dies would decide the thing being asked.
+   * Nothing friendly ever does — not civil traffic, and not the state aircraft
+   * either.
+   *
+   * It used to hold the watch open until STATE 01 crossed the two-hundred-and-
+   * ten-kilometre world rim at a quarter of a kilometre a second, on the theory
+   * that ending the watch when the last fighter died would decide the question
+   * being asked. It does not: nothing that can reach the aeroplane is left on
+   * the board, so what the rule actually bought was fifty to a hundred and
+   * ninety seconds of one friendly symbol crawling across an empty scope, every
+   * hole in the watch, and a last hostile spawn stranded at half the run time.
+   * The corridor is answered when there is nothing left in it — see `checkEnd`,
+   * which says so in the log before it closes the watch.
    */
   holdsWatchOpen(aircraft) {
     if (!aircraft.alive) return false;
     const type = AIR_TYPES[aircraft.type];
-    if (type.friendly && !type.isVip) return false;
+    if (type.friendly) return false;
     /*
      * A decoy is not something the watch is waiting on. It carries nothing, it
      * cannot arrive at anything, and it comes down on its own at the end of a
@@ -2120,6 +2164,17 @@ export class World {
     const liveHostiles = this.aircraft.some((a) => this.holdsWatchOpen(a));
     const liveRounds = this.missiles.some((m) => m.alive);
     if (this.pendingWaves.length === 0 && !liveHostiles && !liveRounds) {
+      /*
+       * Nothing is left that could reach the corridor, so the aeroplane is
+       * through it. Said out loud, because the watch closing on an aircraft
+       * still drawn on the tube needs a sentence — and because this is the
+       * only good news the epilogue has.
+       */
+      const vip = this.vipAircraft();
+      if (vip && this.scenario.epilogue && !this.stats.vipDown && !this.stats.vipEscaped) {
+        this.stats.vipEscaped = true;
+        this.log('good', `${vip.name} — CLEAR OF NATIONAL AIRSPACE`, { severity: 'high' });
+      }
       this.finish('raid-spent');
     }
   }
@@ -2137,6 +2192,7 @@ export class World {
       }
     }
     const wasDestroyed = this.console.destroyed;
+    const fellAtS = this.t;
     this.console.destroyed = false;   // so checkEnd does not recurse
     let steps = 0;
     while (steps < 20000) {
@@ -2154,6 +2210,7 @@ export class World {
     }
     this.console.destroyed = wasDestroyed;
     this.stats.postOverrun = true;
+    this.stats.playedOutS = this.t - fellAtS;
   }
 
   finish(reason) {
@@ -2258,8 +2315,15 @@ export class World {
       + this.stats.civilianCasualties * 2;
     const equipmentPenalty = this.stats.sitesLost * 60 + this.stats.radarsLost * 35;
 
+    /*
+     * And the aeroplane, on the watch that is about an aeroplane. It is scored
+     * exactly like a place that was kept: present if it got out, gone if it did
+     * not, and nothing in between — an escort is not a damage percentage.
+     */
+    const flightScore = this.scenario.epilogue && !this.stats.vipDown ? FLIGHT_VALUE : 0;
+
     const score = Math.round(
-      assetScore + killScore + turnedBackScore
+      assetScore + killScore + turnedBackScore + flightScore
       - leakerPenalty - roundCost - civilPenalty - equipmentPenalty,
     );
 
@@ -2268,12 +2332,25 @@ export class World {
     // leakers the file recognises: a watch that obeyed the freeze reads
     // SECTOR HELD over the building it lost doing so. That is the point.
     const leakersCounted = this.stats.leakers - (this.stats.leakersUnrecognized ?? 0);
-    const success = reason !== 'site-lost' && !criticalLost && leakersCounted <= (this.scenario.leakerTolerance ?? 2);
+    /*
+     * And on the escort watch the verdict is the aeroplane.
+     *
+     * Success used to be read off `reason`, the critical places and the leaker
+     * count alone, none of which the corridor touches — so the watch whose one
+     * job is a single aircraft printed SECTOR HELD over its wreck on thirty of
+     * sixty-four runs, beside a flight strip reading DESTROYED. A verdict that
+     * contradicts the panel beside it teaches the player to stop reading the
+     * verdict.
+     */
+    const flightLost = this.scenario.epilogue === true && this.stats.vipDown;
+    const success = reason !== 'site-lost' && !criticalLost && !flightLost
+      && leakersCounted <= (this.scenario.leakerTolerance ?? 2);
 
     const tier = tierFor(this.command.standing);
     const headline = reason === 'site-lost'
       ? 'YOUR POSITION WAS OVERRUN'
-      : success ? 'SECTOR HELD' : 'SECTOR PENETRATED';
+      : success ? 'SECTOR HELD'
+        : flightLost ? 'STATE 01 WAS LOST' : 'SECTOR PENETRATED';
 
     return {
       /**
@@ -2355,6 +2432,18 @@ export class World {
       const lost = this.assets.find((a) => ASSET_TYPES[a.type].critical && a.destroyed);
       return `${(lost?.label ?? ASSET_TYPES[lost?.type]?.label ?? 'A PLACE THAT CANNOT BE LOST')
         .toUpperCase()} WAS DESTROYED. THAT ALONE LOSES THE WATCH.`;
+    }
+    /*
+     * The escort's own cause clause, and it names who fired. An aircraft lost
+     * to the fighters and an aircraft lost to a round off these rails produce
+     * the same wreckage and are not remotely the same act; the file has always
+     * drawn that distinction in the ending, and now the one line the player
+     * reads on the ticker draws it too.
+     */
+    if (this.scenario.epilogue && this.stats.vipDown) {
+      return this.stats.vipDownedBy === 'operator'
+        ? 'STATE 01 WAS DESTROYED BY A ROUND FROM THIS SECTOR.'
+        : 'STATE 01 WAS DESTROYED IN THE CORRIDOR. THAT ALONE LOSES THE WATCH.';
     }
     const tolerance = this.scenario.leakerTolerance ?? 2;
     const n = leakersCounted;

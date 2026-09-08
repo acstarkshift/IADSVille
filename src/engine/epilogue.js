@@ -127,7 +127,7 @@ export const FLIGHT_ENDINGS = {
     lines: (r, character) => [
       'STATE 01 crossed the frontier at 0438 and was met eleven minutes later by an escort that was not'
         + ' ours and had not been notified to this sector.',
-      `The corridor was held for the eight minutes it needed. ${r.fightersKilled} aircraft were`
+      `The corridor was held for as long as it needed to be. ${r.fightersKilled} aircraft were`
         + ` destroyed over the Tavrov district${r.palaceHarm > 0.3
           ? `, and the palace at ${CAPITAL.en} was struck to ${Math.round(r.palaceHarm * 100)}% while the batteries were engaged elsewhere`
           : ''}.`,
