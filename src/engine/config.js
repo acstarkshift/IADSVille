@@ -750,6 +750,26 @@ export const ASSET_TYPES = {
     value: 40, hp: 110,
     /** Losing this is what breaks the integrated picture. */
     critical: true,
+    /**
+     * And the picture breaks BEFORE the building does.
+     *
+     * The fused plot is aerials, trunk lines and a room full of people; the
+     * roof is the last thing to go. Until this existed, `loseCentralControl`
+     * ran only on destruction — and a destroyed critical asset is an automatic
+     * SECTOR PENETRATED — so the decapitation and the defeat were the same
+     * event and Ville Under Fire had exactly two states. Measured over eight
+     * seeds and all twelve cells of the shipped build: SECTOR OPS OFF THE AIR
+     * fired on zero of eight competent nights on the net, zero of eight expert
+     * nights, and where it fired at all it was a watch already lost. The lesson
+     * the brief states in so many words — "when it goes, the picture stops
+     * being one picture... finish the watch anyway" — was unreachable by
+     * anybody who could hold the sector.
+     *
+     * At forty-five per cent of the building's hit points the centre stops
+     * reconciling, and the watch goes on. The automatic loss on destruction is
+     * untouched; what changes is that there is now a state between them.
+     */
+    offAirFrac: 0.4,
   },
   airbase: { id: 'airbase', label: 'AIRBASE', name: 'Airbase', value: 30, hp: 150 },
   /**

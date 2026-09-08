@@ -188,6 +188,16 @@ export function damageAsset(world, asset, amount, source) {
   }
   addEffect(world, { kind: 'flash', magnitude: 0.8, durationS: 0.6 });
 
+  /*
+   * The fused picture goes before the walls do. See ASSET_TYPES.c2: a place
+   * that carries `offAirFrac` stops being a centre at that fraction of its hit
+   * points, which is the difference between a watch where the decapitation is
+   * a thing that happens to you and a watch where it is the moment you lost.
+   */
+  if (type.critical && type.offAirFrac && asset.damage >= type.hp * type.offAirFrac) {
+    loseCentralControl(world, asset);
+  }
+
   if (asset.damage >= type.hp) {
     asset.destroyed = true;
     world.stats.assetsLost++;
