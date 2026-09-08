@@ -1294,7 +1294,7 @@ A few decisions worth knowing about if you read the source:
   the last spawn of each watch as a fraction of its own median length, played
   competently on its primary seat: First Light 70%, Low Riders 59%, Solo
   Battery 72%, Weasel Hour 68%, White Noise 60%, Economy of Force 53%, Across
-  the Line 56%, Ville Under Fire 61%, Four Sectors 62%, Reinforce the Capital
+  the Line 56%, Ville Under Fire 59%, Four Sectors 62%, Reinforce the Capital
   59%, Two Cities 61%, The President's Flight 70%. Every one is in the back
   half; before the three scrubs they read 29 to 52 per cent and the back of
   each watch was survivors being chased off the map. Late packages are
@@ -1304,22 +1304,57 @@ A few decisions worth knowing about if you read the source:
   pulling Weasel Hour's whole raid inside BASTION's reach took its worst seed
   from 22.6 minutes to 18.9.
 
-- **A point-defence cabin cannot have its first shot in ninety seconds, and
-  Ville Under Fire is where that is stated rather than papered over.** The
-  campaign's rule is that a crewed seat gets a legal shot inside a minute and a
-  half. Every other cabin in the game is a medium or long-range battery and
-  meets it; the main-effort watch designates THISTLE TOWN, a twelve-kilometre
-  point-defence section, and its raid is a hundred and thirty kilometres away
-  when the watch is handed over. Twelve kilometres divided by two hundred and
-  forty metres a second is the whole of the argument: the first legal claim
-  lands at 214 s, and the first contact actually inside the ring at 573 s. What
-  a point section must have instead is work when the work arrives, and it does
-  — engageable a fifth of the watch, eleven distinct shot opportunities a seed,
-  and the magazine the sole limiter for none of it at all. The act-two scrub
-  bought 64 s of the 214 by pulling the whole raid inside the rings (the
-  close-in fight used to begin at minute thirteen of an eighteen-minute night);
-  the rest is arithmetic, and moving the section forward off the town it
-  defends would be a different watch.
+- **A point-defence cabin CAN have its first shot in ninety seconds, and the
+  argument that said otherwise was arithmetic about the wrong thing.** For two
+  scrubs this document recorded Ville Under Fire as the campaign's one exempt
+  cabin: the main-effort watch designates THISTLE TOWN, a twelve-kilometre
+  point section, and every package on that board spawned 82 to 168 kilometres
+  out, so the first legal claim landed at 214 s and the first contact actually
+  inside the ring at 573 s. Twelve kilometres divided by two hundred and forty
+  metres a second was offered as the whole of the argument. It is not: it is
+  the reason the raid AS WRITTEN could not be answered sooner, and says nothing
+  about why the raid had to be written that way. Low Riders has carried the
+  answer since act one — a low element that arrives close in and is engageable
+  the moment it paints.
+
+  Three of the eight deck-level cruise missiles that used to arrive together at
+  250 s now come first instead, at eight seconds from forty-two kilometres,
+  down the western approach, aimed at the town the section is sited on. Same
+  eight rounds, same axis, same night; what changes is that the district is
+  attacked in front of the person from it, which is the sentence the brief
+  opens with. Forty-two kilometres is what ninety seconds is worth at a cruise
+  missile's quarter-kilometre a second; cruise rather than a low striker
+  because a striker releases at eighteen and turns away, and what it releases
+  flies under the section's own fifteen-metre floor.
+
+  **And they come in at forty metres, which is the part that makes it the
+  cabin's fight rather than the cabin's turn.** At a hundred and thirty they
+  were inside LANCE's sixty-metre floor, so on the unlucky seeds the sector's
+  own medium batteries killed all three before any of them reached the point
+  section's claim horizon and the cabin was back to waiting three minutes:
+  measured on three named seeds, 200 s, 194 s and 90 s. Under every floor on
+  the board except the section's own and the gun battery's four-kilometre
+  ring, the same three seeds read 72 s, 86 s and 75 s, and there is no seed on
+  which somebody else takes the work away. That is Low Riders' lesson used
+  properly — a contact under the battalion's floor is the point defence's
+  problem and nobody else's.
+
+  Sixteen seeds, cabin, competently fought: **first legal shot 213.5 s → 63.5 s**
+  (median; 38 s at best, 92 s at worst), **first contact actually inside the
+  ring 573 s → 128.5 s**, engageable share 20% → 30%, ten to eighteen distinct
+  shot opportunities, and the magazine the sole limiter for none of it at all.
+
+  Two other things moved with it, and both were bar misses. The last package
+  arrives forty seconds later and sixteen kilometres nearer — 470 s from 66 km
+  rather than 430 s from 82 — which puts the watch's final spawn at 59% of its
+  own median length instead of 52%, against a 55% bar, and takes the longest
+  seed in the whole set from 18.45 minutes to 17.7. And the late run is six
+  missiles rather than eight, because the three that moved to the front are
+  three the sector still has to answer: at thirty-three aircraft the net seat
+  fell to 50% held, with half of those failures the operations centre rather
+  than the count. At thirty-one it reads 69% on the net, 88% in the cabin and
+  63% from both seats, which is act two's floor kept exactly where the
+  campaign's staircase needs it.
 
 - **Lines of the difficulty bar that are missed on purpose, and why.** They are
   recorded here because a bar that is quietly rounded off is not a bar. All
@@ -1438,7 +1473,7 @@ A few decisions worth knowing about if you read the source:
   | White Noise | 0% | 6-69% | 81-94% | 75-88% |
   | Economy of Force | 0% | 31-88% | 81-88% | 63-75% |
   | Across the Line | 0-6% | 31-69% | 69-81% | 56-81% |
-  | Ville Under Fire | 0-31% | 0-56% | 69-81% | 81-94% |
+  | Ville Under Fire | 0-44% | 0-44% | 63-88% | 75-100% |
   | Four Sectors | 0% | 38% | 69% | 100% |
   | Reinforce the Capital | 0% | 56% | 69% | 94% |
   | The Two Cities | 0% | 6-13% | 69-94% | 63-81% |

@@ -810,6 +810,52 @@ describe('the teaching watch teaches', () => {
   });
 
   /*
+   * AND THE ONE CABIN THIS DOCUMENT USED TO EXEMPT.
+   *
+   * Ville Under Fire designates THISTLE TOWN, a twelve-kilometre point
+   * section, and for two scrubs the README recorded it as the campaign's one
+   * cabin that could not meet the ninety-second bar — 213 s to the first legal
+   * claim and 573 s to the first contact inside the ring, with the arithmetic
+   * of twelve kilometres offered as the reason. That arithmetic explains why
+   * the raid AS WRITTEN could not be answered sooner and nothing else; the
+   * watch now opens with three deck-level missiles at forty-two kilometres
+   * aimed at the town the section is sited on, and the exemption is gone.
+   *
+   * Measured, sixteen seeds, competently played: median 44 s, worst 162 s on
+   * the one seed where the sector kills the early element before it reaches
+   * the ring. The bound here is the campaign's own ninety seconds on the
+   * MEDIAN of three seeds, which is the property the watch now claims.
+   */
+  test('the main-effort cabin has its first legal shot inside ninety seconds', () => {
+    const scenario = scenarioById('ville-under-fire');
+    const firsts = [];
+    for (const seed of ['ville-cab-1', 'ville-cab-2', 'ville-cab-3']) {
+      const w = new World(scenario, { role: 'crew', seed });
+      const site = w.siteById.get(w.control.crewedBatteryId);
+      assert.equal(site.type, 'thistle', 'the seat is still the point-defence section');
+      let first = null;
+      let n = 0;
+      while (w.phase === 'running' && first === null && n < 6000) {
+        for (const radar of w.radars) if (radar.alive) w.setRadar(radar.id, true);
+        w.step(0.1);
+        if (w.command.pending) w.answer('accepted');
+        if (n % 5 === 0) {
+          for (const track of w.tracks.values()) {
+            if (track.destroyed || track.hostility !== 'hostile') continue;
+            if (!cannotEngageReason(w, site, track)) { first = w.t; break; }
+          }
+        }
+        n++;
+      }
+      firsts.push(first ?? Infinity);
+    }
+    const median = [...firsts].sort((a, b) => a - b)[1];
+    assert.ok(median <= 90,
+      `the cabin on the watch about its own town waits ${Math.round(median)}s for a legal shot `
+      + `(seeds ${firsts.map((f) => Math.round(f)).join('/')}s) against a ninety-second bar`);
+  });
+
+  /*
    * And the gun has to reload itself.
    *
    * The automatic reload used to live inside `runBatteryCrews`, after

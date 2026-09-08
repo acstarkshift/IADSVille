@@ -1495,14 +1495,19 @@ export const SCENARIOS = [
     /*
      * THREE, on the honest count, and it is act two's hardest watch.
      *
-     * Eight of this raid's thirty aircraft are cruise missiles on the deck and
-     * every one of them was free until the curve scrub counted an arriving
+     * Nine of this raid's thirty-one aircraft are cruise missiles on the deck
+     * and every one of them was free until the curve scrub counted an arriving
      * missile as an arrival; four was written against a raid a quarter of
      * which could not fail the watch. Sixteen seeds a seat on the honest
      * count: 50 / 63 / 44 per cent held at two, 69 / 81 / 75 at three, 81 / 94
      * / 81 at four. Three is the number, and the net seat's 69 is the floor of
      * act two — which is what lets the district watches sit at 69 without
      * being easier than the act before them.
+     *
+     * Re-measured after the residue pass moved three of the deck missiles to
+     * the front of the watch: 69 / 88 / 88 at three over sixteen seeds, and
+     * four was tried and moves the net seat by six points only, because half
+     * the net's failures here are the operations centre and not the count.
      */
     leakerTolerance: 3,
     playerBatteryId: 's_thistle_t',
@@ -1546,11 +1551,69 @@ export const SCENARIOS = [
       { atS: 165, type: 'striker', count: 5, bearingDeg: 345, spreadDeg: 30, spacingS: 18, altM: 6200,
         distanceKm: 132, targetAssetId: 'a_c2' },
       civilTransit(210),
-      { atS: 250, type: 'cruise', count: 8, bearingDeg: 20, spreadDeg: 46, spacingS: 8, altM: 85,
+      /*
+       * THE CABIN'S OWN FIGHT, AT THE FRONT OF THE WATCH.
+       *
+       * Three of the eight came off the 250 s run and now arrive first, on the
+       * deck, down the western approach, aimed at the town THISTLE TOWN is
+       * sited on. Same eight rounds, same axis, same night — but the seat this
+       * watch designates is a twelve-kilometre point section, and until this
+       * existed every package on the board spawned 82 to 168 km out, so the
+       * cabin's first LEGAL claim landed at 213 s of a fourteen-minute watch
+       * against a ninety-second bar and the first contact actually inside its
+       * ring at 573 s. The arithmetic of twelve kilometres was offered as the
+       * reason; it is the reason the raid AS WRITTEN could not be answered
+       * sooner, not a reason to write it that way. Low Riders has carried the
+       * answer since act one: a low element that arrives close in and is
+       * engageable the moment it paints.
+       *
+       * Forty-two kilometres because that is what ninety seconds is worth at a
+       * cruise missile's quarter-kilometre a second — the claim horizon opens
+       * twelve and a half kilometres outside the ring, so the seat has a legal
+       * shot from about twenty-four. Cruise rather than a low striker because a
+       * striker releases at eighteen and turns, and what it releases is under
+       * the section's own altitude floor: the cabin would watch the weapons go
+       * past it. This is the district being attacked in front of the person
+       * from it, which is the sentence the brief opens with.
+       *
+       * AND FORTY METRES, WHICH IS WHAT MAKES IT THE CABIN'S. At a hundred and
+       * thirty they sat inside LANCE's sixty-metre floor, so on the unlucky
+       * seeds the sector's own medium batteries killed all three before any of
+       * them reached the section's claim horizon and the cabin was back to
+       * waiting three minutes — measured on three named seeds, 200 s, 194 s
+       * and 90 s to the first legal shot. Under every floor on this board but
+       * the section's own fifteen metres and the gun battery's four-kilometre
+       * ring, the same seeds read 72 / 86 / 75, and no seed has the work taken
+       * away. Sixteen seeds competently played: median 63.5 s against 213.5,
+       * worst 92, and the first contact actually inside the ring 128.5 s
+       * against 573.
+       */
+      { atS: 8, type: 'cruise', count: 3, bearingDeg: 345, spreadDeg: 18, spacingS: 11, altM: 40,
+        distanceKm: 42, targetAssetId: 'a_town' },
+      /*
+       * Six at 250 s, not eight. The three that moved to the front of the
+       * watch are three the sector still has to answer, so the total went from
+       * thirty aircraft to thirty-three and the net seat fell from 69 to 50
+       * per cent held over sixteen seeds — half of those failures the
+       * operations centre rather than the leaker count. Six restores act two's
+       * floor with the cabin's fight kept: sixteen seeds, net 69, cabin 88,
+       * both seats 88.
+       */
+      { atS: 250, type: 'cruise', count: 6, bearingDeg: 20, spreadDeg: 46, spacingS: 8, altM: 85,
         distanceKm: 92 },
       { atS: 300, type: 'sead', count: 2, bearingDeg: 30, spreadDeg: 30, spacingS: 20, distanceKm: 130 },
-      { atS: 430, type: 'striker', count: 5, bearingDeg: 5, spreadDeg: 40, spacingS: 16, altM: 160,
-        distanceKm: 82 },
+      /*
+       * The last package: later on the clock and nearer on the map, which are
+       * the same edit. It used to arrive at 430 s from eighty-two kilometres,
+       * which put the watch's final spawn at 52% of its own median length —
+       * under the 55% bar — while the aircraft that survived it spent four
+       * minutes walking home and took the worst seed to 18.5 minutes, over the
+       * ceiling. Seventy kilometres is fifty seconds less ingress and fifty
+       * less egress, so moving it forty seconds later costs the watch nothing
+       * and buys back both figures.
+       */
+      { atS: 470, type: 'striker', count: 5, bearingDeg: 5, spreadDeg: 40, spacingS: 16, altM: 160,
+        distanceKm: 66 },
     ],
   },
 

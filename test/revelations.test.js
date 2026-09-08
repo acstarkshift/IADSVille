@@ -420,14 +420,41 @@ describe('the order to engage the civil transit', () => {
   });
 
   test('refusing costs standing and nothing else', () => {
+    /*
+     * Read off the LEDGER, not off the balance.
+     *
+     * `withTransit` flies five minutes of the main-effort watch with every set
+     * up and nobody assigning anything, which is a night bad enough to put the
+     * account on its floor before the political section transmits — and at the
+     * floor every further charge clamps to zero, so the balance stops moving
+     * while the state goes on billing. That is deliberate engine behaviour
+     * (`standingDelta` keeps the un-floored figure as `charged` for exactly
+     * this reason, and the debrief shows it). The property under test is that
+     * refusal is CHARGED; asserting it against the balance was asserting that
+     * this particular scripted night happens not to end in disgrace.
+     */
     const { w } = withTransit();
     issueDirective(w, DIRECTIVES.engageCivil);
     const before = w.command.standing;
+    const entries = w.command.ledger.length;
     answerDirective(w, 'refused');
-    assert.ok(w.command.standing < before);
+    const charged = w.command.ledger.slice(entries).reduce((n, e) => n + e.charged, 0);
+    assert.ok(charged < 0, 'refusing the order is billed');
+    assert.ok(w.command.standing <= before);
     w.finish('raid-spent');
-    assert.equal(w.outcome.breakdown.civilian, 0);
     assert.equal(w.stats.civilianAircraftShot, 0);
+    /*
+     * "Nothing else" means no SHOOT-DOWN. The civilian column also carries the
+     * town's dead at two points a head, and this scripted night — five minutes
+     * of the main-effort watch with nobody assigning anything — now has some,
+     * because the watch opens with three missiles on the deck aimed at the
+     * town. Asserting the whole column was nought was asserting that the raid
+     * never reaches the Ville, which is a claim about the wave table and not
+     * about the order. The four-hundred-point term is the one this test is
+     * for, and it is checked exactly.
+     */
+    assert.equal(w.outcome.breakdown.civilian, -2 * w.stats.civilianCasualties,
+      'the penalty is the dead on the ground and nothing from a round of ours');
   });
 
   test('acknowledging and then not doing it is noticed', () => {
