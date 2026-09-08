@@ -316,6 +316,29 @@ const ACTION_KINDS = new Set(['launch', 'good', 'alert', 'warn', 'command', 'com
  * a time — see the table in the header, which carries both arms of every hinge
  * and the reason that row changed sides. An entry here is a measurement, never
  * a mood; add one only with the two arms that justify it.
+ *
+ * THE MORAL VERB WAS TRIED AGAIN IN THE RESIDUE PASS, AND HERE IS WHY IT IS
+ * STILL NOT HERE. The judges' reading was that this player cannot reach the
+ * eight-fold score swing the two moral watches are built around, because it
+ * acknowledges the freeze like everybody else and is then bound by it. That is
+ * true, and refusing both hinges was measured over thirty-two seeds a cell:
+ *
+ *                            competent        expert refusing
+ *   economy-of-force net     78% / 560        9% / 378   (+218% on 12 of 32)
+ *   economy-of-force crew    84% / 732       31% / 716  (+1441% on 15 of 32)
+ *   economy-of-force both    81% / 881       16% / 610
+ *   across-the-line  net     72% / 912       50% / 726   (-10.5%)
+ *   across-the-line  crew    75% / 1117      72% / 1120  (+34.8%)
+ *   across-the-line  both    78% / 1247      59% / 1019
+ *
+ * The score column is the swing the judges were looking for and it is real —
+ * on the cabin of Economy of Force refusal is worth fourteen times the mean.
+ * What it costs is the watch: with the constraint never set, this player's own
+ * crews spend the allocation on the struck-off building and the sector is
+ * penetrated on nine watches in ten. Both facts are the campaign's, not the
+ * model's, and the game already says so in the debrief's two columns. A model
+ * that holds one watch in eleven is not the ceiling of play, so the entries
+ * stay out and the measurement stays here.
  */
 export const EXPERT_ANSWERS = {};
 

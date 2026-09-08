@@ -1479,6 +1479,25 @@ A few decisions worth knowing about if you read the source:
   has been found that pays on both. It is a model gap, it is written here, and
   it is the next pass's.
 
+  *A two-channel cabin reads as idle exactly when it is busiest, and the
+  engageable-share floor is the wrong instrument for it.* The rule wants a
+  crewed seat with a legal shot available for a fifth of its watch. Solo
+  Battery's cabin reads 10% and Weasel Hour's 10%, and both are LANCE or
+  BASTION batteries with two engagement channels: `cannotEngageReason` answers
+  "all channels engaged" for exactly the stretch in which the operator has the
+  most to do, so the share collapses while the seat is saturated. The honest
+  companion column is beside it in every table the harness prints — busy share,
+  which counts a legal shot OR a round of this battery's in the air OR a
+  channel committed — and it reads 80% on Solo Battery and 90% on Weasel Hour
+  against those two tens. Read together they say a launcher working at its
+  ceiling, which is what the traces show: continuous engagements from 81 s to
+  540 s on Solo Battery's competent cabin. Fifteen to sixteen distinct shot
+  opportunities a seed on both, against a bar of four. The floor is not raised
+  by moving the raid — Solo Battery's wave table carries a DO-NOT-RETUNE note
+  with seven measured alternatives beside it, every one of which broke a line
+  this one holds — and it is not a defect in the watch. It is a defect in
+  reading one column without the other.
+
   *Economy of Force's cabin holds 81% and its careful player 75%*, and both are
   the same fact about the same watch — see the note on the ledger tax above.
   LANCE WEST covers the hospital road and the airbase approach at once, so a
@@ -1589,6 +1608,17 @@ A few decisions worth knowing about if you read the source:
   aircraft, while a player who so much as brings a set up and assigns holds all
   eight from every seat. The empty cabin is the exception at 6 of 8 — the
   sector's own crews fight the watch around a silent battery.
+
+  **The exemption covers the beginner too, and that half had never been
+  written down.** The rule wants a novice losing two watches in five; on this
+  one a novice holds 100% on all three seats, and so does careful play. The
+  only allowance that would deliver a beginner's failure here is one leaker,
+  and one leaker is the setting this watch was explicitly moved OFF, because
+  the most common way to concede it was spending ninety seconds reading the
+  interface — the watch that exists to teach the controls failing you for
+  learning them. The 100% is deliberate at every rung above the spectator, the
+  reason is the same reason, and it is now stated in `scenarios.js` beside the
+  number as well as here, because two scrubs in a row had to rediscover it.
 
   **And nothing on it is worth being expert about, which is also deliberate
   and had to be measured before it could be said.** The attention dividend —

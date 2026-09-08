@@ -298,6 +298,20 @@ export const SCENARIOS = [
      * between SECTOR HELD and SECTOR PENETRATED, and the most common way to
      * concede it was reading the interface for ninety seconds — the watch
      * that exists to teach the controls failed you for learning them.
+     *
+     * AND NOBODY WHO TOUCHES THE CONSOLE LOSES THIS WATCH, WHICH IS THE POINT
+     * AND NOT AN OVERSIGHT. Measured, sixteen seeds a seat: novice, competent
+     * and careful play all hold 100 per cent on all three seats, and only the
+     * player who never touches a control fails — 0 per cent on the net and
+     * from both seats, 75 in the cabin, where the sector's own crews fight the
+     * watch around a silent battery. The difficulty rule wants a beginner
+     * losing two watches in five, and tightening the allowance to one would
+     * deliver that by failing a learner for the ninety seconds they spend
+     * finding the switch, which is the exact defect the paragraph above
+     * records fixing. A teaching watch that fails a learner has failed. What
+     * it must do instead is fail the SPECTATOR, and it does. Stated here as
+     * well as in the README because the last two scrubs both had to
+     * rediscover that the number was deliberate.
      */
     leakerTolerance: 2,
     /**
