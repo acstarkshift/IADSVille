@@ -13,7 +13,7 @@ import {
 } from '../engine/character.js';
 import { knownRevelations } from '../engine/revelations.js';
 import { tierFor } from '../engine/command.js';
-import { STATE, PLATES } from './lexicon.js';
+import { STATE, PLATES, STATUS } from './lexicon.js';
 import { letterById } from '../engine/family.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
@@ -303,5 +303,38 @@ export function serviceSummary(character, service, campaign) {
     <table class="ledger">${rows.join('')}</table>
     ${character.points ? `<p class="urgent aside">
       ${character.points} training point${character.points > 1 ? 's' : ''} unspent — open your dossier.</p>` : ''}
+  </div>`;
+}
+
+/**
+ * The same sheet of paper, for a watch that was walked out of.
+ *
+ * An abandoned watch banks nothing, so `serviceSummary` above renders nothing
+ * at all and the debrief lost the only card on it that looked issued rather
+ * than printed: no file number, no stamp, no rank, no name — the plainest
+ * screen in the build, at the end of the most consequential decision on the
+ * console. This is the abandonment's own file entry, in the paperwork the
+ * service uses for everything else, and it names the tier the ledger beside it
+ * is already reading: the file does not call this satisfactory.
+ */
+export function abandonedRecord(character, result) {
+  const rank = character ? rankOf(character) : null;
+  const stamp = character
+    ? `ДЕЛО № / FILE ${esc(fileNumber(character))}`
+    : `${esc(STATUS.postAbandoned.tm)} · ${esc(STATUS.postAbandoned.en)}`;
+  return `<div class="card record-card is-abandoned">
+    <div class="record-stamp is-grave">${stamp}</div>
+    <h3>File entry — ${esc(STATUS.postAbandoned.tm)} · ${esc(STATUS.postAbandoned.en)}</h3>
+    ${character ? `<p>${esc(rank.tm)} · ${esc(rank.en)} <b>${esc(character.name)}</b> left the post at
+      <b>${esc(result.clock ?? '')}</b> with the watch still running. The entry stands in the file
+      under that heading and under no other.</p>` : ''}
+    <table class="ledger">
+      <tr><td>Experience earned</td><td class="down">none</td></tr>
+      <tr><td>Decoration, letter, appointment</td><td class="down">none</td></tr>
+      <tr><td>This watch on the roster</td><td class="down">not completed</td></tr>
+      <tr><td>Standing</td><td class="down">charged for leaving the post</td></tr>
+    </table>
+    <p class="note">Nothing further is required of you tonight. Stand the watch again from the
+    roster when you are ready; it is scored when it is finished.</p>
   </div>`;
 }

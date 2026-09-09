@@ -2457,6 +2457,8 @@ export class World {
       cause: this.failureCause({ reason, success, criticalLost, leakersCounted, abandoned }),
       missionId: this.scenario.id,
       role: this.control.role,
+      /** The mission clock the watch ended on, for the paperwork to quote. */
+      clock: clockString(this.t),
       reason,
       success,
       /** The post was left before the raid was resolved. Nothing is banked. */
@@ -2524,9 +2526,13 @@ export class World {
      * long it lasted. Nothing else in the debrief carries that.
      */
     if (abandoned) {
-      const airborne = this.aircraft.filter((a) => a.alive && a.type !== 'civil').length;
-      return `YOU LEFT THE POST AT ${clockString(this.t)}, WITH ${airborne} `
-        + `AIRCRAFT STILL AIRBORNE. THE WATCH IS NOT SCORED AND NOTHING IS BANKED.`;
+      /*
+       * One clause, at a headline's length. It ran to a full sentence and a
+       * half of letterspaced capitals across the whole page width, wrapping to
+       * a one-word widow — body copy set as a title. What the abandonment cost
+       * is the file card's business; the deck line's business is the clock.
+       */
+      return `YOU LEFT THE POST AT ${clockString(this.t)}.`;
     }
     if (reason === 'site-lost') {
       return 'YOUR POSITION WAS OVERRUN — THE REST OF THE RAID CROSSED AN EMPTY SQUARE.';

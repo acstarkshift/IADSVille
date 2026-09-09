@@ -1109,7 +1109,8 @@ function operate(ctl) {
   // dead as the display (belt to the CSS pointer-events braces).
   if (!ctl || !world || world.dark) return;
   if (ctl.dataset.act) {
-    runAction(ctl.dataset.act, ctl.dataset.site, ctl.dataset.radar, ctl.dataset.formation);
+    runAction(ctl.dataset.act, ctl.dataset.site, ctl.dataset.radar, ctl.dataset.formation,
+      ctl.dataset.state);
   } else if (ctl.id === 'btn-fire') {
     world.fire(world.control.crewedBatteryId, ui.selectedTrackId);
   } else if (ctl.dataset.track) {
@@ -1260,7 +1261,7 @@ function closeAbort() {
   document.getElementById('btn-abort')?.focus();
 }
 
-function runAction(act, siteId, radarId, formationId) {
+function runAction(act, siteId, radarId, formationId, stateArg) {
   if (!world) return;
   const site = siteId ? world.siteById.get(siteId) : null;
   const formation = formationId ? world.formationById.get(formationId) : null;
@@ -1309,10 +1310,17 @@ function runAction(act, siteId, radarId, formationId) {
     case 'reserve': if (formation) world.commitReserve(formation.id, 4); break;
     case 'emcon': if (site) world.toggleRadar(site.radarId); break;
     case 'emcon-radar': world.toggleRadar(radarId); break;
+    /*
+     * The weapons state is three latching caps now, not one that cycles, so
+     * the control names the state it selects and the key printed on it does
+     * exactly what the cap does. Anything that still arrives without a state
+     * (a stale binding) advances the cycle as before rather than doing nothing.
+     */
     case 'weapons': {
       if (!site) break;
-      const order = ['hold', 'tight', 'free'];
-      world.setWeaponsState(site.id, order[(order.indexOf(site.weaponsState) + 1) % 3]);
+      const next = POSTURE_CYCLE.includes(stateArg) ? stateArg
+        : POSTURE_CYCLE[(POSTURE_CYCLE.indexOf(site.weaponsState) + 1) % POSTURE_CYCLE.length];
+      world.setWeaponsState(site.id, next);
       break;
     }
     case 'salvo': if (site) world.setSalvo(site.id, site.salvoSize === 1 ? 2 : 1); break;
@@ -1417,9 +1425,16 @@ function wireGlobalInput() {
     // What this watch's console actually carries. The card, the handbook and
     // the key map all read this one answer — see consoleCaps().
     const caps = consoleCaps(world.scenario);
-    /** Say once, quietly, that the verb is not on tonight's console. */
-    const notFitted = (name) => world.logThrottled(`notFitted:${name}`, 30, 'info',
-      `${name} IS NOT ON THIS CONSOLE TONIGHT.`);
+    /*
+     * Say once, quietly, that the verb is not on tonight's console.
+     *
+     * One throttle key for all of them, not one per verb: pressing X, S and G
+     * in sequence printed three near-identical lines in a row, which reads as
+     * a stuck ticker rather than as a rule. The first one names the verb and
+     * states the rule; the rest of the half-minute is silence.
+     */
+    const notFitted = (name) => world.logThrottled('notFitted', 30, 'info',
+      `${name} IS NOT FITTED TO TONIGHT'S CONSOLE — YOU FLY THIS WATCH ON THE CAPS YOU CAN SEE.`);
 
     /*
      * The number row: a speed on its own, a battery with shift, a formation
@@ -1446,6 +1461,16 @@ function wireGlobalInput() {
         }
       } else if (digit in SPEED_BY_KEY) {
         setSpeed(SPEED_BY_KEY[digit]);
+      } else if (digit === 3) {
+        /*
+         * There is no 3× speed, and a key that answers with nothing at all is
+         * indistinguishable from a key that is broken. The rack is four caps
+         * marked 0, 1, 2 and 4; the one number a reader of four caps might
+         * still reach for gets told so, once, the way the stripped battery
+         * keys are.
+         */
+        world.logThrottled('noSpeed3', 30, 'info',
+          'THERE IS NO 3× SPEED — THE RACK IS HOLD, 1×, 2× AND 4×.');
       }
       return;
     }
@@ -1502,9 +1527,23 @@ function wireGlobalInput() {
        * drifted — L locked silently and told you nothing when it could not,
        * while the LOCK cap beside it has printed its reason for watches.
        */
-      case 'q': if (site) { audio.press(); world.setWeaponsState(site.id, 'hold'); } break;
-      case 'w': if (site) { audio.press(); world.setWeaponsState(site.id, 'tight'); } break;
+      // Q, W and Shift+E are the three weapons caps, and they go through the
+      // caps' own path: the same sound, the same guards, the same line.
+      case 'q': if (site) runAction('weapons', site.id, null, null, 'hold'); break;
+      case 'w': if (site) runAction('weapons', site.id, null, null, 'tight'); break;
+      /*
+       * E is emissions; Shift+E is weapons free — and until now it was both.
+       * `e.key.toLowerCase()` folds 'E' onto 'e', so the shifted form fell
+       * into this branch as well as the weapons one underneath the switch: one
+       * keystroke silenced the battery's antenna AND set it weapons free, in
+       * that order, which is the two most consequential orders on the console
+       * given at once by a key that is printed as doing one of them.
+       */
       case 'e': {
+        if (e.shiftKey) {
+          if (site) runAction('weapons', site.id, null, null, 'free');
+          break;
+        }
         const target = ui.view === 'crew' ? world.siteById.get(crewedId) : site;
         if (target) runAction('emcon', target.id);
         break;
@@ -1565,9 +1604,6 @@ function wireGlobalInput() {
       }
       default: break;
     }
-
-    // Weapons free is on its own key because it is the one you reach for fast.
-    if (e.key === 'E' && e.shiftKey && site) { audio.press(); world.setWeaponsState(site.id, 'free'); }
   });
 
   window.addEventListener('resize', () => { scope.resize(); crew.resize(); });

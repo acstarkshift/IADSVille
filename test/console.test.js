@@ -14,8 +14,9 @@ import assert from 'node:assert/strict';
 
 import { World } from '../src/engine/world.js';
 import { scenarioById, consoleCaps } from '../src/engine/scenarios.js';
-import { emptyCampaign, enlist, recordMission } from '../src/engine/campaign.js';
+import { emptyCampaign, enlist, recordMission, briefingNote } from '../src/engine/campaign.js';
 import { SPEED_BY_KEY, digitPressed } from '../src/ui/keymap.js';
+import { CONTROLS, POSTURE_CYCLE, legend, keycap } from '../src/ui/lexicon.js';
 
 const watch = (id, opts = {}) => new World(scenarioById(id), { role: 'net', seed: 5, ...opts });
 
@@ -92,6 +93,31 @@ describe('leaving the post', () => {
     assert.equal(world.outcome.success, true);
     assert.ok(world.outcome.score > 0);
   });
+
+  test('the file files it as abandoned, not as satisfactory', () => {
+    const campaign = emptyCampaign();
+    enlist(campaign, { name: 'Test', background: 'academy', household: 'mother' });
+    const world = watch('first-light');
+    world.step(0.1);
+    world.finish('aborted');
+    recordMission(campaign, world.outcome);
+
+    // The history line used to read tier 'satisfactory', and the debrief read
+    // that word back under a headline that said the post had been left.
+    assert.equal(campaign.history[0].tier, 'abandoned');
+    // And the file has something of its own to say about it next time.
+    assert.match(briefingNote(campaign), /signed for you/);
+  });
+
+  test('the cause clause is one clause, with the clock in it', () => {
+    const world = watch('first-light');
+    world.step(45);
+    world.finish('aborted');
+    assert.match(world.outcome.cause, /^YOU LEFT THE POST AT \d+:\d\d\.$/);
+    assert.ok(world.outcome.cause.length <= 46,
+      `the deck line is set as a headline and must fit like one: "${world.outcome.cause}"`);
+    assert.equal(world.outcome.clock, world.outcome.cause.match(/(\d+:\d\d)/)[1]);
+  });
 });
 
 describe('the number row', () => {
@@ -112,6 +138,45 @@ describe('the number row', () => {
     assert.equal(SPEED_BY_KEY[4], 4, 'pressing 4 must select 4×, not stop the raid');
     assert.equal(SPEED_BY_KEY[0], 0);
     assert.equal(SPEED_BY_KEY[3], undefined, 'there is no 3× speed, so there is no 3 key');
+  });
+});
+
+describe('one control, one key, one legend', () => {
+  test('a key is stamped as a chip, never appended to the legend', () => {
+    const html = legend(CONTROLS.reload, { key: 'R' });
+    // The gloss carries the words and nothing else: appending "· R" to it is
+    // what widened every cap until only two fitted on a rack row.
+    assert.match(html, /<i>RELOAD<\/i>/);
+    assert.doesNotMatch(html, /RELOAD · R/);
+    assert.match(html, /<em class="kc">R<\/em>/);
+    assert.equal(legend(CONTROLS.reload), `<span class="lg lg-stack"><b>${CONTROLS.reload.tm}</b><i>RELOAD</i></span>`);
+  });
+
+  test('every key chip is printed in capitals', () => {
+    // 'STAY AT THE POST · Esc' was the one mixed-case hint in the build.
+    assert.match(keycap('Esc'), />ESC</);
+    assert.equal(keycap(''), '');
+    // A chip of more than two glyphs reserves more of the cap's corner for
+    // itself, or it is drawn across the legend it belongs to.
+    assert.match(keycap('Alt1'), /class="kc kc-wide"/);
+    assert.doesNotMatch(keycap('R'), /kc-wide/);
+  });
+
+  test('the weapons states are three positions, in one order', () => {
+    assert.deepEqual(POSTURE_CYCLE, ['hold', 'tight', 'free']);
+    for (const state of POSTURE_CYCLE) {
+      assert.ok(CONTROLS[state]?.tm && CONTROLS[state]?.en,
+        `the ${state} cap needs both halves of its legend`);
+    }
+  });
+
+  test('a switch legend is short enough to be printed permanently', () => {
+    // Both positions of a switch are engraved beside the lever all night, so
+    // neither may be a sentence: RIDE — HOLD THE BEAM did not fit a rack third.
+    for (const entry of [CONTROLS.radiate, CONTROLS.silence, CONTROLS.ride, CONTROLS.perDoctrine]) {
+      assert.ok(entry.en.length <= 13, `"${entry.en}" is too long for a switch position`);
+      assert.ok(entry.tm.length <= 13, `"${entry.tm}" is too long for a switch position`);
+    }
   });
 });
 

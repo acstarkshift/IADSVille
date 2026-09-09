@@ -175,7 +175,13 @@ export function recordMission(campaign, result) {
     role: result.role,
     score: result.score,
     standing: campaign.standing,
-    tier: tier.id,
+    /*
+     * The tier the file files this watch under. An abandoned one is filed as
+     * abandoned — it was carrying tier 'satisfactory', so the history line for
+     * walking out of a watch was indistinguishable from a watch stood to its
+     * end and quietly accepted, and the debrief read the same word back.
+     */
+    tier: abandoned ? 'abandoned' : tier.id,
     leakers: result.stats.leakers,
     kills: result.stats.kills,
     assetsLost: result.stats.assetsLost,
@@ -348,6 +354,8 @@ export function briefingNote(campaign, { narrativePressure = true } = {}) {
     noted: 'Your relief was late and would not meet your eye. Take the seat.',
     flagged: 'There is a man from the political section in the corridor. He is not here for you yet.',
     condemned: 'You were not told why the position moved forward. You were told to be at the console by first light.',
+    // Nobody asks where you went. The file simply knows.
+    abandoned: 'Nobody asked where you went last time. The log was signed for you, in somebody else’s hand.',
   }[last.tier] ?? null;
 }
 

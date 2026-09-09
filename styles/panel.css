@@ -123,27 +123,50 @@
  * A bat-handle toggle. Up is on, and it stays up — the position of the lever is
  * the state, readable across the room, which is the entire reason real panels
  * use them instead of buttons.
+ *
+ * Both positions are engraved beside the lever, permanently: the legend column
+ * is its own column, so the switch body can never be drawn across its own
+ * caption (ИЗЛУ●ЕНЬ), and neither label moves when the switch is thrown.
  */
 .sw {
-  display: inline-flex; flex-direction: column; align-items: center; gap: 3px;
-  background: none; border: 0; padding: 2px; cursor: pointer;
+  position: relative;
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;
+  gap: 7px; text-align: left;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(0, 0, 0, .14));
+  border: 1px solid var(--metal-edge); border-radius: 3px;
+  padding: 4px 16px 4px 5px; cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
 }
+.sw-legends { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sw-pos { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; opacity: .42; }
+.sw-pos b {
+  font-weight: 700; font-size: 8px; letter-spacing: .06em; color: var(--engrave);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sw-pos i {
+  font-style: normal; font-size: 8px; letter-spacing: .04em; color: var(--engrave);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* The position the lever is actually in: the legends never move, so which of
+   them is live is carried by the ink as well as by the lever. */
+.sw-pos.is-on { opacity: 1; }
+.sw-pos.is-on b { text-shadow: 0 1px 0 rgba(0, 0, 0, .65); }
 .sw-body {
-  position: relative; width: 18px; height: 27px; border-radius: 3px;
+  position: relative; width: 17px; height: 26px; border-radius: 3px;
   background: linear-gradient(180deg, var(--metal-lo), var(--metal-edge));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 1px 2px rgba(0, 0, 0, .6);
   border: 1px solid var(--metal-edge);
 }
 .sw-lever {
-  position: absolute; left: 50%; width: 7px; height: 13px;
+  position: absolute; left: 50%; width: 7px; height: 11px;
   margin-left: -3.5px; border-radius: 4px 4px 2px 2px;
   background: linear-gradient(180deg, var(--lever-hi), var(--lever-mid) 60%, var(--lever-lo));
   box-shadow: 0 1px 2px rgba(0, 0, 0, .7);
   transition: top .09s ease-out, transform .09s ease-out;
   top: 11px; transform-origin: 50% 100%;
 }
-.sw[aria-pressed="true"] .sw-lever { top: 2px; }
-.sw[aria-pressed="false"] .sw-lever { top: 11px; transform: rotate(180deg); }
+.sw[aria-pressed="true"] .sw-lever { top: 3px; }
+.sw[aria-pressed="false"] .sw-lever { top: 12px; transform: rotate(180deg); }
 /* Under the pointer the body lifts a little, the way a switch you are about
    to throw catches the light. */
 .sw:hover:not(:disabled) .sw-body { border-color: var(--screw); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 0 5px rgba(0, 0, 0, .5); }
@@ -157,14 +180,18 @@
 .sw:disabled { cursor: not-allowed; opacity: .6; }
 .sw:disabled .sw-body { background: var(--metal-lo); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6); }
 .sw:disabled .sw-lever { filter: grayscale(1) brightness(.6); box-shadow: none; }
-.sw:disabled .lg b, .sw:disabled .lg i { color: var(--engrave-dim); text-shadow: none; }
-.sw:focus-visible { outline: none; }
-.sw:focus-visible .sw-body { outline: 2px solid var(--accent); outline-offset: 2px; }
-.sw-marks {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  justify-content: space-between; align-items: center; padding: 1px 0;
-  font-size: 6px; color: var(--engrave-dim); letter-spacing: .06em; pointer-events: none;
-}
+.sw:disabled .sw-pos b, .sw:disabled .sw-pos i { color: var(--engrave-dim); text-shadow: none; }
+/*
+ * One ring, one green, one shape, around the whole control — the same rule as
+ * .pb below. The switch used to ring only its toggle graphic, in a different
+ * green, cutting across the caption inside the same control.
+ */
+.sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The set that is cold with something in the sky: this switch IS the watch. */
+.sw.is-urgent { border-color: var(--warn); animation: fire-ready 1.05s infinite; }
+/* The I / O marks inside the bezel are gone with the state-labelled caption:
+   both positions are now spelled out beside the lever, and the lever covered
+   whichever mark it was standing on. */
 
 /* ----------------------------------------------------------------- lamps */
 
@@ -191,6 +218,31 @@
 @keyframes lamp-blink { 50% { box-shadow: none; background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.2), var(--lamp-off) 62%); } }
 
 /* --------------------------------------------------------------- buttons */
+
+/*
+ * The key stencilled in the corner of the cap that answers to it.
+ *
+ * A fixed-width chip in the shroud's own corner rather than words appended to
+ * the legend, so the key costs the caption no width, one control carries one
+ * key, and every key on the console is printed in the same place in the same
+ * type. Never wider than its own corner: it is furniture for the finger, not
+ * a second caption.
+ */
+.kc {
+  position: absolute; top: 2px; right: 3px;
+  font-style: normal; font-size: 7.5px; line-height: 1; letter-spacing: .04em;
+  color: var(--engrave);
+  border: 1px solid var(--metal-edge); border-radius: 2px;
+  padding: 1.5px 2.5px; min-width: 9px; text-align: center;
+  background: rgba(0, 0, 0, .22);
+  pointer-events: none;
+}
+.pb:disabled .kc, .sw:disabled .kc { opacity: .5; }
+/* Only a control that carries a key reserves the corner for it, and a longer
+   key reserves more — a chip that overlaps its own legend is worse than no
+   chip at all. */
+.pb:has(.kc) { padding-right: 12px; }
+.pb:has(.kc-wide) { padding-right: 30px; }
 
 /* Legend-cap pushbutton: a moulded cap on a metal shroud. */
 .pb {
@@ -307,7 +359,12 @@
  * "12. THISTLE BR…". The head wraps instead: the name keeps its own width
  * and the plate drops to the line below when they will not both fit.
  */
-.unit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+/* The corner screw is a physical object on the card and the nomenclature may
+   not run under it: the head reserves its width. */
+.unit-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 6px; flex-wrap: wrap; padding-right: 14px;
+}
 .unit-name {
   font-size: 11px; letter-spacing: .1em; color: var(--engrave); font-weight: 700;
   flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -321,19 +378,54 @@
 .unit-type.wrap {
   white-space: normal; overflow: visible; max-width: none; line-height: 1.35;
 }
-/* The type plate on a card's head: right-hand column, wrapping, never wider
-   than the head it shares. */
-.unit-type.is-plate { flex: 0 1 auto; text-align: right; max-width: 100%; }
+/* The type plate on a card's head: right-hand column, one line, and truncated
+   with an ellipsis rather than cut through a glyph by the card's own edge. */
+.unit-type.is-plate {
+  flex: 0 1 auto; text-align: right; max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .unit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
 /* A line that is present as context rather than as news. */
 .unit-row.is-quiet .unit-type, .unit-unfit.is-quiet span { color: var(--engrave-dim); }
 .unit-row.is-spaced { margin-top: 9px; }
+/*
+ * The rack, on a track.
+ *
+ * Six columns, three caps to a row: every cap on a card is the same width as
+ * every other, every row ends on the same right edge, and the card's pitch does
+ * not move when a watch fits one more cap. It was a wrapping flex row, which
+ * measured 77+93 / 142+76 / 82+95 in a 258 px column — three different right
+ * edges on one card, and a lone RELOAD cap on a row of its own at the bottom.
+ * A last row that is short spans the width instead of trailing a hole.
+ */
 .unit-controls {
-  display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap; margin-top: 7px;
+  display: grid; grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px; margin-top: 7px;
   padding-top: 6px; border-top: 1px solid rgba(0, 0, 0, .3);
 }
-.unit-controls .sw { min-width: 42px; }
-.unit-controls .pb { align-self: stretch; min-width: 0; }
+.unit-controls > * { grid-column: span 2; min-width: 0; }
+.unit-controls > :nth-child(3n+1):last-child { grid-column: span 6; }
+.unit-controls > :nth-child(3n+1):nth-last-child(2),
+.unit-controls > :nth-child(3n+2):last-child { grid-column: span 3; }
+/* The switches sit above the caps, on their own track: two side by side where
+   the rack is wide enough for both sets of legends, one across where it is
+   not. Neither can ever be drawn over the other's caption. */
+.unit-switches {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 5px; margin-top: 7px;
+}
+.unit-controls .pb { align-self: stretch; }
+.unit-controls .pb .lg { width: 100%; }
+.unit-controls .pb .lg b, .unit-controls .pb .lg i {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+}
+/* Rack legends are set one notch tighter than the console's other engraving,
+   because three of them share a row 258 px wide and the longest of them
+   (СМЕНА МЕСТА) has to fit that third without an ellipsis. */
+.unit-controls .pb .lg b { font-size: 9px; letter-spacing: .05em; }
+.unit-controls .pb .lg i { font-size: 9px; letter-spacing: .03em; }
+/* The weapons state: three latching positions, the live one pressed in. */
+.pb-weapons.is-live .lg b { color: var(--good); }
 
 /* Ammunition, shown as rounds on a rail rather than as a number. */
 /* The launcher: one round lamp per rail, lit green with a round on it and red
@@ -396,11 +488,15 @@
 /* What the thing IS, on the card itself — one small line, not a hover. */
 .unit-explain { font-size: 10px; line-height: 1.4; opacity: .7; margin: 2px 0 5px; }
 
-/* The switch the whole game runs on, sized like it. */
-.pb-radiate { width: 100%; }
-.pb-radiate .lg b { font-size: 11px; letter-spacing: .12em; }
-.pb-radiate.is-on .lg b { color: var(--good); }
-.pb-radiate.is-urgent { animation: fire-ready 1.05s infinite; border-color: var(--warn); }
+/* The switch the whole game runs on, sized like it: the surveillance sets'
+   emissions switch is the one control a watch cannot be played without. */
+.sw-primary { padding: 5px 16px 5px 6px; }
+.sw-primary .sw-body { height: 32px; width: 19px; }
+.sw-primary .sw-pos b, .sw-primary .sw-pos i { font-size: 9.5px; letter-spacing: .09em; }
+.sw-primary .sw-lever { height: 13px; }
+.sw-primary[aria-pressed="true"] .sw-lever { top: 4px; }
+.sw-primary[aria-pressed="false"] .sw-lever { top: 15px; }
+.sw-primary[aria-pressed="true"] .sw-pos.is-on b { color: var(--good); }
 
 /*
  * A cap that is being held stays down.

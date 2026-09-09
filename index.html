@@ -20,38 +20,47 @@
            panel and the table it is meant to come from cannot drift apart. -->
       <span class="data-plate" id="unit-plate"></span>
       <span class="badge" id="mission-name">—</span>
-      <span class="readout" title="Mission clock"><label data-legend="STATUS.clock"></label><b id="clock">0:00</b></span>
-      <span class="readout" title="Raid aircraft still airborne"><label data-legend="STATUS.airborne"></label><b id="air-count">0</b></span>
-      <span class="readout" title="Rounds expended against allocation"><label data-legend="STATUS.rounds"></label><b id="rounds">0/0</b></span>
+      <span class="readout" title="Mission clock"><label data-legend="STATUS.clock" data-gloss-only></label><b id="clock">0:00</b></span>
+      <span class="readout" title="Raid aircraft still airborne"><label data-legend="STATUS.airborne" data-gloss-only></label><b id="air-count">0</b></span>
+      <span class="readout" title="Rounds expended against allocation"><label data-legend="STATUS.rounds" data-gloss-only></label><b id="rounds">0/0</b></span>
       <span class="lamps" id="master-lamps"></span>
     </div>
-    <!-- Each cap carries the key that selects it, stamped from the lexicon the
-         same way the ACKNOWLEDGE and REFUSE caps carry Y and N. The keys used
-         to be mapped by position instead: 3 selected the cap marked 4×, and 4
-         — the obvious reach for maximum speed — stopped the raid dead. -->
-    <div class="topbar-group" id="speed-group" role="radiogroup" aria-label="Simulation speed">
-      <button class="pb" data-speed="0" role="radio" aria-checked="false" tabindex="-1"
-        title="Hold — the simulation stops (0 or Space)">
-        <span class="lg" data-legend="CONTROLS.speedHold" data-key="0"></span></button>
-      <button class="pb is-down" data-speed="1" role="radio" aria-checked="true" tabindex="0"
-        title="Real time (1)">
-        <span class="lg" data-legend="CONTROLS.speedReal" data-key="1"></span></button>
-      <button class="pb" data-speed="2" role="radio" aria-checked="false" tabindex="-1"
-        title="Two times real time (2)">
-        <span class="lg" data-legend="CONTROLS.speedFast" data-key="2"></span></button>
-      <button class="pb" data-speed="4" role="radio" aria-checked="false" tabindex="-1"
-        title="Four times real time (4)">
-        <span class="lg" data-legend="CONTROLS.speedMax" data-key="4"></span></button>
-    </div>
+    <!-- Rank, name and appointment on ONE card with one left margin, rather
+         than two boxes of different heights with the operator's own name
+         clipped mid-glyph at the edge of the second one. -->
     <div class="topbar-group">
-      <span class="operator" id="echelon-plate"></span>
-      <span class="operator" id="operator-plate"></span>
+      <span class="idcard">
+        <span class="id-line" id="operator-plate"></span>
+        <span class="id-line is-post" id="echelon-plate"></span>
+      </span>
       <button class="pb" id="view-toggle" hidden title="Switch seat (V)"></button>
       <span class="readout standing" title="Your standing with sector command">
-        <label data-legend="STATUS.standing"></label><b id="standing">50</b>
+        <label data-legend="STATUS.standing" data-gloss-only></label><b id="standing">50</b>
         <span class="standing-bar"><i id="standing-fill"></i></span>
       </span>
-      <button class="pb" id="btn-help" title="Help (H)"><span class="lg"><b>?</b><i>HELP</i></span></button>
+    </div>
+    <!-- The rack and the two caps that end a watch, in the top-right corner at
+         every width. Each cap carries the key that selects it, in the same
+         corner chip every control on this console stamps its key in; the keys
+         used to be mapped by position instead, so 3 selected the cap marked 4×
+         and 4 — the obvious reach for maximum speed — stopped the raid dead.
+         The four caps are one width, so the rack reads as a rack. -->
+    <div class="topbar-group">
+      <span id="speed-group" role="radiogroup" aria-label="Simulation speed">
+        <button class="pb" data-speed="0" role="radio" aria-checked="false" tabindex="-1"
+          title="Hold — the simulation stops (0 or Space)">
+          <span class="lg" data-legend="CONTROLS.speedHold" data-key="0"></span></button>
+        <button class="pb is-down" data-speed="1" role="radio" aria-checked="true" tabindex="0"
+          title="Real time (1)">
+          <span class="lg" data-legend="CONTROLS.speedReal" data-key="1"></span></button>
+        <button class="pb" data-speed="2" role="radio" aria-checked="false" tabindex="-1"
+          title="Two times real time (2)">
+          <span class="lg" data-legend="CONTROLS.speedFast" data-key="2"></span></button>
+        <button class="pb" data-speed="4" role="radio" aria-checked="false" tabindex="-1"
+          title="Four times real time (4)">
+          <span class="lg" data-legend="CONTROLS.speedMax" data-key="4"></span></button>
+      </span>
+      <button class="pb" id="btn-help" title="Help (H)"><span class="lg"><b>?</b><i>HELP</i></span><em class="kc">H</em></button>
       <button class="pb" id="btn-abort" title="Leave the post — this ends the watch and records it as abandoned"><span class="lg" data-legend="CONTROLS.abort"></span></button>
     </div>
   </header>

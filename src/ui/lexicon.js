@@ -50,13 +50,18 @@ export const CONTROLS = {
   hold: { tm: 'ЗАПРЕТ', en: 'HOLD' },
   tight: { tm: 'КОНТРОЛЬ', en: 'TIGHT' },
   free: { tm: 'СВОБОДНО', en: 'FREE' },
-  /** The commander's override on the crew's blink arithmetic. */
+  /**
+   * The commander's override on the crew's blink arithmetic, as the two
+   * permanently engraved positions of one switch. Both legends are short
+   * because both are printed at once, beside the lever, all night — a switch
+   * whose caption changes with its state is a button wearing a lever's coat.
+   */
   ride: {
-    tm: 'ДЕРЖАТЬ ЛУЧ', en: 'RIDE — HOLD THE BEAM',
+    tm: 'ДЕРЖАТЬ ЛУЧ', en: 'HOLD BEAM',
     hint: 'keep guiding with a round homing on this set',
   },
   perDoctrine: {
-    tm: 'ПО УСТАВУ', en: 'EMCON PER DOCTRINE',
+    tm: 'ПО УСТАВУ', en: 'PER DOCTRINE',
     hint: 'the crew blinks when its own arithmetic says so',
   },
   abort: { tm: 'СДАТЬ', en: 'LEAVE POST' },
@@ -74,7 +79,7 @@ export const CONTROLS = {
    * There is no 3× speed and therefore no 3 key.
    */
   speedHold: { tm: 'СТОП', en: 'HOLD', hint: 'the simulation stops; a pending order’s clock does not' },
-  speedReal: { tm: '1×', en: 'REAL TIME' },
+  speedReal: { tm: '1×', en: 'REAL' },
   speedFast: { tm: '2×', en: 'FAST' },
   speedMax: { tm: '4×', en: 'MAX' },
 };
@@ -148,6 +153,8 @@ export const STATUS = {
   holding: { tm: 'ВЫЖИДАНИЕ', en: 'HOLDING FOR RANGE', hint: 'the shot improves every second the target closes' },
   noTarget: { tm: 'ЦЕЛЬ НЕ НАЗНАЧЕНА', en: 'NO TARGET DESIGNATED' },
   yourSeat: { tm: 'ВАШ ПОСТ', en: 'YOUR POST' },
+  /** The stamp the file puts on a watch that was walked out of. */
+  postAbandoned: { tm: 'ПОСТ ОСТАВЛЕН', en: 'POST ABANDONED' },
   destroyed: { tm: 'УНИЧТОЖЕН', en: 'DESTROYED' },
   displacing: { tm: 'НА МАРШЕ', en: 'DISPLACING' },
   /**
@@ -186,19 +193,34 @@ export const PLATES = {
  * Render a legend as engraved markup: the Cyrillic large, the English small
  * underneath. `inline` keeps it on one line for tight controls.
  *
- * `key` stencils the keyboard shortcut onto the gloss line — ЗАХВАТ / LOCK · L
- * — which is the same convention `stampLegends` applies to the fixed legends in
- * the markup through `data-key`. A key that is printed on the cap it operates
- * is a key the player does not have to go and look up.
+ * `key` is stamped as a small dimmed key-cap glyph in the corner of the cap —
+ * `keycap()` below — rather than appended to the gloss line. It used to read
+ * "WEAPONS TIGHT · Q W", which widened every cap until only two fitted on a
+ * row, broke the rack's rhythm into a ragged 2+2+2, and printed two keys on one
+ * face without saying which did which. A cap now carries exactly one key, in a
+ * fixed-width chip that costs the legend no width at all.
  */
 export function legend(entry, { inline = false, glossOnly = false, key = '' } = {}) {
   if (!entry) return '';
-  const gloss = key ? `${entry.en} · ${key}` : entry.en;
-  if (glossOnly) return escapeHtml(gloss);
-  if (inline) {
-    return `<span class="lg"><b>${escapeHtml(entry.tm)}</b><i>${escapeHtml(gloss)}</i></span>`;
-  }
-  return `<span class="lg lg-stack"><b>${escapeHtml(entry.tm)}</b><i>${escapeHtml(gloss)}</i></span>`;
+  if (glossOnly) return escapeHtml(key ? `${entry.en} · ${key}` : entry.en);
+  const cls = inline ? 'lg' : 'lg lg-stack';
+  return `<span class="${cls}"><b>${escapeHtml(entry.tm)}</b><i>${escapeHtml(entry.en)}</i></span>`
+    + keycap(key);
+}
+
+/**
+ * The key stencilled in the corner of the control it presses.
+ *
+ * One key per control, always in the same place, always in capitals — the
+ * console has one convention for this and every cap, switch and dialogue
+ * button in the build follows it.
+ */
+export function keycap(key) {
+  if (!key) return '';
+  const text = String(key).toUpperCase();
+  // A chip of more than two glyphs (ESC, ALT1) needs more of the cap's corner
+  // reserved for it, or it is drawn over the legend it belongs to.
+  return `<em class="kc${text.length > 2 ? ' kc-wide' : ''}">${escapeHtml(text)}</em>`;
 }
 
 /** Plain text form, for canvas drawing and tooltips. */

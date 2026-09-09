@@ -16,7 +16,7 @@ import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor } from '../engine/command.js';
 import { THEMES } from './themes.js';
 import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/character.js';
-import { serviceSummary } from './dossier.js';
+import { serviceSummary, abandonedRecord } from './dossier.js';
 import { STATE } from './lexicon.js';
 import { composeEnding, endingSummary } from '../engine/endings.js';
 import { composeFlightEnding, flightEndingSummary } from '../engine/epilogue.js';
@@ -375,13 +375,22 @@ export function renderDebrief(host, state, result, entry) {
 
     <div class="card">
       <h3>Score</h3>
-      <div class="score-grid">
-        ${cell('TOTAL', result.score, result.score > 0 ? 'is-good' : 'is-bad')}
+      <div class="score-grid${result.abandoned ? ' is-unscored' : ''}">
+        ${/*
+     * A watch that banked nothing is printed in one ink.
+     *
+     * Six zeros in three colours — the total in the failure red, four cells in
+     * the pale ink and two in the credit green — read as a mixed result on a
+     * night that had no result at all: LEAKERS 0 and ASSETS LOST 0 were being
+     * congratulated for a raid that never arrived. On an abandoned watch every
+     * cell is neutral, because none of them was earned either way.
+     */ ''}
+        ${cell('TOTAL', result.score, result.abandoned ? '' : result.score > 0 ? 'is-good' : 'is-bad')}
         ${cell('KILLS', s.kills)}
-        ${cell('TURNED BACK', s.turnedBack, s.turnedBack ? 'is-good' : '')}
-        ${cell('LEAKERS', leakerCell, s.leakers ? 'is-bad' : 'is-good')}
+        ${cell('TURNED BACK', s.turnedBack, !result.abandoned && s.turnedBack ? 'is-good' : '')}
+        ${cell('LEAKERS', leakerCell, result.abandoned ? '' : s.leakers ? 'is-bad' : 'is-good')}
         ${cell('ROUNDS', `${s.roundsFired}`)}
-        ${cell('ASSETS LOST', s.assetsLost, s.assetsLost ? 'is-bad' : 'is-good')}
+        ${cell('ASSETS LOST', s.assetsLost, result.abandoned ? '' : s.assetsLost ? 'is-bad' : 'is-good')}
       </div>
     </div>
 
@@ -392,8 +401,10 @@ export function renderDebrief(host, state, result, entry) {
     const home = a.type === 'town' && state.campaign.character;
     const quarter = home ? districtOf(state.campaign.character) : null;
     const struck = home && a.districtsHit?.includes(quarter.id);
+    // Nothing on the ground was defended on a watch nobody stood, so nothing
+    // on this table is printed in the credit ink either.
     return `<tr><td>${esc(a.label)}${home ? ' <span class="note">— home</span>' : ''}</td>
-          <td class="${a.destroyed ? 'down' : a.damagePct ? '' : 'up'}">
+          <td class="${a.destroyed ? 'down' : a.damagePct || result.abandoned ? '' : 'up'}">
             ${a.destroyed ? 'DESTROYED' : a.damagePct ? `${a.damagePct}% damage` : 'intact'}
             ${a.casualties ? ` · ${a.casualties} casualties` : ''}
             ${struck ? `<br><span class="grave">${esc(quarter.tm)} — ${esc(quarter.en)}, where your people live, is on the returns.</span>` : ''}
@@ -431,18 +442,9 @@ export function renderDebrief(host, state, result, entry) {
     </div>`;
   })()}
 
-    ${result.abandoned ? `<div class="card file-entry">
-      <h3>NOTHING IS BANKED</h3>
-      <table class="ledger">
-        <tr><td>Experience earned</td><td class="down">none</td></tr>
-        <tr><td>This watch on the roster</td><td class="down">not completed</td></tr>
-        <tr><td>Standing</td><td class="down">charged for leaving the post</td></tr>
-      </table>
-      <p class="note">The raid was still in the air when the post was left.
-      Stand the watch again from the roster; it is scored when it is finished.</p>
-    </div>` : ''}
-
-    ${serviceSummary(state.campaign.character, entry?.service, state.campaign)}
+    ${result.abandoned
+    ? abandonedRecord(state.campaign.character, result)
+    : serviceSummary(state.campaign.character, entry?.service, state.campaign)}
 
     ${ledger ? `<div class="card">
       <h3>Sector command's ledger</h3>
@@ -467,10 +469,19 @@ export function renderDebrief(host, state, result, entry) {
       The file does not read the score, and the score does not read the file.</p>
     </div>` : ''}
 
-    <div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : 'file-entry'}">
+    ${/*
+     * Sector command's standing assessment — of a watch that was stood.
+     *
+     * On an abandoned watch this card printed "FILE ENTRY — SATISFACTORY /
+     * Nothing further is required of you at this time" three lines under a
+     * ledger reading "Standing: 32 — FLAGGED", on a page headlined WATCH
+     * ABANDONED. The abandonment has its own file entry, above, under its own
+     * heading and its own tier; the file does not get to say both.
+     */ ''}
+    ${result.abandoned ? '' : `<div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : 'file-entry'}">
       <h3>${esc(consequence.title)}</h3>
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
-    </div>
+    </div>`}
 
     ${state.narrativePressure && entry?.letter ? `<div class="card letter-card">
       <h3>${esc(entry.letter.tm)} · ${esc(entry.letter.title)}</h3>
@@ -521,7 +532,7 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
       <h3>Everywhere</h3>
       <div class="keys">
         ${key('Space / 0', 'hold — the simulation stops; a pending order’s clock does not')}
-        ${key('1 / 2 / 4', 'the speed printed on the cap: real time, twice, four times')}
+        ${key('1 / 2 / 4', 'the speed printed on the cap; there is no 3× cap and no 3 key')}
         ${key('Tab', 'walk the console’s controls; Enter or Space presses the one with the ring')}
         ${key('↑ / ↓', 'step through the contacts on the board')}
         ${key('← / →', 'change speed while the ring is on the speed caps')}
@@ -538,10 +549,10 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
         ${key('Click a contact', 'select it')}
         ${key('Drag contact → battery', 'hand it to that battery')}
         ${key('Shift+1 … 4', 'hand the selected contact to battery 1–4, in the order the cards are numbered')}
-        ${key('Q / W', 'weapons hold / tight on the selected battery')}
-        ${key('Shift+E', 'weapons free on the selected battery')}
-        ${key('E', 'toggle the selected battery’s radar — careful: this silences your own set')}
-        ${ride ? key('G', 'RIDE — hold emissions through guidance with an ARM inbound (the crew never will)') : ''}
+        ${key('Alt+1 … 4', 'take or hand back subordinate command 1–4 (district and national watches)')}
+        ${key('Q / W / Shift+E', 'the three weapons caps on the selected battery: hold, tight, free')}
+        ${key('E', 'throw the selected battery’s emissions switch — careful: this silences your own set')}
+        ${ride ? key('G', 'throw its beam switch to HOLD BEAM — guide through an inbound ARM (the crew never will)') : ''}
         ${key('R', 'loaders out — start the selected battery’s rack filling now, short or not')}
         ${displace ? key('X', 'displace the selected battery') : ''}
         ${key('`', 'toggle every surveillance radar')}
@@ -553,7 +564,7 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
         ${key('Click a contact', 'designate it')}
         ${key('L', 'lock — start the engagement sequence')}
         ${key('F', 'fire')}
-        ${key('E', 'radiate / shut down (this is the whole game)')}
+        ${key('E', 'the emissions switch — up radiates, down is silent (this is the whole game)')}
         ${salvo ? key('S', 'salvo size') : ''}
         ${key('R', 'loaders out — top the rack up now, instead of waiting for the rails to go bare')}
         ${displace ? key('X', 'displace') : ''}

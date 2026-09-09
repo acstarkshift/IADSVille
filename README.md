@@ -44,8 +44,9 @@ Every mechanic hangs off that trade. Most sharply: a surface-to-air round is
 guided by the radar that launched it. Shut that radar down to dodge an incoming
 anti-radiation missile and the round you already have in the air goes stupid and
 falls in a field. Leave it up and you may not be there when the round arrives —
-or give the one order the crew will never give itself (`G`, **RIDE — HOLD THE
-BEAM**) and keep guiding with the enemy's round inbound on your own set.
+or give the one order the crew will never give itself (`G`, the beam switch at
+**ДЕРЖАТЬ ЛУЧ / HOLD BEAM**) and keep guiding with the enemy's round inbound on
+your own set.
 
 And attention is priced. A crew on weapons *free* engages at first opportunity:
 the earliest shot there is, taken at the edge of the envelope where kill
@@ -813,6 +814,15 @@ legible if your system substitutes a font without it.
 None of it is decoration either: the switch you throw to go dark is the same
 decision the whole game is built on, and it should feel like throwing a switch.
 
+A switch carries **both** of its positions, engraved beside the lever and never
+moving: up is ИЗЛУЧЕНЬ / RADIATE, down is ЗАТИХ / SILENCE, and one click throws
+it. A cap carries **one** key, stamped in its own corner rather than added to
+the legend — so a control says what pressing it will do, and the key that does
+that is printed on it. Weapons state is three latching caps (ЗАПРЕТ / HOLD ·
+`Q`, КОНТРОЛЬ / TIGHT · `W`, СВОБОДНО / FREE · `Shift`+`E`) with the live one
+pressed in, rather than one cap that printed the state it was in and then moved
+to the next one when you pressed it.
+
 ## Controls
 
 | Key | Action |
@@ -833,7 +843,7 @@ selects it — `4` selects 4×, and there is no 3× speed, so there is no `3`.
 | `V` | switch seat (commander) |
 | `Shift`+`1`…`4` | hand the selected contact to battery 1–4, in the order the cards are numbered |
 | `Alt`+`1`…`4` | take or hand back a subordinate command (district and national) |
-| `G` | RIDE — hold the selected battery's emissions through guidance with an ARM inbound |
+| `G` | throw the beam switch to ДЕРЖАТЬ ЛУЧ / HOLD BEAM — guide through an inbound ARM |
 | `H` | full controls and a plain-English explanation of the mechanics |
 
 A watch that removes a control removes its key with it: the teaching console
@@ -841,9 +851,10 @@ has no SALVO, RIDE or DISPLACE cap, so `S`, `G` and `X` are inert there and say
 so once on the log rather than quietly putting your only battery on the road.
 
 **Battle manager:** click a contact to select it, drag it onto a battery to
-assign the engagement, right-click a radar to switch it on or off. `Q` / `W` set weapons
-hold / tight, `Shift`+`E` sets weapons free, plain `E` toggles the selected
-battery's radar (mind the difference — one of those silences your own set),
+assign the engagement, right-click a radar to switch it on or off. `Q`, `W` and
+`Shift`+`E` are the three weapons caps — hold, tight, free — and each key
+presses the cap it is printed on; plain `E` throws the selected battery's
+emissions switch (mind the difference — one of those silences your own set),
 `R` sends the selected battery's loaders out — the rack fills itself whenever
 the rails go bare, and this is the order to fill one that is merely short —
 and `X` displaces.

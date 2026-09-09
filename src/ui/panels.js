@@ -17,7 +17,7 @@ import {
   armTimeToImpact, canStartLoading, channelsFor, railLoadS, railsOf, spanLimit, spanLoad,
 } from '../engine/doctrine.js';
 import {
-  STATE, CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, pair,
+  STATE, CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, keycap, pair,
 } from './lexicon.js';
 import { rankOf } from '../engine/character.js';
 import { consoleCaps } from '../engine/scenarios.js';
@@ -114,21 +114,36 @@ function lamp(entry, lit, { colour = '', blinking = false, caption = null } = {}
     <span class="lg"><b>${esc(caption ?? entry.tm)}</b><i>${esc(entry.en)}</i></span></span>`;
 }
 
-/** A bat-handle toggle. Lever up is on, and the position is the state. */
-function toggle(entry, on, { act, site, radar, disabled = false, key = '' } = {}) {
+/**
+ * A bat-handle switch with BOTH of its positions engraved beside it, for good.
+ *
+ * Up is `up`, down is `down`, and the lever's position is the state — which is
+ * the entire reason real panels use a lever instead of a button. The captions
+ * never move and never change: the player asked for exactly this ("the Up
+ * position should be radiate, the Down position should be silence, permanently
+ * labelled as such"), and what was here instead was a button whose caption was
+ * the state it was in, so the console rearranged itself under the finger every
+ * time the switch was thrown, and the Cyrillic half stopped translating the
+ * English half the moment the two were read together (RADIATING · CLICK TO
+ * SILENCE over ЗАТИХ).
+ *
+ * One click throws it. The label column is its own column, so the lever cannot
+ * be drawn over its own caption — which is what ИЗЛУ●ЕНЬ was.
+ */
+function switch2(up, down, on, { act, site, radar, disabled = false, key = '', extra = '' } = {}) {
   const attrs = [
     act ? `data-act="${act}"` : '',
     site ? `data-site="${site}"` : '',
     radar ? `data-radar="${radar}"` : '',
     disabled ? 'disabled' : '',
   ].filter(Boolean).join(' ');
-  return `<button class="sw" aria-pressed="${on}" ${attrs}
-      title="${esc(entry.en)} — ${esc(entry.hint ?? '')}">
-    <span class="sw-body">
-      <span class="sw-marks"><span>I</span><span>O</span></span>
-      <span class="sw-lever"></span>
-    </span>
-    ${legend(entry, { inline: false, key })}
+  const pos = (entry, live) => `<span class="sw-pos ${live ? 'is-on' : ''}">
+    <b>${esc(entry.tm)}</b><i>${esc(entry.en)}</i></span>`;
+  return `<button class="sw ${extra}" aria-pressed="${on}" ${attrs}
+      title="${esc(up.en)} / ${esc(down.en)} — ${esc((on ? up : down).hint ?? '')}">
+    <span class="sw-body"><span class="sw-lever"></span></span>
+    <span class="sw-legends">${pos(up, on)}${pos(down, !on)}</span>
+    ${keycap(key)}
   </button>`;
 }
 
@@ -187,10 +202,11 @@ function reloadBar(site, type) {
   </div>`;
 }
 
-/** A legend-cap pushbutton, with its key stencilled on the gloss line. */
-function press(entry, { act, site, disabled = false, extra = '', key = '' } = {}) {
+/** A legend-cap pushbutton, with its one key stencilled in the corner. */
+function press(entry, { act, site, state = '', disabled = false, extra = '', key = '', title = '' } = {}) {
   return `<button class="pb ${extra}" data-act="${act}" ${site ? `data-site="${site}"` : ''}
-      ${disabled ? 'disabled' : ''} title="${esc(entry.en)}${key ? ` (${key})` : ''}"
+      ${state ? `data-state="${state}"` : ''}
+      ${disabled ? 'disabled' : ''} title="${esc(title || entry.en)}${key ? ` (${key})` : ''}"
       >${legend(entry, { key })}</button>`;
 }
 
@@ -219,15 +235,36 @@ export function stampLegends(root = document) {
     const [group, key] = el.dataset.legend.split('.');
     const entry = TABLES[group]?.[key];
     if (!entry) continue;
-    const shortcut = el.dataset.key ? ` · ${el.dataset.key}` : '';
-    const top = el.dataset.glossFirst !== undefined ? entry.en + shortcut : entry.tm;
-    const under = el.dataset.glossFirst !== undefined ? entry.tm : entry.en + shortcut;
-    if (el.classList.contains('lg')) el.innerHTML = `<b>${esc(top)}</b><i>${esc(under)}</i>`;
-    else el.textContent = `${top} · ${under}`;
+    const top = el.dataset.glossFirst !== undefined ? entry.en : entry.tm;
+    const under = el.dataset.glossFirst !== undefined ? entry.tm : entry.en;
+    if (el.classList.contains('lg')) {
+      el.innerHTML = `<b>${esc(top)}</b><i>${esc(under)}</i>${keycap(el.dataset.key)}`;
+    } else if (el.dataset.glossOnly !== undefined) {
+      /*
+       * The status readouts along the top are not engraved legends, they are
+       * readouts, and they were being set bilingually — ВРЕМЯ · TIME, РАСХОД ·
+       * EXPENDED, АТТЕСТАЦИЯ · STANDING — which is the littering the player
+       * objected to and two hundred pixels of a row that has to hold the
+       * clock, the raid, the identity card and the speed rack at 1280. The
+       * Cyrillic stays where it is stencilled on hardware: the works plate,
+       * the lamp captions, the switch and cap legends.
+       */
+      el.textContent = entry.en;
+      el.title = `${entry.tm} · ${entry.en}`;
+    } else el.textContent = `${top} · ${under}`;
   }
+  /*
+   * The works plate in the corner of the topbar.
+   *
+   * It carried the type and works numbers as well, which are riveted to the
+   * scope bezel four inches away — two hundred pixels of duplicated furniture
+   * in the one row that has to hold the clock, the raid, the identity card and
+   * the speed rack at 1280 as well as at 1920. What is left is the thing the
+   * plate is for: whose service this is, and which sector.
+   */
   const plate = root.getElementById?.('unit-plate') ?? root.querySelector('#unit-plate');
   if (plate) {
-    const stencil = [STATE.serviceShort, STATE.sector, PLATES.type, PLATES.works];
+    const stencil = [STATE.serviceShort, STATE.sector];
     plate.innerHTML = `<b>${stencil.map((e) => esc(e.tm)).join(' · ')}</b>`
       + `<br>${stencil.map((e) => esc(e.en)).join(' · ')}`;
   }
@@ -276,21 +313,27 @@ export function renderTopbar(world, ui, els) {
     lamp(STATUS.fault, faulted, { colour: 'amber' }),
   ].join(''));
 
-  // The appointment, stencilled where the operator can see what they are.
-  if (els.echelonPlate && els.echelonPlate.dataset.echelon !== world.echelon.id) {
-    els.echelonPlate.dataset.echelon = world.echelon.id;
-    els.echelonPlate.innerHTML = `<span class="data-plate">
-      <b>${esc(world.echelon.tm)}</b><br>${esc(world.echelon.appointment.en)}
-    </span>`;
-    els.echelonPlate.title = `${world.echelon.appointment.tm} · ${world.echelon.appointment.en}`;
-  }
-
-  if (world.character && els.operatorPlate.dataset.name !== world.character.name) {
+  /*
+   * Who is sitting here, on one card rather than two.
+   *
+   * These were two separate plates of different heights, set side by side with
+   * their own borders and their own baselines, and the operator's name — the
+   * one string on the console that is about the player — was cut off mid-glyph
+   * at the edge of its box. One card, two lines on one left margin, the name
+   * given the width it needs: rank and name above, the appointment under it.
+   */
+  if (els.operatorPlate && world.character
+    && els.operatorPlate.dataset.name !== world.character.name) {
     els.operatorPlate.dataset.name = world.character.name;
     const rank = rankOf(world.character);
-    els.operatorPlate.innerHTML = `<span class="data-plate">
-      <b>${esc(rank.tm)}</b> ${esc(world.character.name)}<br>${esc(rank.en)}
-    </span>`;
+    els.operatorPlate.innerHTML = `<b>${esc(rank.tm)} · ${esc(rank.en)}</b>`
+      + `<span class="id-name">${esc(world.character.name)}</span>`;
+  }
+  if (els.echelonPlate && els.echelonPlate.dataset.echelon !== world.echelon.id) {
+    els.echelonPlate.dataset.echelon = world.echelon.id;
+    els.echelonPlate.innerHTML = `<b>${esc(world.echelon.appointment.tm)}</b>`
+      + `<span>${esc(world.echelon.appointment.en)}</span>`;
+    els.echelonPlate.title = `${world.echelon.tm} · ${world.echelon.en}`;
   }
 }
 
@@ -580,6 +623,12 @@ function renderTrackDetail(world, ui, els) {
  * the seconds in which nobody is commanding a sector are the price of the
  * decision and hiding them would make the decision free.
  */
+/** Alt and this command's number, or nothing if it is past the fourth. */
+function takeKey(world, formation) {
+  const n = world.formations.filter((f) => !f.hq).indexOf(formation);
+  return n >= 0 && n < 4 ? `ALT${n + 1}` : '';
+}
+
 export function renderFormations(world, ui, els) {
   const host = els.formationList;
   if (!host) return;
@@ -635,11 +684,17 @@ export function renderFormations(world, ui, els) {
           title="Now WEAPONS ${esc(postureEntry.en)}. Press to order WEAPONS ${esc(nextEntry.en)} — the standing order this formation fights on while you are elsewhere.">
           <span class="lg"><b>${esc(nextEntry.tm)}</b><i>ORDER WEAPONS ${esc(nextEntry.en)}</i></span>
         </button>
+        ${/*
+     * The key that takes this command is stamped on the cap that takes it, the
+     * way every other key on this console is: Alt and the card's own number,
+     * counted over the formations you may take — which is the same list the
+     * key map walks.
+     */ ''}
         ${formation.hq ? '' : `<button class="pb ${formation.direct ? 'is-down' : ''}"
           data-act="direct" data-formation="${formation.id}"
           title="${formation.direct ? 'Hand it back to its commander' : `Take it under your own hand (${held}/${limit} held)`}">
           <span class="lg"><b>${formation.direct ? 'ОТДАТЬ' : 'ПРИНЯТЬ'}</b><i>${
-  formation.direct ? 'RELEASE' : 'TAKE'}</i></span>
+  formation.direct ? 'RELEASE' : 'TAKE'}</i></span>${keycap(takeKey(world, formation))}
         </button>`}
       </div>
     </div>`;
@@ -691,6 +746,38 @@ function renderReserve(world) {
   </div>`;
 }
 
+/**
+ * The weapons state, as three latching positions instead of one cycling cap.
+ *
+ * The old cap printed the state the battery was IN and moved it to the NEXT one
+ * when pressed — the same trap the formation cards were taken out of — and it
+ * carried two keys on one face ("WEAPONS TIGHT · Q W") without saying which key
+ * did which. Three caps, one key each, the live one latched down: what the
+ * battery is on is the cap that is pressed in, and what a press will do is
+ * written on the cap you press.
+ *
+ * The order is POSTURE_CYCLE's, so the rack, the formation cards and the
+ * keyboard all name the three states in the same order.
+ */
+const WEAPONS_KEYS = { hold: 'Q', tight: 'W', free: '⇧E' };
+
+function weaponsCaps(site, disabled) {
+  return POSTURE_CYCLE.map((stateId) => {
+    const entry = CONTROLS[stateId];
+    const live = site.weaponsState === stateId;
+    return press(entry, {
+      act: 'weapons',
+      site: site.id,
+      state: stateId,
+      key: WEAPONS_KEYS[stateId],
+      disabled,
+      extra: `pb-weapons${live ? ' is-down is-live' : ''}`,
+      title: live ? `Weapons ${entry.en} — this battery is on it`
+        : `Order weapons ${entry.en}`,
+    });
+  }).join('');
+}
+
 /* ------------------------------------------------------------- weapons */
 
 /**
@@ -736,8 +823,6 @@ export function renderBatteries(world, ui, els) {
     const armEta = radar?.alive ? armTimeToImpact(world, radar) : Infinity;
 
 
-    const weaponsEntry = CONTROLS[site.weaponsState];
-
     // A battery in a formation somebody else is commanding is still on the
     // board and still shooting; it simply is not taking orders from this seat.
     const detached = !world.commandable(site.id);
@@ -758,7 +843,7 @@ export function renderBatteries(world, ui, els) {
       <span class="screw ${'abcd'[index % 4]}"></span>
       <div class="unit-head">
         <span class="unit-name">${index + 1}. ${esc(site.name)}</span>
-        <span class="unit-type wrap is-plate">
+        <span class="unit-type is-plate" title="${esc(nomenclature?.en ?? type.label)}">
           ${esc(nomenclature ? pair(nomenclature) : type.label)}${crewed ? ` · ${esc(pair(STATUS.yourSeat))}` : ''}</span>
       </div>
       ${unfit ? `<div class="unit-row unit-unfit" title="Against the selected contact">
@@ -781,7 +866,18 @@ export function renderBatteries(world, ui, els) {
           ${esc(pair(DEFENCE_CLASSES[type.class]))}
         </span>
       </div>
-      <div class="unit-explain">${esc(DEFENCE_CLASSES[type.class].blurb)}</div>
+      ${/*
+     * What the class IS, on the card the operator is actually looking at.
+     *
+     * Four copies of a four-line paragraph, one per battery, is a hundred and
+     * seventy pixels of teaching copy standing between the operator and the
+     * caps on a rack that scrolls — and it is the same four lines every night
+     * once it has been read. The class name stays on every card; the paragraph
+     * belongs to the card that is selected, which is the card being decided
+     * about.
+     */ ''}
+      ${ui.selectedSiteId === site.id || crewed || (!ui.selectedSiteId && mine)
+    ? `<div class="unit-explain">${esc(DEFENCE_CLASSES[type.class].blurb)}</div>` : ''}
       <div class="unit-row">
         <span class="unit-type wrap">${site.readyRounds}/${site.magazine} ROUNDS
           · ${esc(pair(STATUS.channels))} ${site.engagements.length}/${channelsFor(site)}${(() => {
@@ -800,25 +896,19 @@ export function renderBatteries(world, ui, els) {
     site.emconHold === 'silent' ? 'SILENT' : 'RADIATING')} UNTIL YOU SAY OTHERWISE</span>
       </div>` : ''}
 
-      <div class="unit-controls">
-        ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
+      <div class="unit-switches">
+        ${switch2(CONTROLS.radiate, CONTROLS.silence, !!radar?.on,
     { act: 'emcon', site: site.id, key: 'E', disabled: detached || !anyAlive })}
-        ${!caps.ride ? '' : `<button class="pb ${site.emconOrder === 'ride' ? 'is-down' : ''}"
-          data-act="ride" data-site="${site.id}" ${detached || !anyAlive ? 'disabled' : ''}
-          title="${esc(site.emconOrder === 'ride' ? CONTROLS.ride.hint : CONTROLS.perDoctrine.hint)} (G)">
-          <span class="lg"><b>${esc(CONTROLS.ride.tm)}</b><i>${esc(
-    site.emconOrder === 'ride' ? 'RIDING' : 'RIDE')} · G</i></span>
-        </button>`}
-        <button class="pb" data-act="weapons" data-site="${site.id}" ${detached ? 'disabled' : ''}
-          title="Weapons state — hold, tight or free (Q / W / Shift+E)">
-          <span class="lg"><b>${esc(weaponsEntry.tm)}</b><i>WEAPONS ${esc(weaponsEntry.en)} · Q W</i></span>
-        </button>
-        ${!caps.salvo ? '' : `<button class="pb" data-act="salvo" data-site="${site.id}" ${detached ? 'disabled' : ''}
-          title="Rounds per engagement (S)">
-          <span class="lg"><b>${esc(CONTROLS.salvo.tm)} ${site.salvoSize}</b><i>SALVO · S</i></span>
-        </button>`}
+        ${!caps.ride ? '' : switch2(CONTROLS.ride, CONTROLS.perDoctrine, site.emconOrder === 'ride',
+    { act: 'ride', site: site.id, key: 'G', disabled: detached || !anyAlive })}
+      </div>
+      <div class="unit-controls">
+        ${weaponsCaps(site, detached)}
         ${press(CONTROLS.reload, { act: 'reload', site: site.id, key: 'R',
     disabled: detached || !canStartLoading(world, site) })}
+        ${!caps.salvo ? '' : press({ tm: `${CONTROLS.salvo.tm} ${site.salvoSize}`, en: `SALVO ${site.salvoSize}` },
+    { act: 'salvo', site: site.id, key: 'S', disabled: detached,
+      title: 'Rounds per engagement' })}
         ${!caps.displace ? ''
     : press(CONTROLS.displace, { act: 'scoot', site: site.id, key: 'X',
       disabled: detached || site.scootRemainingS > 0 })}
@@ -845,9 +935,16 @@ export function renderBatteries(world, ui, els) {
         <span class="unit-name" title="${esc(nomenclature?.en ?? radar.label)}">${esc(nomenclature ? nomenclature.tm : radar.label)}</span>
         <span class="unit-type">${radar.alive ? `${radar.rangeKm} КМ/KM` : esc(pair(STATUS.destroyed))}</span>
       </div>
-      <div class="unit-explain">${esc(radar.rangeKm > 90
-    ? 'Early-warning radar — the long-range surveillance picture. Nothing paints until a set radiates.'
-    : 'Gap-filler radar — covers the low approaches the big set cannot see.')}</div>
+      ${/*
+     * What this set is, read off the set rather than off its range figure.
+     * The rule was `rangeKm > 90`, and the gap-filler on the weasel watch
+     * reaches 164 km — so the card for П-14 LOW LOOK, the set that exists to
+     * see under the big one, described itself as the long-range surveillance
+     * picture, word for word, directly under its own nomenclature plate.
+     */ ''}
+      <div class="unit-explain">${esc(nomenclature === EQUIPMENT.gapfiller
+    ? 'Gap-filler radar — covers the low approaches the big set cannot see.'
+    : 'Early-warning radar — the long-range surveillance picture. Nothing paints until a set radiates.')}</div>
       <div class="unit-row">
         ${lamp(radar.state === 'warming' ? STATUS.warming : STATUS.radiating,
     radar.state === 'radiating' || radar.state === 'warming',
@@ -861,14 +958,11 @@ export function renderBatteries(world, ui, els) {
           <i style="width:${Math.round(radar.exposure * 100)}%"></i></span>
         <span class="unit-type">${Math.round(radar.exposure * 100)}%</span>
       </div>` : ''}
-      <div class="unit-controls">
-        <button class="pb pb-radiate ${radar.on ? 'is-on' : blind && radar.alive ? 'is-urgent' : ''}"
-          data-act="emcon-radar" data-radar="${radar.id}" ${radar.alive ? '' : 'disabled'}
-          title="${esc(radar.on ? CONTROLS.silence.hint : CONTROLS.radiate.hint)}">
-          <span class="lg">${radar.on
-    ? `<b>RADIATING · CLICK TO SILENCE</b><i>${esc(CONTROLS.silence.tm)}</i>`
-    : `<b>RADIATE · SET IS COLD</b><i>${esc(CONTROLS.radiate.tm)}</i>`}</span>
-        </button>
+      <div class="unit-switches">
+        ${switch2(CONTROLS.radiate, CONTROLS.silence, !!radar.on, {
+    act: 'emcon-radar', radar: radar.id, disabled: !radar.alive,
+    extra: `sw-primary${!radar.on && blind && radar.alive ? ' is-urgent' : ''}`,
+  })}
       </div>
     </div>`;
   }).join('');
@@ -995,10 +1089,12 @@ export function renderCrewConsole(world, ui, els) {
         CANNOT GUIDE A ROUND.</span>
       </div>` : ''}
 
+      <div class="unit-switches">
+        ${switch2(CONTROLS.radiate, CONTROLS.silence, !!radar?.on,
+    { act: 'emcon', site: site.id, key: 'E', disabled: !radar?.alive })}
+      </div>
       <div class="unit-controls">
         ${press(CONTROLS.lock, { act: 'lock', site: site.id, key: 'L', disabled: !!unfit || noTarget })}
-        ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
-    { act: 'emcon', site: site.id, key: 'E', disabled: !radar?.alive })}
         ${press(CONTROLS.reload, { act: 'reload', site: site.id, key: 'R' })}
         ${caps.displace ? press(CONTROLS.displace, { act: 'scoot', site: site.id, key: 'X' }) : ''}
       </div>
@@ -1039,10 +1135,31 @@ export function renderEventLog(world, els, state) {
 
 /* ---------------------------------------------------------- command net */
 
+/**
+ * Keep the side panels clear of the banner that floats over them.
+ *
+ * The command net is deliberately an overlay — a directive that grew the
+ * footer used to shrink the stage and rescale the whole picture mid-watch —
+ * but it is a full-width overlay, so it also sat on top of the bottom forty-odd
+ * pixels of the rack. Measured with the weasel raid paused and a directive up:
+ * four of a hundred presses on real caps landed on the banner instead, with
+ * nothing to tell the operator why the cap they were pressing did nothing. The
+ * banner's own height is handed to the panels as padding, so the last cap on
+ * the rack always ends above it; the tube, which is what must not resize, is
+ * not touched.
+ */
+function reserveForNet(els, height) {
+  const shell = els.shell ?? document.getElementById('shell');
+  if (!shell || shell.dataset.netH === String(height)) return;
+  shell.dataset.netH = String(height);
+  shell.style.setProperty('--net-h', `${height}px`);
+}
+
 export function renderCommandNet(world, els) {
   const directive = world.command.pending;
   if (!directive) {
     els.commandNet.hidden = true;
+    reserveForNet(els, 0);
     return;
   }
   els.commandNet.hidden = false;
@@ -1051,6 +1168,7 @@ export function renderCommandNet(world, els) {
     els.commandText.innerHTML = `<span class="command-tag">◈ ${esc(pair(STATUS.commandNet))}</span>`
       + esc(directive.text);
   }
+  reserveForNet(els, els.commandNet.offsetHeight);
   const left = Math.max(0, directive.deadlineS - world.t);
   els.commandTimer.textContent = `${Math.ceil(left)}s`;
 }
