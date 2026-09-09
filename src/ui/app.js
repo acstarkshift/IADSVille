@@ -137,6 +137,7 @@ function cacheEls() {
     fusionState: id('fusion-state'),
     trackList: id('track-list'),
     flightStrip: id('flight-strip'),
+    boardState: id('board-state'),
     formationList: id('formation-list'),
     echelonPlate: id('echelon-plate'),
     trackDetail: id('track-detail'),
@@ -1527,23 +1528,22 @@ function wireGlobalInput() {
        * drifted — L locked silently and told you nothing when it could not,
        * while the LOCK cap beside it has printed its reason for watches.
        */
-      // Q, W and Shift+E are the three weapons caps, and they go through the
-      // caps' own path: the same sound, the same guards, the same line.
+      /*
+       * Q, W and E are the three weapons caps, in the order they sit on the
+       * rack, and none of them takes a modifier.
+       *
+       * FREE was Shift+E, which was two faults in one binding: a two-glyph
+       * chip on a cap whose neighbours carried one, and the same letter as the
+       * emissions switch two rows above it — and since `e.key.toLowerCase()`
+       * folds 'E' onto 'e', the shifted form fell into BOTH branches and one
+       * keystroke silenced the battery's antenna as well as setting it weapons
+       * free. Emissions is A, which is the only letter on this console that
+       * takes a battery off the air, and it is printed on the switch.
+       */
       case 'q': if (site) runAction('weapons', site.id, null, null, 'hold'); break;
       case 'w': if (site) runAction('weapons', site.id, null, null, 'tight'); break;
-      /*
-       * E is emissions; Shift+E is weapons free — and until now it was both.
-       * `e.key.toLowerCase()` folds 'E' onto 'e', so the shifted form fell
-       * into this branch as well as the weapons one underneath the switch: one
-       * keystroke silenced the battery's antenna AND set it weapons free, in
-       * that order, which is the two most consequential orders on the console
-       * given at once by a key that is printed as doing one of them.
-       */
-      case 'e': {
-        if (e.shiftKey) {
-          if (site) runAction('weapons', site.id, null, null, 'free');
-          break;
-        }
+      case 'e': if (site) runAction('weapons', site.id, null, null, 'free'); break;
+      case 'a': {
         const target = ui.view === 'crew' ? world.siteById.get(crewedId) : site;
         if (target) runAction('emcon', target.id);
         break;

@@ -50,12 +50,41 @@ kbd {
   border-bottom: 1px solid var(--metal-edge);
   box-shadow: 0 2px 6px rgba(0, 0, 0, .45);
 }
-.lamps { display: inline-flex; gap: 7px; align-items: center; margin-left: 2px; }
-.topbar .lamp { font-size: 8px; letter-spacing: .06em; }
-.topbar-group { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/*
+ * The master annunciator shrinks; it does not wrap.
+ *
+ * At 1280 the three lamps dropped onto a second row underneath the works plate
+ * while the right-hand cluster stayed on row one — an L-shaped bar with a dead
+ * gutter in it, measured at 66px tall against 41px at 1600. They are one
+ * unbreakable group now, and below 1400 they swap their captions for the short
+ * ones panels.js gives them (RAD · ARM 12s · FLT) rather than taking a second
+ * line off the bar. The ARM countdown survives the swap: it is the most
+ * time-critical number on the console.
+ */
+.lamps { display: inline-flex; gap: 7px; align-items: center; margin-left: 2px; flex: 0 0 auto; flex-wrap: nowrap; }
+.topbar .lamp { font-size: 9px; letter-spacing: .06em; white-space: nowrap; }
+.topbar .lamp-dome { width: 10px; height: 10px; }
+@media (max-width: 1400px) {
+  .topbar .lamp-cap b { display: none; }
+  .topbar .lamp-cap i { display: inline; font-style: normal; }
+}
+.topbar-group { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: nowrap; }
 #speed-group { display: inline-flex; align-items: center; gap: 8px; }
-.topbar-group:first-child { flex-wrap: wrap; row-gap: 3px; }
-.topbar-group:not(:first-child) { flex-wrap: nowrap; }
+/*
+ * Nothing on this bar wraps. The telemetry group is the one that gives, and it
+ * gives by truncating the mission name — which is also printed on the briefing
+ * the player just read — rather than by dropping the annunciator onto a second
+ * row underneath the works plate and leaving the whole right-hand cluster
+ * stranded on row one.
+ */
+.topbar-group:first-child > * { flex: 0 0 auto; }
+.topbar-group:first-child > .badge { flex: 0 1 auto; min-width: 7em; }
+/*
+ * And below 1400 the works plate goes, rather than the mission name: the plate
+ * is set dressing that the scope bezel carries again four inches away, and
+ * "WE…" is not a mission name. The plate is back at 1440 and above.
+ */
+@media (max-width: 1400px) { #unit-plate { display: none; } }
 
 .badge {
   color: var(--engrave); letter-spacing: .13em; text-transform: uppercase;
@@ -94,9 +123,11 @@ kbd {
 }
 
 /* One cap four times. The rack reads as a rack, and it does not resize when
-   the clock changes speed. */
-#speed-group .pb { min-width: 58px; width: 58px; padding-left: 5px; padding-right: 11px; }
+   the clock changes speed. The chip sits inset from the cap's bevel rather
+   than half over its corner radius, so the legend keeps its own column. */
+#speed-group .pb { min-width: 62px; width: 62px; padding: 5px 24px 4px 7px; }
 #speed-group .pb .lg { align-items: flex-start; }
+#speed-group .pb .lg b { font-size: 12px; letter-spacing: .06em; }
 
 .readout { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
 .readout label { color: var(--engrave-dim); font-size: 8px; letter-spacing: .1em; }
@@ -183,7 +214,8 @@ kbd {
   grid-template-columns: 3.7em 5.6em 2.6em 3.2em 3.6em 1fr;
   gap: 4px; padding: 2px 8px;
   border-left: 3px solid transparent;
-  font-size: 11px; font-variant-numeric: tabular-nums;
+  /* 15 + 4 + 1 = the 20px pitch the empty board is ruled at. */
+  font-size: 11px; line-height: 15px; font-variant-numeric: tabular-nums;
 }
 .track-head {
   color: var(--engrave-dim); font-size: 8.5px; letter-spacing: .1em;
@@ -193,12 +225,77 @@ kbd {
   margin: 0 6px;
 }
 
+/*
+ * The list is as tall as the board, not as tall as the panel.
+ *
+ * It was `flex: 1`, so four contacts sat in a 687 px well of flat black —
+ * ninety per cent of the column, with no rule, no empty state and nothing
+ * underneath. It takes the height it needs and scrolls past that; what is
+ * below it is panel metal and the board summary, which is a thing rather than
+ * a void.
+ */
 .track-list {
-  list-style: none; margin: 5px; padding: 2px 0; overflow-y: auto; flex: 1;
-  background: linear-gradient(180deg, transparent, rgba(0,0,0,.45)), var(--bg);
+  list-style: none; margin: 5px; padding: 2px 0; overflow-y: auto;
+  flex: 1 1 auto; min-height: 60px;
+  /* Ruled, at the pitch of a row. An empty board is a board with empty
+     slots on it; it was a flat black well, and with four contacts on a
+     watch that is most of the column. */
+  background:
+    repeating-linear-gradient(180deg, transparent 0 19px, rgba(255, 255, 255, .085) 19px 20px),
+    linear-gradient(180deg, transparent, rgba(0,0,0,.45)), var(--bg);
   border: 1px solid var(--metal-edge); border-radius: 2px;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, .7);
 }
+
+/*
+ * The state of the board, at the foot of the panel the board is on.
+ *
+ * Six figures the operator otherwise has to assemble by reading four battery
+ * cards one at a time — how much is out there, how much of it nobody has
+ * taken, how much is being shot at, and how much of your own kit can still
+ * fire. See renderBoardState in panels.js.
+ */
+.board-state {
+  margin: 7px 5px 0; padding: 7px 8px 8px;
+  border: 1px solid var(--metal-edge); border-radius: 2px;
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.18));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.bs-head {
+  font-size: 8.5px; letter-spacing: .2em; color: var(--engrave-dim);
+  padding-bottom: 5px; margin-bottom: 6px;
+  border-bottom: 1px solid var(--metal-edge);
+}
+.bs-figures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px 6px; }
+.bs-figure { display: block; min-width: 0; }
+.bs-figure label {
+  display: block; font-size: 7.5px; letter-spacing: .09em; color: var(--engrave-dim);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bs-figure b {
+  font-size: 16px; color: var(--engrave); font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+}
+.bs-figure.is-bad b { color: var(--hostile); }
+.bs-figure.is-warn b { color: var(--warn); }
+.bs-figure.is-good b { color: var(--good); }
+.bs-note {
+  margin-top: 7px; padding-top: 5px; border-top: 1px solid rgba(0, 0, 0, .3);
+  font-size: 9.5px; letter-spacing: .04em; color: var(--engrave-dim);
+}
+.bs-head.is-second { margin-top: 10px; }
+/* What is being defended and whether it is still there — the thing the watch
+   is scored on, which the console never showed until the debrief. */
+.bs-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font-size: 10px; letter-spacing: .05em; padding: 2px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, .28);
+}
+.bs-row span { color: var(--engrave-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bs-row b { color: var(--good); font-weight: 400; white-space: nowrap; }
+.bs-row.is-hurt b { color: var(--warn); }
+.bs-row.is-lost b { color: var(--hostile); }
+.bs-row.is-lost span { color: var(--hostile); }
 .track-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-row {
   cursor: pointer; align-items: center;
@@ -250,6 +347,7 @@ kbd {
 }
 
 .panel-foot {
+  margin-top: auto;
   border-top: 1px solid var(--metal-edge); padding: 6px 8px;
   font-size: 10.5px; color: var(--engrave-dim); min-height: 62px; line-height: 1.55;
 }
@@ -265,7 +363,13 @@ kbd {
  * at 1280x800 on The Two Cities, LOCK and the LAUNCH cap were rendered below
  * the bottom of the panel with no scrollbar anywhere that could reach them.
  */
-.battery-list { overflow-x: hidden; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+/* The rack runs under the bottom edge of the panel rather than stopping at it:
+   a shadow cast up from the edge says the column continues, which a clipped
+   card with a cap half under the rail otherwise does not. */
+.battery-list {
+  overflow-x: hidden; overflow-y: auto; flex: 1 1 auto; min-height: 0;
+  box-shadow: inset 0 -14px 12px -12px rgba(0, 0, 0, .8);
+}
 
 .pill {
   display: inline-block; padding: 0 5px; border-radius: 999px; font-size: 9.5px;
@@ -424,7 +528,22 @@ kbd {
   padding: 28px 20px;
 }
 .screen[hidden] { display: none; }
-.screen-inner { width: min(940px, 100%); }
+/*
+ * `margin: auto` rather than `align-items: center`: a screen shorter than the
+ * page sits in the middle of it instead of leaving a hand's width of empty
+ * black under the buttons, and a screen taller than the page still starts at
+ * the top, because auto margins have no leftover space to take.
+ */
+.screen-inner { width: min(940px, 100%); margin: auto; }
+/* Prose keeps its measure; a page of figures gets the width it needs. */
+.screen-inner.is-debrief { width: min(1240px, 100%); }
+/* The score and the ground are one band: the two cards a player reads first,
+   side by side, instead of stacked down the middle of an empty page. */
+.debrief-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; }
+.debrief-cols > .card { margin-bottom: 14px; }
+/* Six figures, two rows of three: auto-fit dropped four on the first row and
+   two on the second, which reads as a rack that ran out. */
+.debrief-cols .score-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 .title {
   font-size: clamp(28px, 6vw, 54px); letter-spacing: .28em; margin: 0 0 2px;
@@ -616,10 +735,23 @@ kbd {
 .score-cell b { font-size: 19px; color: var(--ink-bright); font-variant-numeric: tabular-nums; }
 .score-cell.is-bad b { color: var(--hostile); }
 .score-cell.is-good b { color: var(--good); }
-/* A rack of figures that were never earned: one ink, no verdict — and the
-   quiet one, because a zero nobody earned is not a zero anybody achieved. */
-.score-grid.is-unscored .score-cell b { color: var(--ink-dim); }
-.score-grid.is-unscored .score-cell { border-style: dashed; }
+/*
+ * A rack of figures that were never earned reads as WITHHELD.
+ *
+ * `var(--ink-dim)` is a dim phosphor green, which is the colour this screen
+ * uses for a watch that went well — so six zeros under a headline in the
+ * failure red were printed in the credit ink, and were also the same ink as
+ * their own labels, so TOTAL 0 carried no tone at all. They take the failure
+ * tone, muted: not a score, and not a success either.
+ */
+.score-grid.is-unscored .score-cell b {
+  color: color-mix(in srgb, var(--hostile) 62%, var(--ink-dim));
+}
+.score-grid.is-unscored .score-cell {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--hostile) 40%, var(--edge));
+}
+.score-withheld { margin: 10px 0 0; font-size: 11px; letter-spacing: .04em; }
 
 table.ledger { width: 100%; border-collapse: collapse; font-size: 11.5px; }
 table.ledger td { padding: 2px 0; border-bottom: 1px solid color-mix(in srgb, var(--edge) 40%, transparent); }
@@ -628,6 +760,7 @@ table.ledger th { padding: 2px 0; text-align: left; font-weight: 400; color: var
 table.ledger th.is-figure { text-align: right; }
 /* A cell of prose in a column of figures. Colour comes from a tone class. */
 table.ledger td.is-prose, table.ledger td.is-prose:last-child { text-align: left; }
+table.ledger.is-unscored td, table.ledger.is-unscored td:last-child { color: var(--ink-dim); }
 table.ledger .up { color: var(--good); }
 table.ledger .down { color: var(--hostile); }
 
@@ -668,14 +801,24 @@ table.ledger .down { color: var(--hostile); }
   background: color-mix(in srgb, var(--hostile) 5%, var(--bg-panel));
 }
 .record-card.is-abandoned h3 { color: var(--hostile); }
-.record-stamp.is-grave { transform: rotate(-6deg); opacity: .9; }
+/*
+ * The rubber stamp sits INSIDE the card it is stamped on.
+ *
+ * It was pinned 8 px from a top edge it is rotated about, so the corner of the
+ * box rode over the card's border and its rounded corner — a stamp that had
+ * been applied to the desk rather than to the paper. The offsets now clear the
+ * rotation: a 16 px box turned 4° needs about 5 px of headroom, and it has 14.
+ */
+.record-stamp.is-grave { transform: rotate(-4.5deg); opacity: .9; }
 .record-stamp {
-  position: absolute; top: 8px; right: 10px;
+  position: absolute; top: 14px; right: 16px;
   font-size: 8.5px; letter-spacing: .18em; color: var(--hostile);
   border: 1.5px solid var(--hostile); border-radius: 2px;
-  padding: 2px 6px; transform: rotate(-4deg); opacity: .75;
+  padding: 2px 6px; transform: rotate(-3.5deg); opacity: .75;
   pointer-events: none;
 }
+/* And the heading it shares the line with keeps out from under it. */
+.record-card h3 { padding-right: 190px; }
 
 .field-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px; }
 .field { display: flex; flex-direction: column; gap: 3px; flex: 1 1 210px; }
@@ -731,7 +874,9 @@ table.ledger .down { color: var(--hostile); }
    track list's way, and dies with the console in a blackout. */
 .tutorial-card {
   position: absolute;
-  top: 14px;
+  /* Clear of the tube's own two readouts, which the canvas draws at y=16 and
+     y=30: the card used to be laid straight over RANGE 140 KM. */
+  top: 42px;
   left: 14px;
   max-width: 320px;
   padding: 10px 34px 10px 12px;

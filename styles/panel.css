@@ -33,22 +33,24 @@
 /* ------------------------------------------------------------- engraving */
 
 /*
- * A legend is stencilled Cyrillic with the export gloss beneath it. The English
- * is always present, so the panel stays usable for a reader who cannot read the
- * Cyrillic — and legible if a font without Cyrillic coverage substitutes.
+ * A control legend is one English line, cut deep enough to read at arm's
+ * length. It used to be two — the Cyrillic stencil over its gloss — which on a
+ * cap 92 px wide meant two 9px lines saying one thing, and inside a switch
+ * meant four. The Cyrillic moved to the plates, where a plate can be read at
+ * leisure; what is left here got the space back, as size.
+ *
+ * `i` is the quiet second line, used only where the face of a control is a
+ * figure and the word for it goes underneath: 1× REAL, 2× FAST, 4× MAX.
  */
-.lg { display: inline-flex; flex-direction: column; line-height: 1.05; }
+.lg { display: inline-flex; flex-direction: column; line-height: 1.15; }
 .lg b {
-  font-weight: 700; letter-spacing: .1em; font-size: 10px;
+  font-weight: 700; letter-spacing: .08em; font-size: 11px;
   color: var(--engrave);
   text-shadow: 0 1px 0 rgba(0, 0, 0, .65), 0 -1px 0 rgba(255, 255, 255, .07);
 }
 .lg i {
-  /* The English gloss carries all the meaning for most players, so it gets
-     the same size and the same ink as the Cyrillic above it — only the weight
-     differs. Decorative plates and placards stay small — they are furniture. */
-  font-style: normal; font-size: 10px; letter-spacing: .06em;
-  color: var(--engrave);
+  font-style: normal; font-size: 9px; letter-spacing: .1em;
+  color: var(--engrave-dim);
 }
 .lg-stack { align-items: center; text-align: center; }
 
@@ -137,20 +139,38 @@
   padding: 4px 16px 4px 5px; cursor: pointer;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
 }
-.sw-legends { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.sw-pos { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; opacity: .42; }
-.sw-pos b {
-  font-weight: 700; font-size: 8px; letter-spacing: .06em; color: var(--engrave);
+/* The legends are lozenges cut to their own words, not a column of full-width
+   bars: an engraved position marking is the size of the marking. */
+.sw-legends { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; min-width: 0; max-width: 100%; }
+/*
+ * One line per position, 11px on 15px of leading. It was four lines of 8px
+ * type on 8.4px leading — the Cyrillic and its gloss, twice — inside a 34px
+ * switch, and at 100% the two pairs printed into each other. This is the same
+ * switch with half the words and twice the size.
+ */
+.sw-pos {
+  display: block; font-weight: 700; font-size: 11px; line-height: 15px;
+  letter-spacing: .07em; color: var(--engrave-dim);
+  padding: 0 6px; border-radius: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border: 1px solid transparent;
 }
-.sw-pos i {
-  font-style: normal; font-size: 8px; letter-spacing: .04em; color: var(--engrave);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+/*
+ * The position the lever is standing in is a LIT WINDOW, not a colour.
+ *
+ * Colour alone did not survive its own background: the same aria-pressed
+ * RADIATE read lit on the surveillance card and inert on the battery card
+ * below it, because the two cards' fills are different and the green was the
+ * only difference between on and off. A dark well with the ink glowing in it
+ * reads the same on any panel this console has.
+ */
+.sw-pos.is-on {
+  color: var(--good);
+  background: rgba(0, 0, 0, .55);
+  border-color: rgba(0, 0, 0, .5);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .75), 0 0 0 1px rgba(255, 255, 255, .05);
+  text-shadow: 0 0 7px color-mix(in srgb, var(--good) 55%, transparent);
 }
-/* The position the lever is actually in: the legends never move, so which of
-   them is live is carried by the ink as well as by the lever. */
-.sw-pos.is-on { opacity: 1; }
-.sw-pos.is-on b { text-shadow: 0 1px 0 rgba(0, 0, 0, .65); }
 .sw-body {
   position: relative; width: 17px; height: 26px; border-radius: 3px;
   background: linear-gradient(180deg, var(--metal-lo), var(--metal-edge));
@@ -180,13 +200,11 @@
 .sw:disabled { cursor: not-allowed; opacity: .6; }
 .sw:disabled .sw-body { background: var(--metal-lo); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6); }
 .sw:disabled .sw-lever { filter: grayscale(1) brightness(.6); box-shadow: none; }
-.sw:disabled .sw-pos b, .sw:disabled .sw-pos i { color: var(--engrave-dim); text-shadow: none; }
-/*
- * One ring, one green, one shape, around the whole control — the same rule as
- * .pb below. The switch used to ring only its toggle graphic, in a different
- * green, cutting across the caption inside the same control.
- */
-.sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sw:disabled .sw-pos { color: var(--engrave-dim); text-shadow: none; }
+.sw:disabled .sw-pos.is-on { color: var(--engrave-dim); background: rgba(0, 0, 0, .35); }
+/* One ring, one shape, around the whole control — see the ring at the end of
+   this file. The switch used to ring only its toggle graphic, in a different
+   green, cutting across the caption inside the same control. */
 /* The set that is cold with something in the sky: this switch IS the watch. */
 .sw.is-urgent { border-color: var(--warn); animation: fire-ready 1.05s infinite; }
 /* The I / O marks inside the bezel are gone with the state-labelled caption:
@@ -195,11 +213,17 @@
 
 /* ----------------------------------------------------------------- lamps */
 
-/* Domed indicator, dark until it has something to say. */
+/* Domed indicator, dark until it has something to say. Its caption is one
+   English line — it used to be the Cyrillic over the gloss, two lines of 8px
+   type to say READY. */
 .lamp {
   display: inline-flex; align-items: center; gap: 5px;
-  font-size: 8.5px; letter-spacing: .1em; color: var(--engrave-dim);
+  font-size: 9.5px; letter-spacing: .08em; color: var(--engrave-dim);
 }
+.lamp-cap b { font-weight: 700; }
+/* The short caption, for a bar that has run out of room. Only the topbar's
+   master annunciator carries one; see the topbar rules in hud.css. */
+.lamp-cap i { display: none; }
 .lamp-dome {
   width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto;
   background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.28), var(--lamp-off) 62%);
@@ -228,21 +252,33 @@
  * type. Never wider than its own corner: it is furniture for the finger, not
  * a second caption.
  */
+/*
+ * One size of chip, in one corner, on every control that has a key.
+ *
+ * It was 7.5px type in an 11.8×12.5 box — below any floor a person can read —
+ * and it grew with its legend, so the ⇧E chip on the FREE cap was wider and
+ * darker than the Q and W beside it in the same rack. The box is fixed at the
+ * widest single-key legend the console uses; the two- and three-glyph keys
+ * (ESC, ALT1) get the wide box, and only cards with room for one carry them.
+ */
 .kc {
-  position: absolute; top: 2px; right: 3px;
-  font-style: normal; font-size: 7.5px; line-height: 1; letter-spacing: .04em;
+  position: absolute; top: 4px; right: 4px;
+  display: grid; place-items: center;
+  font-style: normal; font-size: 9px; line-height: 1; letter-spacing: .04em;
+  font-weight: 700;
   color: var(--engrave);
   border: 1px solid var(--metal-edge); border-radius: 2px;
-  padding: 1.5px 2.5px; min-width: 9px; text-align: center;
-  background: rgba(0, 0, 0, .22);
+  width: 15px; height: 14px;
+  background: rgba(0, 0, 0, .3);
   pointer-events: none;
 }
+.kc-wide { width: 30px; }
 .pb:disabled .kc, .sw:disabled .kc { opacity: .5; }
-/* Only a control that carries a key reserves the corner for it, and a longer
-   key reserves more — a chip that overlaps its own legend is worse than no
-   chip at all. */
-.pb:has(.kc) { padding-right: 12px; }
-.pb:has(.kc-wide) { padding-right: 30px; }
+/* A cap carrying a chip reserves the corner the chip sits in. (The rack does
+   this for every cap whether it is carrying one or not, so that the chips can
+   follow the selected battery without the rack moving.) */
+.pb:has(.kc) { padding-right: 22px; }
+.pb:has(.kc-wide) { padding-right: 38px; }
 
 /* Legend-cap pushbutton: a moulded cap on a metal shroud. */
 .pb {
@@ -270,16 +306,36 @@
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, .5);
 }
 .pb:disabled .lg b, .pb:disabled .lg i { color: var(--engrave-dim); text-shadow: none; }
-.pb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/*
+ * A cap that is not a cap: the one control on the bar that ends the watch.
+ *
+ * LEAVE POST was the widest and brightest thing in the topbar — a filled,
+ * bevelled, moulded cap sitting in the same weight class as the speed rack,
+ * which is the whole visual grammar of this console pointed at its one
+ * destructive verb. It is a legend on bare metal now, dim, and no wider than
+ * the words it carries. It still asks before it acts.
+ */
+.pb-quiet {
+  background: none; box-shadow: none; border-color: transparent;
+  min-width: 0; padding: 4px 6px 3px;
+}
+.pb-quiet .lg b { color: var(--engrave-dim); font-size: 9.5px; letter-spacing: .12em; text-shadow: none; }
+.pb-quiet:hover:not(:disabled) { filter: none; }
+.pb-quiet:hover:not(:disabled) .lg b { color: var(--hostile); }
+.pb-quiet:active, .pb-quiet.is-pressed { transform: none; box-shadow: none; }
 
 /* The launch button is red, guarded, and larger than everything near it. */
+/* One line instead of two cost the cap nine pixels of height; it takes them
+   back as padding, because the launch cap is the largest control in the cabin
+   on purpose and a thin one reads as a toolbar button. */
 .pb-fire {
-  width: 100%; padding: 10px 8px 9px; margin-top: 7px;
+  width: 100%; padding: 15px 8px 14px; margin-top: 7px;
   background: linear-gradient(180deg, var(--fire-cap), var(--fire-cap-lo));
   border-color: var(--fire-cap-edge);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 3px 0 var(--fire-cap-edge), 0 4px 6px rgba(0, 0, 0, .5);
 }
-.pb-fire .lg b { color: var(--fire-ink); font-size: 13px; letter-spacing: .22em; }
+.pb-fire .lg b { color: var(--fire-ink); font-size: 15px; letter-spacing: .24em; }
 .pb-fire .lg i { color: var(--fire-ink-dim); }
 .pb-fire.is-armed { animation: fire-ready 1.05s infinite; }
 /* A dead launch cap is still the launch cap — grey and cold, not swapped for
@@ -343,8 +399,26 @@
 }
 .unit > .screw { width: 7px; height: 7px; top: 4px; right: 4px; }
 .unit > .screw::after { width: 4.5px; }
-.unit.is-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), inset 0 1px 0 rgba(255,255,255,.07); }
-.unit.is-mine { border-left: 3px solid var(--friendly); }
+/*
+ * Selection and ownership are drawn OUTSIDE the card's content box.
+ *
+ * `border-left: 3px` on the home battery took two pixels out of the grid the
+ * rack is laid on, so the same three caps measured x=1297 w=92 on that card
+ * and x=1295 w=93 on the ones above it — the whole rack stepped sideways as
+ * the selection moved. Both marks are shadows now: one inset rail for the
+ * battery that is yours, one ring around the card that is selected, neither
+ * of which the layout can see.
+ */
+.unit.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .07);
+}
+.unit.is-mine { box-shadow: inset 3px 0 0 var(--friendly), inset 0 1px 0 rgba(255,255,255,.07), 0 1px 3px rgba(0,0,0,.4); }
+.unit.is-mine.is-selected {
+  box-shadow: inset 3px 0 0 var(--friendly),
+    0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
 .unit.is-dead { filter: grayscale(.7); opacity: .55; }
 /* A battery card is a control: clicking it selects the battery the keys and
    the shootlist then act on, so it answers the pointer like one. */
@@ -419,11 +493,11 @@
 .unit-controls .pb .lg b, .unit-controls .pb .lg i {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
 }
-/* Rack legends are set one notch tighter than the console's other engraving,
-   because three of them share a row 258 px wide and the longest of them
-   (СМЕНА МЕСТА) has to fit that third without an ellipsis. */
-.unit-controls .pb .lg b { font-size: 9px; letter-spacing: .05em; }
-.unit-controls .pb .lg i { font-size: 9px; letter-spacing: .03em; }
+/* Rack legends: one line, 10.5px, and every cap on the rack reserves the same
+   corner for its key chip whether it is carrying one or not — so the chips can
+   follow the selected battery without a single cap changing width. */
+.unit-controls .pb { padding-right: 22px; }
+.unit-controls .pb .lg b { font-size: 10.5px; letter-spacing: .05em; }
 /* The weapons state: three latching positions, the live one pressed in. */
 .pb-weapons.is-live .lg b { color: var(--good); }
 
@@ -484,19 +558,21 @@
 /* Envelope constants on the battery card: true all night, so they defer to
    the numbers that change. */
 .unit-row .lo { opacity: .62; }
+/* A surveillance set's reach, at the right-hand end of its lamp row. */
+.unit-type.reach { margin-left: auto; }
 
 /* What the thing IS, on the card itself — one small line, not a hover. */
 .unit-explain { font-size: 10px; line-height: 1.4; opacity: .7; margin: 2px 0 5px; }
 
 /* The switch the whole game runs on, sized like it: the surveillance sets'
-   emissions switch is the one control a watch cannot be played without. */
-.sw-primary { padding: 5px 16px 5px 6px; }
-.sw-primary .sw-body { height: 32px; width: 19px; }
-.sw-primary .sw-pos b, .sw-primary .sw-pos i { font-size: 9.5px; letter-spacing: .09em; }
+   emissions switch, and the one in the cabin, are the controls a watch cannot
+   be played without. */
+.sw-primary { padding: 6px 22px 6px 7px; }
+.sw-primary .sw-body { height: 36px; width: 19px; }
+.sw-primary .sw-pos { font-size: 12px; line-height: 17px; letter-spacing: .09em; }
 .sw-primary .sw-lever { height: 13px; }
-.sw-primary[aria-pressed="true"] .sw-lever { top: 4px; }
-.sw-primary[aria-pressed="false"] .sw-lever { top: 15px; }
-.sw-primary[aria-pressed="true"] .sw-pos.is-on b { color: var(--good); }
+.sw-primary[aria-pressed="true"] .sw-lever { top: 5px; }
+.sw-primary[aria-pressed="false"] .sw-lever { top: 18px; }
 
 /*
  * A cap that is being held stays down.
@@ -510,3 +586,40 @@
   transform: translateY(2px);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, .55), 0 0 0 var(--metal-edge);
 }
+
+/* --------------------------------------------------------------- the ring */
+
+/*
+ * The focus ring, drawn as a piece of this console rather than as a recoloured
+ * browser default.
+ *
+ * A 2px solid outline hugging the control was what the browser would have done
+ * on its own. This is three things a lit ring on a painted panel actually has:
+ * a dark score line cut into the paint around the control, a bright filament
+ * standing off it, and a soft bloom on the metal beyond. It is drawn on a
+ * pseudo-element so it composes with the cap's own moulding instead of
+ * replacing it, and `outline: none` is safe here only because the ring below
+ * is unconditional and unmissable.
+ */
+.pb:focus-visible,
+.sw:focus-visible,
+.knob:focus-visible,
+.unit[tabindex]:focus-visible {
+  outline: none;
+}
+.pb:focus-visible::after,
+.sw:focus-visible::after,
+.knob:focus-visible::after {
+  content: ''; position: absolute; inset: -5px; pointer-events: none;
+  border: 1.5px solid var(--accent);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 1.5px rgba(0, 0, 0, .72),
+    0 0 0 1px rgba(0, 0, 0, .5),
+    0 0 12px 1px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.knob:focus-visible::after { border-radius: 50%; inset: -6px; }
+@media (prefers-reduced-motion: no-preference) {
+  .pb:focus-visible::after, .sw:focus-visible::after { animation: ring-settle .14s ease-out; }
+}
+@keyframes ring-settle { from { opacity: 0; transform: scale(1.06); } }

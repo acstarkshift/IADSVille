@@ -800,28 +800,37 @@ toggle switches whose lever position *is* the state, domed indicator lamps,
 legend-cap pushbuttons, a screwed bezel around the tube, riveted data plates
 carrying a type and a works number, and a high-voltage placard nobody reads.
 
-Every legend is bilingual — the Cyrillic is what is stamped on the panel, with
-the export gloss etched underneath, the way export-marked equipment genuinely is.
-That is also why the console stays playable if you cannot read the Cyrillic, and
-legible if your system substitutes a font without it.
+The plates carry the Cyrillic; the controls do not. A nomenclature plate, the
+works plate, a placard and a rubber stamp are objects with a foundry's lettering
+on them, and they are what make the panel read as manufactured:
 
 ```
-ИЗЛУЧЕНЬ / RADIATE      ЗАТИХ / SILENCE      ПУСК / LAUNCH
-ЗАХВАТ / LOCK           ГОТОВ / READY        ОБЛУЧЕНЬЕ / INBOUND ARM
-ЗАСВЕТКА / ELINT EXPOSURE                    СМЕНА МЕСТА / DISPLACE
+С-200 «БАСТИОН» · S-200 BASTION        П-31 «ШИРОКИЙ ГЛАЗ» · P-31 WIDE EYE
+ТИП 4М-2 · TYPE                        ЗАВ. 118-44 · WORKS NO.
+ВЫСОКОЕ НАПРЯЖЕНИЕ · HIGH VOLTAGE      ДЕЛО / FILE 3050-10-Б
 ```
+
+A cap, a switch position, a lamp caption and a readout are read in a second,
+with something inbound, so they are in English at a size that can be read at
+arm's length. Two languages stacked inside a 45-pixel switch was four lines of
+8px type with 8.4px leading, which is a grey smear rather than a control.
 
 None of it is decoration either: the switch you throw to go dark is the same
 decision the whole game is built on, and it should feel like throwing a switch.
 
 A switch carries **both** of its positions, engraved beside the lever and never
-moving: up is ИЗЛУЧЕНЬ / RADIATE, down is ЗАТИХ / SILENCE, and one click throws
-it. A cap carries **one** key, stamped in its own corner rather than added to
+moving: up is RADIATE, down is SILENCE, one click throws it, and the position
+the lever is standing in is a lit window rather than a colour — colour alone did
+not survive the fill of the card underneath it. A cap carries **one** key, stamped in its own corner rather than added to
 the legend — so a control says what pressing it will do, and the key that does
-that is printed on it. Weapons state is three latching caps (ЗАПРЕТ / HOLD ·
-`Q`, КОНТРОЛЬ / TIGHT · `W`, СВОБОДНО / FREE · `Shift`+`E`) with the live one
-pressed in, rather than one cap that printed the state it was in and then moved
-to the next one when you pressed it.
+that is printed on it. Weapons state is three latching caps (HOLD · `Q`,
+TIGHT · `W`, FREE · `E`) with the live one pressed in, rather than one cap that
+printed the state it was in and then moved to the next one when you pressed it.
+
+The caps, the switch positions and the lamp captions are in English, one line
+each. The Cyrillic is on the plates — the nomenclature plate on each battery,
+the works plate on the bezel, the placards and the stamps — which is where a
+foundry puts it and where it can be read at leisure rather than at a glance.
 
 ## Controls
 
@@ -843,7 +852,7 @@ selects it — `4` selects 4×, and there is no 3× speed, so there is no `3`.
 | `V` | switch seat (commander) |
 | `Shift`+`1`…`4` | hand the selected contact to battery 1–4, in the order the cards are numbered |
 | `Alt`+`1`…`4` | take or hand back a subordinate command (district and national) |
-| `G` | throw the beam switch to ДЕРЖАТЬ ЛУЧ / HOLD BEAM — guide through an inbound ARM |
+| `G` | throw the beam switch to HOLD BEAM — guide through an inbound ARM |
 | `H` | full controls and a plain-English explanation of the mechanics |
 
 A watch that removes a control removes its key with it: the teaching console
@@ -852,14 +861,15 @@ so once on the log rather than quietly putting your only battery on the road.
 
 **Battle manager:** click a contact to select it, drag it onto a battery to
 assign the engagement, right-click a radar to switch it on or off. `Q`, `W` and
-`Shift`+`E` are the three weapons caps — hold, tight, free — and each key
-presses the cap it is printed on; plain `E` throws the selected battery's
-emissions switch (mind the difference — one of those silences your own set),
+`E` are the three weapons caps — hold, tight, free — three adjacent keys for
+three adjacent caps, each printed on the cap it presses; `A` throws the
+selected battery's emissions switch — the one key on this console that takes a
+battery off the air —
 `R` sends the selected battery's loaders out — the rack fills itself whenever
 the rails go bare, and this is the order to fill one that is merely short —
 and `X` displaces.
 
-**SAM operator:** click to designate, `L` to lock, `F` to fire, `E` to radiate or
+**SAM operator:** click to designate, `L` to lock, `F` to fire, `A` to radiate or
 shut down — that last one is the whole game. `R` is LOADERS OUT: the tube lamps
 go green one at a time on their own when the rails run dry, and this starts them
 early, on a rack that is only half spent.

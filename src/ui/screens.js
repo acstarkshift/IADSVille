@@ -172,7 +172,7 @@ export function renderMenu(host, state) {
 
     <div class="actions">
       <button class="btn-primary" id="btn-brief">TAKE THE WATCH</button>
-      <button class="btn" id="btn-dossier">ЛИЧНОЕ ДЕЛО · DOSSIER</button>
+      <button class="btn" id="btn-dossier">DOSSIER</button>
       <button class="btn" id="btn-keys">CONTROLS</button>
       ${flown ? '<button class="btn is-danger" id="btn-wipe">DESTROY FILE</button>' : ''}
     </div>
@@ -359,7 +359,13 @@ export function renderDebrief(host, state, result, entry) {
     })
     .slice(-8);
 
-  host.innerHTML = `<div class="screen-inner">
+  /*
+   * The debrief is the one screen with a rack of figures on it, so it is the
+   * one screen that is allowed to be wider than a column of prose. It was
+   * 940 px on a 1600 px page with the score strip squeezed into six 120 px
+   * cells and a hand's width of empty page under the buttons.
+   */
+  host.innerHTML = `<div class="screen-inner is-debrief">
     ${ending ? `
       <p class="subtitle is-lead">${esc(ending.title)}</p>
       <h1 class="title is-outcome">${esc(ending.subtitle ?? ending.title)}</h1>
@@ -373,6 +379,7 @@ export function renderDebrief(host, state, result, entry) {
       <p class="subtitle">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
     `}
 
+    <div class="debrief-cols">
     <div class="card">
       <h3>Score</h3>
       <div class="score-grid${result.abandoned ? ' is-unscored' : ''}">
@@ -392,11 +399,15 @@ export function renderDebrief(host, state, result, entry) {
         ${cell('ROUNDS', `${s.roundsFired}`)}
         ${cell('ASSETS LOST', s.assetsLost, result.abandoned ? '' : s.assetsLost ? 'is-bad' : 'is-good')}
       </div>
+      ${result.abandoned ? `<p class="note score-withheld">Nothing on this line was
+        earned or lost: the watch was not stood.</p>` : ''}
     </div>
 
     <div class="card">
       <h3>Ground</h3>
-      <table class="ledger">
+      ${/* Nothing on the ground was defended on a watch nobody stood, so the
+           whole column is in the neutral ink rather than the credit one. */ ''}
+      <table class="ledger${result.abandoned ? ' is-unscored' : ''}">
         ${result.assets.map((a) => {
     const home = a.type === 'town' && state.campaign.character;
     const quarter = home ? districtOf(state.campaign.character) : null;
@@ -417,6 +428,7 @@ export function renderDebrief(host, state, result, entry) {
         ${result.battery.roundsRemaining} rounds on the rails,
         ${result.battery.crewLosses} crew casualties,
         ${Math.round(result.battery.exposure * 100)}% emissions exposure.</p>` : ''}
+    </div>
     </div>
 
     ${(() => {
@@ -507,7 +519,7 @@ export function renderDebrief(host, state, result, entry) {
     <div class="actions">
       <button class="btn-primary" id="btn-again">STAND ANOTHER WATCH</button>
       <button class="btn" id="btn-replay">REPLAY THIS ONE</button>
-      ${state.campaign.character ? '<button class="btn" id="btn-dossier-debrief">ЛИЧНОЕ ДЕЛО · DOSSIER</button>' : ''}
+      ${state.campaign.character ? '<button class="btn" id="btn-dossier-debrief">DOSSIER</button>' : ''}
     </div>
   </div>`;
 }
@@ -550,13 +562,16 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
         ${key('Drag contact → battery', 'hand it to that battery')}
         ${key('Shift+1 … 4', 'hand the selected contact to battery 1–4, in the order the cards are numbered')}
         ${key('Alt+1 … 4', 'take or hand back subordinate command 1–4 (district and national watches)')}
-        ${key('Q / W / Shift+E', 'the three weapons caps on the selected battery: hold, tight, free')}
-        ${key('E', 'throw the selected battery’s emissions switch — careful: this silences your own set')}
+        ${key('Q / W / E', 'the three weapons caps on the selected battery: hold, tight, free')}
+        ${key('A', 'throw the selected battery’s emissions switch — careful: this silences your own set')}
         ${ride ? key('G', 'throw its beam switch to HOLD BEAM — guide through an inbound ARM (the crew never will)') : ''}
         ${key('R', 'loaders out — start the selected battery’s rack filling now, short or not')}
         ${displace ? key('X', 'displace the selected battery') : ''}
         ${key('`', 'toggle every surveillance radar')}
       </div>
+      <p class="note">Every key on that list acts on the <b>selected</b> battery, which is why the
+      key chips are stamped on the selected card and on no other: the rack shows six keys once,
+      not the same six on every card. Click a card to move them.</p>
     </div>
     <div class="card">
       <h3>SAM operator</h3>
@@ -564,7 +579,7 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
         ${key('Click a contact', 'designate it')}
         ${key('L', 'lock — start the engagement sequence')}
         ${key('F', 'fire')}
-        ${key('E', 'the emissions switch — up radiates, down is silent (this is the whole game)')}
+        ${key('A', 'the emissions switch — up radiates, down is silent (this is the whole game)')}
         ${salvo ? key('S', 'salvo size') : ''}
         ${key('R', 'loaders out — top the rack up now, instead of waiting for the rails to go bare')}
         ${displace ? key('X', 'displace') : ''}

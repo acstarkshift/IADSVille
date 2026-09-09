@@ -10,11 +10,24 @@
  * Serbian, and the resemblance is the same resemblance those languages have to
  * each other. No real state, service or equipment is depicted.
  *
- * Every entry is bilingual on purpose. The Cyrillic is what is stencilled on the
- * panel; the English gloss is etched underneath it in smaller type, the way
- * export-marked equipment genuinely is — which also means the console stays
- * playable for someone who cannot read the Cyrillic, and legible if a font
- * without Cyrillic coverage substitutes.
+ * Every entry is bilingual, and where the Cyrillic is printed the English is
+ * printed beside it. WHERE it is printed is the rule that changed:
+ *
+ *   The plates carry the Cyrillic. The controls do not.
+ *
+ * A nomenclature plate, the works plate, a placard and a rubber stamp are
+ * objects with a foundry's lettering on them, and they read as manufactured
+ * because of it. A cap, a switch position, a lamp caption and a readout are
+ * things the operator must read at a glance while something is inbound, and
+ * two languages stacked in a 45-pixel switch is not a glance — measured, the
+ * ИЗЛУЧЕНЬ / RADIATE / ЗАТИХ / SILENCE stack set four lines of 8px type with
+ * 8.4px leading inside a 34px box, which at 100% is a grey smear. So the
+ * control legends are English, one line, at a size a person can actually read,
+ * and every letter of Cyrillic that was on them has gone to the plates.
+ *
+ * `tm` is therefore what a plate would be stencilled with; `en` is what the
+ * control says. `legend()` prints the second, `pair()` and `plateHtml()` the
+ * pair. Nothing prints `tm` alone.
  */
 
 /** @typedef {{ tm: string, en: string, hint?: string }} Legend */
@@ -79,9 +92,15 @@ export const CONTROLS = {
    * There is no 3× speed and therefore no 3 key.
    */
   speedHold: { tm: 'СТОП', en: 'HOLD', hint: 'the simulation stops; a pending order’s clock does not' },
-  speedReal: { tm: '1×', en: 'REAL' },
-  speedFast: { tm: '2×', en: 'FAST' },
-  speedMax: { tm: '4×', en: 'MAX' },
+  /*
+   * `cap` is the face of the control where the face is a figure rather than a
+   * word: the rack reads 1× 2× 4× because that is what a speed selector is
+   * marked with, and the word underneath says which is which. Everything else
+   * on the console has one line and no `cap`.
+   */
+  speedReal: { tm: '1×', en: 'REAL', cap: '1×', sub: 'REAL' },
+  speedFast: { tm: '2×', en: 'FAST', cap: '2×', sub: 'FAST' },
+  speedMax: { tm: '4×', en: 'MAX', cap: '4×', sub: 'MAX' },
 };
 
 /**
@@ -182,7 +201,7 @@ export const EQUIPMENT = {
  */
 export const PLATES = {
   type: { tm: 'ТИП 4М-2', en: 'TYPE 4M-2' },
-  works: { tm: 'ЗАВ. № 118-44', en: 'WORKS NO. 118-44' },
+  works: { tm: 'ЗАВ. 118-44', en: 'WORKS NO. 118-44' },
   factory: { tm: 'ЗАВОД ИМ. КОРНЕЛА', en: 'KORNEL WORKS' },
   standard: { tm: 'ТМСТ 4471-Б', en: 'TMST 4471-B' },
   warning: { tm: 'ВЫСОКОЕ НАПРЯЖЕНИЕ', en: 'HIGH VOLTAGE' },
@@ -190,36 +209,45 @@ export const PLATES = {
 };
 
 /**
- * Render a legend as engraved markup: the Cyrillic large, the English small
- * underneath. `inline` keeps it on one line for tight controls.
+ * Render a control's legend: one English line, at a size a person can read.
  *
- * `key` is stamped as a small dimmed key-cap glyph in the corner of the cap —
- * `keycap()` below — rather than appended to the gloss line. It used to read
- * "WEAPONS TIGHT · Q W", which widened every cap until only two fitted on a
- * row, broke the rack's rhythm into a ragged 2+2+2, and printed two keys on one
- * face without saying which did which. A cap now carries exactly one key, in a
- * fixed-width chip that costs the legend no width at all.
+ * This used to stack the Cyrillic over the English on every cap and every
+ * switch position, which put four lines of 8px type inside a 34px switch and
+ * made the two most-used controls on the console a grey smear. The plates keep
+ * the Cyrillic — see `plateHtml` — because a plate is read once, at leisure,
+ * and it is what makes the panel look manufactured. A control is read in a
+ * second, with something inbound.
+ *
+ * `sub` (or the entry's own) is a second, quieter line, used only where the
+ * face of the control is a figure rather than a word: the speed rack is marked
+ * 1× 2× 4× and says REAL / FAST / MAX underneath, the way a speed selector is.
+ *
+ * `key` is stamped as a fixed-width chip in the control's own corner —
+ * `keycap()` below — rather than appended to the legend, so the key costs the
+ * caption no width and every key on the console is printed in the same place.
  */
-export function legend(entry, { inline = false, glossOnly = false, key = '' } = {}) {
+export function legend(entry, { inline = false, glossOnly = false, key = '', sub = null } = {}) {
   if (!entry) return '';
-  if (glossOnly) return escapeHtml(key ? `${entry.en} · ${key}` : entry.en);
+  const face = entry.cap ?? entry.en;
+  if (glossOnly) return escapeHtml(key ? `${face} · ${key}` : face);
+  const under = sub ?? entry.sub ?? '';
   const cls = inline ? 'lg' : 'lg lg-stack';
-  return `<span class="${cls}"><b>${escapeHtml(entry.tm)}</b><i>${escapeHtml(entry.en)}</i></span>`
-    + keycap(key);
+  return `<span class="${cls}"><b>${escapeHtml(face)}</b>${
+    under ? `<i>${escapeHtml(under)}</i>` : ''}</span>` + keycap(key);
 }
 
 /**
  * The key stencilled in the corner of the control it presses.
  *
- * One key per control, always in the same place, always in capitals — the
- * console has one convention for this and every cap, switch and dialogue
- * button in the build follows it.
+ * One key per control, always in the same corner, always in capitals, always
+ * in a chip of one size — the chip is sized for the widest legend the console
+ * uses, so a two-glyph key does not make one cap's chip fatter and darker than
+ * its neighbours'. `wide` is for the three- and four-glyph keys (ESC, ALT1)
+ * that only appear on cards with room for them.
  */
 export function keycap(key) {
   if (!key) return '';
   const text = String(key).toUpperCase();
-  // A chip of more than two glyphs (ESC, ALT1) needs more of the cap's corner
-  // reserved for it, or it is drawn over the legend it belongs to.
   return `<em class="kc${text.length > 2 ? ' kc-wide' : ''}">${escapeHtml(text)}</em>`;
 }
 
@@ -245,6 +273,17 @@ export function pair(tmOrEntry, en) {
     return tmOrEntry.en ? `${tmOrEntry.tm} · ${tmOrEntry.en}` : tmOrEntry.tm;
   }
   return en ? `${tmOrEntry} · ${en}` : String(tmOrEntry ?? '');
+}
+
+/**
+ * A nomenclature plate: the Cyrillic stencil with its English gloss under it.
+ *
+ * This is the ONE form on the console that still carries Cyrillic, and it is
+ * deliberate — the type plate riveted to a battery, the works plate on the
+ * bezel, the placard over the high-voltage cabinet. Controls use `legend`.
+ */
+export function plateHtml(entry) {
+  return pairHtml(entry);
 }
 
 /** Markup form of the same pairing: Cyrillic, then the gloss in smaller type. */

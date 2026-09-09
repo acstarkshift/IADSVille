@@ -114,7 +114,7 @@ export function renderDossier(host, state) {
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title is-file">${esc(rank.tm)} ${esc(character.name)}</h1>
     <p class="subtitle">${esc(rank.en)} · ${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}
-      · ДЕЛО № / FILE NO. ${esc(fileNumber(character))}</p>
+      · ДЕЛО / FILE NO. ${esc(fileNumber(character))}</p>
 
     <div class="card record-card">
       <div class="record-stamp">${esc(tier.label)}</div>
@@ -298,7 +298,7 @@ export function serviceSummary(character, service, campaign) {
   }
 
   return `<div class="card record-card">
-    <div class="record-stamp">ДЕЛО № / FILE ${esc(fileNumber(character))}</div>
+    <div class="record-stamp">ДЕЛО / FILE ${esc(fileNumber(character))}</div>
     <h3>Service record — ${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}</h3>
     <table class="ledger">${rows.join('')}</table>
     ${character.points ? `<p class="urgent aside">
@@ -320,7 +320,7 @@ export function serviceSummary(character, service, campaign) {
 export function abandonedRecord(character, result) {
   const rank = character ? rankOf(character) : null;
   const stamp = character
-    ? `ДЕЛО № / FILE ${esc(fileNumber(character))}`
+    ? `ДЕЛО / FILE ${esc(fileNumber(character))}`
     : `${esc(STATUS.postAbandoned.tm)} · ${esc(STATUS.postAbandoned.en)}`;
   return `<div class="card record-card is-abandoned">
     <div class="record-stamp is-grave">${stamp}</div>

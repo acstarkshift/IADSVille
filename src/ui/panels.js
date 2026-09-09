@@ -8,7 +8,7 @@
  * expensive, while the canvas underneath stays at full rate.
  */
 
-import { SIM, SAM_TYPES, AIR_TYPES, DEFENCE_CLASSES } from '../engine/config.js';
+import { SIM, SAM_TYPES, AIR_TYPES, ASSET_TYPES, DEFENCE_CLASSES } from '../engine/config.js';
 import { bearing, dist, len, clockString, clamp01 } from '../engine/math.js';
 import { sortedTracks, cannotEngageReason, huntsTheFlight } from '../engine/threat.js';
 import { trackProfile } from '../engine/detection.js';
@@ -81,7 +81,7 @@ function paint(host, html) {
  */
 export function clearPanelCache(els) {
   for (const host of [els.trackList, els.batteryList, els.crewConsole,
-    els.formationList, els.masterLamps]) {
+    els.formationList, els.masterLamps, els.boardState]) {
     if (host) host.__painted = null;
   }
 }
@@ -106,12 +106,23 @@ function roundEtaFor(world, site) {
   return soonest;
 }
 
-function lamp(entry, lit, { colour = '', blinking = false, caption = null } = {}) {
+/**
+ * A domed indicator with its caption beside it, in English.
+ *
+ * The caption used to be the Cyrillic over the English — two lines to say one
+ * thing, on an annunciator whose whole job is to be read from the corner of
+ * an eye. `short` is the same caption for a bar that has run out of room; the
+ * topbar's three master lamps carry one and drop to it below 1400px rather
+ * than wrapping the cluster onto a second row.
+ */
+function lamp(entry, lit, { colour = '', blinking = false, caption = null, short = '' } = {}) {
   const classes = ['lamp', lit ? 'is-lit' : '', colour ? `is-${colour}` : '', blinking ? 'blinking' : '']
     .filter(Boolean).join(' ');
-  return `<span class="${classes}" title="${esc(entry.hint ?? entry.en)}">
+  const text = caption ?? entry.en;
+  return `<span class="${classes}" title="${esc(`${entry.tm} · ${entry.en}`)}${
+    entry.hint ? esc(` — ${entry.hint}`) : ''}">
     <span class="lamp-dome"></span>
-    <span class="lg"><b>${esc(caption ?? entry.tm)}</b><i>${esc(entry.en)}</i></span></span>`;
+    <span class="lamp-cap"><b>${esc(text)}</b>${short ? `<i>${esc(short)}</i>` : ''}</span></span>`;
 }
 
 /**
@@ -123,12 +134,18 @@ function lamp(entry, lit, { colour = '', blinking = false, caption = null } = {}
  * position should be radiate, the Down position should be silence, permanently
  * labelled as such"), and what was here instead was a button whose caption was
  * the state it was in, so the console rearranged itself under the finger every
- * time the switch was thrown, and the Cyrillic half stopped translating the
- * English half the moment the two were read together (RADIATING · CLICK TO
- * SILENCE over ЗАТИХ).
+ * time the switch was thrown.
  *
- * One click throws it. The label column is its own column, so the lever cannot
- * be drawn over its own caption — which is what ИЗЛУ●ЕНЬ was.
+ * One line per position, in English. It was two — the Cyrillic over the gloss,
+ * twice — which is four lines of 8px type with 8.4px leading inside a 34px
+ * switch, repeated four times down the rack: measured, a smear. One line per
+ * position at 11px is a switch you can read at arm's length, which is the only
+ * thing this control has ever needed to be.
+ *
+ * The live position is a lit window, not a colour: it sits in a dark well with
+ * its ink glowing. Colour alone did not survive the fill of the selected
+ * card — the same aria-pressed RADIATE read lit on one card and inert on the
+ * one below it, which is the exact failure a lever exists to prevent.
  */
 function switch2(up, down, on, { act, site, radar, disabled = false, key = '', extra = '' } = {}) {
   const attrs = [
@@ -137,8 +154,7 @@ function switch2(up, down, on, { act, site, radar, disabled = false, key = '', e
     radar ? `data-radar="${radar}"` : '',
     disabled ? 'disabled' : '',
   ].filter(Boolean).join(' ');
-  const pos = (entry, live) => `<span class="sw-pos ${live ? 'is-on' : ''}">
-    <b>${esc(entry.tm)}</b><i>${esc(entry.en)}</i></span>`;
+  const pos = (entry, live) => `<span class="sw-pos ${live ? 'is-on' : ''}">${esc(entry.en)}</span>`;
   return `<button class="sw ${extra}" aria-pressed="${on}" ${attrs}
       title="${esc(up.en)} / ${esc(down.en)} — ${esc((on ? up : down).hint ?? '')}">
     <span class="sw-body"><span class="sw-lever"></span></span>
@@ -196,7 +212,7 @@ function reloadBar(site, type) {
   if (!busy) return '';
   const frac = clamp01(1 - busy.remainingS / Math.max(busy.totalS, 1e-6));
   return `<div class="unit-row reload-row">
-    <span class="unit-type">${esc(pair(busy.entry))}${busy.count ? ` ${busy.count}` : ''}</span>
+    <span class="unit-type">${esc(busy.entry.en)}${busy.count ? ` ${busy.count}` : ''}</span>
     <span class="gauge is-warn"><i style="width:${Math.round(frac * 100)}%"></i></span>
     <span class="unit-type reload-left">${Math.ceil(busy.remainingS)}s</span>
   </div>`;
@@ -224,21 +240,22 @@ const TABLES = { STATE, CONTROLS, STATUS, EQUIPMENT, PLATES };
  * СЕКТОР 4-Б · ТИП 4М-2 · ЗАВ. № 118-44 and nothing else, on a console whose
  * one typographic rule is that the gloss is always beside the stencil).
  *
- * An element with `data-legend="GROUP.key"` gets that entry: as a stencil
- * over its gloss if it is a `.lg`, as one paired line otherwise. `data-key`
- * appends the keyboard shortcut, and `data-gloss-first` puts the English on
- * top — which the two command-net caps want, because they are answered
- * against a clock.
+ * An element with `data-legend="GROUP.key"` gets that entry: the control's own
+ * English face if it is a `.lg`, the paired plate line otherwise. `data-key`
+ * stamps the keyboard shortcut in the corner chip.
  */
 export function stampLegends(root = document) {
   for (const el of root.querySelectorAll('[data-legend]')) {
     const [group, key] = el.dataset.legend.split('.');
     const entry = TABLES[group]?.[key];
     if (!entry) continue;
-    const top = el.dataset.glossFirst !== undefined ? entry.en : entry.tm;
-    const under = el.dataset.glossFirst !== undefined ? entry.tm : entry.en;
     if (el.classList.contains('lg')) {
-      el.innerHTML = `<b>${esc(top)}</b><i>${esc(under)}</i>${keycap(el.dataset.key)}`;
+      // Controls speak English, in one line — see `legend()`. The one thing
+      // that gets a second line is a cap whose face is a figure: the speed
+      // rack is marked 1× 2× 4× with the word underneath.
+      const face = entry.cap ?? entry.en;
+      const sub = entry.sub ?? '';
+      el.innerHTML = `<b>${esc(face)}</b>${sub ? `<i>${esc(sub)}</i>` : ''}${keycap(el.dataset.key)}`;
     } else if (el.dataset.glossOnly !== undefined) {
       /*
        * The status readouts along the top are not engraved legends, they are
@@ -251,7 +268,7 @@ export function stampLegends(root = document) {
        */
       el.textContent = entry.en;
       el.title = `${entry.tm} · ${entry.en}`;
-    } else el.textContent = `${top} · ${under}`;
+    } else el.textContent = `${entry.tm} · ${entry.en}`;
   }
   /*
    * The works plate in the corner of the topbar.
@@ -288,8 +305,11 @@ export function renderTopbar(world, ui, els) {
   wrap.classList.toggle('is-low', standing < 34);
   wrap.classList.toggle('is-mid', standing >= 34 && standing < 55);
 
-  els.fusionState.textContent = world.fusionOnline ? STATUS.fusion.tm : STATUS.localControl.tm;
-  els.fusionState.title = world.fusionOnline ? STATUS.fusion.en : STATUS.localControl.en;
+  // The one legend on the picture panel that had no English at all was
+  // ЕДИНАЯ КАРТА, sitting in the header of the panel the whole seat reads.
+  const fusion = world.fusionOnline ? STATUS.fusion : STATUS.localControl;
+  els.fusionState.textContent = fusion.en;
+  els.fusionState.title = `${fusion.tm} · ${fusion.en}`;
   els.fusionState.classList.toggle('is-bad', !world.fusionOnline);
 
   // Master annunciator: the three things that would have someone shouting.
@@ -304,13 +324,24 @@ export function renderTopbar(world, ui, els) {
   const armInbound = Number.isFinite(soonestArm);
   const anyRadiating = world.radars.some((r) => r.state === 'radiating');
   const faulted = world.radars.some((r) => !r.alive) || world.sites.some((s) => !s.alive);
+  /*
+   * The master annunciator, with a short caption for a narrow bar.
+   *
+   * At 1280 the three lamps used to wrap onto a second row underneath the
+   * works plate while the whole right-hand cluster stayed on row one, leaving
+   * an L-shaped bar with a dead gutter in it. They carry both captions now and
+   * the CSS drops to the short one rather than letting the cluster wrap; the
+   * ARM countdown survives the shortening, because it is the most time-critical
+   * number on the console.
+   */
   paint(els.masterLamps, [
-    lamp(STATUS.radiating, anyRadiating, { colour: 'green' }),
+    lamp(STATUS.radiating, anyRadiating, { colour: 'green', short: 'RAD' }),
     lamp(STATUS.armWarning, armInbound, {
       colour: 'red', blinking: true,
-      caption: armInbound ? `${STATUS.armWarning.tm} ${Math.ceil(soonestArm)}s` : STATUS.armWarning.tm,
+      caption: armInbound ? `${STATUS.armWarning.en} ${Math.ceil(soonestArm)}s` : STATUS.armWarning.en,
+      short: armInbound ? `ARM ${Math.ceil(soonestArm)}s` : 'ARM',
     }),
-    lamp(STATUS.fault, faulted, { colour: 'amber' }),
+    lamp(STATUS.fault, faulted, { colour: 'amber', short: 'FLT' }),
   ].join(''));
 
   /*
@@ -359,8 +390,8 @@ export function renderFlightStrip(world, els) {
     strip.hidden = false;
     strip.className = `flight-strip ${down ? 'is-lost' : 'is-clear'}`;
     strip.innerHTML = `<div class="flight-head"><b>STATE 01</b>
-      <span>${down ? 'ЦЕЛЬ УНИЧТОЖЕНА · DESTROYED' : world.stats.vipEscaped
-    ? 'ВНЕ ВОЗДУШНОГО ПРОСТРАНСТВА · CLEAR OF NATIONAL AIRSPACE' : 'НЕ В ВОЗДУХЕ · NOT AIRBORNE'}</span></div>`;
+      <span>${down ? 'DESTROYED' : world.stats.vipEscaped
+    ? 'CLEAR OF NATIONAL AIRSPACE' : 'NOT AIRBORNE'}</span></div>`;
     return;
   }
 
@@ -377,7 +408,7 @@ export function renderFlightStrip(world, els) {
   strip.hidden = false;
   strip.className = `flight-strip${threatened ? ' is-threatened' : ''}`;
   strip.innerHTML = `<div class="flight-head"><b>STATE 01</b>
-      <span>${esc(pair(STATUS.protectedFlight))}</span></div>
+      <span>${esc(STATUS.protectedFlight.en)}</span></div>
     <div class="flight-figures">
       <span><label>ALT</label>${Math.round(vip.altM / 100) * 100} M</span>
       <span><label>TO FRONTIER</label>${Math.round(toGo)} KM</span>
@@ -585,7 +616,77 @@ export function renderTrackList(world, ui, els) {
 
   paint(els.trackList, sections.join(''));
 
+  renderBoardState(world, ui, els, { tracks, unpaired, mine });
   renderTrackDetail(world, ui, els);
+}
+
+/**
+ * The state of the board, on the panel the board is on.
+ *
+ * Four contacts leave this column ninety per cent bare — measured at 1600×950
+ * on First Light, a 687 px list box holding 66 px of rows, the rest flat black
+ * with no rule and no reason. That space is now the answer to the question the
+ * seat asks all night and that nothing on the console answered without reading
+ * four battery cards one at a time: how much of the sector is still in your
+ * hand. Contacts on the board, how many nobody has taken, how many are being
+ * shot at, how many rounds of yours are in the air, and how many batteries
+ * still have something on the rails.
+ *
+ * In the cabin it is the same four figures for your own battery, because the
+ * operator's seat sees its own battery and the cues sent to it, and pretending
+ * otherwise would undo the isolation that seat is built around.
+ */
+function renderBoardState(world, ui, els, { tracks, unpaired, mine }) {
+  const host = els.boardState;
+  if (!host) return;
+
+  const hostile = tracks.filter((t) => t.hostility === 'hostile').length;
+  const paired = tracks.filter((t) => t.assignedTo.length > 0).length;
+  const roundsUp = world.missiles.filter((m) => m.alive && m.kind === 'sam'
+    && mine.some((s) => s.id === m.siteId)).length;
+  const armed = mine.filter((s) => s.alive && s.readyRounds > 0 && s.scootRemainingS === 0);
+  const rails = armed.reduce((n, s) => n + s.readyRounds, 0);
+
+  const figure = (label, value, mood = '') =>
+    `<span class="bs-figure ${mood}"><label>${esc(label)}</label><b>${esc(String(value))}</b></span>`;
+
+  paint(host, `<div class="bs-head">${
+    ui.view === 'crew' ? 'YOUR BATTERY' : 'THE SECTOR'}</div>
+    <div class="bs-figures">
+      ${figure('CONTACTS', tracks.length)}
+      ${figure('HOSTILE', hostile, hostile ? 'is-bad' : '')}
+      ${figure('UNPAIRED', unpaired.length, unpaired.length ? 'is-warn' : '')}
+      ${figure('PAIRED', paired, paired ? 'is-good' : '')}
+      ${figure('ROUNDS UP', roundsUp)}
+      ${figure('ARMED', `${armed.length}/${mine.length}`,
+    armed.length ? '' : 'is-bad')}
+    </div>
+    <div class="bs-note">${rails} round${rails === 1 ? '' : 's'} on the rails${(() => {
+    const cold = mine.length - armed.length;
+    return cold > 0 ? ` · ${cold} ${cold === 1 ? 'battery' : 'batteries'} cannot fire` : '';
+  })()}</div>
+    ${groundState(world)}`);
+}
+
+/**
+ * What is being defended, and whether it is still there.
+ *
+ * The whole watch is scored on this and the console never showed it. A hit on
+ * the airbase was one ticker line that scrolled away inside a minute; from
+ * then until the debrief there was no way to find out what was still standing
+ * short of remembering. It is four to six rows of two words. The debrief has
+ * printed this table since the first build — it should not be the first time
+ * the operator sees it.
+ */
+function groundState(world) {
+  const rows = world.assets.map((asset) => {
+    const hp = ASSET_TYPES[asset.type]?.hp ?? 1;
+    const pct = Math.round(100 * clamp01(asset.damage / hp));
+    const state = asset.destroyed ? 'DESTROYED' : pct >= 1 ? `${pct}% DAMAGE` : 'INTACT';
+    const cls = asset.destroyed ? 'is-lost' : pct >= 1 ? 'is-hurt' : '';
+    return `<div class="bs-row ${cls}"><span>${esc(asset.label)}</span><b>${esc(state)}</b></div>`;
+  }).join('');
+  return rows ? `<div class="bs-head is-second">THE GROUND</div>${rows}` : '';
 }
 
 function renderTrackDetail(world, ui, els) {
@@ -667,11 +768,11 @@ export function renderFormations(world, ui, els) {
       <div class="fmn-head">
         <span class="lg"><b>${esc(formation.tm)}</b><i>${esc(formation.en)}</i></span>
         <span class="fmn-state">${esc(
-    handover > 0 ? `ПЕРЕДАЧА · HANDOVER ${Math.ceil(handover)}s`
-      : formation.hq ? 'ВАШ ДИВИЗИОН · YOURS'
-        : formation.direct ? 'ПОД ВАШЕЙ РУКОЙ · DIRECT'
-          : saturated ? 'РУКИ ЗАНЯТЫ · HANDS FULL'
-            : `${formation.commander?.tm ?? ''} · ${formation.commander?.name ?? 'SUBORDINATE'}`)}</span>
+    handover > 0 ? `HANDOVER ${Math.ceil(handover)}s`
+      : formation.hq ? 'YOURS'
+        : formation.direct ? 'UNDER YOUR HAND'
+          : saturated ? 'HANDS FULL'
+            : (formation.commander?.name ?? 'SUBORDINATE'))}</span>
       </div>
       <div class="fmn-figures">
         <span><label>BTY</label>${alive.length}/${sites.length}</span>
@@ -682,7 +783,7 @@ export function renderFormations(world, ui, els) {
       <div class="fmn-controls">
         <button class="pb" data-act="posture" data-formation="${formation.id}"
           title="Now WEAPONS ${esc(postureEntry.en)}. Press to order WEAPONS ${esc(nextEntry.en)} — the standing order this formation fights on while you are elsewhere.">
-          <span class="lg"><b>${esc(nextEntry.tm)}</b><i>ORDER WEAPONS ${esc(nextEntry.en)}</i></span>
+          <span class="lg"><b>ORDER WEAPONS ${esc(nextEntry.en)}</b></span>
         </button>
         ${/*
      * The key that takes this command is stamped on the cap that takes it, the
@@ -693,15 +794,14 @@ export function renderFormations(world, ui, els) {
         ${formation.hq ? '' : `<button class="pb ${formation.direct ? 'is-down' : ''}"
           data-act="direct" data-formation="${formation.id}"
           title="${formation.direct ? 'Hand it back to its commander' : `Take it under your own hand (${held}/${limit} held)`}">
-          <span class="lg"><b>${formation.direct ? 'ОТДАТЬ' : 'ПРИНЯТЬ'}</b><i>${
-  formation.direct ? 'RELEASE' : 'TAKE'}</i></span>${keycap(takeKey(world, formation))}
+          <span class="lg"><b>${formation.direct ? 'RELEASE' : 'TAKE'}</b></span>${keycap(takeKey(world, formation))}
         </button>`}
       </div>
     </div>`;
   }).join('');
 
   paint(host, `<div class="fmn-bar">
-      <span class="lg"><b>ПОДЧИНЁННЫЕ КОМАНДЫ</b><i>SUBORDINATE COMMANDS</i></span>
+      <span class="lg"><b>SUBORDINATE COMMANDS</b></span>
       <span class="fmn-count">${held}/${Number.isFinite(limit) ? limit : '∞'} DIRECT</span>
     </div>
     <div class="unit-explain">Each formation fights on the standing order you leave it with.
@@ -732,7 +832,7 @@ function renderReserve(world) {
     .join(', ');
   return `<div class="fmn is-reserve">
     <div class="fmn-head">
-      <span class="lg"><b>СТРАТЕГИЧЕСКИЙ РЕЗЕРВ</b><i>STRATEGIC RESERVE</i></span>
+      <span class="lg"><b>STRATEGIC RESERVE</b></span>
       <span class="fmn-state">${world.reserve.rounds} ROUNDS HELD</span>
     </div>
     ${transit ? `<div class="fmn-figures"><span><label>ON THE ROAD</label>${transit}</span></div>` : ''}
@@ -740,7 +840,7 @@ function renderReserve(world) {
       ${world.formations.filter((f) => world.sitesOf(f).length).map((f) => `<button class="pb"
         data-act="reserve" data-formation="${f.id}" ${world.reserve.rounds <= 0 ? 'disabled' : ''}
         title="Release four rounds to ${esc(f.name)}. They take four minutes to arrive.">
-        <span class="lg"><b>4 → ${esc(f.tm)}</b><i>RELEASE TO ${esc(f.en.toUpperCase())}</i></span>
+        <span class="lg"><b>RELEASE 4 → ${esc(f.en.toUpperCase())}</b></span>
       </button>`).join('')}
     </div>
   </div>`;
@@ -759,9 +859,15 @@ function renderReserve(world) {
  * The order is POSTURE_CYCLE's, so the rack, the formation cards and the
  * keyboard all name the three states in the same order.
  */
-const WEAPONS_KEYS = { hold: 'Q', tight: 'W', free: '⇧E' };
+/*
+ * Q, W, E — three adjacent keys for three adjacent caps, and no modifier on
+ * any of them. FREE used to be Shift+E, which put a two-glyph chip on a cap
+ * whose neighbours carried one, and left the only modified binding on the rack
+ * sitting next to the only other control that answered to E.
+ */
+const WEAPONS_KEYS = { hold: 'Q', tight: 'W', free: 'E' };
 
-function weaponsCaps(site, disabled) {
+function weaponsCaps(site, disabled, keyed) {
   return POSTURE_CYCLE.map((stateId) => {
     const entry = CONTROLS[stateId];
     const live = site.weaponsState === stateId;
@@ -769,7 +875,7 @@ function weaponsCaps(site, disabled) {
       act: 'weapons',
       site: site.id,
       state: stateId,
-      key: WEAPONS_KEYS[stateId],
+      key: keyed ? WEAPONS_KEYS[stateId] : '',
       disabled,
       extra: `pb-weapons${live ? ' is-down is-live' : ''}`,
       title: live ? `Weapons ${entry.en} — this battery is on it`
@@ -837,14 +943,30 @@ export function renderBatteries(world, ui, els) {
     const unfit = selectedTrack && !detached && site.alive
       ? cannotEngageReason(world, site, selectedTrack) : null;
 
+    /*
+     * The key chips go on the card the keys will act on, and on no other.
+     *
+     * Q, W, E, R, S and X all act on the SELECTED battery, so a rack of four
+     * cards printed the same six chips four times over: twenty-four key
+     * legends for six keys, and no way to tell from the rack which card they
+     * addressed. The chips follow the selection — which is also the card
+     * carrying the class note, for the same reason — and the shroud reserves
+     * the chip's corner on every cap either way, so nothing on the rack moves
+     * when the selection does.
+     */
+    const keyed = ui.view !== 'crew'
+      && (ui.selectedSiteId === site.id || (!ui.selectedSiteId && mine));
+
     return `<div class="unit ${ui.selectedSiteId === site.id ? 'is-selected' : ''}
         ${!site.alive ? 'is-dead' : ''} ${mine ? 'is-mine' : ''}
         ${detached ? 'is-detached' : ''}" data-site="${site.id}">
       <span class="screw ${'abcd'[index % 4]}"></span>
       <div class="unit-head">
         <span class="unit-name">${index + 1}. ${esc(site.name)}</span>
+        ${/* The nomenclature plate is where the Cyrillic lives, here and on the
+             works plate and the stamps — and nowhere else on this console. */ ''}
         <span class="unit-type is-plate" title="${esc(nomenclature?.en ?? type.label)}">
-          ${esc(nomenclature ? pair(nomenclature) : type.label)}${crewed ? ` · ${esc(pair(STATUS.yourSeat))}` : ''}</span>
+          ${esc(nomenclature ? pair(nomenclature) : type.label)}${crewed ? ` · ${esc(STATUS.yourSeat.en)}` : ''}</span>
       </div>
       ${unfit ? `<div class="unit-row unit-unfit" title="Against the selected contact">
         <span>✗ CANNOT TAKE ${esc(selectedTrack.tn)} — ${esc(unfit.toUpperCase())}</span>
@@ -856,14 +978,14 @@ export function renderBatteries(world, ui, els) {
     radar?.state === 'radiating' || radar?.state === 'warming',
     { colour: radar?.state === 'warming' ? 'amber' : 'green' })}
         ${lamp(STATUS.armWarning, Number.isFinite(armEta), { colour: 'red', blinking: true,
-    caption: Number.isFinite(armEta) ? `${STATUS.armWarning.tm} ${Math.ceil(armEta)}s` : STATUS.armWarning.tm })}
+    caption: Number.isFinite(armEta) ? `${STATUS.armWarning.en} ${Math.ceil(armEta)}s` : STATUS.armWarning.en })}
         ${!site.alive ? lamp(STATUS.fault, true, { colour: 'red' }) : ''}
       </div>
 
       <div class="unit-row">
         ${tubes(site)}
         <span class="unit-type wrap" title="${esc(DEFENCE_CLASSES[type.class].blurb)}">
-          ${esc(pair(DEFENCE_CLASSES[type.class]))}
+          ${esc(DEFENCE_CLASSES[type.class].en)}
         </span>
       </div>
       ${/*
@@ -880,37 +1002,37 @@ export function renderBatteries(world, ui, els) {
     ? `<div class="unit-explain">${esc(DEFENCE_CLASSES[type.class].blurb)}</div>` : ''}
       <div class="unit-row">
         <span class="unit-type wrap">${site.readyRounds}/${site.magazine} ROUNDS
-          · ${esc(pair(STATUS.channels))} ${site.engagements.length}/${channelsFor(site)}${(() => {
+          · ${esc(STATUS.channels.en)} ${site.engagements.length}/${channelsFor(site)}${(() => {
     // The battery's own most anxious number, on the net side too: seconds
     // until its nearest round in flight arrives. The crew console had this;
     // the commander watching four batteries did not.
     const eta = roundEtaFor(world, site);
-    return eta !== null ? ` · ${esc(pair(STATUS.inFlight))} ${Math.ceil(eta)}s` : '';
+    return eta !== null ? ` · ${esc(STATUS.inFlight.en)} ${Math.ceil(eta)}s` : '';
   })()}
           <span class="lo">· ${type.minRangeKm}–${type.maxRangeKm} KM · ${Math.round(type.minAltM)}–${Math.round(type.maxAltM).toLocaleString('en-US')} M</span></span>
       </div>
       ${reloadBar(site, type)}
 
       ${site.emconHold && !crewed ? `<div class="unit-row is-quiet">
-        <span class="unit-type wrap">${esc(pair(STATUS.emconHeld))} — ${esc(
+        <span class="unit-type wrap">${esc(STATUS.emconHeld.en)} — ${esc(
     site.emconHold === 'silent' ? 'SILENT' : 'RADIATING')} UNTIL YOU SAY OTHERWISE</span>
       </div>` : ''}
 
       <div class="unit-switches">
         ${switch2(CONTROLS.radiate, CONTROLS.silence, !!radar?.on,
-    { act: 'emcon', site: site.id, key: 'E', disabled: detached || !anyAlive })}
+    { act: 'emcon', site: site.id, key: keyed ? 'A' : '', disabled: detached || !anyAlive })}
         ${!caps.ride ? '' : switch2(CONTROLS.ride, CONTROLS.perDoctrine, site.emconOrder === 'ride',
-    { act: 'ride', site: site.id, key: 'G', disabled: detached || !anyAlive })}
+    { act: 'ride', site: site.id, key: keyed ? 'G' : '', disabled: detached || !anyAlive })}
       </div>
       <div class="unit-controls">
-        ${weaponsCaps(site, detached)}
-        ${press(CONTROLS.reload, { act: 'reload', site: site.id, key: 'R',
+        ${weaponsCaps(site, detached, keyed)}
+        ${press(CONTROLS.reload, { act: 'reload', site: site.id, key: keyed ? 'R' : '',
     disabled: detached || !canStartLoading(world, site) })}
         ${!caps.salvo ? '' : press({ tm: `${CONTROLS.salvo.tm} ${site.salvoSize}`, en: `SALVO ${site.salvoSize}` },
-    { act: 'salvo', site: site.id, key: 'S', disabled: detached,
+    { act: 'salvo', site: site.id, key: keyed ? 'S' : '', disabled: detached,
       title: 'Rounds per engagement' })}
         ${!caps.displace ? ''
-    : press(CONTROLS.displace, { act: 'scoot', site: site.id, key: 'X',
+    : press(CONTROLS.displace, { act: 'scoot', site: site.id, key: keyed ? 'X' : '',
       disabled: detached || site.scootRemainingS > 0 })}
       </div>
     </div>`;
@@ -932,8 +1054,16 @@ export function renderBatteries(world, ui, els) {
     return `<div class="unit" data-radar="${radar.id}">
       <span class="screw ${'abcd'[index % 4]}"></span>
       <div class="unit-head">
-        <span class="unit-name" title="${esc(nomenclature?.en ?? radar.label)}">${esc(nomenclature ? nomenclature.tm : radar.label)}</span>
-        <span class="unit-type">${radar.alive ? `${radar.rangeKm} КМ/KM` : esc(pair(STATUS.destroyed))}</span>
+        ${/*
+       * Callsign first, then the plate — the same head the battery cards have,
+       * because the player's rule is that a set has one name everywhere and
+       * the tutorial calls this one WIDE EYE. The range figure moved down to
+       * the lamp row: it read "449 КМ/KM" — two spellings of one unit — in the
+       * most prominent slot on the first card of the rack.
+       */ ''}
+        <span class="unit-name">${esc(nomenclature?.en ?? radar.label)}</span>
+        <span class="unit-type is-plate" title="${esc(nomenclature?.en ?? radar.label)}">
+          ${esc(nomenclature ? nomenclature.tm : radar.label)}</span>
       </div>
       ${/*
      * What this set is, read off the set rather than off its range figure.
@@ -950,10 +1080,11 @@ export function renderBatteries(world, ui, els) {
     radar.state === 'radiating' || radar.state === 'warming',
     { colour: radar.state === 'warming' ? 'amber' : 'green' })}
         ${lamp(STATUS.armWarning, Number.isFinite(armEta), { colour: 'red', blinking: true,
-    caption: Number.isFinite(armEta) ? `${STATUS.armWarning.tm} ${Math.ceil(armEta)}s` : STATUS.armWarning.tm })}
+    caption: Number.isFinite(armEta) ? `${STATUS.armWarning.en} ${Math.ceil(armEta)}s` : STATUS.armWarning.en })}
+        <span class="unit-type reach">${radar.alive ? `${radar.rangeKm} KM` : esc(STATUS.destroyed.en)}</span>
       </div>
       ${caps.exposure ? `<div class="unit-row">
-        <span class="unit-type wrap">${esc(pair(STATUS.exposure))}</span>
+        <span class="unit-type wrap">${esc(STATUS.exposure.en)}</span>
         <span class="gauge ${radar.exposure > 0.65 ? 'is-hot' : radar.exposure > 0.35 ? 'is-warn' : ''}">
           <i style="width:${Math.round(radar.exposure * 100)}%"></i></span>
         <span class="unit-type">${Math.round(radar.exposure * 100)}%</span>
@@ -1009,9 +1140,9 @@ export function renderCrewConsole(world, ui, els) {
     : status.inEnvelope ? STATUS.inEnvelope : STATUS.outOfZone;
 
   const envelopeDetail = !status.hasTarget ? '—'
-    : status.inEnvelope ? `${Math.round(status.rangeKm)} КМ`
+    : status.inEnvelope ? `${Math.round(status.rangeKm)} KM`
       : status.timeToRangeS !== null ? `+${Math.ceil(status.timeToRangeS)}s`
-        : pair(STATUS.noSolution);
+        : STATUS.noSolution.en;
 
   const row = (entry, value, mood = '') =>
     `<div class="crew-row ${mood}">${legend(entry, { inline: true })}<b>${esc(value)}</b></div>`;
@@ -1065,7 +1196,7 @@ export function renderCrewConsole(world, ui, els) {
     ? row(STATUS.shotQuality, `${Math.round(status.pkEstimate * 100)}%`,
       status.pkEstimate >= 0.5 ? 'is-good' : '')
     : ''}
-      ${row(STATUS.sequence, `${pair(sequence)}${status.reactionRemainingS > 0 ? ` ${status.reactionRemainingS.toFixed(1)}s` : ''}`)}
+      ${row(STATUS.sequence, `${sequence.en}${status.reactionRemainingS > 0 ? ` ${status.reactionRemainingS.toFixed(1)}s` : ''}`)}
       ${row(STATUS.channels, `${status.channelsUsed}/${status.channels}`)}
       ${row(CONTROLS.reload, `${site.readyRounds} / ${site.magazine}`)}
       <div class="crew-row crew-tubes">${legend(CONTROLS.launch, { inline: true })}${tubes(site)}</div>
@@ -1074,7 +1205,7 @@ export function renderCrewConsole(world, ui, els) {
       <button class="pb pb-fire ${status.canFire && (status.pkEstimate === null || status.pkEstimate >= 0.5) ? 'is-armed' : ''}" id="btn-fire"
         ${status.canFire ? '' : 'disabled'}>
         ${status.state === 'guiding'
-    ? `<span class="lg"><b>${status.roundsUp} В ПОЛЁТЕ${status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}С` : ''}</b><i>${status.roundsUp} IN FLIGHT${status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}s TO INTERCEPT` : ''}</i></span>`
+    ? `<span class="lg"><b>${status.roundsUp} IN FLIGHT</b>${status.roundEtaS !== null ? `<i>${Math.ceil(status.roundEtaS)}s TO INTERCEPT</i>` : ''}</span>`
     : legend(CONTROLS.launch, { key: 'F' })}
       </button>
 
@@ -1085,13 +1216,13 @@ export function renderCrewConsole(world, ui, els) {
         <span>NO TARGET SELECTED — PICK A CONTACT ON THE SCOPE OR THE LIST</span>
       </div>` : ''}
       ${wrecked ? `<div class="unit-row unit-unfit">
-        <span>${esc(pair(STATUS.antennasGone))} — ${esc(guidance.label)} DESTROYED. THIS BATTERY
+        <span>${esc(STATUS.antennasGone.en)} — ${esc(guidance.label)} DESTROYED. THIS BATTERY
         CANNOT GUIDE A ROUND.</span>
       </div>` : ''}
 
       <div class="unit-switches">
         ${switch2(CONTROLS.radiate, CONTROLS.silence, !!radar?.on,
-    { act: 'emcon', site: site.id, key: 'E', disabled: !radar?.alive })}
+    { act: 'emcon', site: site.id, key: 'A', extra: 'sw-primary', disabled: !radar?.alive })}
       </div>
       <div class="unit-controls">
         ${press(CONTROLS.lock, { act: 'lock', site: site.id, key: 'L', disabled: !!unfit || noTarget })}
@@ -1106,7 +1237,7 @@ export function renderCrewConsole(world, ui, els) {
         <span class="unit-type">${Math.round((radar?.exposure ?? 0) * 100)}%</span>
       </div>` : ''}
       ${site.crewLosses ? `<div class="crew-row is-hot">${legend(STATUS.crew, { inline: true })}
-        <b>${site.crewLosses} ПОТЕРЬ / CASUALTIES</b></div>` : ''}
+        <b>${site.crewLosses} CASUALTIES</b></div>` : ''}
 
       <div class="placard">${esc(PLATES.warning.tm)}<br>${esc(PLATES.warning.en)}</div>
     </div>`);
@@ -1165,12 +1296,23 @@ export function renderCommandNet(world, els) {
   els.commandNet.hidden = false;
   if (els.commandText.dataset.uid !== directive.uid) {
     els.commandText.dataset.uid = directive.uid;
-    els.commandText.innerHTML = `<span class="command-tag">◈ ${esc(pair(STATUS.commandNet))}</span>`
+    els.commandText.innerHTML = `<span class="command-tag">◈ ${esc(STATUS.commandNet.en)}</span>`
       + esc(directive.text);
   }
   reserveForNet(els, els.commandNet.offsetHeight);
   const left = Math.max(0, directive.deadlineS - world.t);
   els.commandTimer.textContent = `${Math.ceil(left)}s`;
+}
+
+/**
+ * The English half of a plate entry with its serial dropped: TYPE 4M-2 → TYPE.
+ *
+ * A plate carries its number once. The gloss is there to say what the number
+ * is called, not to reprint it — which is what ЗАВ. № 118-44 over WORKS NO.
+ * 118-44 was doing, twice on one plate.
+ */
+function glossWord(entry) {
+  return entry.en.replace(/\s*\S*\d\S*$/, '');
 }
 
 /** Range scale positions on the selector, in kilometres. */
@@ -1198,9 +1340,15 @@ export function renderScopeSide(world, ui, els, rangeKm) {
       </div>
       ${legend(CONTROLS.range, {})}
       <span class="knob-readout" id="range-readout"></span>
+      ${/*
+     * The works plate: the figure once, the word for it in both languages.
+     * It used to print ТИП 4М-2 / TYPE 4M-2 / ЗАВ. № 118-44 / WORKS NO. 118-44
+     * — the same two numbers stamped twice each, which is not a plate, it is a
+     * plate photocopied onto itself.
+     */ ''}
       <span class="data-plate is-footer">
-        <b>${esc(PLATES.type.tm)}</b> ${esc(PLATES.type.en)}<br>
-        ${esc(PLATES.works.tm)}<br>${esc(PLATES.works.en)}<br>
+        <b>${esc(PLATES.type.tm)}</b><br>${esc(glossWord(PLATES.type))}<br>
+        <b>${esc(PLATES.works.tm)}</b><br>${esc(glossWord(PLATES.works))}<br>
         ${esc(PLATES.factory.tm)}<br>${esc(PLATES.factory.en)}
       </span>
       <span class="placard">${esc(PLATES.caution.tm)}<br>${esc(PLATES.caution.en)}</span>`;
@@ -1209,7 +1357,7 @@ export function renderScopeSide(world, ui, els, rangeKm) {
   const pointer = els.scopeSide.querySelector('.knob-pointer');
   if (pointer) pointer.style.transform = `rotate(${angle}deg)`;
   const readout = els.scopeSide.querySelector('#range-readout');
-  if (readout) readout.textContent = `${Math.round(rangeKm)} КМ`;
+  if (readout) readout.textContent = `${Math.round(rangeKm)} KM`;
 }
 
 /** The boot sequence shown while the console is down. It is not a spinner. */

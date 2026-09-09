@@ -144,12 +144,32 @@ describe('the number row', () => {
 describe('one control, one key, one legend', () => {
   test('a key is stamped as a chip, never appended to the legend', () => {
     const html = legend(CONTROLS.reload, { key: 'R' });
-    // The gloss carries the words and nothing else: appending "· R" to it is
+    // The face carries the word and nothing else: appending "· R" to it is
     // what widened every cap until only two fitted on a rack row.
-    assert.match(html, /<i>RELOAD<\/i>/);
+    assert.match(html, /<b>RELOAD<\/b>/);
     assert.doesNotMatch(html, /RELOAD · R/);
     assert.match(html, /<em class="kc">R<\/em>/);
-    assert.equal(legend(CONTROLS.reload), `<span class="lg lg-stack"><b>${CONTROLS.reload.tm}</b><i>RELOAD</i></span>`);
+    assert.equal(legend(CONTROLS.reload), '<span class="lg lg-stack"><b>RELOAD</b></span>');
+  });
+
+  test('a control legend is English, and one line of it', () => {
+    /*
+     * The plates carry the Cyrillic; the controls do not. Two languages
+     * stacked inside a 45px switch is four lines of 8px type, which is what
+     * the emissions switch was — measured, a smear at 100% — and a cap that
+     * puts the Cyrillic on the bright line and the English small underneath
+     * it is the wrong way round for a player who reads one of them.
+     */
+    const CYRILLIC = /[Ѐ-ӿ]/;
+    for (const entry of Object.values(CONTROLS)) {
+      const html = legend(entry, { key: 'Q' });
+      assert.ok(!CYRILLIC.test(html.replace(/<em class="kc">.*?<\/em>/, '')),
+        `the ${entry.en} control legend still carries Cyrillic`);
+    }
+    // The one exception is a face that is a figure rather than a word: the
+    // speed rack is marked 1× 2× 4× with the word for it underneath.
+    assert.equal(legend(CONTROLS.speedFast), '<span class="lg lg-stack"><b>2×</b><i>FAST</i></span>');
+    assert.equal(legend(CONTROLS.speedHold), '<span class="lg lg-stack"><b>HOLD</b></span>');
   });
 
   test('every key chip is printed in capitals', () => {
