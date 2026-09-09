@@ -60,9 +60,23 @@ export const CONTROLS = {
     hint: 'the crew blinks when its own arithmetic says so',
   },
   abort: { tm: 'СДАТЬ', en: 'LEAVE POST' },
+  /* The two halves of the question the LEAVE POST cap now asks first. */
+  abandon: { tm: 'ОСТАВИТЬ ПОСТ', en: 'ABANDON THE WATCH' },
+  stay: { tm: 'ОСТАТЬСЯ', en: 'STAY AT THE POST' },
   /* The commander's seat toggle. It says what pressing it will do. */
   takeConsole: { tm: 'ЗАНЯТЬ ПОСТ', en: 'TAKE A CONSOLE' },
   backToNet: { tm: 'НА СЕТЬ', en: 'BACK TO THE NET' },
+  /*
+   * The four speed caps. They live here rather than as literals in the markup
+   * so that each one can carry its key — the number stencilled on the cap is
+   * the number that selects it, which it was not: the keyboard used to map the
+   * digits by position, so 3 selected the cap marked 4× and 4 stopped the raid.
+   * There is no 3× speed and therefore no 3 key.
+   */
+  speedHold: { tm: 'СТОП', en: 'HOLD', hint: 'the simulation stops; a pending order’s clock does not' },
+  speedReal: { tm: '1×', en: 'REAL TIME' },
+  speedFast: { tm: '2×', en: 'FAST' },
+  speedMax: { tm: '4×', en: 'MAX' },
 };
 
 /**
@@ -171,14 +185,20 @@ export const PLATES = {
 /**
  * Render a legend as engraved markup: the Cyrillic large, the English small
  * underneath. `inline` keeps it on one line for tight controls.
+ *
+ * `key` stencils the keyboard shortcut onto the gloss line — ЗАХВАТ / LOCK · L
+ * — which is the same convention `stampLegends` applies to the fixed legends in
+ * the markup through `data-key`. A key that is printed on the cap it operates
+ * is a key the player does not have to go and look up.
  */
-export function legend(entry, { inline = false, glossOnly = false } = {}) {
+export function legend(entry, { inline = false, glossOnly = false, key = '' } = {}) {
   if (!entry) return '';
-  if (glossOnly) return escapeHtml(entry.en);
+  const gloss = key ? `${entry.en} · ${key}` : entry.en;
+  if (glossOnly) return escapeHtml(gloss);
   if (inline) {
-    return `<span class="lg"><b>${escapeHtml(entry.tm)}</b><i>${escapeHtml(entry.en)}</i></span>`;
+    return `<span class="lg"><b>${escapeHtml(entry.tm)}</b><i>${escapeHtml(gloss)}</i></span>`;
   }
-  return `<span class="lg lg-stack"><b>${escapeHtml(entry.tm)}</b><i>${escapeHtml(entry.en)}</i></span>`;
+  return `<span class="lg lg-stack"><b>${escapeHtml(entry.tm)}</b><i>${escapeHtml(gloss)}</i></span>`;
 }
 
 /** Plain text form, for canvas drawing and tooltips. */

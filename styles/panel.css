@@ -401,3 +401,16 @@
 .pb-radiate .lg b { font-size: 11px; letter-spacing: .12em; }
 .pb-radiate.is-on .lg b { color: var(--good); }
 .pb-radiate.is-urgent { animation: fire-ready 1.05s infinite; border-color: var(--warn); }
+
+/*
+ * A cap that is being held stays down.
+ *
+ * `:active` is the browser's version of this and it lets go the moment the
+ * pointer slides off the cap, which is the wrong reading: the press is still
+ * committed until the finger comes up. app.js sets this class from pointerdown
+ * to pointerup, which is exactly as long as the panel underneath is frozen.
+ */
+.pb.is-pressed, .sw.is-pressed {
+  transform: translateY(2px);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .55), 0 0 0 var(--metal-edge);
+}

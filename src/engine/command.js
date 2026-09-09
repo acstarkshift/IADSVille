@@ -965,6 +965,16 @@ export function stepCommand(world, dt) {
  */
 export function settleDirectives(world) {
   const c = world.command.constraints;
+  /*
+   * A watch that was walked out of earns none of the credits below.
+   *
+   * Every one of them pays for something that was KEPT — no leakers, the
+   * priority asset untouched, every defended place intact, every battery still
+   * standing — and a raid that was never fought keeps all of them by default,
+   * so an abandoned watch used to collect them and climb. The charges still
+   * apply: what the night already cost is still owed.
+   */
+  const stood = !world.abandoned;
 
   if (c.leakerAccount) {
     // The file counts the leakers it recognises. An arrival at the place the
@@ -972,7 +982,7 @@ export function settleDirectives(world) {
     // declare a building undesignated and bill you for failing to defend it.
     const counted = world.stats.leakers - (world.stats.leakersUnrecognized ?? 0);
     if (counted === 0) {
-      standingDelta(world, 10, 'no leakers, as ordered');
+      if (stood) standingDelta(world, 10, 'no leakers, as ordered');
     } else {
       standingDelta(world, -3 * counted, `${counted} leakers against a standing order`);
     }
@@ -982,15 +992,15 @@ export function settleDirectives(world) {
     const asset = world.assetById.get(c.priorityOfFiresId);
     if (asset && asset.destroyed) {
       standingDelta(world, -12, `${asset.label} lost after being designated priority`);
-    } else if (asset && asset.damage === 0) {
+    } else if (asset && asset.damage === 0 && stood) {
       standingDelta(world, 6, `${asset.label} untouched, as ordered`);
     }
   }
 
-  if (world.stats.assetsLost === 0) {
+  if (world.stats.assetsLost === 0 && stood) {
     standingDelta(world, COMMAND.standing.cleanSweep, 'all defended assets intact');
   }
-  if (world.stats.sitesLost === 0) {
+  if (world.stats.sitesLost === 0 && stood) {
     standingDelta(world, COMMAND.standing.siteIntact, 'no batteries lost');
   }
 

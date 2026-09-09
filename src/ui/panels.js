@@ -20,10 +20,71 @@ import {
   STATE, CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, pair,
 } from './lexicon.js';
 import { rankOf } from '../engine/character.js';
-import { raidHuntsRadars, positionCanBeHunted } from '../engine/scenarios.js';
+import { consoleCaps } from '../engine/scenarios.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/* -------------------------------------------------------------- painting */
+
+/**
+ * What identifies a control across a rebuild.
+ *
+ * Not the node — the node is thrown away eight times a second — but what the
+ * control IS: the battery it belongs to and the verb it performs. Two rebuilds
+ * of the same card produce the same key, which is what makes it possible to
+ * hand the focus ring back to the control the operator had it on.
+ */
+function controlKey(el) {
+  const d = el.dataset ?? {};
+  return `${el.id ?? ''}|${d.act ?? ''}|${d.site ?? ''}|${d.radar ?? ''}|${d.formation ?? ''}|${d.track ?? ''}`;
+}
+
+/**
+ * Write a panel, and keep what the operator had.
+ *
+ * These panels are regenerated from world state rather than mutated in place,
+ * which keeps them honest — there is no way for the panel to disagree with the
+ * simulation — but a bare `innerHTML =` throws away three things that belong
+ * to the person rather than to the world: the focus ring, the scroll position,
+ * and (with a rebuild between the press and the release) the press itself.
+ *
+ * So: nothing is written when the markup has not actually changed — which
+ * makes a paused console genuinely still, and cuts the rebuild rate on a quiet
+ * watch to almost nothing — and when it has, the focus ring is handed back to
+ * the same control by identity and the column is scrolled back to where it
+ * was. The press is handled in app.js, which freezes these panels for as long
+ * as a pointer is down inside them.
+ */
+function paint(host, html) {
+  if (host.__painted === html && host.childElementCount) return;
+  host.__painted = html;
+  const active = document.activeElement;
+  const focusKey = active && active !== document.body && host.contains(active)
+    ? controlKey(active) : null;
+  const top = host.scrollTop;
+  host.innerHTML = html;
+  if (focusKey) {
+    for (const el of host.querySelectorAll('button, [tabindex]')) {
+      if (controlKey(el) === focusKey) { el.focus({ preventScroll: true }); break; }
+    }
+  }
+  if (top) host.scrollTop = top;
+}
+
+/**
+ * Forget what is on the panels, so the next paint is unconditional.
+ *
+ * Called when a watch starts: two different watches could in principle
+ * generate the same markup for the same host, and a console that came up
+ * showing the previous mission's rack would be an unforgettable bug to find.
+ */
+export function clearPanelCache(els) {
+  for (const host of [els.trackList, els.batteryList, els.crewConsole,
+    els.formationList, els.masterLamps]) {
+    if (host) host.__painted = null;
+  }
+}
 
 /* ---------------------------------------------------------------- hardware
  * Small builders for the physical controls. Keeping them here means a lamp is
@@ -54,7 +115,7 @@ function lamp(entry, lit, { colour = '', blinking = false, caption = null } = {}
 }
 
 /** A bat-handle toggle. Lever up is on, and the position is the state. */
-function toggle(entry, on, { act, site, radar, disabled = false } = {}) {
+function toggle(entry, on, { act, site, radar, disabled = false, key = '' } = {}) {
   const attrs = [
     act ? `data-act="${act}"` : '',
     site ? `data-site="${site}"` : '',
@@ -67,7 +128,7 @@ function toggle(entry, on, { act, site, radar, disabled = false } = {}) {
       <span class="sw-marks"><span>I</span><span>O</span></span>
       <span class="sw-lever"></span>
     </span>
-    ${legend(entry, { inline: false })}
+    ${legend(entry, { inline: false, key })}
   </button>`;
 }
 
@@ -126,10 +187,11 @@ function reloadBar(site, type) {
   </div>`;
 }
 
-/** A legend-cap pushbutton. */
-function press(entry, { act, site, disabled = false, extra = '' } = {}) {
+/** A legend-cap pushbutton, with its key stencilled on the gloss line. */
+function press(entry, { act, site, disabled = false, extra = '', key = '' } = {}) {
   return `<button class="pb ${extra}" data-act="${act}" ${site ? `data-site="${site}"` : ''}
-      ${disabled ? 'disabled' : ''} title="${esc(entry.en)}">${legend(entry)}</button>`;
+      ${disabled ? 'disabled' : ''} title="${esc(entry.en)}${key ? ` (${key})` : ''}"
+      >${legend(entry, { key })}</button>`;
 }
 
 /* ------------------------------------------------------------- stamping */
@@ -205,14 +267,14 @@ export function renderTopbar(world, ui, els) {
   const armInbound = Number.isFinite(soonestArm);
   const anyRadiating = world.radars.some((r) => r.state === 'radiating');
   const faulted = world.radars.some((r) => !r.alive) || world.sites.some((s) => !s.alive);
-  els.masterLamps.innerHTML = [
+  paint(els.masterLamps, [
     lamp(STATUS.radiating, anyRadiating, { colour: 'green' }),
     lamp(STATUS.armWarning, armInbound, {
       colour: 'red', blinking: true,
       caption: armInbound ? `${STATUS.armWarning.tm} ${Math.ceil(soonestArm)}s` : STATUS.armWarning.tm,
     }),
     lamp(STATUS.fault, faulted, { colour: 'amber' }),
-  ].join('');
+  ].join(''));
 
   // The appointment, stencilled where the operator can see what they are.
   if (els.echelonPlate && els.echelonPlate.dataset.echelon !== world.echelon.id) {
@@ -478,7 +540,7 @@ export function renderTrackList(world, ui, els) {
     sections.push(head('UNCOMMITTED', idle.map((s) => s.name).join(' · '), 'is-idle'));
   }
 
-  els.trackList.innerHTML = sections.join('');
+  paint(els.trackList, sections.join(''));
 
   renderTrackDetail(world, ui, els);
 }
@@ -583,13 +645,13 @@ export function renderFormations(world, ui, els) {
     </div>`;
   }).join('');
 
-  host.innerHTML = `<div class="fmn-bar">
+  paint(host, `<div class="fmn-bar">
       <span class="lg"><b>ПОДЧИНЁННЫЕ КОМАНДЫ</b><i>SUBORDINATE COMMANDS</i></span>
       <span class="fmn-count">${held}/${Number.isFinite(limit) ? limit : '∞'} DIRECT</span>
     </div>
     <div class="unit-explain">Each formation fights on the standing order you leave it with.
       TAKE one to command its batteries yourself; the rest are their officers' watch.</div>
-    ${cards}${renderReserve(world)}`;
+    ${cards}${renderReserve(world)}`);
 }
 
 /**
@@ -653,6 +715,9 @@ export function batteryOrder(world) {
 }
 
 export function renderBatteries(world, ui, els) {
+  // One answer for what this watch's console carries, shared with the key map
+  // and the handbook. See consoleCaps().
+  const caps = consoleCaps(world.scenario);
   const units = batteryOrder(world).map((site, index) => {
     const type = SAM_TYPES[site.type];
     /*
@@ -737,25 +802,25 @@ export function renderBatteries(world, ui, els) {
 
       <div class="unit-controls">
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
-    { act: 'emcon', site: site.id, disabled: detached || !anyAlive })}
-        ${world.scenario.basicConsole ? '' : `<button class="pb ${site.emconOrder === 'ride' ? 'is-down' : ''}"
+    { act: 'emcon', site: site.id, key: 'E', disabled: detached || !anyAlive })}
+        ${!caps.ride ? '' : `<button class="pb ${site.emconOrder === 'ride' ? 'is-down' : ''}"
           data-act="ride" data-site="${site.id}" ${detached || !anyAlive ? 'disabled' : ''}
           title="${esc(site.emconOrder === 'ride' ? CONTROLS.ride.hint : CONTROLS.perDoctrine.hint)} (G)">
           <span class="lg"><b>${esc(CONTROLS.ride.tm)}</b><i>${esc(
-    site.emconOrder === 'ride' ? 'RIDING' : 'RIDE')}</i></span>
+    site.emconOrder === 'ride' ? 'RIDING' : 'RIDE')} · G</i></span>
         </button>`}
         <button class="pb" data-act="weapons" data-site="${site.id}" ${detached ? 'disabled' : ''}
           title="Weapons state — hold, tight or free (Q / W / Shift+E)">
-          <span class="lg"><b>${esc(weaponsEntry.tm)}</b><i>WEAPONS ${esc(weaponsEntry.en)}</i></span>
+          <span class="lg"><b>${esc(weaponsEntry.tm)}</b><i>WEAPONS ${esc(weaponsEntry.en)} · Q W</i></span>
         </button>
-        ${world.scenario.basicConsole ? '' : `<button class="pb" data-act="salvo" data-site="${site.id}" ${detached ? 'disabled' : ''}
-          title="Rounds per engagement">
-          <span class="lg"><b>${esc(CONTROLS.salvo.tm)} ${site.salvoSize}</b><i>SALVO</i></span>
+        ${!caps.salvo ? '' : `<button class="pb" data-act="salvo" data-site="${site.id}" ${detached ? 'disabled' : ''}
+          title="Rounds per engagement (S)">
+          <span class="lg"><b>${esc(CONTROLS.salvo.tm)} ${site.salvoSize}</b><i>SALVO · S</i></span>
         </button>`}
-        ${press(CONTROLS.reload, { act: 'reload', site: site.id,
+        ${press(CONTROLS.reload, { act: 'reload', site: site.id, key: 'R',
     disabled: detached || !canStartLoading(world, site) })}
-        ${world.scenario.basicConsole || !positionCanBeHunted(world.scenario) ? ''
-    : press(CONTROLS.displace, { act: 'scoot', site: site.id,
+        ${!caps.displace ? ''
+    : press(CONTROLS.displace, { act: 'scoot', site: site.id, key: 'X',
       disabled: detached || site.scootRemainingS > 0 })}
       </div>
     </div>`;
@@ -790,7 +855,7 @@ export function renderBatteries(world, ui, els) {
         ${lamp(STATUS.armWarning, Number.isFinite(armEta), { colour: 'red', blinking: true,
     caption: Number.isFinite(armEta) ? `${STATUS.armWarning.tm} ${Math.ceil(armEta)}s` : STATUS.armWarning.tm })}
       </div>
-      ${raidHuntsRadars(world.scenario) ? `<div class="unit-row">
+      ${caps.exposure ? `<div class="unit-row">
         <span class="unit-type wrap">${esc(pair(STATUS.exposure))}</span>
         <span class="gauge ${radar.exposure > 0.65 ? 'is-hot' : radar.exposure > 0.35 ? 'is-warn' : ''}">
           <i style="width:${Math.round(radar.exposure * 100)}%"></i></span>
@@ -808,7 +873,7 @@ export function renderBatteries(world, ui, els) {
     </div>`;
   }).join('');
 
-  els.batteryList.innerHTML = surveillance + units;
+  paint(els.batteryList, surveillance + units);
 }
 
 /* -------------------------------------------------------- crew console */
@@ -831,19 +896,16 @@ export function renderCrewConsole(world, ui, els) {
   /*
    * The teaching watch shows the seat, not the trade: displacement and the
    * ELINT game wait until a watch where somebody is actually shooting back.
+   * And so does every other watch where nobody is — measured on Solo Battery,
+   * not one of its sixteen aircraft carries an anti-radiation round, so the
+   * exposure gauge sat pinned at 100% in red from the four-minute mark of
+   * three hand-played watches with nothing behind it and the INBOUND ARM lamp
+   * never lit once.
    *
-   * And so does every other watch where nobody is. `basicConsole` is First
-   * Light saying so by hand; `raidHuntsRadars` asks the raid table instead —
-   * measured on Solo Battery, not one of its sixteen aircraft carries an
-   * anti-radiation round, so the exposure gauge sat pinned at 100% in red
-   * from the four-minute mark of three hand-played watches with nothing
-   * behind it and the INBOUND ARM lamp never lit once. `positionCanBeHunted`
-   * is the same question for DISPLACE, which also answers a hostile tracking
-   * toward something that drives out with the battery.
+   * `consoleCaps` is that whole judgement in one place, and the key map and
+   * the handbook read the same answer this card does.
    */
-  const basic = !!world.scenario.basicConsole;
-  const hunted = !basic && raidHuntsRadars(world.scenario);
-  const canBeHunted = !basic && positionCanBeHunted(world.scenario);
+  const caps = consoleCaps(world.scenario);
 
   const sequence = status.holding ? STATUS.holding : {
     idle: STATUS.standby, reacting: STATUS.preparing, ready: STATUS.ready, guiding: STATUS.inFlight,
@@ -882,7 +944,7 @@ export function renderCrewConsole(world, ui, els) {
   const wrecked = site.alive && guidance && !guidance.alive;
   const noTarget = !track && !wrecked;
 
-  els.crewConsole.innerHTML = `
+  paint(els.crewConsole, `
     <div class="unit is-mine">
       <span class="screw a"></span>
       <div class="unit-head">
@@ -919,7 +981,7 @@ export function renderCrewConsole(world, ui, els) {
         ${status.canFire ? '' : 'disabled'}>
         ${status.state === 'guiding'
     ? `<span class="lg"><b>${status.roundsUp} В ПОЛЁТЕ${status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}С` : ''}</b><i>${status.roundsUp} IN FLIGHT${status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}s TO INTERCEPT` : ''}</i></span>`
-    : legend(CONTROLS.launch)}
+    : legend(CONTROLS.launch, { key: 'F' })}
       </button>
 
       ${unfit ? `<div class="unit-row unit-unfit" title="Why this battery cannot take the selected contact">
@@ -934,14 +996,14 @@ export function renderCrewConsole(world, ui, els) {
       </div>` : ''}
 
       <div class="unit-controls">
-        ${press(CONTROLS.lock, { act: 'lock', site: site.id, disabled: !!unfit || noTarget })}
+        ${press(CONTROLS.lock, { act: 'lock', site: site.id, key: 'L', disabled: !!unfit || noTarget })}
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
-    { act: 'emcon', site: site.id, disabled: !radar?.alive })}
-        ${press(CONTROLS.reload, { act: 'reload', site: site.id })}
-        ${canBeHunted ? press(CONTROLS.displace, { act: 'scoot', site: site.id }) : ''}
+    { act: 'emcon', site: site.id, key: 'E', disabled: !radar?.alive })}
+        ${press(CONTROLS.reload, { act: 'reload', site: site.id, key: 'R' })}
+        ${caps.displace ? press(CONTROLS.displace, { act: 'scoot', site: site.id, key: 'X' }) : ''}
       </div>
 
-      ${hunted ? `<div class="unit-row is-spaced">
+      ${caps.exposure ? `<div class="unit-row is-spaced">
         ${legend(STATUS.exposure, { inline: true })}
         <span class="gauge ${(radar?.exposure ?? 0) > 0.65 ? 'is-hot' : (radar?.exposure ?? 0) > 0.35 ? 'is-warn' : ''}">
           <i style="width:${Math.round((radar?.exposure ?? 0) * 100)}%"></i></span>
@@ -951,7 +1013,7 @@ export function renderCrewConsole(world, ui, els) {
         <b>${site.crewLosses} ПОТЕРЬ / CASUALTIES</b></div>` : ''}
 
       <div class="placard">${esc(PLATES.warning.tm)}<br>${esc(PLATES.warning.en)}</div>
-    </div>`;
+    </div>`);
 }
 
 /* ------------------------------------------------------------ event log */

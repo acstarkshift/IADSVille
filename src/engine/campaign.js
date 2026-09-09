@@ -133,6 +133,19 @@ export function saveCampaign(store, campaign) {
  */
 export function recordMission(campaign, result) {
   /*
+   * A watch that was walked out of is written down, and that is all it does.
+   *
+   * Everything the file hands out below — the experience, the promotion, the
+   * decoration, the letter from home, the completion that opens the next
+   * echelon — is a payment for a watch that was stood. An abandoned one was
+   * not, so it banks none of them: it costs standing (charged in the world's
+   * own ledger, where the reason is written), it appears in the history, and
+   * it leaves `completed` alone so the campaign gate stays shut. Pressing
+   * BEGIN and then LEAVE POST twelve times used to open the entire campaign.
+   */
+  const abandoned = !!result.abandoned;
+
+  /*
    * The first entry in a new file is written kindly. A fumbled learning watch
    * used to brand the campaign — FLAGGED standing, the political section in
    * the corridor, and fifteen percent off the ammunition for watch two, all
@@ -149,12 +162,12 @@ export function recordMission(campaign, result) {
   // The service record is updated against the standing the watch actually left
   // you on, so a promotion reflects where you now stand rather than where you
   // stood when the raid started.
-  const service = campaign.character
+  const service = campaign.character && !abandoned
     ? recordWatch(campaign.character, result, campaign.standing)
     : null;
 
   const tier = tierFor(campaign.standing);
-  if (tier.id === 'commended') campaign.commendations++;
+  if (tier.id === 'commended' && !abandoned) campaign.commendations++;
   if (tier.id === 'flagged' || tier.id === 'condemned') campaign.fileMarks++;
 
   const entry = {
@@ -166,9 +179,14 @@ export function recordMission(campaign, result) {
     leakers: result.stats.leakers,
     kills: result.stats.kills,
     assetsLost: result.stats.assetsLost,
+    abandoned,
     at: Date.now(),
   };
   campaign.history.push(entry);
+
+  if (abandoned) {
+    return { ...entry, service: null, revelation: null, appointment: null, letter: null };
+  }
 
   if (result.finale && result.endingId) campaign.ending = result.endingId;
   if (result.finale) {

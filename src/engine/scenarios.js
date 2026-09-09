@@ -2591,3 +2591,32 @@ export function positionCanBeHunted(scenario) {
   return raidHuntsRadars(scenario)
     || (scenario?.assets ?? []).some((asset) => asset.follows);
 }
+
+/**
+ * Which of the console's optional controls this watch actually fits.
+ *
+ * One answer, read by all three places that have to agree about it: the cap on
+ * the battery card (`panels.js`), the line on the CONTROLS screen
+ * (`screens.js`), and the key binding (`app.js`). They used to each ask the
+ * question their own way, and they drifted: First Light stripped SALVO, RIDE
+ * and DISPLACE off the card and off the help page, and left S, G and X live on
+ * the keyboard — so a learner who fat-fingered X put their only long-range
+ * battery on the road for two hundred and ten seconds, with no cap on screen to
+ * explain it and no entry in the handbook to find.
+ *
+ * A control that has been removed is removed everywhere: the binding, the
+ * button and the help entry go together.
+ */
+export function consoleCaps(scenario) {
+  const basic = !!scenario?.basicConsole;
+  return {
+    /** Rounds per engagement. Off on the teaching console. */
+    salvo: !basic,
+    /** Hold the beam through guidance with an ARM inbound. */
+    ride: !basic,
+    /** Pack up and drive. Only where something is hunting the position. */
+    displace: !basic && positionCanBeHunted(scenario),
+    /** The ELINT gauge, which needs somebody listening for it. */
+    exposure: !basic && raidHuntsRadars(scenario),
+  };
+}

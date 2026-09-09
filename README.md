@@ -817,17 +817,31 @@ decision the whole game is built on, and it should feel like throwing a switch.
 
 | Key | Action |
 |---|---|
-| `Space` | pause / resume |
-| `1` `2` `3` | speed: 1× · 2× · 4× |
+Every key here is stencilled on the control it works, the way the ACKNOWLEDGE
+cap has always carried its `Y`. The number on a speed cap is the number that
+selects it — `4` selects 4×, and there is no 3× speed, so there is no `3`.
+
+| Key | Action |
+|---|---|
+| `Space` `0` | hold — the simulation stops; a pending order's clock does not |
+| `1` `2` `4` | speed: 1× · 2× · 4× |
+| `Tab` | walk the console's controls; `Enter` or `Space` presses the one with the ring |
+| `↑` `↓` | step through the contacts on the board |
+| `←` `→` | change speed while the ring is on the speed caps |
 | `+` `−` | zoom the scope |
 | `Y` `N` | acknowledge / refuse a directive |
-| `Tab` | switch seat (commander) |
+| `V` | switch seat (commander) |
+| `Shift`+`1`…`4` | hand the selected contact to battery 1–4, in the order the cards are numbered |
 | `Alt`+`1`…`4` | take or hand back a subordinate command (district and national) |
 | `G` | RIDE — hold the selected battery's emissions through guidance with an ARM inbound |
 | `H` | full controls and a plain-English explanation of the mechanics |
 
+A watch that removes a control removes its key with it: the teaching console
+has no SALVO, RIDE or DISPLACE cap, so `S`, `G` and `X` are inert there and say
+so once on the log rather than quietly putting your only battery on the road.
+
 **Battle manager:** click a contact to select it, drag it onto a battery to
-assign the engagement, right-click a radar to blink it. `Q` / `W` set weapons
+assign the engagement, right-click a radar to switch it on or off. `Q` / `W` set weapons
 hold / tight, `Shift`+`E` sets weapons free, plain `E` toggles the selected
 battery's radar (mind the difference — one of those silences your own set),
 `R` sends the selected battery's loaders out — the rack fills itself whenever

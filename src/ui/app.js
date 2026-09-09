@@ -9,7 +9,7 @@
  */
 
 import { World } from '../engine/world.js';
-import { SCENARIOS, scenarioById, rosterFor, positionCanBeHunted } from '../engine/scenarios.js';
+import { SCENARIOS, scenarioById, rosterFor, consoleCaps } from '../engine/scenarios.js';
 import { SIM, SAM_TYPES, DEFENCE_CLASSES, ASSET_TYPES } from '../engine/config.js';
 import {
   loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign,
@@ -19,7 +19,7 @@ import { armTimeToImpact } from '../engine/doctrine.js';
 import { stepCommand } from '../engine/command.js';
 import { cannotEngageReason } from '../engine/threat.js';
 import { AIR_TYPES } from '../engine/config.js';
-import { dist, clamp01 } from '../engine/math.js';
+import { dist, clamp01, clockString } from '../engine/math.js';
 import { applyTheme } from './themes.js';
 import { Scope } from './scope.js';
 import { CrewConsole } from './console.js';
@@ -27,9 +27,10 @@ import { Audio } from './audio.js';
 import {
   renderTopbar, renderTrackList, renderFlightStrip, renderFormations, renderBatteries, renderCrewConsole,
   renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, stampLegends,
-  RANGE_SCALES, batteryOrder,
+  clearPanelCache, RANGE_SCALES, batteryOrder,
 } from './panels.js';
 import { CONTROLS, POSTURE_CYCLE, legend } from './lexicon.js';
+import { SPEED_BY_KEY, digitPressed } from './keymap.js';
 import { renderMenu, renderBriefing, renderDebrief, renderControls } from './screens.js';
 import { renderEnlistment, renderDossier } from './dossier.js';
 import { learnSkill } from '../engine/character.js';
@@ -150,6 +151,10 @@ function cacheEls() {
     masterLamps: id('master-lamps'),
     operatorPlate: id('operator-plate'),
     scopeSide: id('scope-side'),
+    abortAsk: id('abort-ask'),
+    abortLine: id('abort-line'),
+    abortConfirm: id('abort-confirm'),
+    abortCancel: id('abort-cancel'),
   });
 }
 
@@ -358,10 +363,10 @@ function showHelp(back) {
   state.phase = 'help';
   // The key list belongs to the watch you are on: the teaching watch strips
   // salvo, RIDE and displacement off the console, so this page must not go on
-  // telling a new operator to press S, G and X.
-  const basic = !!state.mission?.basicConsole;
-  const hunted = !state.mission || positionCanBeHunted(state.mission);
-  showScreen((host) => renderControls(host, { basic, hunted }));
+  // telling a new operator to press S, G and X. One predicate answers for the
+  // cap, the key and this page — see consoleCaps().
+  const caps = consoleCaps(state.mission);
+  showScreen((host) => renderControls(host, caps));
   els.screen.querySelector('#btn-close-help').onclick = () => helpReturn();
 }
 
@@ -407,6 +412,9 @@ function startMission() {
 
   els.viewToggle.hidden = state.role !== 'both';
   setViewToggle();
+  els.abortAsk.hidden = true;
+  ui.pressHeld = false;
+  clearPanelCache(els);
   els.screen.hidden = true;
   els.shell.hidden = false;
   state.phase = 'mission';
@@ -459,9 +467,18 @@ function endMissionScreen(result, entry) {
 
 function setSpeed(speed) {
   state.speed = speed;
-  // The selected speed button stays physically depressed.
+  /*
+   * The selected cap stays physically depressed, and it is the group's one
+   * stop on the tab ring: four near-identical caps do not each deserve a
+   * press of the Tab key. The left and right arrows move within the group,
+   * which is how a segmented control is driven from a keyboard everywhere
+   * else, and it keeps the walk to the rack short enough to be worth taking.
+   */
   els.speedGroup.querySelectorAll('[data-speed]').forEach((b) => {
-    b.classList.toggle('is-down', Number(b.dataset.speed) === speed);
+    const chosen = Number(b.dataset.speed) === speed;
+    b.classList.toggle('is-down', chosen);
+    b.tabIndex = chosen ? 0 : -1;
+    b.setAttribute('aria-checked', String(chosen));
   });
   // Said once, the first time somebody tries it: sector command's clock is
   // not attached to your space bar.
@@ -521,8 +538,9 @@ function frame(now) {
   if (!ui.speedHintShown && state.speed === 1 && world.t > 75
       && world.stats.roundsFired === 0 && (world.character?.watches ?? 1) === 0) {
     ui.speedHintShown = true;
+    // The keys are the numbers on the caps: 2 for twice, 4 for four times.
     world.log('info',
-      'NOTHING CLOSE YET. TIME COMPRESSION IS ON THE BOARD — KEYS 2 AND 3. THE WATCH KEEPS AT 1.');
+      'NOTHING CLOSE YET. TIME COMPRESSION IS ON THE BOARD — KEYS 2 AND 4. THE WATCH KEEPS AT 1.');
   }
 
   /*
@@ -568,7 +586,17 @@ function render(now, frameDtS = 1 / 60) {
   if (now - ui.lastPanelAt > 120) {
     ui.lastPanelAt = now;
     renderTopbar(world, ui, els);
-    if (!dark) {
+    /*
+     * The rack holds still while it is being pressed. See the press handling
+     * below: a cap rebuilt between the finger going down and coming up is a
+     * different cap, and the press is thrown away. The clock above keeps
+     * running, because the clock is not something anybody is holding.
+     *
+     * A press that never came back — the pointer left the window, the tab was
+     * switched under a held finger — must not freeze the rack for good.
+     */
+    if (ui.pressHeld && now - (ui.pressHeldAt ?? 0) > 5000) ui.pressHeld = false;
+    if (!dark && !ui.pressHeld) {
       renderTrackList(world, ui, els);
       renderFlightStrip(world, els);
       renderFormations(world, ui, els);
@@ -759,13 +787,24 @@ function handleAudio() {
 }
 
 function updateLegend() {
-  // The crew seat had no on-screen instruction at all — a first-timer who
-  // picked the flashier-sounding seat had to find the help screen to learn
-  // that the game had controls. The same line doubles as the hover readout:
-  // point at anything on the scope and it says what the thing IS.
+  /*
+   * The line under the tube, written for a person.
+   *
+   * It is the seat's only on-screen instruction — a first-timer who picked the
+   * cabin had to find the help screen to learn that the game had controls —
+   * and it doubles as the hover readout, so pointing at anything on the scope
+   * replaces it with what that thing IS.
+   *
+   * It used to end "right-click a radar to blink it", which is shop talk for
+   * switching a set on and off for a few seconds and means nothing to anybody
+   * who has not already been told. Plain sentences, and the key beside the
+   * verb it performs.
+   */
   els.scopeLegend.textContent = ui.hoverInfo ?? (ui.view === 'crew'
-    ? 'click to designate · L lock · F fire · E radiate / shut down — that last one is the whole game'
-    : 'hover anything for what it is · drag a contact onto a battery to assign · right-click a radar to blink it');
+    ? 'Click a contact to designate it. L locks a channel onto it, F launches. '
+      + 'E turns your own radar on and off — that one decision is the whole game.'
+    : 'Point at anything to read what it is. Drag a contact onto a battery to hand it over, '
+      + 'or press Shift and the battery’s number. Right-click a radar to switch it on or off.');
 }
 
 /** One sentence for whatever the scope's hit-test found under the pointer. */
@@ -827,7 +866,11 @@ const NET_TUTORIAL_STEPS = [
     id: 'assign',
     en: 'Hand it to a battery: drag the contact onto a battery symbol, or press Shift+1. The battery answers on the log.',
     tm: 'НАЗНАЧЬТЕ БАТАРЕЮ',
-    done: (w, u, sinceS) => [...w.tracks.values()].some((t) => t.assignedTo.length > 0) || sinceS > 150,
+    // Ninety seconds, not a hundred and fifty. A card that is still up when
+    // the watch has moved on is furniture — and this one used to be
+    // unclearable by the key it teaches, so it sat here for two and a half
+    // minutes while the raid ran on around it.
+    done: (w, u, sinceS) => [...w.tracks.values()].some((t) => t.assignedTo.length > 0) || sinceS > 90,
   },
   {
     id: 'intercept',
@@ -1041,34 +1084,120 @@ function assignSelected(siteId) {
   }
 }
 
-function wirePanelInput() {
-  els.trackList.addEventListener('click', (e) => {
-    // The empty-state row carries no track id; clicking it must not clear the
+/**
+ * Which control a press acts on, in the order the panel stacks them.
+ *
+ * `#btn-fire` is matched with `closest` rather than by comparing the event
+ * target's id, which is what the launch cap used to do: the cap's legend is a
+ * `<span>` filling most of its face, so a press that landed on the word ПУСК —
+ * measured, 60 of the 792 sample points across the cap — hit the span, failed
+ * `e.target.id === 'btn-fire'`, and did nothing at all.
+ */
+function controlUnder(target) {
+  if (!target?.closest) return null;
+  return target.closest('[data-act]')
+    ?? target.closest('#btn-fire')
+    // The empty-state row carries no track id; pressing it must not clear the
     // selection out from under the operator.
-    const row = e.target.closest('[data-track]');
-    if (row?.dataset.track) ui.selectedTrackId = row.dataset.track;
+    ?? target.closest('[data-track]')
+    ?? target.closest('[data-site]');
+}
+
+/** Do what the control says, whether a finger or the keyboard pressed it. */
+function operate(ctl) {
+  // A dark console takes no orders — the buttons under a blanked panel are as
+  // dead as the display (belt to the CSS pointer-events braces).
+  if (!ctl || !world || world.dark) return;
+  if (ctl.dataset.act) {
+    runAction(ctl.dataset.act, ctl.dataset.site, ctl.dataset.radar, ctl.dataset.formation);
+  } else if (ctl.id === 'btn-fire') {
+    world.fire(world.control.crewedBatteryId, ui.selectedTrackId);
+  } else if (ctl.dataset.track) {
+    ui.selectedTrackId = ctl.dataset.track;
+  } else if (ctl.dataset.site) {
+    ui.selectedSiteId = ctl.dataset.site;
+  }
+  // Whatever it did, the panel should be showing it on the next frame.
+  ui.lastPanelAt = 0;
+}
+
+/*
+ * A press on this console is a press.
+ *
+ * The panels are regenerated from world state every 120 ms, and the browser
+ * only synthesises a `click` when the pointer goes down and comes up on the
+ * SAME element — so any rebuild between the two ends of a press threw it away.
+ * Measured on the weapons rack with the raid running: of a hundred presses
+ * held for a normal human 100 ms, thirteen registered. At 120 ms and longer,
+ * none did. It failed non-deterministically, which is worse than failing
+ * outright, because the same cap worked or did not depending on where the
+ * press happened to land in the refresh cycle.
+ *
+ * Two things fix it, and both are here. The panels do not rebuild while a
+ * pointer is down inside them (`ui.pressHeld`, read by render), so the control
+ * under the finger keeps its identity for as long as it is held; and the
+ * action is committed on pointerup against the control the press STARTED on,
+ * rather than waiting for the browser to decide whether the two ends matched.
+ * Sliding off the cap before letting go still cancels it, which is what a
+ * physical cap does.
+ */
+let pressArmed = null;
+
+function beginPress(e) {
+  if (e.button !== 0) return;
+  ui.pressHeld = true;
+  ui.pressHeldAt = performance.now();
+  const ctl = controlUnder(e.target);
+  pressArmed = ctl && !ctl.disabled ? ctl : null;
+  if (pressArmed) pressArmed.classList.add('is-pressed');
+}
+
+function endPress(e) {
+  const ctl = pressArmed;
+  const wasHeld = ui.pressHeld;
+  pressArmed = null;
+  ui.pressHeld = false;
+  if (!wasHeld) return;
+  if (ctl) {
+    ctl.classList.remove('is-pressed');
+    const over = e.type === 'pointerup' && Number.isFinite(e.clientX)
+      ? document.elementFromPoint(e.clientX, e.clientY) : null;
+    if (over && ctl.isConnected && ctl.contains(over)) operate(ctl);
+  }
+  // Lift the freeze and repaint on the very next frame.
+  ui.lastPanelAt = 0;
+}
+
+function wirePanelInput() {
+  /*
+   * A cap pressed with the mouse does not take the focus ring.
+   *
+   * The ring belongs to the keyboard: it says which control Enter and Space
+   * will press. Chromium leaves focus on a button after a click, so without
+   * this, clicking the 4× cap quietly rebound the space bar from PAUSE to
+   * "press 4× again" for the rest of the watch — measured, and it did the
+   * same to every cap on the rack. Cancelling the default action of mousedown
+   * suppresses the focus and nothing else: the click still fires.
+   */
+  els.shell.addEventListener('mousedown', (e) => {
+    if (e.target.closest?.('button')) e.preventDefault();
   });
 
-  const panelAction = (e) => {
-    // A dark console takes no orders — the buttons under a blanked panel are
-    // as dead as the display (belt to the CSS pointer-events braces).
-    if (world?.dark) return;
-    const btn = e.target.closest('[data-act]');
-    if (btn) {
-      e.stopPropagation();
-      runAction(btn.dataset.act, btn.dataset.site, btn.dataset.radar, btn.dataset.formation);
-      return;
-    }
-    if (e.target.id === 'btn-fire') {
-      world.fire(world.control.crewedBatteryId, ui.selectedTrackId);
-      return;
-    }
-    const card = e.target.closest('[data-site]');
-    if (card) ui.selectedSiteId = card.dataset.site;
-  };
-  els.batteryList.addEventListener('click', panelAction);
-  els.crewConsole.addEventListener('click', panelAction);
-  els.formationList.addEventListener('click', panelAction);
+  for (const host of [els.trackList, els.batteryList, els.crewConsole, els.formationList]) {
+    host.addEventListener('pointerdown', beginPress);
+    /*
+     * And the keyboard's own press. A click with `detail === 0` was not made
+     * by a pointer — it is Enter or Space on the control the focus ring is
+     * sitting on — so it never went through the pointer path above and has to
+     * be operated here. Pointer-made clicks are ignored, because their press
+     * was already committed on pointerup.
+     */
+    host.addEventListener('click', (e) => {
+      if (e.detail === 0) operate(controlUnder(e.target));
+    });
+  }
+  window.addEventListener('pointerup', endPress);
+  window.addEventListener('pointercancel', endPress);
 
   els.speedGroup.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-speed]');
@@ -1091,11 +1220,44 @@ function wirePanelInput() {
     els.shell.hidden = false;
     state.phase = 'mission';
   });
-  document.getElementById('btn-abort').onclick = () => {
-    if (world) { world.finish('aborted'); }
+  document.getElementById('btn-abort').onclick = askAbort;
+  els.abortCancel.onclick = closeAbort;
+  els.abortConfirm.onclick = () => {
+    closeAbort();
+    if (world) world.finish('aborted');
   };
   document.getElementById('btn-accept').onclick = () => { if (!world.dark) world.answer('accepted'); };
   document.getElementById('btn-refuse').onclick = () => { if (!world.dark) world.answer('refused'); };
+}
+
+/**
+ * Leaving the post, asked properly.
+ *
+ * The cap used to end the watch on the first click, with no question and no
+ * statement of what it cost — beside the pause cap, in a topbar full of things
+ * that are safe to press. Leaving is a decision the game scores, so it is
+ * confirmed like one, and the card says what will be lost before it is lost.
+ * The simulation deliberately keeps running underneath: this is not a pause,
+ * and the raid does not wait for the paperwork.
+ */
+function askAbort() {
+  if (!world || state.phase !== 'mission' || !els.abortAsk.hidden) return;
+  const airborne = world.aircraft.filter((a) => a.alive && a.type !== 'civil').length;
+  els.abortLine.textContent = airborne === 0
+    ? `It is ${clockString(world.t)} and the raid has not reached the sector yet. `
+      + 'Leaving now ends the watch anyway; it does not postpone it.'
+    : `It is ${clockString(world.t)}. ${airborne} raid aircraft `
+      + `${airborne === 1 ? 'is' : 'are'} still airborne, and the raid does not stop `
+      + 'while you decide.';
+  els.abortAsk.hidden = false;
+  // The safe answer takes the focus, so Enter and Space keep you at the post.
+  els.abortCancel.focus();
+}
+
+function closeAbort() {
+  if (els.abortAsk.hidden) return;
+  els.abortAsk.hidden = true;
+  document.getElementById('btn-abort')?.focus();
 }
 
 function runAction(act, siteId, radarId, formationId) {
@@ -1191,7 +1353,9 @@ function runAction(act, siteId, radarId, formationId) {
  */
 function setViewToggle() {
   const entry = ui.view === 'net' ? CONTROLS.takeConsole : CONTROLS.backToNet;
-  els.viewToggle.innerHTML = legend(entry);
+  // The key is printed on the cap, like every other key on this console.
+  els.viewToggle.innerHTML = legend(entry, { key: 'V' });
+  els.viewToggle.title = `${entry.en} (V)`;
 }
 
 function toggleView() {
@@ -1204,6 +1368,19 @@ function toggleView() {
 function wireGlobalInput() {
   window.addEventListener('keydown', (e) => {
     if (e.target.matches('input, select, textarea')) return;
+    /*
+     * A control with the focus RING on it gets Enter and Space to itself:
+     * that is how a keyboard presses a cap, and the console must not answer
+     * one keystroke twice.
+     *
+     * The ring, specifically — `:focus-visible`, not `:focus`. Chromium leaves
+     * focus on a button after a click, so testing plain focus would mean that
+     * clicking the 4× cap silently rebound the space bar from PAUSE to "press
+     * 4× again" for the rest of the watch. A mouse user keeps their space bar;
+     * a keyboard user, who can see which control they are on, presses it.
+     */
+    if ((e.key === ' ' || e.key === 'Enter')
+      && e.target.closest?.('button, a[href], input, select, textarea')) return;
 
     if (state.phase !== 'mission') {
       if (e.key === 'Enter' && state.phase === 'brief') startMission();
@@ -1212,12 +1389,23 @@ function wireGlobalInput() {
       }
       return;
     }
+    /*
+     * A question on the screen owns the keyboard while it is up. Escape is the
+     * way out; Enter and Space were handed to the focused cap above.
+     */
+    if (!els.abortAsk.hidden) {
+      if (e.key === 'Escape') { e.preventDefault(); closeAbort(); }
+      return;
+    }
+
+    const digit = digitPressed(e);
+
     // A dark console takes no orders. Only the clock and the handbook still
     // answer — and the net, notably, keeps its own time regardless.
     if (world.dark) {
       const k = e.key.toLowerCase();
       const speedKey = k === ' '
-        || (['1', '2', '3', '4'].includes(k) && !e.shiftKey && !e.altKey);
+        || (digit !== null && digit in SPEED_BY_KEY && !e.shiftKey && !e.altKey);
       if (!speedKey && k !== 'h') return;
     }
 
@@ -1226,57 +1414,149 @@ function wireGlobalInput() {
     const selected = ui.selectedSiteId ? world.siteById.get(ui.selectedSiteId) : null;
     const site = selected && world.commandable(selected.id) ? selected : null;
     const crewedId = world.control.crewedBatteryId;
+    // What this watch's console actually carries. The card, the handbook and
+    // the key map all read this one answer — see consoleCaps().
+    const caps = consoleCaps(world.scenario);
+    /** Say once, quietly, that the verb is not on tonight's console. */
+    const notFitted = (name) => world.logThrottled(`notFitted:${name}`, 30, 'info',
+      `${name} IS NOT ON THIS CONSOLE TONIGHT.`);
+
+    /*
+     * The number row: a speed on its own, a battery with shift, a formation
+     * with alt. Handled off the code rather than the character so the shifted
+     * and alt-shifted forms reach the same branch on every layout.
+     */
+    if (digit !== null) {
+      const n = digit - 1;
+      if (e.altKey && world.formations.length > 1) {
+        const target = world.formations.filter((f) => !f.hq)[n];
+        if (target) {
+          e.preventDefault();
+          if (target.direct) world.releaseDirect(target.id);
+          else world.takeDirect(target.id);
+        }
+      } else if (e.shiftKey) {
+        // The same order the panel numbers its cards in — your own battery
+        // first — so Shift+1 hands the selected contact to the card marked 1.
+        const target = batteryOrder(world)[n];
+        if (target) {
+          e.preventDefault();
+          ui.selectedSiteId = target.id;
+          assignSelected(target.id);
+        }
+      } else if (digit in SPEED_BY_KEY) {
+        setSpeed(SPEED_BY_KEY[digit]);
+      }
+      return;
+    }
 
     switch (e.key.toLowerCase()) {
       case ' ': e.preventDefault(); setSpeed(state.speed === 0 ? 1 : 0); break;
-      case '1': case '2': case '3': case '4': {
-        // Numbers pick a speed on their own, or a battery with shift held. At
-        // district and national command, where the number of batteries is
-        // silly, the alt key takes a formation instead.
-        const n = Number(e.key) - 1;
-        if (e.altKey && world.formations.length > 1) {
-          const target = world.formations.filter((f) => !f.hq)[n];
-          if (target) {
-            if (target.direct) world.releaseDirect(target.id);
-            else world.takeDirect(target.id);
-          }
-        } else if (e.shiftKey) {
-          // The same order the panel numbers its cards in — your own battery
-          // first — so Shift+1 selects the card marked 1.
-          const target = batteryOrder(world)[n];
-          if (target) { ui.selectedSiteId = target.id; assignSelected(target.id); }
-        } else {
-          setSpeed([1, 2, 4, 0][n] ?? 1);
-        }
-        break;
-      }
       case '+': case '=': scope.zoom(0.85); break;
       case '-': case '_': scope.zoom(1.18); break;
-      case 'q': if (site) world.setWeaponsState(site.id, 'hold'); break;
-      case 'w': if (site) world.setWeaponsState(site.id, 'tight'); break;
+      /*
+       * Step through the board.
+       *
+       * A contact could only be picked with a pointer — on the tube or in the
+       * list — so the seat's first verb was the one thing the keyboard could
+       * not do, and every key that acts on "the selected contact" (LOCK,
+       * LAUNCH, Shift+battery) was unreachable without a mouse. The arrows
+       * walk the rows in the order they are drawn, which is the order the
+       * shootlists put them in, so a contact under two batteries is stepped
+       * through under both.
+       */
+      case 'arrowleft': case 'arrowright': {
+        // Inside the speed group the arrows are the group's own; anywhere else
+        // they are nothing, and the board's arrows are up and down.
+        const caps = [...els.speedGroup.querySelectorAll('[data-speed]')];
+        const at = caps.indexOf(document.activeElement);
+        if (at < 0) break;
+        e.preventDefault();
+        const step = e.key === 'ArrowRight' ? 1 : caps.length - 1;
+        const cap = caps[(at + step) % caps.length];
+        setSpeed(Number(cap.dataset.speed));
+        cap.focus();
+        break;
+      }
+      case 'arrowdown': case 'arrowup': {
+        const rows = [...els.trackList.querySelectorAll('li[data-track]')];
+        if (!rows.length) break;
+        e.preventDefault();
+        const ids = rows.map((r) => r.dataset.track);
+        const at = ids.indexOf(ui.selectedTrackId);
+        const next = e.key === 'ArrowDown'
+          ? (at + 1) % ids.length
+          : (at <= 0 ? ids.length - 1 : at - 1);
+        ui.selectedTrackId = ids[next];
+        rows[next].scrollIntoView({ block: 'nearest' });
+        ui.lastPanelAt = 0;
+        break;
+      }
+      /*
+       * From here down a key is the cap.
+       *
+       * Everything with a cap on the panel goes through `runAction`, which is
+       * what the cap itself calls: the console makes the same noise, the same
+       * guards apply, and a refusal prints the same sentence. The key and the
+       * button used to be two implementations of one verb, and they had
+       * drifted — L locked silently and told you nothing when it could not,
+       * while the LOCK cap beside it has printed its reason for watches.
+       */
+      case 'q': if (site) { audio.press(); world.setWeaponsState(site.id, 'hold'); } break;
+      case 'w': if (site) { audio.press(); world.setWeaponsState(site.id, 'tight'); } break;
       case 'e': {
         const target = ui.view === 'crew' ? world.siteById.get(crewedId) : site;
-        if (target) world.toggleRadar(target.radarId);
+        if (target) runAction('emcon', target.id);
         break;
       }
       case 'f': if (crewedId) world.fire(crewedId, ui.selectedTrackId); break;
-      case 'l': if (crewedId && ui.selectedTrackId) world.assign(ui.selectedTrackId, crewedId); break;
-      case 'r': if (site) world.reload(site.id); break;
-      case 'x': if (site) world.scoot(site.id); break;
-      case 's': if (site) world.setSalvo(site.id, site.salvoSize === 1 ? 2 : 1); break;
+      case 'l': if (crewedId) runAction('lock', crewedId); break;
+      case 'r': if (site) runAction('reload', site.id); break;
+      /*
+       * S, G and X answer to the same predicate their caps do.
+       *
+       * The teaching watch strips SALVO, RIDE and DISPLACE off the battery
+       * card and off the handbook, and left all three live on the keyboard:
+       * pressing X on First Light put the beginner's only long-range battery
+       * on the road for two hundred and ten seconds, with no cap on screen to
+       * explain it, no key in the handbook to look up, and no way to cancel.
+       * A control the watch has removed is removed everywhere — and says so
+       * once, so a stray press reads as a rule rather than as a dead key.
+       */
+      case 'x':
+        if (!caps.displace) { notFitted('DISPLACE'); break; }
+        if (site) runAction('scoot', site.id);
+        break;
+      case 's':
+        if (!caps.salvo) { notFitted('SALVO'); break; }
+        if (site) runAction('salvo', site.id);
+        break;
       case 'g': {
         // Ride the warning: hold the selected (or crewed) battery's emissions
         // through guidance with an ARM inbound. The one EMCON call the crew
         // will never make for itself.
+        if (!caps.ride) { notFitted('RIDE'); break; }
         const target = ui.view === 'crew' ? world.siteById.get(crewedId) : site;
-        if (target) world.setEmconOrder(target.id, target.emconOrder === 'ride' ? 'doctrine' : 'ride');
+        if (target) runAction('ride', target.id);
         break;
       }
       case 'y': if (world.command.pending) world.answer('accepted'); break;
       case 'n': if (world.command.pending) world.answer('refused'); break;
       case 'm': ui.showMap = !ui.showMap; break;
       case 'h': showHelp(() => { els.screen.hidden = true; els.shell.hidden = false; state.phase = 'mission'; }); break;
-      case 'tab': e.preventDefault(); toggleView(); break;
+      /*
+       * The seat toggle is on V, and Tab belongs to the browser.
+       *
+       * This used to be `case 'tab': e.preventDefault(); toggleView();`, run
+       * for the whole mission phase and before toggleView's own "only the
+       * commander has two seats" guard — so on every watch, including the
+       * nine where the toggle does nothing at all, Tab was swallowed and focus
+       * never left <body>. Measured: twenty-six consecutive presses on First
+       * Light with the focus never moving. The console has a drawn focus ring
+       * on nine kinds of control and no player could ever see one, and the
+       * game could not be played without a mouse.
+       */
+      case 'v': toggleView(); break;
       case '`': {
         const surveillance = world.radars.filter((r) => !r.siteId && r.alive);
         const anyOn = surveillance.some((r) => r.on);
@@ -1287,7 +1567,7 @@ function wireGlobalInput() {
     }
 
     // Weapons free is on its own key because it is the one you reach for fast.
-    if (e.key === 'E' && e.shiftKey && site) world.setWeaponsState(site.id, 'free');
+    if (e.key === 'E' && e.shiftKey && site) { audio.press(); world.setWeaponsState(site.id, 'free'); }
   });
 
   window.addEventListener('resize', () => { scope.resize(); crew.resize(); });

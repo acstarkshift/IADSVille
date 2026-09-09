@@ -25,22 +25,34 @@
       <span class="readout" title="Rounds expended against allocation"><label data-legend="STATUS.rounds"></label><b id="rounds">0/0</b></span>
       <span class="lamps" id="master-lamps"></span>
     </div>
-    <div class="topbar-group" id="speed-group">
-      <button class="pb" data-speed="0" title="Pause (Space)"><span class="lg"><b>СТОП</b><i>HOLD</i></span></button>
-      <button class="pb is-down" data-speed="1"><span class="lg"><b>1×</b><i>REAL</i></span></button>
-      <button class="pb" data-speed="2"><span class="lg"><b>2×</b><i>FAST</i></span></button>
-      <button class="pb" data-speed="4"><span class="lg"><b>4×</b><i>MAX</i></span></button>
+    <!-- Each cap carries the key that selects it, stamped from the lexicon the
+         same way the ACKNOWLEDGE and REFUSE caps carry Y and N. The keys used
+         to be mapped by position instead: 3 selected the cap marked 4×, and 4
+         — the obvious reach for maximum speed — stopped the raid dead. -->
+    <div class="topbar-group" id="speed-group" role="radiogroup" aria-label="Simulation speed">
+      <button class="pb" data-speed="0" role="radio" aria-checked="false" tabindex="-1"
+        title="Hold — the simulation stops (0 or Space)">
+        <span class="lg" data-legend="CONTROLS.speedHold" data-key="0"></span></button>
+      <button class="pb is-down" data-speed="1" role="radio" aria-checked="true" tabindex="0"
+        title="Real time (1)">
+        <span class="lg" data-legend="CONTROLS.speedReal" data-key="1"></span></button>
+      <button class="pb" data-speed="2" role="radio" aria-checked="false" tabindex="-1"
+        title="Two times real time (2)">
+        <span class="lg" data-legend="CONTROLS.speedFast" data-key="2"></span></button>
+      <button class="pb" data-speed="4" role="radio" aria-checked="false" tabindex="-1"
+        title="Four times real time (4)">
+        <span class="lg" data-legend="CONTROLS.speedMax" data-key="4"></span></button>
     </div>
     <div class="topbar-group">
       <span class="operator" id="echelon-plate"></span>
       <span class="operator" id="operator-plate"></span>
-      <button class="pb" id="view-toggle" hidden title="Switch seat (Tab)"></button>
+      <button class="pb" id="view-toggle" hidden title="Switch seat (V)"></button>
       <span class="readout standing" title="Your standing with sector command">
         <label data-legend="STATUS.standing"></label><b id="standing">50</b>
         <span class="standing-bar"><i id="standing-fill"></i></span>
       </span>
       <button class="pb" id="btn-help" title="Help (H)"><span class="lg"><b>?</b><i>HELP</i></span></button>
-      <button class="pb" id="btn-abort" title="Leave the mission"><span class="lg" data-legend="CONTROLS.abort"></span></button>
+      <button class="pb" id="btn-abort" title="Leave the post — this ends the watch and records it as abandoned"><span class="lg" data-legend="CONTROLS.abort"></span></button>
     </div>
   </header>
 
@@ -94,6 +106,27 @@
     </div>
     <ol id="event-log" class="event-log strip" aria-live="polite"></ol>
   </footer>
+
+  <!-- Leaving the post is a decision the game scores, so it is confirmed like
+       one, and the card states the cost before it is paid. The simulation
+       deliberately keeps running underneath: this is a question, not a pause. -->
+  <div class="ask" id="abort-ask" hidden role="dialog" aria-modal="true" aria-labelledby="abort-head">
+    <div class="ask-card">
+      <h2 id="abort-head"><span class="lg" data-legend="CONTROLS.abort" data-gloss-first></span></h2>
+      <p class="ask-line" id="abort-line"></p>
+      <ul class="ask-costs">
+        <li>The watch is recorded as <b>abandoned</b>. It is not scored.</li>
+        <li>No points, no experience, no decoration, and no completion on the roster.</li>
+        <li>Standing is charged for leaving the post.</li>
+      </ul>
+      <div class="ask-actions">
+        <button class="pb pb-refuse" id="abort-confirm"><span class="lg"
+          data-legend="CONTROLS.abandon" data-gloss-first></span></button>
+        <button class="pb pb-accept" id="abort-cancel"><span class="lg"
+          data-legend="CONTROLS.stay" data-gloss-first data-key="Esc"></span></button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="screen" class="screen"></div>

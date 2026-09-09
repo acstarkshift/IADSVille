@@ -299,8 +299,13 @@ export function renderDebrief(host, state, result, entry) {
    * The last watch does not get a debrief so much as an outcome. The ending is
    * read off what was actually defended and is placed above the arithmetic,
    * because on this one night the arithmetic is not the point.
+   *
+   * A watch that was walked out of has nothing to read: `result.finale` is
+   * already false for an abandoned watch, and the second clause says so here
+   * too, because an ending composed from a raid that never launched is the
+   * worst thing this screen could print.
    */
-  const ending = result.finale
+  const ending = !result.abandoned && result.finale
     ? composeEnding(result, state.campaign.character, { narrativePressure: state.narrativePressure })
     : result.epilogue
       ? composeFlightEnding(result, state.campaign.character, { narrativePressure: state.narrativePressure })
@@ -403,21 +408,39 @@ export function renderDebrief(host, state, result, entry) {
         ${Math.round(result.battery.exposure * 100)}% emissions exposure.</p>` : ''}
     </div>
 
-    <div class="card">
+    ${(() => {
+    // A card with a heading and nothing under it is furniture. It happens on
+    // an abandoned watch, where every line of the arithmetic is zero by
+    // definition and the card above has already said why.
+    const rows = [
+      ['Ground preserved', b.assets],
+      ['Aircraft destroyed', b.kills],
+      ['Sorties turned back', b.turnedBack],
+      ['Leakers', b.leakers],
+      ['Rounds expended', b.rounds],
+      ['Equipment lost', b.equipment],
+      ['Civilian harm', b.civilian],
+    ].filter(([, v]) => v !== 0);
+    if (!rows.length) return '';
+    return `<div class="card">
       <h3>Points</h3>
       <table class="ledger">
-        ${[
-    ['Ground preserved', b.assets],
-    ['Aircraft destroyed', b.kills],
-    ['Sorties turned back', b.turnedBack],
-    ['Leakers', b.leakers],
-    ['Rounds expended', b.rounds],
-    ['Equipment lost', b.equipment],
-    ['Civilian harm', b.civilian],
-  ].filter(([, v]) => v !== 0).map(([label, value]) =>
+        ${rows.map(([label, value]) =>
     `<tr><td>${esc(label)}</td><td class="${value > 0 ? 'up' : 'down'}">${value > 0 ? '+' : ''}${value}</td></tr>`).join('')}
       </table>
-    </div>
+    </div>`;
+  })()}
+
+    ${result.abandoned ? `<div class="card file-entry">
+      <h3>NOTHING IS BANKED</h3>
+      <table class="ledger">
+        <tr><td>Experience earned</td><td class="down">none</td></tr>
+        <tr><td>This watch on the roster</td><td class="down">not completed</td></tr>
+        <tr><td>Standing</td><td class="down">charged for leaving the post</td></tr>
+      </table>
+      <p class="note">The raid was still in the air when the post was left.
+      Stand the watch again from the roster; it is scored when it is finished.</p>
+    </div>` : ''}
 
     ${serviceSummary(state.campaign.character, entry?.service, state.campaign)}
 
@@ -481,29 +504,29 @@ export function renderDebrief(host, state, result, entry) {
 /* ------------------------------------------------------------- help */
 
 /**
- * `basic` is the teaching watch's cut-down console, and this screen has to
- * agree with it. `scenarios.js` sets `basicConsole` on First Light and
- * `panels.js` reads it to strip displacement, salvo and RIDE off the battery
- * card — while this page went on listing S, G and X as things to press. A
- * help screen that names keys the console has removed is worse than no help
- * screen: it sends a new operator hunting for a control that is not there.
+ * The handbook for the console you are actually sitting at.
+ *
+ * The caps a watch does not carry are taken by `consoleCaps(scenario)`, and
+ * this page, the battery card and the key map all read that one answer — so
+ * they cannot drift the way they had. The teaching watch strips SALVO, RIDE
+ * and DISPLACE off the card; this page used to go on listing S, G and X as
+ * things to press, and the keyboard went on obeying them, which is how a
+ * learner put their only battery on the road for three and a half minutes.
  */
-export function renderControls(host, { basic = false, hunted = true } = {}) {
+export function renderControls(host, { salvo = true, ride = true, displace = true } = {}) {
   const key = (k, d) => `<div><b>${esc(k)}</b><span>${esc(d)}</span></div>`;
-  const unless = (cond, row) => (cond ? '' : row);
-  // DISPLACE is listed only where something can hunt the position: an
-  // anti-radiation round in the raid, or a place that drives out with the
-  // battery. `panels.js` hides the cap on the same test.
-  const displaceable = !basic && hunted;
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title is-outcome">CONTROLS</h1>
     <div class="card">
       <h3>Everywhere</h3>
       <div class="keys">
-        ${key('Space', 'pause / resume — the sim stops; a pending directive’s clock does not')}
-        ${key('1 2 3', 'game speed 1× / 2× / 4×  (4 pauses)')}
+        ${key('Space / 0', 'hold — the simulation stops; a pending order’s clock does not')}
+        ${key('1 / 2 / 4', 'the speed printed on the cap: real time, twice, four times')}
+        ${key('Tab', 'walk the console’s controls; Enter or Space presses the one with the ring')}
+        ${key('↑ / ↓', 'step through the contacts on the board')}
+        ${key('← / →', 'change speed while the ring is on the speed caps')}
         ${key('+ / −', 'zoom the scope')}
-        ${key('Tab', 'switch seat (commander only)')}
+        ${key('V', 'switch seat — net or cabin (commander only)')}
         ${key('Y / N', 'acknowledge or refuse a directive')}
         ${key('M', 'the map of Trans Mordovia under the picture')}
         ${key('H', 'this screen')}
@@ -513,13 +536,14 @@ export function renderControls(host, { basic = false, hunted = true } = {}) {
       <h3>Battle manager</h3>
       <div class="keys">
         ${key('Click a contact', 'select it')}
-        ${key('Drag contact → battery', 'assign the engagement')}
+        ${key('Drag contact → battery', 'hand it to that battery')}
+        ${key('Shift+1 … 4', 'hand the selected contact to battery 1–4, in the order the cards are numbered')}
         ${key('Q / W', 'weapons hold / tight on the selected battery')}
         ${key('Shift+E', 'weapons free on the selected battery')}
         ${key('E', 'toggle the selected battery’s radar — careful: this silences your own set')}
-        ${unless(basic, key('G', 'RIDE — hold emissions through guidance with an ARM inbound (the crew never will)'))}
+        ${ride ? key('G', 'RIDE — hold emissions through guidance with an ARM inbound (the crew never will)') : ''}
         ${key('R', 'loaders out — start the selected battery’s rack filling now, short or not')}
-        ${displaceable ? key('X', 'displace the selected battery') : ''}
+        ${displace ? key('X', 'displace the selected battery') : ''}
         ${key('`', 'toggle every surveillance radar')}
       </div>
     </div>
@@ -530,11 +554,15 @@ export function renderControls(host, { basic = false, hunted = true } = {}) {
         ${key('L', 'lock — start the engagement sequence')}
         ${key('F', 'fire')}
         ${key('E', 'radiate / shut down (this is the whole game)')}
-        ${unless(basic, key('S', 'salvo size'))}
+        ${salvo ? key('S', 'salvo size') : ''}
         ${key('R', 'loaders out — top the rack up now, instead of waiting for the rails to go bare')}
-        ${displaceable ? key('X', 'displace') : ''}
+        ${displace ? key('X', 'displace') : ''}
       </div>
     </div>
+    ${salvo && ride && displace ? '' : `<div class="card">
+      <p class="note">Some controls are not fitted to tonight's console — this watch is
+      flown on the caps you can see, and the keys that are not listed above do nothing.</p>
+    </div>`}
     <div class="card">
       <h3>The four classes of air defence</h3>
       <table class="ledger">

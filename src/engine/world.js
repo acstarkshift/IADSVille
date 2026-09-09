@@ -20,7 +20,9 @@ import {
   SIM, SAM_TYPES, RADAR_TYPES, ASSET_TYPES, AIR_TYPES, DETECTION, DIFFICULTY, COMMAND, DAMAGE,
 } from './config.js';
 import { makeRng } from './rng.js';
-import { dist, len, bearing, polar, wrapDeg, clamp, clamp01, absDeltaDeg } from './math.js';
+import {
+  dist, len, bearing, polar, wrapDeg, clamp, clamp01, absDeltaDeg, clockString,
+} from './math.js';
 import { stepDetection, rememberGhost } from './detection.js';
 import { stepMissiles, inEnvelope, timeToInRangeS } from './weapons.js';
 import { stepAircraft, createAircraft } from './ai.js';
@@ -2250,7 +2252,30 @@ export class World {
 
   finish(reason) {
     this.phase = 'complete';
+
+    /*
+     * Leaving the post is its own ending, and it is not one of the good ones.
+     *
+     * `finish` is the teardown path for every way a watch can stop, including
+     * the operator walking out of the room, and everything below it used to
+     * treat the walk-out exactly like a raid that had been fought to a
+     * standstill: every asset was still intact because nothing had been
+     * attacked yet, so the scoring said SECTOR HELD, paid the ground-preserved
+     * award, banked the experience, and — on the last watch — composed the
+     * campaign's best ending out of a night that never happened. Twelve
+     * watches could be walked through by pressing BEGIN and then LEAVE POST.
+     *
+     * So an abandoned watch stops here, before any of that. The file records
+     * that the post was left, it costs standing, and it is scored as the
+     * nothing it is.
+     */
+    this.abandoned = reason === 'aborted';
+    // Set before the directives are settled, because the settlement's credits
+    // are for a watch that was stood; the charge for leaving lands after them.
     settleDirectives(this);
+    if (this.abandoned) {
+      standingDelta(this, -14, 'left the post before the watch ended');
+    }
 
     /*
      * The last watch is scored twice: once by the rules that score every watch,
@@ -2258,7 +2283,7 @@ export class World {
      * defended, and its standing effect lands before the result is composed so
      * the debrief shows the figure the file will carry.
      */
-    if (this.scenario.finale) {
+    if (this.scenario.finale && !this.abandoned) {
       const provisional = this.result(reason);
       const ending = composeEnding(provisional, this.character,
         { narrativePressure: this.narrativePressure, family: this.family });
@@ -2274,7 +2299,7 @@ export class World {
      * order was acknowledged, which is not something an ending text should be
      * doing. So this only names the outcome.
      */
-    if (this.scenario.epilogue) {
+    if (this.scenario.epilogue && !this.abandoned) {
       this.endingId = composeFlightEnding(this.result(reason), this.character,
         { narrativePressure: this.narrativePressure }).id;
     }
@@ -2295,6 +2320,20 @@ export class World {
    * so that emptying every rack into the first wave is a decision with a price.
    */
   result(reason = 'raid-spent') {
+    /*
+     * Nothing is credited for a watch nobody stood.
+     *
+     * Every award below is an award for something the operator kept: the
+     * ground still standing, the sorties turned back, the aeroplane that got
+     * out. An abandoned watch has all of those in the same state a watch that
+     * has not started yet does — intact, because nothing has been attacked —
+     * so paying for them is paying for the raid's absence. The costs already
+     * incurred stay: rounds spent, leakers through, a civil aircraft shot.
+     * That makes the arithmetic one-directional, which is the point. A watch
+     * you walk out of can be worth nothing or worse, never something.
+     */
+    const abandoned = reason === 'aborted';
+
     // Scored on what a place is actually worth, which is not always what sector
     // command's ledger says it is worth.
     const assetScore = this.assets.reduce((sum, asset) => {
@@ -2357,9 +2396,9 @@ export class World {
      */
     const flightScore = this.scenario.epilogue && !this.stats.vipDown ? FLIGHT_VALUE : 0;
 
+    const earned = abandoned ? 0 : assetScore + killScore + turnedBackScore + flightScore;
     const score = Math.round(
-      assetScore + killScore + turnedBackScore + flightScore
-      - leakerPenalty - roundCost - civilPenalty - equipmentPenalty,
+      earned - leakerPenalty - roundCost - civilPenalty - equipmentPenalty,
     );
 
     const criticalLost = this.assets.some((a) => ASSET_TYPES[a.type].critical && a.destroyed);
@@ -2378,14 +2417,24 @@ export class World {
      * verdict.
      */
     const flightLost = this.scenario.epilogue === true && this.stats.vipDown;
-    const success = reason !== 'site-lost' && !criticalLost && !flightLost
+    /*
+     * `reason` used to be consulted for exactly one value — 'site-lost' — and
+     * every other string fell through the test as if it were a watch fought to
+     * the end. 'aborted' is one of those strings, and an abandoned watch
+     * passes every remaining condition trivially: nothing has been attacked,
+     * so no critical place is lost and no leaker has arrived. Walking out was
+     * therefore the most reliable way to win.
+     */
+    const success = !abandoned && reason !== 'site-lost' && !criticalLost && !flightLost
       && leakersCounted <= (this.scenario.leakerTolerance ?? 2);
 
     const tier = tierFor(this.command.standing);
-    const headline = reason === 'site-lost'
-      ? 'YOUR POSITION WAS OVERRUN'
-      : success ? 'SECTOR HELD'
-        : flightLost ? 'STATE 01 WAS LOST' : 'SECTOR PENETRATED';
+    const headline = abandoned
+      ? 'WATCH ABANDONED'
+      : reason === 'site-lost'
+        ? 'YOUR POSITION WAS OVERRUN'
+        : success ? 'SECTOR HELD'
+          : flightLost ? 'STATE 01 WAS LOST' : 'SECTOR PENETRATED';
 
     return {
       /**
@@ -2405,11 +2454,13 @@ export class World {
        * place that cannot be lost, then the count — so the clause always names
        * the thing that actually settled it.
        */
-      cause: this.failureCause({ reason, success, criticalLost, leakersCounted }),
+      cause: this.failureCause({ reason, success, criticalLost, leakersCounted, abandoned }),
       missionId: this.scenario.id,
       role: this.control.role,
       reason,
       success,
+      /** The post was left before the raid was resolved. Nothing is banked. */
+      abandoned,
       headline,
       score,
       standing: this.command.standing,
@@ -2421,9 +2472,9 @@ export class World {
        * compares unequal to 0 under strict equality.
        */
       breakdown: {
-        assets: Math.round(assetScore),
-        kills: killScore,
-        turnedBack: turnedBackScore,
+        assets: abandoned ? 0 : Math.round(assetScore),
+        kills: abandoned ? 0 : killScore,
+        turnedBack: abandoned ? 0 : turnedBackScore,
         leakers: -leakerPenalty || 0,
         rounds: -roundCost || 0,
         civilian: -civilPenalty || 0,
@@ -2433,9 +2484,16 @@ export class World {
       ledger: [...this.command.ledger],
       /** Orders accepted or refused, for the endings to read. */
       constraints: { ...this.command.constraints },
-      finale: this.scenario.finale === true,
-      epilogue: this.scenario.epilogue === true,
-      endingId: this.endingId ?? null,
+      /*
+       * The ending is composed from what the night turned out to be, so a
+       * night that was not fought does not get one. Aborting the finale used
+       * to produce BOTH CITIES — the campaign's payoff — out of a raid that
+       * had not launched, complete with an ending text asserting that
+       * twenty-eight aircraft had been committed against the sector.
+       */
+      finale: this.scenario.finale === true && !abandoned,
+      epilogue: this.scenario.epilogue === true && !abandoned,
+      endingId: abandoned ? null : (this.endingId ?? null),
       assets: this.assets.map((a) => ({
         id: a.id,
         type: a.type,
@@ -2458,8 +2516,18 @@ export class World {
    * aircraft, they lost to an empty scope, and telling them "four leaked" is
    * telling them the symptom.
    */
-  failureCause({ reason, success, criticalLost, leakersCounted }) {
+  failureCause({ reason, success, criticalLost, leakersCounted, abandoned }) {
     if (success) return null;
+    /*
+     * Said first, because it is the whole of what happened, and said with the
+     * clock on it: the number that makes an abandoned watch legible is how
+     * long it lasted. Nothing else in the debrief carries that.
+     */
+    if (abandoned) {
+      const airborne = this.aircraft.filter((a) => a.alive && a.type !== 'civil').length;
+      return `YOU LEFT THE POST AT ${clockString(this.t)}, WITH ${airborne} `
+        + `AIRCRAFT STILL AIRBORNE. THE WATCH IS NOT SCORED AND NOTHING IS BANKED.`;
+    }
     if (reason === 'site-lost') {
       return 'YOUR POSITION WAS OVERRUN — THE REST OF THE RAID CROSSED AN EMPTY SQUARE.';
     }

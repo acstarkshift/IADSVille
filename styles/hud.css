@@ -24,6 +24,9 @@ kbd {
   grid-template-rows: auto minmax(0, 1fr) auto;
   height: 100%;
   overflow: hidden;
+  /* The console's own coordinate space, so a question asked over it (the
+     LEAVE POST card) covers the console and nothing else. */
+  position: relative;
 }
 .shell[hidden] { display: none; }
 
@@ -676,6 +679,56 @@ table.ledger .down { color: var(--hostile); }
 .tutorial-card .tut-skip:hover { background: var(--bg-raised); color: var(--ink-bright); }
 .tutorial-card .tut-skip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .is-console-dark #tutorial-card { visibility: hidden; }
+
+/*
+ * The one question the console asks before it does something irreversible.
+ *
+ * Leaving the post ends the watch and is scored as abandonment, so the cap
+ * asks first and the card says what it will cost. It shares the command net's
+ * layer and comes after it in the markup, so it sits over everything on the
+ * stage; the simulation underneath keeps running, which the line at the top
+ * says out loud, because a confirmation that quietly stops the raid would be
+ * a free pause with a question mark on it.
+ */
+.ask[hidden] { display: none; }
+.ask {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .62);
+  z-index: var(--z-command);
+}
+.ask-card {
+  width: min(520px, 82vw);
+  padding: 16px 18px 14px;
+  background: var(--bg-panel);
+  border: 1px solid var(--edge);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 18px 46px rgba(0, 0, 0, .62);
+}
+.ask-card h2 { margin: 0 0 10px; font-size: 13px; }
+.ask-card h2 .lg b { font-size: 14px; letter-spacing: .18em; color: var(--ink-bright); }
+.ask-card h2 .lg i { font-size: 10px; letter-spacing: .16em; color: var(--ink-dim); }
+.ask-line {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+.ask-costs {
+  margin: 0 0 14px;
+  padding: 9px 12px 9px 26px;
+  list-style: square;
+  border-left: 2px solid var(--warn);
+  background: var(--bg-raised);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--ink-dim);
+}
+.ask-costs b { color: var(--ink); }
+.ask-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.ask-actions .pb { min-width: 150px; }
 
 /* The one thing a browser with scripting off is shown. It is outside the
    console entirely, so it names the tokens it needs rather than inheriting. */
