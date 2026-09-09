@@ -57,7 +57,7 @@ kbd {
 
 .standing-bar {
   display: inline-block; width: 62px; height: 7px; margin-left: 4px;
-  background: #0d0f0c; border: 1px solid var(--metal-edge); border-radius: 1px;
+  background: var(--paper); border: 1px solid var(--metal-edge); border-radius: 1px;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, .8);
   overflow: hidden; vertical-align: middle;
 }
@@ -76,9 +76,14 @@ kbd {
 }
 .btn:hover { border-color: var(--accent); color: var(--ink-bright); }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.btn.is-on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
 .btn.is-danger { border-color: var(--hostile); color: var(--hostile); }
-.btn:disabled { opacity: .4; cursor: not-allowed; }
+/* Dead, not dim: the fill flattens into the panel and the ink goes grey. */
+.btn:disabled {
+  cursor: not-allowed; opacity: .75;
+  background: transparent; border-style: dashed;
+  border-color: color-mix(in srgb, var(--edge) 60%, transparent); color: var(--ink-dim);
+}
+.btn:disabled:hover { border-color: color-mix(in srgb, var(--edge) 60%, transparent); color: var(--ink-dim); }
 
 /* ----------------------------------------------------------------- stage */
 
@@ -91,13 +96,12 @@ kbd {
 
 .panel {
   display: flex; flex-direction: column; min-height: 0;
+  overflow-x: hidden;
   border-right: 1px solid var(--metal-edge);
   box-shadow: inset -3px 0 8px rgba(0, 0, 0, .35);
 }
 .panel-right { border-right: none; border-left: 1px solid var(--metal-edge);
   box-shadow: inset 3px 0 8px rgba(0, 0, 0, .35); }
-.panel { overflow-x: hidden; }
-.battery-list { overflow-x: hidden; }
 
 .panel h2 {
   margin: 0; padding: 5px 9px;
@@ -112,27 +116,37 @@ kbd {
 
 /* ------------------------------------------------------------ track list */
 
-.track-head { padding-left: 14px !important; padding-right: 14px !important; }
+/*
+ * The head and the rows are one grid in one box. ALT carries five figures at
+ * twenty-five thousand metres and had 2.8em to do it in, so 10800 overflowed
+ * its cell by two pixels on every watch that flies high; the head also sat
+ * three pixels right of the rows it labels, because it padded 14px against
+ * their 8px plus a three-pixel selection rail.
+ */
 .track-head, .track-row {
   display: grid;
-  grid-template-columns: 3.7em 5.6em 2.6em 3.2em 2.8em 1fr;
+  grid-template-columns: 3.7em 5.6em 2.6em 3.2em 3.6em 1fr;
   gap: 4px; padding: 2px 8px;
+  border-left: 3px solid transparent;
   font-size: 11px; font-variant-numeric: tabular-nums;
 }
 .track-head {
   color: var(--engrave-dim); font-size: 8.5px; letter-spacing: .1em;
   padding-top: 5px; padding-bottom: 3px;
+  /* The list below is inset by its own 5px margin and 1px border; the head
+     has to stand off by the same, or the columns do not line up under it. */
+  margin: 0 6px;
 }
 
 .track-list {
   list-style: none; margin: 5px; padding: 2px 0; overflow-y: auto; flex: 1;
-  background: linear-gradient(180deg, #05070500, rgba(0,0,0,.45)), var(--bg);
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.45)), var(--bg);
   border: 1px solid var(--metal-edge); border-radius: 2px;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, .7);
 }
 .track-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-row {
-  cursor: pointer; border-left: 3px solid transparent; align-items: center;
+  cursor: pointer; align-items: center;
   border-bottom: 1px solid color-mix(in srgb, var(--edge) 35%, transparent);
 }
 .track-row:hover { background: var(--bg-raised); }
@@ -142,20 +156,19 @@ kbd {
 .track-row.is-unknown .tn { color: var(--unknown); }
 .track-row.is-coasting { opacity: .55; font-style: italic; }
 .track-row.is-engaged .asgn { color: var(--good); }
-.track-row .threat-pip {
-  display: inline-block; width: 4px; height: 4px; border-radius: 50%;
-  background: var(--hostile); margin-right: 3px; vertical-align: middle;
-}
 /* A target the net called to you, as against one you picked yourself. */
 .track-row .asgn .cued { color: var(--accent); font-style: normal; margin-right: 2px; }
-.track-row.is-empty { opacity: .5; cursor: default; }
+.track-row .pips { color: var(--hostile); font-style: normal; }
+/* "no contacts" is a sentence, not a row of columns: it had been landing in
+   the five-em TYPE cell and being clipped in half. */
+.track-row.is-empty { opacity: .5; cursor: default; display: block; }
 .track-row.is-empty:hover { background: none; }
 
 /* Shootlist headings: the battery a run of rows belongs to, and whether it
    can take another one. Sticky so the battery stays named while you scroll
    its list. */
 .shootlist-head {
-  position: sticky; top: 0; z-index: 1;
+  position: sticky; top: 0; z-index: var(--z-sticky);
   display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
   padding: 4px 8px 2px; margin-top: 3px;
   font-size: 8.5px; letter-spacing: .11em;
@@ -170,7 +183,16 @@ kbd {
 .shootlist-head.is-urgent .sl-name, .shootlist-head.is-urgent .sl-note { color: var(--hostile); }
 .shootlist-head.is-busy .sl-note { color: var(--warn); }
 .shootlist-head.is-down .sl-note { color: var(--hostile); }
-.shootlist-head.is-idle { opacity: .6; }
+/*
+ * The two closing headings — UNCOMMITTED and OUT OF REACH — carry a list
+ * rather than a status, and the list runs to eleven battery names at district
+ * command. Truncating it to "BASTION DISTRICT · LANCE VILLE · THISTLE…" hid
+ * two hundred and forty-four pixels of the answer; it wraps instead.
+ */
+.shootlist-head.is-idle { opacity: .6; align-items: flex-start; }
+.shootlist-head.is-idle .sl-note {
+  white-space: normal; overflow: visible; text-align: right; line-height: 1.35;
+}
 
 .panel-foot {
   border-top: 1px solid var(--metal-edge); padding: 6px 8px;
@@ -181,54 +203,33 @@ kbd {
 
 /* --------------------------------------------------------------- weapons */
 
-.battery-list { overflow-y: auto; flex: 1; }
-
-.battery {
-  padding: 6px 8px; border-bottom: 1px solid var(--edge); cursor: pointer;
-  border-left: 3px solid transparent;
-}
-.battery:hover { background: var(--bg-raised); }
-.battery.is-selected { border-left-color: var(--accent); background: var(--bg-raised); }
-.battery.is-dead { opacity: .4; }
-.battery.is-crewed { border-left-color: var(--friendly); }
-
-.battery-name { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-.battery-name b { color: var(--ink-bright); letter-spacing: .06em; }
-.battery-name .type { font-size: 10px; color: var(--ink-dim); }
-
-.battery-meta {
-  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 3px;
-  font-size: 10.5px; color: var(--ink-dim); font-variant-numeric: tabular-nums;
-}
-.battery-meta span b { color: var(--ink); }
+/*
+ * The weapons rack. In the cabin the crew console below it is the seat the
+ * player is actually sitting in, so the rack gives way: it takes a third of
+ * the column and scrolls, and the cabin takes the rest. Measured before this,
+ * at 1280x800 on The Two Cities, LOCK and the LAUNCH cap were rendered below
+ * the bottom of the panel with no scrollbar anywhere that could reach them.
+ */
+.battery-list { overflow-x: hidden; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
 
 .pill {
   display: inline-block; padding: 0 5px; border-radius: 999px; font-size: 9.5px;
   border: 1px solid currentColor; letter-spacing: .08em;
 }
-.pill.hold { color: var(--ink-dim); }
 .pill.tight { color: var(--warn); }
 .pill.free { color: var(--good); }
-.pill.radiating { color: var(--accent); animation: blink 1.4s infinite; }
-.pill.warming { color: var(--warn); }
-.pill.dark { color: var(--ink-dim); }
-.pill.alarm { color: var(--hostile); animation: blink .5s infinite steps(1); }
 
-.rounds-bar { display: flex; gap: 2px; margin-top: 4px; }
-.rounds-bar i {
-  flex: 1 1 auto; height: 5px; background: var(--accent); border-radius: 1px; max-width: 12px;
-}
-.rounds-bar i.is-spent { background: var(--bg-raised); border: 1px solid var(--edge); }
-
-.battery-actions { display: flex; gap: 3px; margin-top: 5px; flex-wrap: wrap; }
-.battery-actions .btn { padding: 1px 6px; font-size: 10px; }
-
-.progress { height: 3px; background: var(--bg-raised); margin-top: 4px; border-radius: 2px; overflow: hidden; }
-.progress i { display: block; height: 100%; background: var(--warn); }
+/* In the cabin both of the panels above give way to the seat itself. */
+.battery-list.is-secondary { flex: 0 1 auto; max-height: 30%; }
 
 /* -------------------------------------------------------- crew console */
 
-.crew-console { border-top: 1px solid var(--metal-edge); padding: 7px 5px; }
+.crew-console {
+  border-top: 1px solid var(--metal-edge); padding: 7px 5px;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+}
+.crew-console .unit { margin: 0; }
+.crew-console .unit-controls, .crew-console .placard { margin-top: 9px; }
 .crew-console h3 {
   margin: 0 0 6px; font-size: 10px; letter-spacing: .16em;
   color: var(--engrave-dim); text-transform: uppercase;
@@ -244,14 +245,6 @@ kbd {
 
 .meter { height: 6px; background: var(--bg-raised); border: 1px solid var(--edge); border-radius: 999px; overflow: hidden; margin: 3px 0 6px; }
 .meter i { display: block; height: 100%; background: var(--warn); transition: width .3s; }
-.meter.is-hot i { background: var(--hostile); }
-
-.fire-btn {
-  width: 100%; margin-top: 6px; padding: 7px; font-weight: 700; letter-spacing: .18em;
-  border: 1px solid var(--edge); background: var(--bg-raised); cursor: pointer; border-radius: var(--radius);
-}
-.fire-btn.is-armed { background: var(--hostile); color: #fff; border-color: var(--hostile); animation: alarm-pulse 1.1s infinite; }
-.fire-btn:disabled { opacity: .35; cursor: not-allowed; animation: none; }
 
 /* ----------------------------------------------------------------- scope */
 
@@ -271,10 +264,13 @@ kbd {
 }
 .scope-side .placard { width: 100%; }
 .scope-side .data-plate { width: 100%; text-align: left; white-space: normal; }
+.scope-side .data-plate.is-footer { margin-top: auto; }
 @media (max-width: 1100px) { .scope-side { display: none; } }
 
 .scope-overlay {
   position: absolute; inset: 0; pointer-events: none;
+  /* --flash-a is set per frame by the app from the effect's magnitude. */
+  background-color: rgba(var(--flash-rgb), var(--flash-a, 0));
   display: flex; align-items: center; justify-content: center;
   text-align: center; font-size: 15px; letter-spacing: .2em; color: var(--ink);
 }
@@ -302,8 +298,8 @@ kbd {
    pulsing for the effect's life. */
 .shell.is-alarm .scope-wrap { animation: alarm-breathe 0.9s ease-in-out infinite; }
 @keyframes alarm-breathe {
-  0%, 100% { box-shadow: inset 0 0 0 rgba(255, 64, 40, 0); }
-  50% { box-shadow: inset 0 0 42px rgba(255, 64, 40, 0.18); }
+  0%, 100% { box-shadow: inset 0 0 0 rgba(var(--alarm-rgb), 0); }
+  50% { box-shadow: inset 0 0 42px rgba(var(--alarm-rgb), .18); }
 }
 .shell.is-hit { animation: flicker .5s linear; }
 
@@ -326,7 +322,7 @@ kbd {
  * below or beside it moves at all.
  */
 .command-net {
-  position: absolute; left: 0; right: 0; bottom: 100%; z-index: 20;
+  position: absolute; left: 0; right: 0; bottom: 100%; z-index: var(--z-command);
   display: flex; align-items: center; gap: 12px; padding: 7px 10px;
   border-top: 1px solid var(--metal-edge);
   border-bottom: 1px solid var(--metal-edge);
@@ -336,13 +332,8 @@ kbd {
 }
 .command-net[hidden] { display: none; }
 .command-text { flex: 1; color: var(--engrave); line-height: 1.5; font-size: 12px; }
-.command-text::before {
-  content: "◈ СЕТЬ КОМАНДОВАНЬЯ / COMMAND NET  ";
-  color: var(--hostile); letter-spacing: .1em; font-size: 9px;
-}
+.command-tag { color: var(--hostile); letter-spacing: .1em; font-size: 9px; margin-right: 6px; }
 .command-actions { display: flex; align-items: center; gap: 6px; }
-.btn-accept { border-color: var(--good); color: var(--good); }
-.btn-refuse { border-color: var(--hostile); color: var(--hostile); }
 .command-timer {
   font-variant-numeric: tabular-nums; color: var(--hostile); min-width: 3.5em;
   text-align: right; font-size: 15px; font-weight: 700;
@@ -372,7 +363,7 @@ kbd {
 /* ---------------------------------------------------------------- screens */
 
 .screen {
-  position: fixed; inset: 0; z-index: 50; overflow-y: auto;
+  position: fixed; inset: 0; z-index: var(--z-screen); overflow-y: auto;
   background: var(--bg);
   display: flex; align-items: flex-start; justify-content: center;
   padding: 28px 20px;
@@ -394,15 +385,65 @@ kbd {
   margin: 0 0 8px; font-size: 11px; letter-spacing: .18em;
   color: var(--ink-dim); text-transform: uppercase;
 }
-.card p { margin: 0 0 8px; line-height: 1.65; color: var(--ink); }
+.card :where(p) { margin: 0 0 8px; line-height: 1.65; color: var(--ink); }
 .card p:last-child { margin-bottom: 0; }
+
+/*
+ * The screens' vocabulary.
+ *
+ * Everything below replaces a style attribute that used to be written out by
+ * hand in screens.js and dossier.js — the same six colours and four sizes,
+ * eighty-odd times, with the usual result that two of them had drifted. The
+ * names say what the text IS, not what colour it is, so the palette can move
+ * without going back through the templates.
+ */
+.title.is-watch   { font-size: 34px; }   /* the name of a watch, or its outcome */
+.title.is-outcome { font-size: 30px; }   /* an ending, and the enlistment form */
+.title.is-file    { font-size: 26px; }   /* a service record */
+.subtitle.is-lead { margin-bottom: 2px; }
+.subtitle.is-tail { margin-top: 18px; }
+
+.note      { color: var(--ink-dim); }        /* the quieter half of a card */
+.note small, .note span { color: inherit; }
+.quoted    { font-style: italic; }           /* somebody else's words */
+.grave     { color: var(--hostile); }        /* what it cost */
+.warned    { color: var(--warn); }           /* what you have been told */
+.gained    { color: var(--good); }           /* what it earned */
+.urgent    { color: var(--accent); }         /* what is waiting for you */
+.stencil   { color: var(--ink-bright); font-weight: 700; }
+.card p.lede  { color: var(--ink-dim); margin: -2px 0 10px; }
+.card p.aside { margin-top: 8px; }
+.card p.verdict { margin-top: 9px; }
+/* The rank ladder on the dossier: a plain line over its own meter. */
+.rank-progress { margin-top: 10px; }
+.crew-row.is-plain { border: 0; }
+.card.is-tight { padding: 9px 14px; }
+
+/* A score cell carrying a word rather than a figure, with an optional gloss. */
+.score-cell.is-word b { font-size: 12.5px; }
+.score-cell .sub { display: block; font-size: 9px; color: var(--ink-dim); }
 
 .file-entry { border-left: 3px solid var(--hostile); }
 .file-entry p { color: var(--ink-bright); }
 .file-entry.is-good { border-left-color: var(--good); }
 
-/* Subordinate commands — district and national watches only. */
-.formation-list { display: grid; gap: 7px; margin-bottom: 9px; }
+/*
+ * Subordinate commands — district and national watches only. It is a
+ * bounded scroller rather than a block that grows: on The Two Cities with
+ * the cabin open, two formation cards and the reserve strip pushed the rack
+ * and the whole crew console out of the bottom of the panel, so LOCK and the
+ * launch cap were rendered three hundred pixels below anything a scrollbar
+ * could reach.
+ */
+.formation-list { display: grid; gap: 7px; margin-bottom: 9px; min-height: 0; overflow-y: auto; }
+.formation-list.is-secondary { max-height: 30%; }
+/*
+ * Where there are formations, they are what the watch is played on and the
+ * rack is mostly detached batteries you may not touch — so the rack takes
+ * the smaller half. Left to shrink in proportion to their content the two
+ * split 75px to 504px the wrong way round.
+ */
+.battery-list.with-formations { flex: 0 1 40%; }
 .fmn-bar {
   display: flex; justify-content: space-between; align-items: baseline;
   padding: 2px 2px 4px; border-bottom: 1px solid var(--edge);
@@ -469,6 +510,7 @@ kbd {
   border: 1px solid var(--edge); background: var(--bg-panel); border-radius: var(--radius);
 }
 .mission:hover:not(:disabled) { border-color: var(--accent); background: var(--bg-raised); }
+.mission:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .mission.is-active { border-color: var(--accent); background: var(--bg-raised); }
 .mission b { display: block; color: var(--ink-bright); letter-spacing: .1em; margin-bottom: 3px; }
 .mission small { color: var(--ink-dim); display: block; line-height: 1.5; }
@@ -482,11 +524,19 @@ kbd {
   flex: 1 1 160px; text-align: left; padding: 9px 11px; cursor: pointer;
   border: 1px solid var(--edge); background: var(--bg-panel); border-radius: var(--radius);
 }
-.choice:hover:not(:disabled) { border-color: var(--accent); }
+.choice:hover:not(:disabled) { border-color: var(--accent); background: var(--bg-raised); }
+.choice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .choice.is-active { border-color: var(--accent); background: var(--bg-raised); }
 .choice b { display: block; color: var(--ink-bright); letter-spacing: .1em; }
-.choice small { color: var(--ink-dim); line-height: 1.45; display: block; margin-top: 2px; }
-.choice:disabled { opacity: .35; cursor: not-allowed; }
+.choice :where(small) { color: var(--ink-dim); line-height: 1.45; display: block; margin-top: 2px; }
+/* Struck out rather than faded: a seat this watch does not offer is not a
+   dim seat, it is one that is not on the establishment. */
+.choice:disabled {
+  cursor: not-allowed; opacity: .8;
+  border-style: dashed; border-color: color-mix(in srgb, var(--edge) 55%, transparent);
+  background: transparent;
+}
+.choice:disabled b, .choice:disabled small { color: var(--ink-dim); }
 
 .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
 .btn-primary {
@@ -495,6 +545,8 @@ kbd {
   border-radius: var(--radius); cursor: pointer;
 }
 .btn-primary:hover { filter: brightness(1.12); }
+.btn-primary:focus-visible { outline: 2px solid var(--ink-bright); outline-offset: 2px; }
+.btn-primary:disabled { cursor: not-allowed; filter: grayscale(.9) brightness(.7); }
 
 .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
 .score-cell { border: 1px solid var(--edge); padding: 8px 10px; border-radius: var(--radius); }
@@ -506,6 +558,10 @@ kbd {
 table.ledger { width: 100%; border-collapse: collapse; font-size: 11.5px; }
 table.ledger td { padding: 2px 0; border-bottom: 1px solid color-mix(in srgb, var(--edge) 40%, transparent); }
 table.ledger td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+table.ledger th { padding: 2px 0; text-align: left; font-weight: 400; color: var(--ink-dim); }
+table.ledger th.is-figure { text-align: right; }
+/* A cell of prose in a column of figures. Colour comes from a tone class. */
+table.ledger td.is-prose, table.ledger td.is-prose:last-child { text-align: left; }
 table.ledger .up { color: var(--good); }
 table.ledger .down { color: var(--hostile); }
 
@@ -546,10 +602,9 @@ table.ledger .down { color: var(--hostile); }
   background: var(--bg); border: 1px solid var(--edge); border-radius: var(--radius);
   padding: 6px 8px;
 }
-.field input:focus, .field select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.field input:focus-visible, .field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.field input:hover, .field select:hover { border-color: var(--accent); }
 
-.choice[disabled] { opacity: .45; }
-.choice.is-active { border-color: var(--accent); background: var(--bg-raised); }
 
 /* The last watch's outcome, set apart from the arithmetic that follows it. */
 .ending-card {
@@ -600,7 +655,7 @@ table.ledger .down { color: var(--hostile); }
   background: var(--bg);
   border: 1px solid var(--accent);
   box-shadow: 0 0 0 1px var(--engrave), 0 4px 18px rgba(0, 0, 0, .45);
-  z-index: 5;
+  z-index: var(--z-tutorial);
 }
 .tutorial-card b { display: block; font-size: 12.5px; line-height: 1.45; color: var(--ink); letter-spacing: .02em; }
 .tutorial-card i { display: block; margin-top: 3px; font-size: 10px; font-style: normal; opacity: .68; letter-spacing: .14em; }
@@ -618,4 +673,10 @@ table.ledger .down { color: var(--hostile); }
   font-size: 13px;
   line-height: 1;
 }
+.tutorial-card .tut-skip:hover { background: var(--bg-raised); color: var(--ink-bright); }
+.tutorial-card .tut-skip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .is-console-dark #tutorial-card { visibility: hidden; }
+
+/* The one thing a browser with scripting off is shown. It is outside the
+   console entirely, so it names the tokens it needs rather than inheriting. */
+.noscript { color: var(--ink); padding: 2rem; font: 14px var(--font-mono); }

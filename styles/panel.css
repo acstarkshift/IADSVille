@@ -10,45 +10,11 @@
  * No images are used. The grain is an inline SVG turbulence, the metal is
  * layered gradients, and the screws are radial gradients — so the whole console
  * still loads instantly and stays a static site.
+ *
+ * Not one colour is written here. The painted-steel palette and the fixed
+ * parts — lever, launch cap, lamp filament — are declared in theme.css with
+ * everything else, so a theme is one block of one file.
  */
-
-:root {
-  /* Painted steel, as issued. Themes override these. */
-  --metal: #6e7568;
-  --metal-hi: #878e7f;
-  --metal-lo: #4c5248;
-  --metal-edge: #2c3128;
-  --engrave: #f0f4e8;
-  --engrave-dim: #c3cbb6;
-  --plate: #3a4034;
-  --lamp-off: #40463a;
-  --screw: #9aa290;
-}
-
-[data-theme="crt-amber"] {
-  --metal: #756b5c;
-  --metal-hi: #8e8372;
-  --metal-lo: #524a3f;
-  --metal-edge: #322c24;
-  --engrave: #f7ecd8;
-  --engrave-dim: #cdbfa5;
-  --plate: #443c31;
-  --lamp-off: #4a4237;
-  --screw: #a2957f;
-}
-
-[data-theme="ops-modern"] {
-  /* Modern equipment: anodised grey, machined rather than painted. */
-  --metal: #39414d;
-  --metal-hi: #48515f;
-  --metal-lo: #272e38;
-  --metal-edge: #151a21;
-  --engrave: #e8eef6;
-  --engrave-dim: #a6b2c2;
-  --plate: #232a34;
-  --lamp-off: #2d3540;
-  --screw: #626d7d;
-}
 
 /* Paint grain. One inline turbulence, reused by everything metal. */
 .metal,
@@ -86,16 +52,6 @@
 }
 .lg-stack { align-items: center; text-align: center; }
 
-/* A screwed-down nomenclature plate. */
-.plate {
-  background: var(--plate);
-  border: 1px solid var(--metal-edge);
-  border-radius: 2px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 1px 2px rgba(0, 0, 0, .5);
-  padding: 3px 7px;
-  display: inline-flex; align-items: center; gap: 7px;
-}
-
 .data-plate {
   font-size: 7.5px; letter-spacing: .08em; line-height: 1.5; white-space: nowrap;
   color: var(--engrave-dim);
@@ -116,7 +72,7 @@
 
 /* Screw heads, dropped into the corners of a panel or bezel. */
 .screw {
-  position: absolute; width: 10px; height: 10px; border-radius: 50%; z-index: 2;
+  position: absolute; width: 10px; height: 10px; border-radius: 50%; z-index: var(--z-screw);
   background:
     linear-gradient(180deg, rgba(255,255,255,.35), rgba(0,0,0,.45)),
     radial-gradient(circle at 35% 30%, var(--screw), var(--metal-lo) 70%);
@@ -153,7 +109,7 @@
   position: relative; flex: 1; min-width: 0; min-height: 0;
   border-radius: 10px;
   overflow: hidden;
-  background: #000;
+  background: var(--tube-face);
   box-shadow:
     inset 0 0 0 2px var(--metal-edge),
     inset 0 0 24px rgba(0, 0, 0, .9),
@@ -181,14 +137,28 @@
 .sw-lever {
   position: absolute; left: 50%; width: 7px; height: 13px;
   margin-left: -3.5px; border-radius: 4px 4px 2px 2px;
-  background: linear-gradient(180deg, #d9dcd4, #8f958a 60%, #5d635a);
+  background: linear-gradient(180deg, var(--lever-hi), var(--lever-mid) 60%, var(--lever-lo));
   box-shadow: 0 1px 2px rgba(0, 0, 0, .7);
   transition: top .09s ease-out, transform .09s ease-out;
   top: 11px; transform-origin: 50% 100%;
 }
 .sw[aria-pressed="true"] .sw-lever { top: 2px; }
 .sw[aria-pressed="false"] .sw-lever { top: 11px; transform: rotate(180deg); }
-.sw:disabled { opacity: .45; cursor: not-allowed; }
+/* Under the pointer the body lifts a little, the way a switch you are about
+   to throw catches the light. */
+.sw:hover:not(:disabled) .sw-body { border-color: var(--screw); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 0 5px rgba(0, 0, 0, .5); }
+.sw:hover:not(:disabled) .sw-lever { filter: brightness(1.12); }
+/*
+ * A switch with nothing behind it is dead metal, not a faint switch: the
+ * plating goes grey, the lever loses its highlight, and the body sits flush
+ * in its shroud. Opacity alone read as "the panel is dim", which on a console
+ * that genuinely dims in a blackout is exactly the wrong reading.
+ */
+.sw:disabled { cursor: not-allowed; opacity: .6; }
+.sw:disabled .sw-body { background: var(--metal-lo); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6); }
+.sw:disabled .sw-lever { filter: grayscale(1) brightness(.6); box-shadow: none; }
+.sw:disabled .lg b, .sw:disabled .lg i { color: var(--engrave-dim); text-shadow: none; }
+.sw:focus-visible { outline: none; }
 .sw:focus-visible .sw-body { outline: 2px solid var(--accent); outline-offset: 2px; }
 .sw-marks {
   position: absolute; inset: 0; display: flex; flex-direction: column;
@@ -210,7 +180,7 @@
   border: 1px solid var(--metal-edge);
 }
 .lamp.is-lit .lamp-dome {
-  background: radial-gradient(circle at 34% 30%, #fff, var(--lamp-colour, var(--accent)) 55%);
+  background: radial-gradient(circle at 34% 30%, var(--lamp-filament), var(--lamp-colour, var(--accent)) 55%);
   box-shadow: 0 0 9px var(--lamp-colour, var(--accent)), inset 0 0 3px rgba(255, 255, 255, .6);
 }
 .lamp.is-lit { color: var(--engrave); }
@@ -231,32 +201,50 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .14), 0 2px 0 var(--metal-edge), 0 3px 4px rgba(0, 0, 0, .45);
   transition: transform .05s, box-shadow .05s;
 }
-.pb:hover { filter: brightness(1.1); }
+.pb:hover:not(:disabled) { filter: brightness(1.1); }
 .pb:active, .pb.is-down {
   transform: translateY(2px);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, .55), 0 0 0 var(--metal-edge);
 }
-.pb:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+/*
+ * A cap with nothing wired to it: grey, sunk into its shroud, and legended in
+ * the dim engraving rather than the bright one. A cap that was merely faint
+ * was indistinguishable from the console browning out.
+ */
+.pb:disabled {
+  cursor: not-allowed; transform: none; opacity: .72;
+  filter: grayscale(.85) brightness(.72);
+  background: var(--metal-lo);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .5);
+}
+.pb:disabled .lg b, .pb:disabled .lg i { color: var(--engrave-dim); text-shadow: none; }
 .pb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* The launch button is red, guarded, and larger than everything near it. */
 .pb-fire {
   width: 100%; padding: 10px 8px 9px; margin-top: 7px;
-  background: linear-gradient(180deg, #8d2b22, #5e1b16);
-  border-color: #2a0d0a;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 3px 0 #2a0d0a, 0 4px 6px rgba(0, 0, 0, .5);
+  background: linear-gradient(180deg, var(--fire-cap), var(--fire-cap-lo));
+  border-color: var(--fire-cap-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 3px 0 var(--fire-cap-edge), 0 4px 6px rgba(0, 0, 0, .5);
 }
-.pb-fire .lg b { color: #ffd9d2; font-size: 13px; letter-spacing: .22em; }
-.pb-fire .lg i { color: #e8a79e; }
+.pb-fire .lg b { color: var(--fire-ink); font-size: 13px; letter-spacing: .22em; }
+.pb-fire .lg i { color: var(--fire-ink-dim); }
 .pb-fire.is-armed { animation: fire-ready 1.05s infinite; }
-.pb-fire:disabled { filter: grayscale(.65); }
+/* A dead launch cap is still the launch cap — grey and cold, not swapped for
+   a piece of grey panel. */
+.pb-fire:disabled {
+  background: linear-gradient(180deg, var(--fire-cap), var(--fire-cap-lo));
+  border-color: var(--fire-cap-edge);
+  filter: grayscale(.75) brightness(.66);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .55);
+}
 @keyframes fire-ready {
-  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 0 #2a0d0a, 0 0 0 rgba(255,80,60,0); }
-  50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 0 #2a0d0a, 0 0 22px rgba(255, 80, 60, .75); }
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 0 var(--fire-cap-edge), 0 0 0 rgba(var(--fire-halo-rgb), 0); }
+  50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 0 var(--fire-cap-edge), 0 0 22px rgba(var(--fire-halo-rgb), .75); }
 }
 
-.pb-accept { background: linear-gradient(180deg, #2f6a3a, #1d4526); border-color: #0f2415; }
-.pb-refuse { background: linear-gradient(180deg, #7a3a1e, #4a2211); border-color: #241007; }
+.pb-accept { background: linear-gradient(180deg, var(--accept-cap), var(--accept-cap-lo)); border-color: var(--accept-cap-edge); }
+.pb-refuse { background: linear-gradient(180deg, var(--refuse-cap), var(--refuse-cap-lo)); border-color: var(--refuse-cap-edge); }
 
 /* ------------------------------------------------------------------ knob */
 
@@ -273,8 +261,8 @@
   /* Knurling. */
   content: ''; position: absolute; inset: 3px; border-radius: 50%;
   background: repeating-conic-gradient(rgba(255,255,255,.09) 0 3deg, rgba(0,0,0,.16) 3deg 6deg);
-  mask: radial-gradient(circle, transparent 55%, #000 57%);
-  -webkit-mask: radial-gradient(circle, transparent 55%, #000 57%);
+  mask: radial-gradient(circle, transparent 55%, var(--tube-face) 57%);
+  -webkit-mask: radial-gradient(circle, transparent 55%, var(--tube-face) 57%);
 }
 .knob-pointer {
   position: absolute; left: 50%; top: 5px; width: 2.5px; height: 13px;
@@ -283,6 +271,7 @@
   transform-origin: 50% 15px;
   transition: transform .12s ease-out;
 }
+.knob:hover { filter: brightness(1.12); }
 .knob:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .knob-readout { font-size: 9px; letter-spacing: .1em; color: var(--engrave); min-width: 4.4em; }
 
@@ -297,33 +286,54 @@
   padding: 6px 8px 8px;
   background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(0,0,0,.16));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 1px 3px rgba(0, 0, 0, .4);
+  /* The rack is a fixed width; nothing in a unit strip may push past it. */
+  overflow: hidden;
 }
 .unit > .screw { width: 7px; height: 7px; top: 4px; right: 4px; }
 .unit > .screw::after { width: 4.5px; }
 .unit.is-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), inset 0 1px 0 rgba(255,255,255,.07); }
 .unit.is-mine { border-left: 3px solid var(--friendly); }
 .unit.is-dead { filter: grayscale(.7); opacity: .55; }
+/* A battery card is a control: clicking it selects the battery the keys and
+   the shootlist then act on, so it answers the pointer like one. */
+.unit[data-site] { cursor: pointer; }
+.unit[data-site]:hover { background: linear-gradient(180deg, rgba(255,255,255,.085), rgba(0,0,0,.12)); }
 
-.unit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
-.unit-name { font-size: 11px; letter-spacing: .1em; color: var(--engrave); font-weight: 700; }
-.unit-type { font-size: 9px; letter-spacing: .08em; color: var(--engrave-dim); }
+/*
+ * The card's head is a name and a type plate. At district and national
+ * command the names run to eighteen characters in a two-hundred-pixel rack,
+ * and the type plate was taking fifty-six per cent of it by inline style —
+ * so LANCE CAPITAL, THISTLE BRASOV and nine others were ellipsised down to
+ * "12. THISTLE BR…". The head wraps instead: the name keeps its own width
+ * and the plate drops to the line below when they will not both fit.
+ */
+.unit-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.unit-name {
+  font-size: 11px; letter-spacing: .1em; color: var(--engrave); font-weight: 700;
+  flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.unit-type {
+  font-size: 9px; letter-spacing: .08em; color: var(--engrave-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 52%;
+}
+/* Bilingual lines are twice as long as monolingual ones; where the gloss
+   matters more than the single-line layout, let it wrap instead of truncate. */
+.unit-type.wrap {
+  white-space: normal; overflow: visible; max-width: none; line-height: 1.35;
+}
+/* The type plate on a card's head: right-hand column, wrapping, never wider
+   than the head it shares. */
+.unit-type.is-plate { flex: 0 1 auto; text-align: right; max-width: 100%; }
 .unit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+/* A line that is present as context rather than as news. */
+.unit-row.is-quiet .unit-type, .unit-unfit.is-quiet span { color: var(--engrave-dim); }
+.unit-row.is-spaced { margin-top: 9px; }
 .unit-controls {
   display: flex; align-items: flex-start; gap: 6px; flex-wrap: wrap; margin-top: 7px;
   padding-top: 6px; border-top: 1px solid rgba(0, 0, 0, .3);
 }
 .unit-controls .sw { min-width: 42px; }
 .unit-controls .pb { align-self: stretch; min-width: 0; }
-/* The rack is a fixed width; nothing in a unit strip may push past it. */
-.unit { overflow: hidden; }
-.unit-type { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 52%; }
-/* Bilingual lines are twice as long as monolingual ones; where the gloss
-   matters more than the single-line layout, let it wrap instead of truncate. */
-.unit-type.wrap {
-  white-space: normal; overflow: visible; max-width: none; line-height: 1.35;
-}
-.unit-head { min-width: 0; }
-.unit-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Ammunition, shown as rounds on a rail rather than as a number. */
 /* The launcher: one round lamp per rail, lit green with a round on it and red
@@ -364,7 +374,7 @@
 /* A meter with a needle-ish fill, for exposure and timers. */
 .gauge {
   height: 7px; border-radius: 1px; overflow: hidden; flex: 1; min-width: 60px;
-  background: linear-gradient(180deg, #000, #12140f);
+  background: linear-gradient(180deg, var(--tube-face), var(--well));
   border: 1px solid var(--metal-edge);
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, .8);
 }
@@ -374,7 +384,7 @@
 
 /* Punched paper strip for the log — the console prints, it does not scroll. */
 .strip {
-  background: repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 14px), #0d0f0c;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 14px), var(--paper);
   border-top: 1px solid var(--metal-edge);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, .7);
 }

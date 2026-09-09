@@ -11,7 +11,6 @@ import {
   RANKS, BACKGROUNDS, SKILLS, DECORATIONS, HOUSEHOLDS,
   rankOf, backgroundOf, householdOf, districtOf, nextRank, canLearn, suggestName,
 } from '../engine/character.js';
-import { ENDINGS } from '../engine/endings.js';
 import { knownRevelations } from '../engine/revelations.js';
 import { tierFor } from '../engine/command.js';
 import { STATE, PLATES } from './lexicon.js';
@@ -38,13 +37,13 @@ export function renderEnlistment(host, state) {
   state.pendingHousehold = household;
 
   host.innerHTML = `<div class="screen-inner">
-    <h1 class="title" style="font-size:30px">ЛИЧНОЕ ДЕЛО</h1>
+    <h1 class="title is-outcome">ЛИЧНОЕ ДЕЛО · SERVICE RECORD</h1>
     <p class="subtitle">SERVICE RECORD · ${esc(STATE.serviceShort.tm)} · ${esc(STATE.service.en)}</p>
 
     <div class="card record-card">
       <div class="record-stamp">${esc(PLATES.standard.tm)} · ${esc(PLATES.standard.en)}</div>
       <h3>Enlistment</h3>
-      <p style="color:var(--ink-dim)">You are being posted to the air defence sector covering the valley
+      <p class="note">You are being posted to the air defence sector covering the valley
       of ${esc(STATE.town.en)} — the village you are from. The scope you will sit at is centred on your
       own roof. Sector command keeps a file on you from today, and it is never closed.</p>
 
@@ -63,7 +62,7 @@ export function renderEnlistment(host, state) {
 
     <div class="card">
       <h3>Who is still there</h3>
-      <p style="color:var(--ink-dim)">The Ville is on every scope in this campaign, and it is where the
+      <p class="note">The Ville is on every scope in this campaign, and it is where the
       people below live. That is not a coincidence and it does not become one.</p>
       <div class="choice-row" id="household-row">
         ${Object.values(HOUSEHOLDS).map((h) => `<button class="choice ${h.id === household ? 'is-active' : ''}"
@@ -76,13 +75,13 @@ export function renderEnlistment(host, state) {
 
     <div class="card">
       <h3>Before the army had you</h3>
-      <p style="color:var(--ink-dim)">Permanent. It decides what you are already good at, and what
+      <p class="note">Permanent. It decides what you are already good at, and what
       sector command assumes about you before you have done anything.</p>
       <div class="choice-row" id="background-row">
         ${Object.values(BACKGROUNDS).map((bg) => `<button class="choice ${bg.id === background ? 'is-active' : ''}" data-background="${bg.id}">
           <b>${esc(bg.tm)} · ${esc(bg.en)}</b>
           <small>${esc(bg.blurb)}</small>
-          <small style="color:var(--good);margin-top:5px">${esc(bg.effect)}</small>
+          <small class="gained">${esc(bg.effect)}</small>
         </button>`).join('')}
       </div>
     </div>
@@ -93,7 +92,7 @@ export function renderEnlistment(host, state) {
         title="Take the suggested name and the clerk's defaults, and get to the console">
         ПОДПИСАТЬ ГДЕ УКАЗАНО · SIGN WHERE INDICATED</button>
     </div>
-    <p style="color:var(--ink-dim);font-size:12px;margin-top:6px">The particulars can be read at
+    <p class="note aside">The particulars can be read at
     leisure in the dossier. The clerk has seen people stand at this counter for ten minutes; he has
     also seen the schedule.</p>
   </div>`;
@@ -113,38 +112,37 @@ export function renderDossier(host, state) {
     : 100;
 
   host.innerHTML = `<div class="screen-inner">
-    <h1 class="title" style="font-size:26px">${esc(rank.tm)} ${esc(character.name)}</h1>
+    <h1 class="title is-file">${esc(rank.tm)} ${esc(character.name)}</h1>
     <p class="subtitle">${esc(rank.en)} · ${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}
       · ДЕЛО № / FILE NO. ${esc(fileNumber(character))}</p>
 
     <div class="card record-card">
       <div class="record-stamp">${esc(tier.label)}</div>
       <div class="score-grid">
-        <div class="score-cell"><label>ЗВАНИЕ · RANK</label>
-          <b style="font-size:12px">${esc(rank.tm)}</b>
-          <span style="display:block;font-size:9px;color:var(--ink-dim)">${esc(rank.en)}</span></div>
+        <div class="score-cell is-word"><label>ЗВАНИЕ · RANK</label>
+          <b>${esc(rank.tm)}</b><span class="sub">${esc(rank.en)}</span></div>
         <div class="score-cell"><label>ОПЫТ · EXPERIENCE</label><b>${character.xp}</b></div>
         <div class="score-cell"><label>ВАХТ · WATCHES</label><b>${character.watches}</b></div>
         <div class="score-cell"><label>АТТЕСТАЦИЯ · STANDING</label><b>${Math.round(state.campaign.standing)}</b></div>
         <div class="score-cell ${character.points ? 'is-good' : ''}"><label>ПОДГОТОВКА · TRAINING PTS</label><b>${character.points}</b></div>
-        <div class="score-cell ${character.wounded ? 'is-bad' : ''}"><label>СОСТОЯНИЕ · CONDITION</label>
-          <b style="font-size:12px">${character.wounded ? 'РАНЕН · INJURED' : 'ГОДЕН · FIT'}</b></div>
+        <div class="score-cell is-word ${character.wounded ? 'is-bad' : ''}"><label>СОСТОЯНИЕ · CONDITION</label>
+          <b>${character.wounded ? 'РАНЕН · INJURED' : 'ГОДЕН · FIT'}</b></div>
       </div>
-      ${next ? `<div style="margin-top:10px">
-        <div class="crew-row" style="border:0"><span>Toward ${esc(next.rank.tm)} · ${esc(next.rank.en)}</span>
+      ${next ? `<div class="rank-progress">
+        <div class="crew-row is-plain"><span>Toward ${esc(next.rank.tm)} · ${esc(next.rank.en)}</span>
           <b>${next.xpShort ? `${next.xpShort} experience` : 'experience met'}${next.standingShort ? `, standing ${next.rank.standing}` : ''}</b></div>
         <div class="meter"><i style="width:${progress}%"></i></div>
-      </div>` : '<p style="margin-top:10px;color:var(--good)">At the top of the ladder they will let you reach.</p>'}
-      ${character.wounded ? `<p style="color:var(--hostile);margin-top:8px">
+      </div>` : '<p class="verdict gained">At the top of the ladder they will let you reach.</p>'}
+      ${character.wounded ? `<p class="grave aside">
         You were pulled out of a position that was overrun. Everything takes you longer until the
         next watch is behind you.</p>` : ''}
     </div>
 
     <div class="card">
       <h3>Training</h3>
-      <p style="color:var(--ink-dim)">One point per promotion. Qualifications apply in full at your own
+      <p class="note">One point per promotion. Qualifications apply in full at your own
       battery and at half strength across the sector — you drilled those crews, but you are not sitting in them.</p>
-      <div class="choice-row" style="flex-wrap:wrap">
+      <div class="choice-row">
         ${Object.values(SKILLS).map((skill) => {
     const known = character.skills.includes(skill.id);
     const affordable = canLearn(character, skill.id);
@@ -152,7 +150,7 @@ export function renderDossier(host, state) {
             ${known || !affordable ? 'disabled' : ''}>
           <b>${esc(skill.tm)} · ${esc(skill.en)}${skill.cost > 1 ? ` (${skill.cost})` : ''}</b>
           <small>${esc(skill.blurb)}</small>
-          <small style="color:${known ? 'var(--good)' : 'var(--accent)'};margin-top:5px">
+          <small class="${known ? 'gained' : 'urgent'}">
             ${known ? '✔ QUALIFIED — ' : ''}${esc(skill.effect)}</small>
         </button>`;
   }).join('')}
@@ -164,10 +162,10 @@ export function renderDossier(host, state) {
       ${character.decorations.length ? `<table class="ledger">
         ${character.decorations.map((id) => {
     const d = DECORATIONS[id];
-    return `<tr><td><b style="color:var(--ink-bright)">${esc(d.tm)}</b><br>
-        <span style="color:var(--ink-dim)">${esc(d.en)} — ${esc(d.blurb)}</span></td></tr>`;
+    return `<tr><td><b class="stencil">${esc(d.tm)}</b><br>
+        <span class="note">${esc(d.en)} — ${esc(d.blurb)}</span></td></tr>`;
   }).join('')}</table>`
-    : '<p style="color:var(--ink-dim)">None awarded. Most files stay this way.</p>'}
+    : '<p class="note">None awarded. Most files stay this way.</p>'}
     </div>
 
     <div class="card">
@@ -184,7 +182,7 @@ export function renderDossier(host, state) {
         <tr><td>Watches stood</td><td>${character.watches}</td></tr>
         <tr><td>Assessment</td><td>${esc(tier.label)}</td></tr>
       </table>
-      ${state.narrativePressure ? `<p style="color:var(--ink-dim);margin-top:8px">
+      ${state.narrativePressure ? `<p class="note aside">
         Correspondence to and from the Ville passes through the sector political section. This is
         described as routine. The village is fourteen kilometres from this console.</p>` : ''}
     </div>
@@ -193,8 +191,8 @@ export function renderDossier(host, state) {
       <h3>What you have worked out</h3>
       <table class="ledger">
         ${knownRevelations(state.campaign).map((r) => `<tr>
-          <td><b style="color:var(--ink-bright)">${esc(r.tm)}</b> · ${esc(r.title)}</td>
-          <td style="color:var(--ink-dim);text-align:left">${esc(r.lines[0])}</td>
+          <td><b class="stencil">${esc(r.tm)}</b> · ${esc(r.title)}</td>
+          <td class="is-prose note">${esc(r.lines[0])}</td>
         </tr>`).join('')}
       </table>
     </div>` : ''}
@@ -207,15 +205,15 @@ export function renderDossier(host, state) {
         ${state.campaign.family.delivered.map((d) => {
     const t = letterById(d.id);
     return t ? `<tr>
-          <td><b style="color:var(--ink-bright)">${esc(t.tm)}</b> · ${esc(t.title)}</td>
-          <td style="color:var(--ink-dim);text-align:left">${esc(d.excerpt ?? '')}</td>
+          <td><b class="stencil">${esc(t.tm)}</b> · ${esc(t.title)}</td>
+          <td class="is-prose note">${esc(d.excerpt ?? '')}</td>
         </tr>` : '';
   }).join('')}
         ${state.campaign.family.withheld.map((h) => {
     const t = letterById(h.id);
     return t ? `<tr>
-          <td><b style="color:var(--ink-bright)">${esc(t.tm)}</b> · ${esc(t.title)}</td>
-          <td style="color:var(--hostile);text-align:left">Withheld by the political section.</td>
+          <td><b class="stencil">${esc(t.tm)}</b> · ${esc(t.title)}</td>
+          <td class="is-prose grave">Withheld by the political section.</td>
         </tr>` : '';
   }).join('')}
       </table>
@@ -283,7 +281,7 @@ export function serviceSummary(character, service, campaign) {
   }
   for (const decoration of service.awarded) {
     rows.push(`<tr><td><b>${esc(decoration.tm)}</b> · ${esc(decoration.en)}<br>
-      <span style="color:var(--ink-dim)">${esc(decoration.blurb)}</span></td>
+      <span class="note">${esc(decoration.blurb)}</span></td>
       <td class="up">AWARDED</td></tr>`);
   }
   if (character.wounded) {
@@ -303,7 +301,7 @@ export function serviceSummary(character, service, campaign) {
     <div class="record-stamp">ДЕЛО № / FILE ${esc(fileNumber(character))}</div>
     <h3>Service record — ${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}</h3>
     <table class="ledger">${rows.join('')}</table>
-    ${character.points ? `<p style="color:var(--accent);margin-top:8px">
+    ${character.points ? `<p class="urgent aside">
       ${character.points} training point${character.points > 1 ? 's' : ''} unspent — open your dossier.</p>` : ''}
   </div>`;
 }

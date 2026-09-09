@@ -10,25 +10,26 @@
 
 import { World } from '../engine/world.js';
 import { SCENARIOS, scenarioById, rosterFor, positionCanBeHunted } from '../engine/scenarios.js';
-import { SIM, SAM_TYPES, ROLES, DEFENCE_CLASSES, ASSET_TYPES } from '../engine/config.js';
+import { SIM, SAM_TYPES, DEFENCE_CLASSES, ASSET_TYPES } from '../engine/config.js';
 import {
   loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign,
-  consequenceFor, missionModifiers, enlist,
+  missionModifiers, enlist,
 } from '../engine/campaign.js';
 import { armTimeToImpact } from '../engine/doctrine.js';
 import { stepCommand } from '../engine/command.js';
 import { cannotEngageReason } from '../engine/threat.js';
 import { AIR_TYPES } from '../engine/config.js';
 import { dist, clamp01 } from '../engine/math.js';
-import { applyTheme, THEMES } from './themes.js';
+import { applyTheme } from './themes.js';
 import { Scope } from './scope.js';
 import { CrewConsole } from './console.js';
 import { Audio } from './audio.js';
 import {
   renderTopbar, renderTrackList, renderFlightStrip, renderFormations, renderBatteries, renderCrewConsole,
-  renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, RANGE_SCALES, batteryOrder,
+  renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, stampLegends,
+  RANGE_SCALES, batteryOrder,
 } from './panels.js';
-import { POSTURE_CYCLE } from './lexicon.js';
+import { CONTROLS, POSTURE_CYCLE, legend } from './lexicon.js';
 import { renderMenu, renderBriefing, renderDebrief, renderControls } from './screens.js';
 import { renderEnlistment, renderDossier } from './dossier.js';
 import { learnSkill } from '../engine/character.js';
@@ -154,6 +155,9 @@ function cacheEls() {
 
 function boot() {
   cacheEls();
+  // The fixed legends on the page come out of the lexicon, not out of the
+  // markup, so the panel and the nomenclature table cannot disagree.
+  stampLegends(document);
   // Exposed for the headless smoke and integration tests, and genuinely handy
   // when debugging a campaign state by hand.
   window.__state = state;
@@ -402,7 +406,7 @@ function startMission() {
   setSpeed(1);
 
   els.viewToggle.hidden = state.role !== 'both';
-  els.viewToggle.textContent = ui.view === 'net' ? 'TAKE A CONSOLE' : 'BACK TO THE NET';
+  setViewToggle();
   els.screen.hidden = true;
   els.shell.hidden = false;
   state.phase = 'mission';
@@ -570,8 +574,14 @@ function render(now, frameDtS = 1 / 60) {
       renderFormations(world, ui, els);
       renderBatteries(world, ui, els);
       renderScopeSide(world, ui, els, ui.view === 'crew' ? crew.rangeKm : scope.rangeKm);
-      if (world.control.crewedBatteryId && ui.view === 'crew') renderCrewConsole(world, ui, els);
+      const cabin = !!world.control.crewedBatteryId && ui.view === 'crew';
+      if (cabin) renderCrewConsole(world, ui, els);
       else els.crewConsole.hidden = true;
+      // With the cabin up the rack is reference, not the control surface: it
+      // yields the column so LOCK and the launch cap stay on the screen.
+      els.batteryList.classList.toggle('is-secondary', cabin);
+      els.formationList.classList.toggle('is-secondary', cabin);
+      els.batteryList.classList.toggle('with-formations', world.formations.length > 1);
       updateLegend();
       renderTutorial();
     }
@@ -583,9 +593,15 @@ function render(now, frameDtS = 1 / 60) {
   renderBlackout(world, els);
 }
 
+/*
+ * A dark console shows the theme's own black. Read from BODY: the theme is
+ * stamped on <body>, so asking documentElement for --bg returned the green
+ * phosphor default on every watch — the amber and modern sets blanked to a
+ * colour from a console they are not.
+ */
 function clearCanvas() {
   const ctx = els.canvas.getContext('2d');
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg') || '#000';
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--bg').trim() || '#000';
   ctx.fillRect(0, 0, els.canvas.width, els.canvas.height);
 }
 
@@ -636,10 +652,11 @@ function applyEffects() {
 
   // A brief wash of light over the scope, fading with the effect. The 0.3
   // factor made a kill's flash arithmetically imperceptible (0.09 alpha).
+  // Only the alpha is set here; the colour is --flash-rgb, in theme.css.
   if (flash > 0.01) {
-    els.scopeOverlay.style.backgroundColor = `rgba(255, 236, 200, ${Math.min(0.35, flash * 0.55)})`;
-  } else if (els.scopeOverlay.style.backgroundColor) {
-    els.scopeOverlay.style.backgroundColor = '';
+    els.scopeOverlay.style.setProperty('--flash-a', Math.min(0.35, flash * 0.55).toFixed(3));
+  } else if (els.scopeOverlay.style.getPropertyValue('--flash-a')) {
+    els.scopeOverlay.style.removeProperty('--flash-a');
   }
 
   // One-shot flicker on the whole console the moment something lands.
@@ -1165,10 +1182,22 @@ function runAction(act, siteId, radarId, formationId) {
   }
 }
 
+/**
+ * The cap says what pressing it will do, in both languages.
+ *
+ * It used to be assigned as plain textContent, which threw away the engraved
+ * legend the button ships with: the moment a watch started, the one cap in
+ * the topbar with no stencil on it was the one that changes your seat.
+ */
+function setViewToggle() {
+  const entry = ui.view === 'net' ? CONTROLS.takeConsole : CONTROLS.backToNet;
+  els.viewToggle.innerHTML = legend(entry);
+}
+
 function toggleView() {
   if (state.role !== 'both') return;
   ui.view = ui.view === 'net' ? 'crew' : 'net';
-  els.viewToggle.textContent = ui.view === 'net' ? 'TAKE A CONSOLE' : 'BACK TO THE NET';
+  setViewToggle();
   updateLegend();
 }
 

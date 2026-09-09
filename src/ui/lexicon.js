@@ -25,22 +25,13 @@ export const STATE = {
   service: { tm: 'ВОЙСКА ПРОТИВОВОЗДУШНОЙ ОБОРОНЫ', en: 'AIR DEFENCE FORCES' },
   serviceShort: { tm: 'ВПВО ТМ', en: 'TM ADF' },
   sector: { tm: 'СЕКТОР 4-Б', en: 'SECTOR 4-B' },
-  ministry: { tm: 'МИНИСТЕРСТВО ОБОРОНЫ', en: 'MINISTRY OF DEFENCE' },
-  politicalSection: { tm: 'ПОЛИТИЧЕСКИЙ ОТДЕЛ', en: 'POLITICAL SECTION' },
   town: { tm: 'ВИЛЛА', en: 'THE VILLE' },
-  neighbour: { tm: 'ЛИСТОНИЯ', en: 'LISTONIA' },
-  camp: { tm: 'ЛАГЕРЬ ПЕРЕМЕЩЁННЫХ', en: 'DISPLACED PERSONS CAMP' },
-  airport: { tm: 'ДЕМОБОДЕДОВО', en: 'DEMOBODEDOVO' },
-  palace: { tm: 'ПРЕЗИДЕНТСКИЙ ДВОРЕЦ', en: 'PRESIDENTIAL PALACE' },
 };
 
 /** Controls the operator physically touches. */
 export const CONTROLS = {
   radiate: { tm: 'ИЗЛУЧЕНЬ', en: 'RADIATE', hint: 'high voltage to the antenna' },
   silence: { tm: 'ЗАТИХ', en: 'SILENCE', hint: 'kill the transmitter' },
-  power: { tm: 'ЖИВЛЕНЬ', en: 'POWER' },
-  filament: { tm: 'НАКАЛ', en: 'FILAMENT', hint: 'warming up' },
-  search: { tm: 'ПОШУК', en: 'SEARCH' },
   lock: { tm: 'ЗАХВАТ', en: 'LOCK' },
   launch: { tm: 'ПУСК', en: 'LAUNCH' },
   /*
@@ -53,10 +44,7 @@ export const CONTROLS = {
   reload: { tm: 'ПЕРЕЗАРЯД', en: 'RELOAD' },
   displace: { tm: 'СМЕНА МЕСТА', en: 'DISPLACE' },
   salvo: { tm: 'ЗАЛП', en: 'SALVO' },
-  gain: { tm: 'ПОСИЛ', en: 'GAIN' },
-  brightness: { tm: 'ЯСНОТА', en: 'BRIGHTNESS' },
   range: { tm: 'ДАЛЬ', en: 'RANGE SCALE' },
-  scale: { tm: 'МАСШТАБ', en: 'SCALE' },
   acknowledge: { tm: 'ПРИНЯТО', en: 'ACKNOWLEDGE' },
   refuse: { tm: 'ОТКАЗ', en: 'REFUSE' },
   hold: { tm: 'ЗАПРЕТ', en: 'HOLD' },
@@ -71,8 +59,10 @@ export const CONTROLS = {
     tm: 'ПО УСТАВУ', en: 'EMCON PER DOCTRINE',
     hint: 'the crew blinks when its own arithmetic says so',
   },
-  weapons: { tm: 'ОРУЖИЕ', en: 'WEAPONS' },
-  abort: { tm: 'СДАТЬ ПОСТ', en: 'LEAVE POST' },
+  abort: { tm: 'СДАТЬ', en: 'LEAVE POST' },
+  /* The commander's seat toggle. It says what pressing it will do. */
+  takeConsole: { tm: 'ЗАНЯТЬ ПОСТ', en: 'TAKE A CONSOLE' },
+  backToNet: { tm: 'НА СЕТЬ', en: 'BACK TO THE NET' },
 };
 
 /**
@@ -94,7 +84,6 @@ export const POSTURE_CYCLE = ['hold', 'tight', 'free'];
 export const STATUS = {
   ready: { tm: 'ГОТОВ', en: 'READY' },
   radiating: { tm: 'ИЗЛУЧАЕТ', en: 'RADIATING' },
-  dark: { tm: 'ТИХО', en: 'DARK' },
   warming: { tm: 'НАКАЛ', en: 'WARMING' },
   fault: { tm: 'АВАРА', en: 'FAULT' },
   guiding: { tm: 'ВЕДЁТ', en: 'GUIDING' },
@@ -119,6 +108,8 @@ export const STATUS = {
   fusion: { tm: 'ЕДИНАЯ КАРТА', en: 'FUSED PICTURE' },
   localControl: { tm: 'МЕСТНОЕ УПР.', en: 'LOCAL CONTROL' },
   airPicture: { tm: 'ВОЗДУШНАЯ ОБСТАНОВКА', en: 'AIR PICTURE' },
+  /** The heading over the rack, as against CONTROLS.hold/tight/free. */
+  weaponsPanel: { tm: 'ОГНЕВЫЕ СРЕДСТВА', en: 'WEAPONS' },
   standing: { tm: 'АТТЕСТАЦИЯ', en: 'STANDING' },
   commandNet: { tm: 'СЕТЬ КОМАНДОВАНЬЯ', en: 'COMMAND NET' },
   rounds: { tm: 'РАСХОД', en: 'EXPENDED' },
@@ -135,7 +126,6 @@ export const STATUS = {
     hint: 'what the firing tables say this shot is worth right now',
   },
   target: { tm: 'ЦЕЛЬ', en: 'TARGET' },
-  survival: { tm: 'ЖИВУЧЕСТЬ', en: 'SURVIVAL' },
   sequence: { tm: 'ЦИКЛ', en: 'SEQUENCE' },
   crew: { tm: 'РАСЧЁТ', en: 'CREW' },
   standby: { tm: 'ОЖИДАНИЕ', en: 'STANDBY' },
@@ -143,14 +133,9 @@ export const STATUS = {
   inFlight: { tm: 'В ПОЛЁТЕ', en: 'ROUNDS IN FLIGHT' },
   holding: { tm: 'ВЫЖИДАНИЕ', en: 'HOLDING FOR RANGE', hint: 'the shot improves every second the target closes' },
   noTarget: { tm: 'ЦЕЛЬ НЕ НАЗНАЧЕНА', en: 'NO TARGET DESIGNATED' },
-  rangeHeight: { tm: 'ДАЛЬ / ВЫСОТА', en: 'RANGE / HEIGHT' },
-  horizon: { tm: 'ГОРИЗОНТ', en: 'HORIZON' },
-  beyond: { tm: 'ЗА ПРЕДЕЛОМ', en: 'BEYOND' },
-  cue: { tm: 'НАВОДКА', en: 'CUE' },
   yourSeat: { tm: 'ВАШ ПОСТ', en: 'YOUR POST' },
   destroyed: { tm: 'УНИЧТОЖЕН', en: 'DESTROYED' },
   displacing: { tm: 'НА МАРШЕ', en: 'DISPLACING' },
-  reloading: { tm: 'ЗАРЯЖАНИЕ', en: 'RELOADING' },
   /**
    * ЗАРЯЖАНИЕ is the whole operation; ПОДАЧА is the hoist putting the next
    * round on the rail, which is what the bar counts down now the rack fills
@@ -177,7 +162,6 @@ export const EQUIPMENT = {
 export const PLATES = {
   type: { tm: 'ТИП 4М-2', en: 'TYPE 4M-2' },
   works: { tm: 'ЗАВ. № 118-44', en: 'WORKS NO. 118-44' },
-  year: { tm: 'ГОД ВЫПУСКА 19__', en: 'YEAR OF MANUFACTURE 19__' },
   factory: { tm: 'ЗАВОД ИМ. КОРНЕЛА', en: 'KORNEL WORKS' },
   standard: { tm: 'ТМСТ 4471-Б', en: 'TMST 4471-B' },
   warning: { tm: 'ВЫСОКОЕ НАПРЯЖЕНИЕ', en: 'HIGH VOLTAGE' },

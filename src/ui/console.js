@@ -14,7 +14,7 @@
 
 import { THEMES, readPalette, hostilityColour } from './themes.js';
 import { SAM_TYPES, AIR_TYPES } from '../engine/config.js';
-import { bearing, dist, headingVec, len, radarHorizonKm, clamp01, clamp } from '../engine/math.js';
+import { bearing, dist, headingVec, len, clamp01 } from '../engine/math.js';
 import { inEnvelope, timeToInRangeS, computeSamPk } from '../engine/weapons.js';
 import { withAlpha } from './scope.js';
 

@@ -14,7 +14,7 @@
 import { THEMES, readPalette, hostilityColour } from './themes.js';
 import { MAP } from '../engine/geography.js';
 import { SAM_TYPES, ASSET_TYPES, AIR_TYPES } from '../engine/config.js';
-import { bearing, dist, headingVec, len, wrapDeg, clamp01 } from '../engine/math.js';
+import { bearing, headingVec, len, clamp01 } from '../engine/math.js';
 import { trackProfile } from '../engine/detection.js';
 
 const TAU = Math.PI * 2;

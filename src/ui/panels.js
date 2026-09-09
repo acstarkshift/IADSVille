@@ -8,7 +8,7 @@
  * expensive, while the canvas underneath stays at full rate.
  */
 
-import { SIM, SAM_TYPES, ASSET_TYPES, AIR_TYPES, COMMAND, DEFENCE_CLASSES } from '../engine/config.js';
+import { SIM, SAM_TYPES, AIR_TYPES, DEFENCE_CLASSES } from '../engine/config.js';
 import { bearing, dist, len, clockString, clamp01 } from '../engine/math.js';
 import { sortedTracks, cannotEngageReason, huntsTheFlight } from '../engine/threat.js';
 import { trackProfile } from '../engine/detection.js';
@@ -17,7 +17,7 @@ import {
   armTimeToImpact, canStartLoading, channelsFor, railLoadS, railsOf, spanLimit, spanLoad,
 } from '../engine/doctrine.js';
 import {
-  CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, pair, pairHtml,
+  STATE, CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, pair,
 } from './lexicon.js';
 import { rankOf } from '../engine/character.js';
 import { raidHuntsRadars, positionCanBeHunted } from '../engine/scenarios.js';
@@ -130,6 +130,45 @@ function reloadBar(site, type) {
 function press(entry, { act, site, disabled = false, extra = '' } = {}) {
   return `<button class="pb ${extra}" data-act="${act}" ${site ? `data-site="${site}"` : ''}
       ${disabled ? 'disabled' : ''} title="${esc(entry.en)}">${legend(entry)}</button>`;
+}
+
+/* ------------------------------------------------------------- stamping */
+
+const TABLES = { STATE, CONTROLS, STATUS, EQUIPMENT, PLATES };
+
+/**
+ * Fill the fixed legends on index.html out of the lexicon, once, at boot.
+ *
+ * The page used to carry these as literals — ВРЕМЯ · TIME, АТТЕСТАЦИЯ ·
+ * STANDING, СЕТЬ КОМАНДОВАНЬЯ in a CSS `content` string — beside a table
+ * that held the same words and was never consulted, so half of them had no
+ * English at all (the works plate in the corner of the topbar read ВПВО ТМ ·
+ * СЕКТОР 4-Б · ТИП 4М-2 · ЗАВ. № 118-44 and nothing else, on a console whose
+ * one typographic rule is that the gloss is always beside the stencil).
+ *
+ * An element with `data-legend="GROUP.key"` gets that entry: as a stencil
+ * over its gloss if it is a `.lg`, as one paired line otherwise. `data-key`
+ * appends the keyboard shortcut, and `data-gloss-first` puts the English on
+ * top — which the two command-net caps want, because they are answered
+ * against a clock.
+ */
+export function stampLegends(root = document) {
+  for (const el of root.querySelectorAll('[data-legend]')) {
+    const [group, key] = el.dataset.legend.split('.');
+    const entry = TABLES[group]?.[key];
+    if (!entry) continue;
+    const shortcut = el.dataset.key ? ` · ${el.dataset.key}` : '';
+    const top = el.dataset.glossFirst !== undefined ? entry.en + shortcut : entry.tm;
+    const under = el.dataset.glossFirst !== undefined ? entry.tm : entry.en + shortcut;
+    if (el.classList.contains('lg')) el.innerHTML = `<b>${esc(top)}</b><i>${esc(under)}</i>`;
+    else el.textContent = `${top} · ${under}`;
+  }
+  const plate = root.getElementById?.('unit-plate') ?? root.querySelector('#unit-plate');
+  if (plate) {
+    const stencil = [STATE.serviceShort, STATE.sector, PLATES.type, PLATES.works];
+    plate.innerHTML = `<b>${stencil.map((e) => esc(e.tm)).join(' · ')}</b>`
+      + `<br>${stencil.map((e) => esc(e.en)).join(' · ')}`;
+  }
 }
 
 /* --------------------------------------------------------------- topbar */
@@ -357,7 +396,7 @@ export function renderTrackList(world, ui, els) {
       <span>${String(brg).padStart(3, '0')}</span>
       <span>${rng}</span>
       <span>${alt}</span>
-      <span class="asgn">${engaged ? '◆' : ''}${cued ? '<i class="cued" title="Called to you by the net — you did not pick this one">▸</i>' : ''}${esc(assigned)} <em style="color:var(--hostile)">${pips}</em></span>
+      <span class="asgn">${engaged ? '◆' : ''}${cued ? '<i class="cued" title="Called to you by the net — you did not pick this one">▸</i>' : ''}${esc(assigned)} <em class="pips">${pips}</em></span>
     </li>`;
   };
 
@@ -459,7 +498,7 @@ function renderTrackDetail(world, ui, els) {
     <b>${esc(track.tn)}</b> ${esc(track.hostility.toUpperCase())}
     · ${esc(track.classification === 'unknown' ? `ID ${idPct}%` : AIR_TYPES[track.classification]?.name ?? '')}<br>
     ${speedKts} kt · ${Math.round(track.altM)} m · quality ${Math.round(track.quality * 100)}%
-    ${track.coasting ? '· <em style="color:var(--warn)">COASTING</em>' : ''}<br>
+    ${track.coasting ? '· <em>COASTING</em>' : ''}<br>
     ${huntsTheFlight(world, track)
     ? `Tracking toward <b>${esc(world.vipAircraft()?.name ?? 'THE STATE AIRCRAFT')}</b>.`
     : asset ? `Tracking toward <b>${esc(asset.label)}</b>, ${tti} out.` : 'No obvious objective.'}
@@ -654,7 +693,7 @@ export function renderBatteries(world, ui, els) {
       <span class="screw ${'abcd'[index % 4]}"></span>
       <div class="unit-head">
         <span class="unit-name">${index + 1}. ${esc(site.name)}</span>
-        <span class="unit-type wrap" style="max-width:56%;text-align:right">
+        <span class="unit-type wrap is-plate">
           ${esc(nomenclature ? pair(nomenclature) : type.label)}${crewed ? ` · ${esc(pair(STATUS.yourSeat))}` : ''}</span>
       </div>
       ${unfit ? `<div class="unit-row unit-unfit" title="Against the selected contact">
@@ -752,7 +791,7 @@ export function renderBatteries(world, ui, els) {
     caption: Number.isFinite(armEta) ? `${STATUS.armWarning.tm} ${Math.ceil(armEta)}s` : STATUS.armWarning.tm })}
       </div>
       ${raidHuntsRadars(world.scenario) ? `<div class="unit-row">
-        <span class="unit-type">${esc(pair(STATUS.exposure))}</span>
+        <span class="unit-type wrap">${esc(pair(STATUS.exposure))}</span>
         <span class="gauge ${radar.exposure > 0.65 ? 'is-hot' : radar.exposure > 0.35 ? 'is-warn' : ''}">
           <i style="width:${Math.round(radar.exposure * 100)}%"></i></span>
         <span class="unit-type">${Math.round(radar.exposure * 100)}%</span>
@@ -844,15 +883,15 @@ export function renderCrewConsole(world, ui, els) {
   const noTarget = !track && !wrecked;
 
   els.crewConsole.innerHTML = `
-    <div class="unit is-mine" style="margin:0">
+    <div class="unit is-mine">
       <span class="screw a"></span>
       <div class="unit-head">
         <span class="unit-name">${esc(site.name)}</span>
-        <span class="unit-type" title="${esc(nomenclature?.en ?? type.label)}">
+        <span class="unit-type wrap is-plate" title="${esc(nomenclature?.en ?? type.label)}">
           ${esc(nomenclature ? pair(nomenclature) : type.label)}</span>
       </div>
 
-      <div class="unit-row" style="margin-top:7px">
+      <div class="unit-row is-spaced">
         ${lamp(STATUS.ready, status.state === 'ready', { colour: 'green' })}
         ${lamp(STATUS.guiding, status.guidance === 'GUIDING', { colour: 'green' })}
         ${lamp(STATUS.noGuidance, status.guidance !== 'GUIDING', { colour: 'amber' })}
@@ -894,7 +933,7 @@ export function renderCrewConsole(world, ui, els) {
         CANNOT GUIDE A ROUND.</span>
       </div>` : ''}
 
-      <div class="unit-controls" style="margin-top:8px">
+      <div class="unit-controls">
         ${press(CONTROLS.lock, { act: 'lock', site: site.id, disabled: !!unfit || noTarget })}
         ${toggle(radar?.on ? CONTROLS.silence : CONTROLS.radiate, !!radar?.on,
     { act: 'emcon', site: site.id, disabled: !radar?.alive })}
@@ -902,7 +941,7 @@ export function renderCrewConsole(world, ui, els) {
         ${canBeHunted ? press(CONTROLS.displace, { act: 'scoot', site: site.id }) : ''}
       </div>
 
-      ${hunted ? `<div class="unit-row" style="margin-top:9px">
+      ${hunted ? `<div class="unit-row is-spaced">
         ${legend(STATUS.exposure, { inline: true })}
         <span class="gauge ${(radar?.exposure ?? 0) > 0.65 ? 'is-hot' : (radar?.exposure ?? 0) > 0.35 ? 'is-warn' : ''}">
           <i style="width:${Math.round((radar?.exposure ?? 0) * 100)}%"></i></span>
@@ -911,7 +950,7 @@ export function renderCrewConsole(world, ui, els) {
       ${site.crewLosses ? `<div class="crew-row is-hot">${legend(STATUS.crew, { inline: true })}
         <b>${site.crewLosses} ПОТЕРЬ / CASUALTIES</b></div>` : ''}
 
-      <div class="placard" style="margin-top:9px">${esc(PLATES.warning.tm)}<br>${esc(PLATES.warning.en)}</div>
+      <div class="placard">${esc(PLATES.warning.tm)}<br>${esc(PLATES.warning.en)}</div>
     </div>`;
 }
 
@@ -947,7 +986,8 @@ export function renderCommandNet(world, els) {
   els.commandNet.hidden = false;
   if (els.commandText.dataset.uid !== directive.uid) {
     els.commandText.dataset.uid = directive.uid;
-    els.commandText.textContent = directive.text;
+    els.commandText.innerHTML = `<span class="command-tag">◈ ${esc(pair(STATUS.commandNet))}</span>`
+      + esc(directive.text);
   }
   const left = Math.max(0, directive.deadlineS - world.t);
   els.commandTimer.textContent = `${Math.ceil(left)}s`;
@@ -978,7 +1018,7 @@ export function renderScopeSide(world, ui, els, rangeKm) {
       </div>
       ${legend(CONTROLS.range, {})}
       <span class="knob-readout" id="range-readout"></span>
-      <span class="data-plate" style="margin-top:auto">
+      <span class="data-plate is-footer">
         <b>${esc(PLATES.type.tm)}</b> ${esc(PLATES.type.en)}<br>
         ${esc(PLATES.works.tm)}<br>${esc(PLATES.works.en)}<br>
         ${esc(PLATES.factory.tm)}<br>${esc(PLATES.factory.en)}

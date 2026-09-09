@@ -16,13 +16,13 @@
 <div id="shell" class="shell" hidden>
   <header class="topbar">
     <div class="topbar-group">
-      <span class="data-plate" id="unit-plate">
-        <b>ВПВО ТМ</b> · СЕКТОР 4-Б<br>ТИП 4М-2 · ЗАВ. № 118-44
-      </span>
+      <!-- Every legend below is stamped from src/ui/lexicon.js at boot, so the
+           panel and the table it is meant to come from cannot drift apart. -->
+      <span class="data-plate" id="unit-plate"></span>
       <span class="badge" id="mission-name">—</span>
-      <span class="readout" title="Mission clock"><label>ВРЕМЯ · TIME</label><b id="clock">0:00</b></span>
-      <span class="readout" title="Raid aircraft still airborne"><label>В ВОЗДУХЕ · AIR</label><b id="air-count">0</b></span>
-      <span class="readout" title="Rounds expended against allocation"><label>РАСХОД · EXPENDED</label><b id="rounds">0/0</b></span>
+      <span class="readout" title="Mission clock"><label data-legend="STATUS.clock"></label><b id="clock">0:00</b></span>
+      <span class="readout" title="Raid aircraft still airborne"><label data-legend="STATUS.airborne"></label><b id="air-count">0</b></span>
+      <span class="readout" title="Rounds expended against allocation"><label data-legend="STATUS.rounds"></label><b id="rounds">0/0</b></span>
       <span class="lamps" id="master-lamps"></span>
     </div>
     <div class="topbar-group" id="speed-group">
@@ -34,19 +34,19 @@
     <div class="topbar-group">
       <span class="operator" id="echelon-plate"></span>
       <span class="operator" id="operator-plate"></span>
-      <button class="pb" id="view-toggle" hidden title="Switch seat (Tab)"><span class="lg"><b>ПОСТ</b><i>CONSOLE</i></span></button>
+      <button class="pb" id="view-toggle" hidden title="Switch seat (Tab)"></button>
       <span class="readout standing" title="Your standing with sector command">
-        <label>АТТЕСТАЦИЯ · STANDING</label><b id="standing">50</b>
+        <label data-legend="STATUS.standing"></label><b id="standing">50</b>
         <span class="standing-bar"><i id="standing-fill"></i></span>
       </span>
       <button class="pb" id="btn-help" title="Help (H)"><span class="lg"><b>?</b><i>HELP</i></span></button>
-      <button class="pb" id="btn-abort" title="Leave the mission"><span class="lg"><b>СДАТЬ</b><i>LEAVE</i></span></button>
+      <button class="pb" id="btn-abort" title="Leave the mission"><span class="lg" data-legend="CONTROLS.abort"></span></button>
     </div>
   </header>
 
   <main class="stage">
     <section class="panel panel-left" id="panel-tracks">
-      <h2><span class="lg"><b>ВОЗДУШНАЯ ОБСТАНОВКА</b><i>AIR PICTURE</i></span>
+      <h2><span class="lg" data-legend="STATUS.airPicture"></span>
         <span class="hint" id="fusion-state">FUSED</span></h2>
       <div class="track-head">
         <span title="Track number">TN</span><span title="Classification, or LOW/FAST kinematics until identified">TYPE</span>
@@ -73,7 +73,7 @@
     </section>
 
     <section class="panel panel-right" id="panel-batteries">
-      <h2><span class="lg"><b>ОГНЕВЫЕ СРЕДСТВА</b><i>WEAPONS</i></span></h2>
+      <h2><span class="lg" data-legend="STATUS.weaponsPanel"></span></h2>
       <div id="formation-list" class="formation-list" hidden></div>
       <div id="battery-list" class="battery-list"></div>
       <div id="crew-console" class="crew-console" hidden></div>
@@ -84,8 +84,11 @@
     <div id="command-net" class="command-net" hidden>
       <div class="command-text" id="command-text"></div>
       <div class="command-actions">
-        <button class="pb pb-accept" id="btn-accept"><span class="lg"><b>ACKNOWLEDGE · Y</b><i>ПРИНЯТО</i></span></button>
-        <button class="pb pb-refuse" id="btn-refuse"><span class="lg"><b>REFUSE · N</b><i>ОТКАЗ</i></span></button>
+        <!-- These two put the gloss on top: they are answered against a clock. -->
+        <button class="pb pb-accept" id="btn-accept"><span class="lg"
+          data-legend="CONTROLS.acknowledge" data-gloss-first data-key="Y"></span></button>
+        <button class="pb pb-refuse" id="btn-refuse"><span class="lg"
+          data-legend="CONTROLS.refuse" data-gloss-first data-key="N"></span></button>
         <span class="command-timer" id="command-timer"></span>
       </div>
     </div>
@@ -97,7 +100,7 @@
 
 <script type="module" src="src/ui/app.js"></script>
 <noscript>
-  <p style="color:#9fe;padding:2rem;font:14px monospace">IADSVille needs JavaScript to run the simulation.</p>
+  <p class="noscript">IADSVille needs JavaScript to run the simulation.</p>
 </noscript>
 </body>
 </html>

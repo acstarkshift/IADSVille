@@ -11,17 +11,16 @@
 
 import { SCENARIOS, isUnlocked, appointmentOf } from '../engine/scenarios.js';
 import { ECHELON_ORDER } from '../engine/echelon.js';
-import { DIFFICULTY, ROLES, SAM_TYPES, COMMAND, DEFENCE_CLASSES } from '../engine/config.js';
+import { DIFFICULTY, ROLES, SAM_TYPES, DEFENCE_CLASSES } from '../engine/config.js';
 import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor } from '../engine/command.js';
-import { THEMES, applyTheme } from './themes.js';
-import { clockString } from '../engine/math.js';
+import { THEMES } from './themes.js';
 import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/character.js';
 import { serviceSummary } from './dossier.js';
 import { STATE } from './lexicon.js';
-import { composeEnding, ENDINGS, endingSummary } from '../engine/endings.js';
+import { composeEnding, endingSummary } from '../engine/endings.js';
 import { composeFlightEnding, flightEndingSummary } from '../engine/epilogue.js';
-import { knownRevelations, standing as arcStanding } from '../engine/revelations.js';
+import { standing as arcStanding } from '../engine/revelations.js';
 import { briefLine } from '../engine/family.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
@@ -29,7 +28,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
 
 /* ------------------------------------------------------------- title */
 
-export function renderMenu(host, state, actions) {
+export function renderMenu(host, state) {
   const campaign = state.campaign;
   const tier = tierFor(campaign.standing);
   const flown = campaign.history.length;
@@ -82,37 +81,37 @@ export function renderMenu(host, state, actions) {
       <p>A raid is coming for the town you are sitting under. You have radars that can see only
       while they are radiating, batteries with more targets than rounds, and a command that reads
       your log afterwards.</p>
-      <p style="color:var(--ink-dim)">Emit to see. Emit to shoot. Emit and they will find you. Pick two.</p>
+      <p class="note">Emit to see. Emit to shoot. Emit and they will find you. Pick two.</p>
     </div>
 
     <div class="card record-card">
       <div class="record-stamp">${esc(tier.label)}</div>
       <h3>Personnel file${character ? ` — ${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}` : ''}</h3>
       <div class="score-grid">
-        <div class="score-cell"><label>ЗВАНИЕ · RANK</label><b style="font-size:13px">${esc(rank?.en ?? '—')}</b></div>
-        <div class="score-cell"><label>ДОЛЖНОСТЬ · APPOINTMENT</label>
-          <b style="font-size:13px">${esc(appointment.en)}</b></div>
+        <div class="score-cell is-word"><label>ЗВАНИЕ · RANK</label><b>${esc(rank?.en ?? '—')}</b></div>
+        <div class="score-cell is-word"><label>ДОЛЖНОСТЬ · APPOINTMENT</label>
+          <b>${esc(appointment.en)}</b></div>
         <div class="score-cell"><label>АТТЕСТАЦИЯ · STANDING</label><b>${Math.round(campaign.standing)}</b></div>
         <div class="score-cell"><label>ОПЫТ · EXPERIENCE</label><b>${character?.xp ?? 0}</b></div>
         <div class="score-cell"><label>ВАХТ · WATCHES</label><b>${flown}</b></div>
         <div class="score-cell ${character?.points ? 'is-good' : ''}"><label>ПОДГОТОВКА · TRAINING</label><b>${character?.points ?? 0}</b></div>
-        <div class="score-cell ${character?.wounded ? 'is-bad' : ''}"><label>СОСТОЯНИЕ · CONDITION</label>
-          <b style="font-size:13px">${character?.wounded ? 'РАНЕН' : 'ГОДЕН'}</b></div>
+        <div class="score-cell is-word ${character?.wounded ? 'is-bad' : ''}"><label>СОСТОЯНИЕ · CONDITION</label>
+          <b>${character?.wounded ? 'РАНЕН · INJURED' : 'ГОДЕН · FIT'}</b></div>
       </div>
-      ${campaign.ending ? `<p style="margin-top:9px;color:var(--hostile)">
+      ${campaign.ending ? `<p class="verdict grave">
         <b>${esc(endingSummary(campaign.ending) ?? '')}</b> — the last watch has been stood.</p>` : ''}
-      ${campaign.epilogue ? `<p style="margin-top:4px;color:var(--hostile)">
+      ${campaign.epilogue ? `<p class="verdict grave">
         <b>${esc(flightEndingSummary(campaign.epilogue) ?? '')}</b> — and what happened two days after it.</p>` : ''}
-      ${character ? `<p style="color:var(--ink-dim);margin-top:9px">
+      ${character ? `<p class="note verdict">
         ${esc(backgroundOf(character).en)}, of the Ville · ${esc(householdOf(character).en)}.
         ${character.decorations.length ? `${character.decorations.length} decoration${character.decorations.length > 1 ? 's' : ''} on file.` : ''}
-        ${character.points ? '<b style="color:var(--accent)"> Training points unspent.</b>' : ''}</p>` : ''}
+        ${character.points ? '<b class="urgent"> Training points unspent.</b>' : ''}</p>` : ''}
     </div>
 
     <div class="card">
       <h3>Select a watch</h3>
-      <p style="color:var(--ink-dim);margin:-2px 0 10px">
-        You currently hold <b style="color:var(--accent)">${esc(appointment.appointment.tm)} ·
+      <p class="lede">
+        You currently hold <b class="urgent">${esc(appointment.appointment.tm)} ·
         ${esc(appointment.appointment.en)}</b>. ${esc(appointment.blurb)}</p>
       ${ECHELON_ORDER.map((echelon) => {
     const watches = SCENARIOS.filter((sc) => sc.echelon === echelon.id);
@@ -160,11 +159,11 @@ export function renderMenu(host, state, actions) {
       </div>
       <div class="toggle-row">
         <label><input type="checkbox" id="opt-pressure" ${state.narrativePressure ? 'checked' : ''}> Narrative pressure</label>
-        <span style="opacity:.7">— sector command's file entries and the consequences of failing them. Turn it off for the simulation alone.</span>
+        <span class="note">— sector command's file entries and the consequences of failing them. Turn it off for the simulation alone.</span>
       </div>
       <div class="toggle-row">
         <label><input type="checkbox" id="opt-audio" ${state.audio ? 'checked' : ''}> Sound</label>
-        <label style="margin-left:12px"><input type="checkbox" id="opt-theme-lock" ${state.themeOverride ? 'checked' : ''}> Force theme:</label>
+        <label><input type="checkbox" id="opt-theme-lock" ${state.themeOverride ? 'checked' : ''}> Force theme:</label>
         <select id="theme-pick" class="btn" ${state.themeOverride ? '' : 'disabled'}>
           ${Object.values(THEMES).map((t) => `<option value="${t.id}" ${state.themeOverride === t.id ? 'selected' : ''}>${esc(t.label)}</option>`).join('')}
         </select>
@@ -195,19 +194,19 @@ export function renderBriefing(host, state) {
   const rank = character ? rankOf(character) : null;
 
   host.innerHTML = `<div class="screen-inner">
-    <h1 class="title" style="font-size:34px">${esc(mission.name)}</h1>
+    <h1 class="title is-watch">${esc(mission.name)}</h1>
     <p class="subtitle">${esc(mission.subtitle)}</p>
-    ${character ? `<div class="card record-card" style="padding:9px 14px">
+    ${character ? `<div class="card record-card is-tight">
       <div class="record-stamp">${esc(STATE.serviceShort.tm)}</div>
-      <p style="margin:0">Posting order for <b>${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}</b>.
+      <p>Posting order for <b>${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}</b>.
       Origin: ${esc(backgroundOf(character).en)}. Home: ${esc(STATE.town.en)}, ${esc(STATE.country.en)}.
-      ${character.wounded ? '<span style="color:var(--hostile)">Returned to duty against medical advice.</span>' : ''}</p>
+      ${character.wounded ? '<span class="grave">Returned to duty against medical advice.</span>' : ''}</p>
     </div>` : ''}
 
-    ${note ? `<div class="card"><p style="color:var(--ink-dim);font-style:italic">${esc(note)}</p></div>` : ''}
+    ${note ? `<div class="card"><p class="note quoted">${esc(note)}</p></div>` : ''}
 
     ${state.narrativePressure && briefLine(state.campaign, mission.id) ? `<div class="card">
-      <p style="font-style:italic">${esc(briefLine(state.campaign, mission.id))}</p>
+      <p class="quoted">${esc(briefLine(state.campaign, mission.id))}</p>
     </div>` : ''}
 
     ${state.narrativePressure && arcStanding(state.campaign) ? `<div class="card file-entry">
@@ -221,19 +220,19 @@ export function renderBriefing(host, state) {
       ${state.narrativePressure ? Object.entries(mission.briefIfKnown ?? {})
     .filter(([id]) => (state.campaign.revelations ?? []).includes(id))
     .flatMap(([, lines]) => lines)
-    .map((line) => `<p style="color:var(--warn)">${esc(line)}</p>`).join('') : ''}
+    .map((line) => `<p class="warned">${esc(line)}</p>`).join('') : ''}
     </div>
 
     <div class="card">
       <h3>Your seat — ${esc(role.label)}</h3>
       <p>${esc(role.blurb)}</p>
-      ${battery ? `<p style="color:var(--ink-dim)">You are crewing <b>${esc(battery.name)}</b> —
+      ${battery ? `<p class="note">You are crewing <b>${esc(battery.name)}</b> —
         ${esc(SAM_TYPES[battery.type].label)}, ${esc(DEFENCE_CLASSES[SAM_TYPES[battery.type].class].en.toLowerCase())}.
         ${SAM_TYPES[battery.type].minRangeKm}–${SAM_TYPES[battery.type].maxRangeKm} km,
         ${SAM_TYPES[battery.type].minAltM}–${SAM_TYPES[battery.type].maxAltM} m,
         ${SAM_TYPES[battery.type].channels} channels, ${SAM_TYPES[battery.type].readyRounds} rounds on the rails.</p>
-        <p style="color:var(--ink-dim);font-style:italic">${esc(DEFENCE_CLASSES[SAM_TYPES[battery.type].class].blurb)}</p>` : ''}
-      <p style="color:var(--ink-dim)">This watch teaches: ${esc(mission.teaches)}</p>
+        <p class="note quoted">${esc(DEFENCE_CLASSES[SAM_TYPES[battery.type].class].blurb)}</p>` : ''}
+      <p class="note">This watch teaches: ${esc(mission.teaches)}</p>
     </div>
 
     <div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : consequence.tier.id === 'satisfactory' ? '' : 'file-entry'}">
@@ -357,15 +356,15 @@ export function renderDebrief(host, state, result, entry) {
 
   host.innerHTML = `<div class="screen-inner">
     ${ending ? `
-      <p class="subtitle" style="margin-bottom:2px">${esc(ending.title)}</p>
-      <h1 class="title" style="font-size:30px">${esc(ending.subtitle ?? ending.title)}</h1>
+      <p class="subtitle is-lead">${esc(ending.title)}</p>
+      <h1 class="title is-outcome">${esc(ending.subtitle ?? ending.title)}</h1>
       <div class="card ending-card">
         ${ending.lines.map((line) => `<p>${esc(line)}</p>`).join('')}
       </div>
-      <p class="subtitle" style="margin-top:18px">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
+      <p class="subtitle is-tail">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
     ` : `
-      <h1 class="title" style="font-size:32px;color:${result.success ? 'var(--good)' : 'var(--hostile)'}">${esc(result.headline)}</h1>
-      ${result.cause ? `<p class="subtitle" style="color:var(--hostile)">${esc(result.cause)}</p>` : ''}
+      <h1 class="title is-watch ${result.success ? 'gained' : 'grave'}">${esc(result.headline)}</h1>
+      ${result.cause ? `<p class="subtitle grave">${esc(result.cause)}</p>` : ''}
       <p class="subtitle">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
     `}
 
@@ -388,15 +387,15 @@ export function renderDebrief(host, state, result, entry) {
     const home = a.type === 'town' && state.campaign.character;
     const quarter = home ? districtOf(state.campaign.character) : null;
     const struck = home && a.districtsHit?.includes(quarter.id);
-    return `<tr><td>${esc(a.label)}${home ? ' <span style="color:var(--ink-dim)">— home</span>' : ''}</td>
+    return `<tr><td>${esc(a.label)}${home ? ' <span class="note">— home</span>' : ''}</td>
           <td class="${a.destroyed ? 'down' : a.damagePct ? '' : 'up'}">
             ${a.destroyed ? 'DESTROYED' : a.damagePct ? `${a.damagePct}% damage` : 'intact'}
             ${a.casualties ? ` · ${a.casualties} casualties` : ''}
-            ${struck ? `<br><span style="color:var(--hostile)">${esc(quarter.tm)} — ${esc(quarter.en)}, where your people live, is on the returns.</span>` : ''}
+            ${struck ? `<br><span class="grave">${esc(quarter.tm)} — ${esc(quarter.en)}, where your people live, is on the returns.</span>` : ''}
           </td></tr>`;
   }).join('')}
       </table>
-      ${result.battery ? `<p style="margin-top:8px;color:var(--ink-dim)">
+      ${result.battery ? `<p class="aside">
         Your battery: <b>${esc(result.battery.name)}</b> —
         ${result.battery.alive ? 'still in action' : 'lost'},
         ${result.battery.roundsRemaining} rounds on the rails,
@@ -425,25 +424,23 @@ export function renderDebrief(host, state, result, entry) {
     ${ledger ? `<div class="card">
       <h3>Sector command's ledger</h3>
       <table class="ledger">${ledger}</table>
-      <p style="margin-top:8px;color:var(--ink-dim)">Standing: ${Math.round(result.standing)} — ${esc(result.tierLabel)}</p>
+      <p class="aside">Standing: ${Math.round(result.standing)} — ${esc(result.tierLabel)}</p>
     </div>` : ''}
 
     ${divergences.length ? `<div class="card">
       <h3>ДВЕ АРИФМЕТИКИ · THE FILE AND THE NIGHT</h3>
-      <p style="color:var(--ink-dim);margin-bottom:7px">What each decision did to your file, beside
+      <p class="lede">What each decision did to your file, beside
       what the night actually was. When these two columns agree, this table is empty.</p>
       <table class="ledger">
-        <tr><th style="text-align:left;color:var(--ink-dim)">decision</th>
-          <th style="color:var(--ink-dim)">the file</th>
-          <th style="text-align:left;color:var(--ink-dim)">the night</th></tr>
+        <tr><th>decision</th><th class="is-figure">the file</th><th>the night</th></tr>
         ${divergences.map((l) => {
     const charged = l.charged ?? l.delta;
     return `<tr><td>${esc(l.reason)}</td>
           <td class="${charged > 0 ? 'up' : 'down'}">${charged > 0 ? '+' : ''}${charged.toFixed(1)}</td>
-          <td style="text-align:left;color:var(--ink-dim)">${esc(nightSideFor(l.reason, result))}</td></tr>`;
+          <td class="is-prose note">${esc(nightSideFor(l.reason, result))}</td></tr>`;
   }).join('')}
       </table>
-      <p style="margin-top:8px;color:var(--ink-dim)">The night itself is the score above: ${result.score}.
+      <p class="aside">The night itself is the score above: ${result.score}.
       The file does not read the score, and the score does not read the file.</p>
     </div>` : ''}
 
@@ -454,7 +451,7 @@ export function renderDebrief(host, state, result, entry) {
 
     ${state.narrativePressure && entry?.letter ? `<div class="card letter-card">
       <h3>${esc(entry.letter.tm)} · ${esc(entry.letter.title)}</h3>
-      ${entry.letter.note ? `<p style="color:var(--ink-dim);font-style:italic">${esc(entry.letter.note)}</p>` : ''}
+      ${entry.letter.note ? `<p class="note quoted">${esc(entry.letter.note)}</p>` : ''}
       ${entry.letter.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>` : ''}
 
@@ -465,7 +462,7 @@ export function renderDebrief(host, state, result, entry) {
         ${esc(entry.appointment.gazetted.tm)} · ${esc(entry.appointment.gazetted.en)} on the same order.</p>` : ''}
       ${state.narrativePressure && entry.appointment.note
     ? `<p>${esc(entry.appointment.note)}</p>` : ''}
-      <p style="color:var(--ink-dim)">${esc(entry.appointment.echelon.blurb)}</p>
+      <p class="note">${esc(entry.appointment.echelon.blurb)}</p>
     </div>` : ''}
 
     ${state.narrativePressure && entry?.revelation ? `<div class="card revelation-card">
@@ -499,7 +496,7 @@ export function renderControls(host, { basic = false, hunted = true } = {}) {
   // battery. `panels.js` hides the cap on the same test.
   const displaceable = !basic && hunted;
   host.innerHTML = `<div class="screen-inner">
-    <h1 class="title" style="font-size:28px">CONTROLS</h1>
+    <h1 class="title is-outcome">CONTROLS</h1>
     <div class="card">
       <h3>Everywhere</h3>
       <div class="keys">
@@ -543,9 +540,9 @@ export function renderControls(host, { basic = false, hunted = true } = {}) {
       <table class="ledger">
         ${Object.values(DEFENCE_CLASSES).map((c) => {
     const sys = Object.values(SAM_TYPES).find((t) => t.class === c.id);
-    return `<tr><td><b style="color:var(--ink-bright)">${esc(c.tm)}</b> · ${esc(c.en)}<br>
-      <span style="color:var(--ink-dim)">${esc(c.blurb)}</span></td>
-      <td>${esc(sys.label)}<br><span style="color:var(--ink-dim)">${sys.minRangeKm}–${sys.maxRangeKm} km<br>
+    return `<tr><td><b class="stencil">${esc(c.tm)}</b> · ${esc(c.en)}<br>
+      <span class="note">${esc(c.blurb)}</span></td>
+      <td>${esc(sys.label)}<br><span class="note">${sys.minRangeKm}–${sys.maxRangeKm} km<br>
       ${sys.minAltM}–${sys.maxAltM} m</span></td></tr>`;
   }).join('')}
       </table>
