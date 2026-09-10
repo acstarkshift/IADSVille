@@ -38,53 +38,60 @@ kbd {
  * The bar was a flex row that wrapped, so at 1280 the speed rack — four caps
  * that had grown to four different widths — was ejected out of the top-right
  * corner onto a second row at x=9, three hundred and fifty pixels of dead
- * space from the identity plates and divorced from the clock it drives. The
- * rack and the identity card are their own columns and stay where they are at
- * every width; what gives instead is the status column on the left, which
- * wraps its own readouts onto a second line when there is not room.
+ * space from the identity plates and divorced from the clock it drives. Three
+ * columns: what the watch is, who is sitting here, and what you can do to the
+ * clock. They stay where they are at every desktop width, and what gives when
+ * the window narrows is the readouts between them, which are figures and can
+ * afford to be tight. Below 900px it is a different piece of hardware and is
+ * laid out as one — see the phone console at the end of this file.
  */
 .topbar {
   display: grid; grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: start; gap: 4px 10px;
-  padding: 5px 9px;
+  align-items: center; gap: 4px 12px;
+  /* A gutter on both ends. The bar used to be padded 9px and the rack's last
+     cap had no housing at all, so the one irreversible control on the console
+     sat as bare text against the right edge of the window. */
+  padding: 5px 12px;
   border-bottom: 1px solid var(--metal-edge);
   box-shadow: 0 2px 6px rgba(0, 0, 0, .45);
 }
 /*
- * The master annunciator shrinks; it does not wrap.
+ * The master annunciator spells its words. At every width.
  *
- * At 1280 the three lamps dropped onto a second row underneath the works plate
- * while the right-hand cluster stayed on row one — an L-shaped bar with a dead
- * gutter in it, measured at 66px tall against 41px at 1600. They are one
- * unbreakable group now, and below 1400 they swap their captions for the short
- * ones panels.js gives them (RAD · ARM 12s · FLT) rather than taking a second
- * line off the bar. The ARM countdown survives the swap: it is the most
- * time-critical number on the console.
+ * At 1280 the three lamps used to wrap onto a second row underneath the works
+ * plate — an L-shaped bar with a dead gutter in it — and the fix for that was
+ * to swap all three captions for RAD / ARM / FLT below 1400px. That is the
+ * console's primary status row reduced to a code nobody was taught, with FLT
+ * for FAULT reading as "flight" on a screen full of aircraft. The room came
+ * out of the speed rack instead, which lost a dim second line saying nothing
+ * its own figure did not.
  */
-.lamps { display: inline-flex; gap: 7px; align-items: center; margin-left: 2px; flex: 0 0 auto; flex-wrap: nowrap; }
+.lamps { display: inline-flex; gap: 8px; align-items: center; margin-left: 2px; flex: 0 0 auto; flex-wrap: nowrap; }
 .topbar .lamp { font-size: 9px; letter-spacing: .06em; white-space: nowrap; }
 .topbar .lamp-dome { width: 10px; height: 10px; }
-@media (max-width: 1400px) {
-  .topbar .lamp-cap b { display: none; }
-  .topbar .lamp-cap i { display: inline; font-style: normal; }
-}
 .topbar-group { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: nowrap; }
-#speed-group { display: inline-flex; align-items: center; gap: 8px; }
 /*
- * Nothing on this bar wraps. The telemetry group is the one that gives, and it
- * gives by truncating the mission name — which is also printed on the briefing
- * the player just read — rather than by dropping the annunciator onto a second
- * row underneath the works plate and leaving the whole right-hand cluster
- * stranded on row one.
+ * Nothing on this bar wraps, and the two things that identify the watch — the
+ * works plate and the mission's name — are the two things that stay. The plate
+ * used to be dropped entirely below 1400px, which left FIRST LIGHT five pixels
+ * from the window's edge with no gutter at all; the name used to ellipsise to
+ * "WEASEL H…" the moment the ARM lamp grew a countdown. The name reserves its
+ * own width now, and what gives instead is the readouts between them, which
+ * are figures with labels and can afford to be tight.
  */
 .topbar-group:first-child > * { flex: 0 0 auto; }
-.topbar-group:first-child > .badge { flex: 0 1 auto; min-width: 7em; }
-/*
- * And below 1400 the works plate goes, rather than the mission name: the plate
- * is set dressing that the scope bezel carries again four inches away, and
- * "WE…" is not a mission name. The plate is back at 1440 and above.
- */
-@media (max-width: 1400px) { #unit-plate { display: none; } }
+.topbar-group:first-child > .badge { flex: 0 1 auto; min-width: 11em; }
+@media (max-width: 1400px) {
+  .topbar { gap: 4px 8px; padding: 5px 10px; }
+  .topbar-group:first-child > .badge { min-width: 9.5em; }
+  .topbar .readout label { display: none; }
+  #unit-plate { font-size: 7px; padding: 2px 4px; }
+}
+/* Below 1180 the readouts themselves start to go, youngest first, rather than
+   anything on the bar abbreviating itself into a code. */
+@media (max-width: 1180px) {
+  .topbar .readout.standing { display: none; }
+}
 
 .badge {
   color: var(--engrave); letter-spacing: .13em; text-transform: uppercase;
@@ -94,40 +101,90 @@ kbd {
 }
 
 /*
- * The identity card: rank and name over the appointment, one box, one left
- * margin, nothing clipped. It was two plates of different heights sitting
- * side by side, and the operator's own name — the one string on this console
- * that belongs to the player — was cut through mid-glyph at the box's edge.
+ * The service identity card, standing out of its slot.
+ *
+ * This was two clipped plates, then one flat rectangle with a coloured left
+ * edge and two lines of "Cyrillic word · English word" — the last bilingual
+ * clutter in the strip the player reads every second of every watch, and not
+ * the thing that was asked for. What it is now is an object: a card issued to
+ * a soldier, with his rank insignia printed on it, pushed into a machined slot
+ * in the console and left standing proud of the panel at an angle, the way a
+ * card left in a slot does. The slot is cut into the paint — a dark recess
+ * with a lit lower lip — and the card leans out of it towards the operator.
+ *
+ * The rotation is on the card only; the slot keeps its own rectangle, so the
+ * bar's grid never sees the tilt and nothing beside it moves.
  */
+.id-slot {
+  position: relative;
+  display: inline-flex; align-items: center;
+  /* The leading edge of a card standing out of a slot is nearer the eye, so
+     it projects wider than its layout box — twenty-odd pixels at this angle,
+     which is how it came to be drawn over the ARM lamp's countdown at 1280.
+     The recess is cut deeper on that side to hold it. */
+  padding: 4px 9px 5px 30px;
+  border: 1px solid var(--metal-edge); border-radius: 2px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, .22));
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 255, 255, .07);
+}
 .idcard {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 3px 8px; border: 1px solid var(--metal-edge); border-radius: 1px;
-  background: linear-gradient(180deg, var(--metal-hi), var(--metal-lo));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04);
-  border-left: 2px solid var(--accent);
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 10px 4px 7px;
+  border: 1px solid var(--metal-edge); border-radius: 2px;
+  /* Card stock, not painted steel: a paler, flatter board with a printed
+     tint band down its leading edge. */
+  background:
+    linear-gradient(97deg, color-mix(in srgb, var(--accent) 22%, var(--metal-hi)) 0 5px,
+      var(--metal-hi) 5px, var(--metal-lo) 100%);
   white-space: nowrap;
+  /*
+   * Standing out of the slot, towards the reader. The card is hinged at its
+   * right-hand edge — the end still in the slot — so the left end swings out
+   * and catches the light while the right end darkens into the recess.
+   */
+  transform: perspective(300px) rotateY(-17deg) rotate(-1.4deg) translateX(-2px);
+  transform-origin: 100% 50%;
+  box-shadow:
+    -5px 3px 9px rgba(0, 0, 0, .6),
+    inset -14px 0 16px -12px rgba(0, 0, 0, .75),
+    inset 2px 0 0 rgba(255, 255, 255, .2),
+    inset 0 1px 0 rgba(255, 255, 255, .18),
+    inset 0 -1px 0 rgba(0, 0, 0, .32);
 }
+.id-insignia { display: flex; align-items: center; flex: 0 0 auto; }
+.id-insignia svg { display: block; }
+.id-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .id-line { display: flex; align-items: baseline; gap: 6px; }
-.id-line b {
-  font-size: 7.5px; letter-spacing: .1em; color: var(--engrave-dim); font-weight: 700;
-  text-transform: uppercase;
-}
 .id-line .id-name {
-  font-size: 11px; letter-spacing: .04em; color: var(--engrave);
+  font-size: 11.5px; letter-spacing: .05em; color: var(--engrave); font-weight: 700;
   text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
 }
-.id-line.is-post { border-top: 1px solid var(--metal-edge); padding-top: 2px; }
-.id-line.is-post b { color: var(--engrave); }
-.id-line.is-post span {
-  font-size: 7.5px; letter-spacing: .1em; color: var(--engrave-dim); text-transform: uppercase;
+/* The appointment, printed the way a card prints one: small, spaced, and in
+   one language. */
+.id-line.is-post {
+  font-size: 7.5px; letter-spacing: .11em; color: var(--engrave-dim);
+  text-transform: uppercase;
 }
 
-/* One cap four times. The rack reads as a rack, and it does not resize when
-   the clock changes speed. The chip sits inset from the cap's bevel rather
-   than half over its corner radius, so the legend keeps its own column. */
-#speed-group .pb { min-width: 62px; width: 62px; padding: 5px 24px 4px 7px; }
-#speed-group .pb .lg { align-items: flex-start; }
-#speed-group .pb .lg b { font-size: 12px; letter-spacing: .06em; }
+/*
+ * The rack: one cap, six times.
+ *
+ * Six controls in four hundred pixels used to be built to four different
+ * treatments — a 62×27 cap with a chip, three 62×37 two-line caps with a chip
+ * in a different place, a 61×27 cap, and LEAVE POST with no housing at all.
+ * One height, one chip corner, one bevel. The speed caps are wider than the
+ * word caps because a segmented selector reads as one instrument, and that is
+ * the only difference between them.
+ */
+.topbar .rack { gap: 10px; }
+.topbar .rack .pb { height: 28px; padding: 0 22px 0 8px; display: flex; align-items: center; }
+.topbar .rack .pb .lg { align-items: flex-start; }
+.topbar .rack .pb .lg b { font-size: 11.5px; letter-spacing: .07em; }
+/* Four caps of one width, set by the widest legend in the group rather than by
+   a number somebody guessed — HOLD used to be cut to "HOL" by a 48px cap. */
+#speed-group { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+#speed-group .pb { min-width: 0; justify-content: flex-start; }
+#speed-group .pb .lg b { font-size: 12.5px; letter-spacing: .04em; }
 
 .readout { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
 .readout label { color: var(--engrave-dim); font-size: 8px; letter-spacing: .1em; }
@@ -230,13 +287,16 @@ kbd {
  *
  * It was `flex: 1`, so four contacts sat in a 687 px well of flat black —
  * ninety per cent of the column, with no rule, no empty state and nothing
- * underneath. It takes the height it needs and scrolls past that; what is
- * below it is panel metal and the board summary, which is a thing rather than
- * a void.
+ * underneath. `flex: 1 1 auto` only half fixed it: the basis was the content
+ * but the list still GREW into whatever the column had spare, so at 1920 four
+ * rows still sat above two hundred and eighty pixels of empty box with THE
+ * SECTOR floated to the bottom of it. It takes exactly the height its rows
+ * need, shrinks and scrolls when there are more of them than the column has,
+ * and everything below it rides up under the last row.
  */
 .track-list {
   list-style: none; margin: 5px; padding: 2px 0; overflow-y: auto;
-  flex: 1 1 auto; min-height: 60px;
+  flex: 0 1 auto; min-height: 60px;
   /* Ruled, at the pitch of a row. An empty board is a board with empty
      slots on it; it was a flat black well, and with four contacts on a
      watch that is most of the column. */
@@ -346,6 +406,13 @@ kbd {
   white-space: normal; overflow: visible; text-align: right; line-height: 1.35;
 }
 
+/*
+ * What the selected contact is doing: the readout at the foot of the picture
+ * panel, where the cabin keeps its works plates. The instruments group at the
+ * top of the column, one continuous surface of painted metal runs under them,
+ * and the panel closes on its own bottom readout — which is what both columns
+ * now do, rather than one of them being a box of black.
+ */
 .panel-foot {
   margin-top: auto;
   border-top: 1px solid var(--metal-edge); padding: 6px 8px;
@@ -387,8 +454,30 @@ kbd {
   border-top: 1px solid var(--metal-edge); padding: 7px 5px;
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
 }
-.crew-console .unit { margin: 0; }
+/*
+ * The cabin fills its column, and its plates sit at the bottom of it.
+ *
+ * Below the high-voltage placard there used to be a hundred and forty pixels
+ * of blank painted panel at 950 and two hundred and thirty at 1080 — every
+ * control in the top two thirds and dead metal under them. The card is as tall
+ * as the console it is screwed into, and the works plates ride at its foot,
+ * where a factory rivets them.
+ */
+.crew-console .unit {
+  margin: 0; min-height: 100%;
+  display: flex; flex-direction: column;
+}
 .crew-console .unit-controls, .crew-console .placard { margin-top: 9px; }
+.cabin-foot {
+  margin-top: auto; padding-top: 12px;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+}
+.cabin-foot .data-plate { line-height: 1.55; }
+.cabin-foot-right {
+  display: flex; flex-direction: column; align-items: stretch; gap: 6px;
+  min-width: 0; flex: 0 1 auto; text-align: right;
+}
+.cabin-foot .placard { margin-top: 0; }
 .crew-console h3 {
   margin: 0 0 6px; font-size: 10px; letter-spacing: .16em;
   color: var(--engrave-dim); text-transform: uppercase;
@@ -437,8 +526,21 @@ kbd {
 .scope-overlay .boot .line { opacity: .85; }
 .scope-overlay .huge { font-size: 22px; color: var(--hostile); text-shadow: var(--glow); animation: blink .7s infinite steps(1); }
 
+/*
+ * The line under the tube stands off the banner that floats over it.
+ *
+ * The command net overlays the bottom of the stage rather than growing the
+ * footer — a directive that resized the picture mid-watch was worse — but the
+ * scope's own instruction line was pinned 8px from the tube's bottom edge and
+ * was therefore sliced horizontally by the banner's top border, two of its
+ * three lines cut through the middle of their glyphs at 1280. The banner hands
+ * its height to the shell as `--net-h`; the legend clears it, and rides back
+ * down when the directive is answered.
+ */
 .scope-legend {
-  position: absolute; left: 8px; bottom: 8px; pointer-events: none;
+  position: absolute; left: 8px; right: 8px;
+  bottom: calc(8px + var(--net-h, 0px));
+  pointer-events: none; transition: bottom .12s;
   font-size: 10px; color: var(--ink-dim); line-height: 1.7; letter-spacing: .06em;
 }
 
@@ -535,15 +637,30 @@ kbd {
  * the top, because auto margins have no leftover space to take.
  */
 .screen-inner { width: min(940px, 100%); margin: auto; }
-/* Prose keeps its measure; a page of figures gets the width it needs. */
-.screen-inner.is-debrief { width: min(1240px, 100%); }
-/* The score and the ground are one band: the two cards a player reads first,
-   side by side, instead of stacked down the middle of an empty page. */
-.debrief-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; }
+/*
+ * Prose keeps its measure; a page of figures gets the width it needs — and the
+ * outcome of a watch sits at the top of the page, not in the middle of it.
+ * `margin: auto` centred the whole stack vertically, so the headline that says
+ * what happened to the sector floated a hundred and fifty pixels down a black
+ * page with a matching band of nothing under the buttons. It is the first
+ * thing on the screen; it belongs at eye level.
+ */
+.screen-inner.is-debrief { width: min(1240px, 100%); margin: 0 auto; }
+/* The ground and the arithmetic are one band: two tables of a similar height,
+   side by side, each hugging its own content rather than one stretching to
+   the other's and ending on ninety pixels of empty panel. */
+.debrief-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; align-items: start; }
 .debrief-cols > .card { margin-bottom: 14px; }
-/* Six figures, two rows of three: auto-fit dropped four on the first row and
-   two on the second, which reads as a rack that ran out. */
-.debrief-cols .score-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/*
+ * The score is a rack of six across the page.
+ *
+ * It used to be one column of a two-column band, so six cells wrapped 3+3 in
+ * 420px — a rack that ran out — while the card beside it was four tight rows,
+ * and the two never shared a baseline.
+ */
+.score-card .score-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 1000px) { .score-card .score-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .score-card .score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .title {
   font-size: clamp(28px, 6vw, 54px); letter-spacing: .28em; margin: 0 0 2px;
@@ -616,7 +733,14 @@ kbd {
  * launch cap were rendered three hundred pixels below anything a scrollbar
  * could reach.
  */
-.formation-list { display: grid; gap: 7px; margin-bottom: 9px; min-height: 0; overflow-y: auto; }
+/* Like the rack below it, the column runs under its own bottom edge rather
+   than stopping at it: a shadow cast up from the rail says there is more, which
+   a card sliced through its last cap otherwise does not. */
+.formation-list {
+  display: grid; gap: 7px; margin-bottom: 9px; padding-bottom: 6px;
+  min-height: 0; overflow-y: auto;
+  box-shadow: inset 0 -14px 12px -12px rgba(0, 0, 0, .8);
+}
 .formation-list.is-secondary { max-height: 30%; }
 /*
  * Where there are formations, they are what the watch is played on and the
@@ -631,19 +755,52 @@ kbd {
 }
 .fmn-count { color: var(--accent); font-size: 11px; letter-spacing: .1em; }
 .fmn {
-  padding: 7px 9px; border-radius: var(--radius);
+  padding: 7px 9px 9px; border-radius: var(--radius);
   border: 1px solid var(--edge); background: var(--bg-panel);
 }
 .fmn.is-direct { border-color: var(--accent); background: var(--bg-raised); }
 .fmn.is-hq { border-color: var(--good); }
 .fmn.is-handover { border-style: dashed; border-color: var(--warn); opacity: .8; }
 .fmn.is-detached { opacity: .72; }
-.fmn.is-reserve { border-color: var(--friendly); }
+/*
+ * The reserve is pinned to the foot of the column, not scrolled off it.
+ *
+ * It is the one decision at this appointment that cannot be taken back —
+ * rounds nobody below you can move, four minutes of road — and it was the last
+ * card in a bounded scroller, so at 1600 it was sliced through its own head
+ * and its RELEASE caps were below anything on screen. Sticky, with the
+ * formations running behind it.
+ */
+.fmn.is-reserve {
+  border-color: var(--friendly);
+  position: sticky; bottom: 0; z-index: var(--z-sticky);
+  background: var(--bg-panel);
+  box-shadow: 0 -8px 14px -8px rgba(0, 0, 0, .85);
+}
 /* An officer with every engagement he can personally hold already running. */
 .fmn.is-saturated { border-color: var(--warn); opacity: 1; }
 .fmn.is-saturated .fmn-state { color: var(--warn); }
 .fmn-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
-.fmn-state { color: var(--ink-dim); font-size: 10px; letter-spacing: .06em; text-align: right; }
+/* Who is commanding it, on its own instrument line: label left, answer right,
+   the way every other figure on this console is set. */
+.fmn-state {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  margin-top: 4px; padding-bottom: 3px;
+  border-bottom: 1px solid color-mix(in srgb, var(--edge) 50%, transparent);
+}
+.fmn-state label { color: var(--ink-dim); font-size: 8.5px; letter-spacing: .14em; }
+.fmn-state b {
+  color: var(--ink-bright); font-size: 10.5px; letter-spacing: .06em; font-weight: 400;
+  text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fmn.is-saturated .fmn-state b { color: var(--warn); }
+/*
+ * The formation card's head is the battery card's head: the English name at
+ * the left and the Cyrillic nomenclature on a plate at the right, so one
+ * scrolling column does not carry two naming systems. `.unit-head` reserves
+ * fourteen pixels for a corner screw these cards do not have.
+ */
+.fmn-head.unit-head { padding-right: 0; }
 .fmn-figures { display: flex; gap: 12px; margin: 5px 0; flex-wrap: wrap; }
 .fmn-figures span { color: var(--ink-bright); font-size: 12px; }
 .fmn-figures label { display: block; color: var(--ink-dim); font-size: 9px; letter-spacing: .1em; }
@@ -758,6 +915,9 @@ table.ledger td { padding: 2px 0; border-bottom: 1px solid color-mix(in srgb, va
 table.ledger td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 table.ledger th { padding: 2px 0; text-align: left; font-weight: 400; color: var(--ink-dim); }
 table.ledger th.is-figure { text-align: right; }
+/* Three columns of headings ran into each other — "the filethe night" — because
+   only the cells had a gutter between them and the headings had none. */
+table.ledger th + th, table.ledger td + td { padding-left: 14px; }
 /* A cell of prose in a column of figures. Colour comes from a tone class. */
 table.ledger td.is-prose, table.ledger td.is-prose:last-child { text-align: left; }
 table.ledger.is-unscored td, table.ledger.is-unscored td:last-child { color: var(--ink-dim); }
@@ -780,12 +940,139 @@ table.ledger .down { color: var(--hostile); }
 
 .toggle-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 11.5px; color: var(--ink-dim); }
 
-/* Cramped screens: drop the side panels under the scope rather than squeezing. */
+/* ------------------------------------------------------------ thumb rail */
+
+/*
+ * The verbs of the watch, on the glass, for a hand with no keyboard.
+ *
+ * Above 900px this console has a keyboard and two full panels and does not
+ * need one; below it, the picture panel is gone and the rack is a third of a
+ * short screen that scrolls, which is how the launch cap ended up off the
+ * bottom of a scroller in portrait and off the screen entirely in landscape.
+ * The rail is docked between the stage and the ticker, is never inside
+ * anything that scrolls, and its caps are sized for a thumb rather than for a
+ * mouse. `renderActionBar` builds it at every width; this rule is the only
+ * thing that decides whether the console has one.
+ */
+.action-bar { display: none; }
+/* A dark console has no rail either. */
+.is-console-dark .action-bar { visibility: hidden; pointer-events: none; }
+
+/* ------------------------------------------------------- the phone console */
+
+/*
+ * Under 900px this is a different piece of hardware, and it is laid out as
+ * one rather than as the desktop console with things falling off the edges.
+ *
+ * The rules: no control the watch needs is off the screen or inside something
+ * that scrolls; no key chips, because there is no keyboard to press; the
+ * picture keeps the room it needs; and the bar at the bottom is the console.
+ */
 @media (max-width: 900px) {
-  .stage { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+  /*
+   * The topbar goes to two rows: what the watch IS on top, what you can do to
+   * the clock underneath. At 390px the works plate, the identity card and the
+   * standing meter were being drawn on top of each other and cut off by the
+   * window — set dressing that belongs to a desk with room on it.
+   */
+  .topbar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px; padding: 4px 8px;
+  }
+  .topbar-group:nth-child(2) { display: none; }
+  .topbar-group.rack { justify-content: flex-end; gap: 5px; }
+  #unit-plate, #mission-name { display: none; }
+  /*
+   * The status row wraps rather than shortening anything. Everything on it is
+   * a word or a figure a player was taught; a narrow window is a reason for
+   * the bar to take a second line, not for the console to start speaking in
+   * three-letter codes.
+   */
+  .topbar-group:first-child { flex-wrap: wrap; }
+  .topbar .readout label { display: inline; }
+  .topbar .lamp { font-size: 8.5px; }
+  .topbar .rack .pb { height: 26px; padding: 0 6px; }
+  .topbar .rack .pb .lg b { font-size: 9.5px; white-space: nowrap; }
+  /*
+   * No keyboard, no key chips. Every cap on a phone loses the stencilled
+   * letter that presses it — it is furniture for a finger that does not exist
+   * here, and it was costing twenty-two pixels of legend on every control.
+   */
+  .kc, #rack-keys { display: none; }
+  .pb:has(.kc), .pb:has(.kc-wide), .unit-controls .pb { padding-right: 8px; }
+  /*
+   * A directive is a paragraph and this is a phone: it stacks, it keeps its
+   * own answer buttons under it, and it is bounded — it wrapped to thirteen
+   * lines and took half the screen, and the panels reserved that height.
+   */
+  .command-net { flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 8px; }
+  .command-text { font-size: 11px; line-height: 1.4; max-height: 5.6em; overflow-y: auto; }
+  .command-actions { justify-content: space-between; }
+
+  .stage { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
   .panel-left { display: none; }
-  .panel-right { border-left: none; border-top: 1px solid var(--edge); max-height: 34vh; }
-  .event-log { height: 60px; }
+  .panel-right { border-left: none; border-top: 1px solid var(--edge); max-height: 30vh; }
+  .event-log { height: 52px; }
+  /* The tube's instruction line is the rail's job here, and the tube needs
+     every pixel it has. */
+  .scope-legend { display: none; }
+  .bezel { padding: 6px; }
+
+  .action-bar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 5px 8px;
+    padding: 5px 8px calc(5px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--metal-edge);
+    background-color: var(--metal);
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(0, 0, 0, .18));
+    box-shadow: 0 -3px 10px rgba(0, 0, 0, .5);
+  }
+  .action-bar[hidden] { display: none; }
+  /* Four verbs that all act on "the selection" have to print the selection. */
+  .ab-aim { display: flex; align-items: baseline; gap: 7px; flex: 1 1 100%; min-width: 0; }
+  .ab-aim label { font-size: 7.5px; letter-spacing: .13em; color: var(--engrave-dim); flex: 0 0 auto; }
+  .ab-aim b {
+    font-size: 11px; letter-spacing: .05em; color: var(--engrave);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ab-caps { display: flex; align-items: stretch; gap: 7px; flex: 1 1 100%; min-width: 0; }
+  /* Thumb-sized, and all one size: 44px is the floor a finger hits reliably,
+     and these are the caps a watch cannot be played without. */
+  .ab-caps > * { flex: 1 1 0; min-width: 0; min-height: 46px; }
+  .ab-caps .pb { display: flex; align-items: center; justify-content: center; padding: 5px 4px; }
+  .ab-caps .pb .lg { align-items: center; text-align: center; width: 100%; }
+  .ab-caps .pb .lg b {
+    font-size: 10px; letter-spacing: .04em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+  }
+  .ab-caps .pb .lg i { font-size: 7.5px; }
+  .ab-caps .pb-rail { padding: 5px 4px; margin-top: 0; }
+  .ab-caps .sw { padding: 3px 5px; gap: 5px; }
+  .ab-caps .sw-pos { font-size: 9.5px; line-height: 13px; padding: 0 4px; }
+  .ab-caps .sw-body { width: 13px; height: 21px; }
+  .ab-caps .sw-lever { height: 9px; width: 6px; margin-left: -3px; }
+  .ab-caps .sw[aria-pressed="true"] .sw-lever { top: 3px; }
+  .ab-caps .sw[aria-pressed="false"] .sw-lever { top: 9px; }
+}
+/*
+ * Landscape on a phone is 390px of height for a topbar, a tube, a ticker and
+ * the rail. The rack goes — every verb on it that the watch needs is on the
+ * rail — the rail's readout moves back beside its caps, and the ticker keeps
+ * two lines, because the ticker is how this game speaks.
+ */
+@media (max-width: 900px) and (max-height: 460px) {
+  .panel-right { display: none; }
+  .event-log { height: 34px; }
+  .topbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .topbar-group.rack { grid-column: 2; }
+  .topbar-group:first-child { flex-wrap: nowrap; }
+  /* 390 pixels of height: the bar is one line, and the mission's name earns
+     its place back because it is the only context left. */
+  .topbar .readout label { display: none; }
+  #mission-name { display: inline; }
+  .action-bar { flex-wrap: nowrap; padding-top: 4px; padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)); }
+  .ab-aim { flex: 0 1 130px; flex-direction: column; align-items: flex-start; gap: 0; }
+  .ab-caps { flex: 1 1 auto; }
+  .ab-caps > * { min-height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }

@@ -78,6 +78,13 @@ export const CONTROLS = {
     hint: 'the crew blinks when its own arithmetic says so',
   },
   abort: { tm: 'СДАТЬ', en: 'LEAVE POST' },
+  /*
+   * The thumb rail's own verbs. A phone has no keyboard, so the two things the
+   * keys did that no cap on the console did — step the selection, and hand the
+   * selected contact to the selected battery — are controls here.
+   */
+  nextTarget: { tm: 'СЛЕД. ЦЕЛЬ', en: 'NEXT TARGET', hint: 'step to the next contact on the board' },
+  assign: { tm: 'НАЗНАЧИТЬ', en: 'ASSIGN', hint: 'hand the selected contact to the selected battery' },
   /* The two halves of the question the LEAVE POST cap now asks first. */
   abandon: { tm: 'ОСТАВИТЬ ПОСТ', en: 'ABANDON THE WATCH' },
   stay: { tm: 'ОСТАТЬСЯ', en: 'STAY AT THE POST' },
@@ -95,12 +102,18 @@ export const CONTROLS = {
   /*
    * `cap` is the face of the control where the face is a figure rather than a
    * word: the rack reads 1× 2× 4× because that is what a speed selector is
-   * marked with, and the word underneath says which is which. Everything else
-   * on the console has one line and no `cap`.
+   * marked with.
+   *
+   * It used to carry a second line as well — a dim REAL / FAST / MAX under the
+   * figure — which made three caps in the rack two lines tall while HOLD and
+   * HELP beside them were one, so six controls in four hundred pixels were
+   * built to three different heights with the key chip in two different
+   * places. The word said nothing the figure did not; it is in the cap's own
+   * tooltip and on the CONTROLS page, and the rack is now one cap six times.
    */
-  speedReal: { tm: '1×', en: 'REAL', cap: '1×', sub: 'REAL' },
-  speedFast: { tm: '2×', en: 'FAST', cap: '2×', sub: 'FAST' },
-  speedMax: { tm: '4×', en: 'MAX', cap: '4×', sub: 'MAX' },
+  speedReal: { tm: '1×', en: 'REAL', cap: '1×' },
+  speedFast: { tm: '2×', en: 'FAST', cap: '2×' },
+  speedMax: { tm: '4×', en: 'MAX', cap: '4×' },
 };
 
 /**

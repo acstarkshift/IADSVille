@@ -6,9 +6,19 @@
  * here is *behaviour*: whether the display holds a phosphor image between
  * frames, whether it wears scanlines, and which symbol set it draws.
  *
- * Each mission names a theme, so working a raid on the amber set genuinely feels
- * like a different console from the green one, and the modern ops display feels
- * like a different decade.
+ * There is ONE phosphor. There used to be two — an amber set on four of the
+ * twelve watches — on the reasoning that a different tube would make a watch
+ * feel like a different night, and it did not: it made four watches look like a
+ * reskin of the other eight, which is the opposite of the thing it was for. A
+ * watch is distinguished by the hardware of its echelon, its hour, its weather,
+ * its map and the order pinned to its board, never by a palette swap.
+ *
+ * What survives beside the green set is not a second phosphor. It is a
+ * different KIND of display: the flat tactical panel the national echelon
+ * works on, which has no phosphor at all, holds no image between frames, wears
+ * no scanlines and draws standard symbology rather than blips. Sitting down at
+ * one is meant to feel like sitting down at a different decade's equipment,
+ * which is what having been promoted out of a cathode-ray cabin feels like.
  */
 
 export const THEMES = {
@@ -30,18 +40,6 @@ export const THEMES = {
     sweepTailDeg: 62,
     symbology: 'blip',
     vignette: 0.55,
-    curvature: true,
-  },
-  'crt-amber': {
-    id: 'crt-amber',
-    label: 'PHOSPHOR AMBER',
-    blurb: 'Warmer tube, slower decay, and a bloom you will be staring at all night.',
-    afterglow: 0.985,
-    scanlines: true,
-    glowPx: 12,
-    sweepTailDeg: 78,
-    symbology: 'blip',
-    vignette: 0.6,
     curvature: true,
   },
   'ops-modern': {

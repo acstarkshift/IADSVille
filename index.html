@@ -25,13 +25,26 @@
       <span class="readout" title="Rounds expended against allocation"><label data-legend="STATUS.rounds" data-gloss-only></label><b id="rounds">0/0</b></span>
       <span class="lamps" id="master-lamps"></span>
     </div>
-    <!-- Rank, name and appointment on ONE card with one left margin, rather
-         than two boxes of different heights with the operator's own name
-         clipped mid-glyph at the edge of the second one. -->
+    <!--
+      The service identity card, in its slot.
+
+      This was a flat rectangle with a coloured left edge carrying two lines of
+      "Cyrillic word · English word" — the last bilingual clutter in the top
+      strip, and not the thing that was asked for. It is a card now: an issued
+      ID with the operator's rank insignia printed on it, sitting at an oblique
+      angle in a slot machined into the console, as though it has been pushed
+      in and is standing proud of the panel towards the operator. The rank is
+      English; the insignia carries the rest. See rankInsignia() in panels.js.
+    -->
     <div class="topbar-group">
-      <span class="idcard">
-        <span class="id-line" id="operator-plate"></span>
-        <span class="id-line is-post" id="echelon-plate"></span>
+      <span class="id-slot">
+        <span class="idcard">
+          <span class="id-insignia" id="rank-insignia"></span>
+          <span class="id-body">
+            <span class="id-line" id="operator-plate"></span>
+            <span class="id-line is-post" id="echelon-plate"></span>
+          </span>
+        </span>
       </span>
       <button class="pb" id="view-toggle" hidden title="Switch seat (V)"></button>
       <span class="readout standing" title="Your standing with sector command">
@@ -39,13 +52,21 @@
         <span class="standing-bar"><i id="standing-fill"></i></span>
       </span>
     </div>
-    <!-- The rack and the two caps that end a watch, in the top-right corner at
-         every width. Each cap carries the key that selects it, in the same
-         corner chip every control on this console stamps its key in; the keys
-         used to be mapped by position instead, so 3 selected the cap marked 4×
-         and 4 — the obvious reach for maximum speed — stopped the raid dead.
-         The four caps are one width, so the rack reads as a rack. -->
-    <div class="topbar-group">
+    <!--
+      The rack: six caps, one geometry.
+
+      Every control in this corner is the same height, machined the same way,
+      with its key stencilled in the same corner chip. It was three idioms in
+      four hundred pixels — a short cap with an inline chip, three tall
+      two-line caps with a corner chip and a dim second line, and LEAVE POST
+      as bare text with no housing at all — which is four treatments across
+      six controls on the one strip that has to read as one piece of hardware.
+
+      The keys used to be mapped by position, so 3 selected the cap marked 4×
+      and 4 — the obvious reach for maximum speed — stopped the raid dead. The
+      number stencilled on a cap is now the number that selects it.
+    -->
+    <div class="topbar-group rack">
       <span id="speed-group" role="radiogroup" aria-label="Simulation speed">
         <button class="pb" data-speed="0" role="radio" aria-checked="false" tabindex="-1"
           title="Hold — the simulation stops (0 or Space)">
@@ -61,10 +82,20 @@
           <span class="lg" data-legend="CONTROLS.speedMax" data-key="4"></span></button>
       </span>
       <button class="pb" id="btn-help" title="Help (H)"><span class="lg"><b>HELP</b></span><em class="kc">H</em></button>
-      <!-- The one destructive control on the bar, demoted to look like one: no
-           cap, no fill, no bevel, dim ink. It was the widest and brightest
-           thing in the topbar, which is precisely backwards. -->
-      <button class="pb pb-quiet" id="btn-abort" title="Leave the post — this ends the watch and records it as abandoned"><span class="lg" data-legend="CONTROLS.abort"></span></button>
+      <!--
+        The one irreversible control on the console, housed as one.
+
+        It was demoted to bare dim text on the reasoning that a destructive
+        verb should not shout. That went too far: on a strip of machined caps
+        a caption reads as a caption, and the control that ends the watch was
+        the only thing in the bar a player could not see was a button. It is a
+        cap like its neighbours now — same height, same shroud — but sunk into
+        its housing and outlined in the alarm colour, which is how a guarded
+        switch is distinguished on hardware. It still asks before it acts.
+      -->
+      <button class="pb pb-danger" id="btn-abort"
+        title="Leave the post — this ends the watch and records it as abandoned"><span
+          class="lg" data-legend="CONTROLS.abort"></span></button>
     </div>
   </header>
 
@@ -100,7 +131,12 @@
     </section>
 
     <section class="panel panel-right" id="panel-batteries">
-      <h2><span class="lg" data-legend="STATUS.weaponsPanel"></span></h2>
+      <!-- The rack head says which card the keyboard is pointed at. The key
+           chips are printed on the selected battery's caps only, but the caps
+           on the cards below it look identically live, and nothing on the
+           panel said that Q/W/E/R follow the highlight. Now the head does. -->
+      <h2><span class="lg" data-legend="STATUS.weaponsPanel"></span>
+        <span class="hint" id="rack-keys"></span></h2>
       <div id="formation-list" class="formation-list" hidden></div>
       <div id="battery-list" class="battery-list"></div>
       <div id="crew-console" class="crew-console" hidden></div>
@@ -108,6 +144,23 @@
   </main>
 
   <footer class="ticker">
+    <!--
+      The thumb rail: the verbs of the watch, on the glass, at phone widths.
+
+      On a phone the left panel is gone and the right one is a third of a short
+      screen that scrolls, so the launch cap was off the bottom of a scroller in
+      portrait and off the screen entirely in landscape — and a touch that moved
+      the panel a pixel was cancelled and committed nothing. There was no way to
+      fire a round with a finger. This rail carries whichever verbs the seat
+      cannot be played without, never scrolls, and is thumb-sized;
+      renderActionBar in panels.js fills it, and it goes through the same press
+      path as every other cap on the console.
+
+      It lives inside the ticker so that the command net — which floats above
+      the ticker's top edge rather than growing it — clears the rail as well as
+      the panels, instead of covering the launch cap with a directive.
+    -->
+    <div class="action-bar" id="action-bar" hidden></div>
     <div id="command-net" class="command-net" hidden>
       <div class="command-text" id="command-text"></div>
       <div class="command-actions">

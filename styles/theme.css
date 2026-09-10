@@ -90,39 +90,18 @@
   --z-screen: 50;
 }
 
-[data-theme="crt-amber"] {
-  --bg: #0b0602;
-  --bg-panel: #170d04;
-  --bg-raised: #221306;
-  --grid: #3a2208;
-  --edge: #5c380d;
-  --ink: #ffc266;
-  --ink-bright: #ffe6c2;
-  --ink-dim: #a06d24;
-  --accent: #ffab2e;
-  --hostile: #ff6a4d;
-  --friendly: #7fd4ff;
-  --unknown: #fff07a;
-  --warn: #ffcb57;
-  --good: #ffd98a;
-  --shadow: 0 0 12px rgba(255, 171, 46, .18);
-  --glow: 0 0 6px rgba(255, 171, 46, .5);
-  --scanline-alpha: .07;
-
-  --metal: #756b5c;
-  --metal-hi: #8e8372;
-  --metal-lo: #524a3f;
-  --metal-edge: #322c24;
-  --engrave: #f7ecd8;
-  --engrave-dim: #cdbfa5;
-  --plate: #443c31;
-  --lamp-off: #4a4237;
-  --screw: #a2957f;
-  --tube-face: #000000;
-  --well: #16100a;
-  --paper: #100b05;
-}
-
+/*
+ * There is one phosphor, and it is the green set above.
+ *
+ * An amber block used to sit here and four of the twelve watches were fought
+ * on it. It made those four look like a reskin of the other eight rather than
+ * like a different night, which is the opposite of what it was for; watches
+ * are told apart by the echelon's hardware, the hour, the weather, the map and
+ * the order on the board. The set below is not a second phosphor: it is the
+ * flat tactical panel the national echelon works on, with no persistence, no
+ * scanlines and no bloom — a different kind of display, not a different colour
+ * of the same one.
+ */
 [data-theme="ops-modern"] {
   --bg: #0b0e13;
   --bg-panel: #121721;

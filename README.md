@@ -522,9 +522,9 @@ Narrative pressure: off** keeps every mechanic and drops the file entries.
 
 Eleven watches across four appointments, each teaching one thing and then never
 letting you forget it, and a twelfth that only some records ever see. Each names
-its own console theme, so the campaign visibly changes hardware as it escalates.
+its own hardware, so the campaign visibly changes equipment as it escalates.
 
-**Act I — battalion command.** *Green phosphor. Four batteries in one valley.*
+**Act I — battalion command.** *A cathode-ray cabin. Four batteries in one valley.*
 
 | Watch | Teaches |
 |---|---|
@@ -532,7 +532,7 @@ its own console theme, so the campaign visibly changes hardware as it escalates.
 | Low Riders | The radar horizon. Low contacts arrive close and stay close |
 | Solo Battery | The whole engagement loop from the seat, alone *(operator only)* |
 
-**Act II — sector command.** *Amber phosphor, then the tactical display. A sector,
+**Act II — sector command.** *The same cabin, a bigger board. A sector,
 its radars, and more contacts than you have rounds.*
 
 | Watch | Teaches |

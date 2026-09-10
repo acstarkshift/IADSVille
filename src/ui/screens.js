@@ -379,8 +379,18 @@ export function renderDebrief(host, state, result, entry) {
       <p class="subtitle">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
     `}
 
-    <div class="debrief-cols">
-    <div class="card">
+    ${/*
+     * The score is one band of six across the page, not a column of two rows
+     * of three.
+     *
+     * It was the left half of a two-column band, so six cells wrapped 3+3 in a
+     * 420px column while the GROUND card beside it was four tight rows — the
+     * two cards never shared a baseline and GROUND ended on ninety pixels of
+     * empty panel. Six figures read as a rack when they are a rack; the ground
+     * and the arithmetic below it are two tables of similar height and pair
+     * properly with each other instead.
+     */ ''}
+    <div class="card score-card">
       <h3>Score</h3>
       <div class="score-grid${result.abandoned ? ' is-unscored' : ''}">
         ${/*
@@ -403,6 +413,7 @@ export function renderDebrief(host, state, result, entry) {
         earned or lost: the watch was not stood.</p>` : ''}
     </div>
 
+    <div class="debrief-cols">
     <div class="card">
       <h3>Ground</h3>
       ${/* Nothing on the ground was defended on a watch nobody stood, so the
@@ -429,8 +440,9 @@ export function renderDebrief(host, state, result, entry) {
         ${result.battery.crewLosses} crew casualties,
         ${Math.round(result.battery.exposure * 100)}% emissions exposure.</p>` : ''}
     </div>
-    </div>
 
+    ${/* The arithmetic pairs with the ground: two tables of a similar height,
+         side by side, each hugging its own content. */ ''}
     ${(() => {
     // A card with a heading and nothing under it is furniture. It happens on
     // an abandoned watch, where every line of the arithmetic is zero by
@@ -453,6 +465,7 @@ export function renderDebrief(host, state, result, entry) {
       </table>
     </div>`;
   })()}
+    </div>
 
     ${result.abandoned
     ? abandonedRecord(state.campaign.character, result)

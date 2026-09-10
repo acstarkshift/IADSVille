@@ -81,7 +81,7 @@ function paint(host, html) {
  */
 export function clearPanelCache(els) {
   for (const host of [els.trackList, els.batteryList, els.crewConsole,
-    els.formationList, els.masterLamps, els.boardState]) {
+    els.formationList, els.masterLamps, els.boardState, els.actionBar]) {
     if (host) host.__painted = null;
   }
 }
@@ -111,18 +111,18 @@ function roundEtaFor(world, site) {
  *
  * The caption used to be the Cyrillic over the English — two lines to say one
  * thing, on an annunciator whose whole job is to be read from the corner of
- * an eye. `short` is the same caption for a bar that has run out of room; the
- * topbar's three master lamps carry one and drop to it below 1400px rather
- * than wrapping the cluster onto a second row.
+ * an eye. It is one English word, spelled out, at every width: an annunciator
+ * that abbreviates itself to RAD / ARM / FLT when the window narrows is a code
+ * nobody was taught, and this row is the console's primary status.
  */
-function lamp(entry, lit, { colour = '', blinking = false, caption = null, short = '' } = {}) {
+function lamp(entry, lit, { colour = '', blinking = false, caption = null } = {}) {
   const classes = ['lamp', lit ? 'is-lit' : '', colour ? `is-${colour}` : '', blinking ? 'blinking' : '']
     .filter(Boolean).join(' ');
   const text = caption ?? entry.en;
   return `<span class="${classes}" title="${esc(`${entry.tm} · ${entry.en}`)}${
     entry.hint ? esc(` — ${entry.hint}`) : ''}">
     <span class="lamp-dome"></span>
-    <span class="lamp-cap"><b>${esc(text)}</b>${short ? `<i>${esc(short)}</i>` : ''}</span></span>`;
+    <span class="lamp-cap"><b>${esc(text)}</b></span></span>`;
 }
 
 /**
@@ -329,43 +329,118 @@ export function renderTopbar(world, ui, els) {
    *
    * At 1280 the three lamps used to wrap onto a second row underneath the
    * works plate while the whole right-hand cluster stayed on row one, leaving
-   * an L-shaped bar with a dead gutter in it. They carry both captions now and
-   * the CSS drops to the short one rather than letting the cluster wrap; the
-   * ARM countdown survives the shortening, because it is the most time-critical
-   * number on the console.
+   * an L-shaped bar with a dead gutter in it. The fix was to swap all three
+   * captions for three-letter stubs below 1400 — RAD / ARM / FLT — which is
+   * the console's primary status row reduced to a code the player is never
+   * taught, with FLT for FAULT reading as "flight" on a screen full of
+   * aircraft. The words are spelled at every width now; the room comes out of
+   * the speed rack, which lost the dim second line it did not need.
    */
   paint(els.masterLamps, [
-    lamp(STATUS.radiating, anyRadiating, { colour: 'green', short: 'RAD' }),
+    lamp(STATUS.radiating, anyRadiating, { colour: 'green' }),
     lamp(STATUS.armWarning, armInbound, {
       colour: 'red', blinking: true,
       caption: armInbound ? `${STATUS.armWarning.en} ${Math.ceil(soonestArm)}s` : STATUS.armWarning.en,
-      short: armInbound ? `ARM ${Math.ceil(soonestArm)}s` : 'ARM',
     }),
-    lamp(STATUS.fault, faulted, { colour: 'amber', short: 'FLT' }),
+    lamp(STATUS.fault, faulted, { colour: 'amber' }),
   ].join(''));
 
   /*
-   * Who is sitting here, on one card rather than two.
+   * Who is sitting here: the issued identity card, in its slot.
    *
-   * These were two separate plates of different heights, set side by side with
-   * their own borders and their own baselines, and the operator's name — the
-   * one string on the console that is about the player — was cut off mid-glyph
-   * at the edge of its box. One card, two lines on one left margin, the name
-   * given the width it needs: rank and name above, the appointment under it.
+   * It began as two clipped plates, became one flat rectangle with a coloured
+   * left edge, and in both shapes it printed a Cyrillic word ahead of every
+   * English one — "стрелец · recruit", "командир дивизиона BATTALION
+   * COMMANDER" — which is the littering the player asked to have scaled back,
+   * in the one strip he reads every second of every watch.
+   *
+   * What it is now is a card: rank insignia printed on the left, the name in
+   * the size a name is printed in, rank and appointment under it in one
+   * English line, sitting at an oblique angle in a slot in the console (see
+   * .id-slot in hud.css). The Cyrillic that belongs to a person — the
+   * operator's own name — stays, because it is his name.
    */
   if (els.operatorPlate && world.character
     && els.operatorPlate.dataset.name !== world.character.name) {
     els.operatorPlate.dataset.name = world.character.name;
-    const rank = rankOf(world.character);
-    els.operatorPlate.innerHTML = `<b>${esc(rank.tm)} · ${esc(rank.en)}</b>`
-      + `<span class="id-name">${esc(world.character.name)}</span>`;
+    els.operatorPlate.innerHTML = `<span class="id-name">${esc(world.character.name)}</span>`;
   }
-  if (els.echelonPlate && els.echelonPlate.dataset.echelon !== world.echelon.id) {
-    els.echelonPlate.dataset.echelon = world.echelon.id;
-    els.echelonPlate.innerHTML = `<b>${esc(world.echelon.appointment.tm)}</b>`
-      + `<span>${esc(world.echelon.appointment.en)}</span>`;
+  if (els.rankInsignia && world.character
+    && els.rankInsignia.dataset.rank !== String(world.character.rankIndex)) {
+    els.rankInsignia.dataset.rank = String(world.character.rankIndex);
+    const rank = rankOf(world.character);
+    els.rankInsignia.innerHTML = rankInsignia(world.character.rankIndex);
+    els.rankInsignia.title = `${rank.tm} · ${rank.en}`;
+  }
+  const post = world.character
+    ? `${rankOf(world.character).en} · ${world.echelon.appointment.en}`
+    : world.echelon.appointment.en;
+  if (els.echelonPlate && els.echelonPlate.dataset.post !== post) {
+    els.echelonPlate.dataset.post = post;
+    els.echelonPlate.textContent = post;
     els.echelonPlate.title = `${world.echelon.tm} · ${world.echelon.en}`;
   }
+}
+
+/**
+ * The rank insignia printed on the identity card, drawn rather than named.
+ *
+ * Sixteen ranks, one shoulder board, and a rule the player can read off the
+ * card without a table: bars across the board are enlisted service, a stripe
+ * down it is a commission, and stars are seniority within the commission.
+ *
+ *   0–5  recruit to master sergeant — that many transverse bars
+ *   6     warrant officer — one longitudinal stripe, no stars
+ *   7–10  junior lieutenant to captain — one stripe, one to four small stars
+ *   11–13 major to colonel — two stripes, one to three small stars
+ *   14–15 general officer — a bare board and one or two large stars
+ *
+ * Inline SVG in the console's own engraving colours, so it themes with
+ * everything else and costs nothing to load.
+ */
+export function rankInsignia(rankIndex = 0) {
+  const i = Math.max(0, Math.min(15, Math.round(rankIndex)));
+  const parts = [];
+  const star = (cx, cy, r) => {
+    const pts = [];
+    for (let k = 0; k < 10; k++) {
+      const rad = k % 2 ? r * 0.44 : r;
+      const a = (Math.PI / 5) * k - Math.PI / 2;
+      pts.push(`${(cx + rad * Math.cos(a)).toFixed(2)},${(cy + rad * Math.sin(a)).toFixed(2)}`);
+    }
+    return `<polygon points="${pts.join(' ')}" fill="var(--engrave)"/>`;
+  };
+  if (i <= 5) {
+    for (let k = 0; k < i; k++) {
+      parts.push(`<rect x="3.5" y="${7 + k * 4.4}" width="15" height="2.2" fill="var(--engrave)"/>`);
+    }
+  } else {
+    const stripes = i === 6 ? 1 : i <= 10 ? 1 : i <= 13 ? 2 : 0;
+    for (let k = 0; k < stripes; k++) {
+      parts.push(`<rect x="${stripes === 1 ? 9.9 : 7.4 + k * 5}" y="4" width="2.2" height="24"
+        fill="var(--engrave)" opacity=".85"/>`);
+    }
+    const small = i >= 7 && i <= 10 ? i - 6 : i >= 11 && i <= 13 ? i - 10 : 0;
+    for (let k = 0; k < small; k++) parts.push(star(11, 24.5 - k * 6.2, 2.7));
+    if (i >= 14) for (let k = 0; k < i - 13; k++) parts.push(star(11, 20 - k * 9, 4.6));
+  }
+  /*
+   * The board itself is woven, not painted: a recruit's board carries no bars
+   * at all, and a bare rectangle at 16×23 reads as a missing graphic rather
+   * than as the beginning of a career. The lay of the braid is drawn under
+   * whatever the rank puts on top of it, so the object exists at rank zero.
+   */
+  const braid = Array.from({ length: 11 },
+    (_, k) => `<line x1="2" y1="${3.5 + k * 2.6}" x2="20" y2="${1.2 + k * 2.6}"
+      stroke="var(--engrave-dim)" stroke-width=".55" opacity=".28"/>`).join('');
+  return `<svg viewBox="0 0 22 32" width="17" height="25" aria-hidden="true">
+    <rect x="1" y="1" width="20" height="30" rx="3" fill="var(--plate)" stroke="var(--metal-edge)"/>
+    <clipPath id="rk-board"><rect x="1.6" y="1.6" width="18.8" height="28.8" rx="2.6"/></clipPath>
+    <g clip-path="url(#rk-board)">${braid}</g>
+    <rect x="2.5" y="2.5" width="17" height="27" rx="2" fill="none"
+      stroke="var(--engrave-dim)" stroke-width=".7" opacity=".55"/>
+    ${parts.join('')}
+  </svg>`;
 }
 
 /* --------------------------------------------------------- flight strip */
@@ -665,7 +740,37 @@ function renderBoardState(world, ui, els, { tracks, unpaired, mine }) {
     const cold = mine.length - armed.length;
     return cold > 0 ? ` · ${cold} ${cold === 1 ? 'battery' : 'batteries'} cannot fire` : '';
   })()}</div>
-    ${groundState(world)}`);
+    ${groundState(world)}
+    ${pictureSources(world, ui)}`);
+}
+
+/**
+ * Where the picture is coming from, on the panel the picture is on.
+ *
+ * Nothing paints until a set radiates, and the seat's whole first lesson is
+ * that — but the only place on the console that said whether a surveillance
+ * set was up was its own card, at the far end of the opposite panel, behind a
+ * scrollbar. So an operator watching an empty board had to cross the console
+ * to find out whether the board was empty or the antenna was cold, and when a
+ * set was destroyed mid-raid the picture simply got worse with no statement of
+ * why. Two lines under the ground, on the panel that goes blind.
+ */
+function pictureSources(world, ui) {
+  // The cabin fights on its own antenna and is told so elsewhere; this is the
+  // net's picture, which is assembled out of the surveillance sets.
+  if (ui.view === 'crew') return '';
+  const sets = world.radars.filter((r) => !r.siteId);
+  if (!sets.length) return '';
+  const rows = sets.map((radar) => {
+    const nomenclature = Object.values(EQUIPMENT).find((e) => e.en.includes(radar.label));
+    const state = !radar.alive ? STATUS.destroyed.en
+      : radar.state === 'warming' ? STATUS.warming.en
+        : radar.on ? STATUS.radiating.en : 'COLD';
+    const cls = !radar.alive ? 'is-lost' : radar.on ? '' : 'is-hurt';
+    return `<div class="bs-row ${cls}"><span>${esc(nomenclature?.en ?? radar.label)}</span>`
+      + `<b>${esc(state)}</b></div>`;
+  }).join('');
+  return `<div class="bs-head is-second">THE PICTURE</div>${rows}`;
 }
 
 /**
@@ -765,15 +870,26 @@ export function renderFormations(world, ui, els) {
     const saturated = showSpan && held >= limit;
 
     return `<div class="fmn is-${state}${saturated ? ' is-saturated' : ''}" data-formation="${formation.id}">
-      <div class="fmn-head">
-        <span class="lg"><b>${esc(formation.tm)}</b><i>${esc(formation.en)}</i></span>
-        <span class="fmn-state">${esc(
+      ${/*
+     * The head of a formation card is built like the head of a battery card:
+     * the English name on the left, the Cyrillic nomenclature on a plate at
+     * the right. It was the other way round and in a different idiom —
+     * ДИВИЗИОН ГЛАВНОГО ШТАБА over a dim "Headquarters battalion" — so one
+     * scrolling column carried two naming systems, Cyrillic-first at the top
+     * and English-first below it, on cards of the same size.
+     */ ''}
+      <div class="fmn-head unit-head">
+        <span class="unit-name">${esc(formation.en.toUpperCase())}</span>
+        <span class="unit-type is-plate" title="${esc(formation.en)}">${esc(formation.tm)}</span>
+      </div>
+      ${/* Who is actually commanding it, on its own instrument line rather
+           than squeezed into the head beside a name and a plate. */ ''}
+      <div class="fmn-state"><label>COMMAND</label><b>${esc(
     handover > 0 ? `HANDOVER ${Math.ceil(handover)}s`
       : formation.hq ? 'YOURS'
         : formation.direct ? 'UNDER YOUR HAND'
           : saturated ? 'HANDS FULL'
-            : (formation.commander?.name ?? 'SUBORDINATE'))}</span>
-      </div>
+            : (formation.commander?.name ?? 'SUBORDINATE'))}</b></div>
       <div class="fmn-figures">
         <span><label>BTY</label>${alive.length}/${sites.length}</span>
         <span><label>ROUNDS</label>${rounds}</span>
@@ -831,9 +947,9 @@ function renderReserve(world) {
       + `(${Math.ceil(c.arrivesAtS - world.t)}s)`)
     .join(', ');
   return `<div class="fmn is-reserve">
-    <div class="fmn-head">
-      <span class="lg"><b>STRATEGIC RESERVE</b></span>
-      <span class="fmn-state">${world.reserve.rounds} ROUNDS HELD</span>
+    <div class="fmn-head unit-head">
+      <span class="unit-name">STRATEGIC RESERVE</span>
+      <span class="unit-type is-plate">${world.reserve.rounds} ROUNDS HELD</span>
     </div>
     ${transit ? `<div class="fmn-figures"><span><label>ON THE ROAD</label>${transit}</span></div>` : ''}
     <div class="fmn-controls">
@@ -1009,7 +1125,12 @@ export function renderBatteries(world, ui, els) {
     const eta = roundEtaFor(world, site);
     return eta !== null ? ` · ${esc(STATUS.inFlight.en)} ${Math.ceil(eta)}s` : '';
   })()}
-          <span class="lo">· ${type.minRangeKm}–${type.maxRangeKm} KM · ${Math.round(type.minAltM)}–${Math.round(type.maxAltM).toLocaleString('en-US')} M</span></span>
+          ${/* A range is one figure and may not be broken across two lines.
+               This read "· 6–120 KM · 120–" over "25,000 M" on a rack 230px
+               wide — a numeric span cut in half at the hyphen. Each envelope
+               is its own unbreakable unit; the line breaks at the middot. */ ''}
+          <span class="lo"><span class="nb">· ${type.minRangeKm}–${type.maxRangeKm} KM</span>
+            <span class="nb">· ${Math.round(type.minAltM)}–${Math.round(type.maxAltM).toLocaleString('en-US')} M</span></span></span>
       </div>
       ${reloadBar(site, type)}
 
@@ -1099,9 +1220,48 @@ export function renderBatteries(world, ui, els) {
   }).join('');
 
   paint(els.batteryList, surveillance + units);
+
+  /*
+   * Which card the keyboard is pointed at, said at the head of the rack.
+   *
+   * The key chips are printed on the selected battery's caps and on no other —
+   * twenty-four legends for six keys was unreadable — but the caps on the cards
+   * below look identically live, and nothing on the panel said that Q, W, E and
+   * R follow the highlight. The rack head says it, and names the card, so the
+   * answer is one glance rather than a hunt for chips.
+   */
+  if (els.rackKeys) {
+    const target = ui.view === 'crew' ? null
+      : batteryOrder(world).find((s) => s.id === ui.selectedSiteId)
+        ?? batteryOrder(world).find((s) => s.id === world.homeBatteryId);
+    const text = ui.view === 'crew' ? '' : target ? `KEYS → ${target.name}` : '';
+    if (els.rackKeys.textContent !== text) els.rackKeys.textContent = text;
+  }
 }
 
 /* -------------------------------------------------------- crew console */
+
+/**
+ * The second line on the launch cap: what the cap is waiting for.
+ *
+ * Short enough to be engraved, and it always says something — a cap that is
+ * ready says how many rounds it will fire from, and a cap that is dead says
+ * which of the four reasons it is dead for. Both are things the operator was
+ * otherwise reading off three different rows above it.
+ */
+function fireCapNote(site, status, unfit, noTarget) {
+  if (status.state === 'guiding') return `${status.roundsUp} ROUNDS IN FLIGHT`;
+  if (!site.alive) return 'BATTERY DESTROYED';
+  if (site.readyRounds <= 0) return 'RAILS EMPTY';
+  if (noTarget) return 'NO TARGET DESIGNATED';
+  if (unfit) return String(unfit).toUpperCase();
+  if (status.canFire) {
+    return `${site.readyRounds} ON THE RAILS · SALVO ${site.salvoSize}`;
+  }
+  if (status.holding) return 'HOLDING FOR RANGE';
+  if (status.state === 'reacting') return 'CREW PREPARING';
+  return 'NO FIRING SOLUTION';
+}
 
 /**
  * The operator's own panel: the engagement sequence on the left of their brain,
@@ -1202,11 +1362,23 @@ export function renderCrewConsole(world, ui, els) {
       <div class="crew-row crew-tubes">${legend(CONTROLS.launch, { inline: true })}${tubes(site)}</div>
       ${reloadBar(site, type)}
 
+      ${/*
+     * The launch cap, with something on it.
+     *
+     * The legend was one 76×17 word floating in a 291×48 cap — six times its
+     * own type block — which reads as a blank plate somebody stencilled in the
+     * middle. A launch cap on hardware carries its state under its verb, and
+     * this one has a state worth carrying: how many rounds are on the rails,
+     * or what is stopping it. It is also `data-act="fire"` rather than an id
+     * the handler looks up by name, so the thumb rail can carry the same cap.
+     */ ''}
       <button class="pb pb-fire ${status.canFire && (status.pkEstimate === null || status.pkEstimate >= 0.5) ? 'is-armed' : ''}" id="btn-fire"
+        data-act="fire" data-site="${site.id}"
+        title="${esc(fireCapNote(site, status, unfit, noTarget))}"
         ${status.canFire ? '' : 'disabled'}>
         ${status.state === 'guiding'
-    ? `<span class="lg"><b>${status.roundsUp} IN FLIGHT</b>${status.roundEtaS !== null ? `<i>${Math.ceil(status.roundEtaS)}s TO INTERCEPT</i>` : ''}</span>`
-    : legend(CONTROLS.launch, { key: 'F' })}
+    ? `<span class="lg lg-stack"><b>${status.roundsUp} IN FLIGHT</b>${status.roundEtaS !== null ? `<i>${Math.ceil(status.roundEtaS)}s TO INTERCEPT</i>` : ''}</span>`
+    : legend(CONTROLS.launch, { key: 'F', sub: fireCapNote(site, status, unfit, noTarget) })}
       </button>
 
       ${unfit ? `<div class="unit-row unit-unfit" title="Why this battery cannot take the selected contact">
@@ -1239,8 +1411,125 @@ export function renderCrewConsole(world, ui, els) {
       ${site.crewLosses ? `<div class="crew-row is-hot">${legend(STATUS.crew, { inline: true })}
         <b>${site.crewLosses} CASUALTIES</b></div>` : ''}
 
-      <div class="placard">${esc(PLATES.warning.tm)}<br>${esc(PLATES.warning.en)}</div>
+      ${/*
+     * The foot of the cabin: the plates the cabin was built with.
+     *
+     * Below the high-voltage placard there used to be a hundred and forty
+     * pixels of blank painted panel at 950, and two hundred and thirty at
+     * 1080 — dead metal under a column whose controls all sat in the top two
+     * thirds. A real cabin has its works plates down there, riveted where
+     * they were riveted at the factory, and they anchor the bottom of the
+     * column the way the bezel's plate anchors the scope. This is also the
+     * one place on the console Cyrillic belongs: stamped nomenclature, with
+     * its gloss under it.
+     */ ''}
+      <div class="cabin-foot">
+        <span class="data-plate">
+          <b>${esc(nomenclature ? nomenclature.tm : type.label)}</b><br>
+          ${esc(nomenclature ? nomenclature.en : type.label)}<br>
+          <b>${esc(PLATES.works.tm)}</b><br>${esc(glossWord(PLATES.works))}<br>
+          <b>${esc(PLATES.standard.tm)}</b><br>${esc(PLATES.standard.en)}
+        </span>
+        ${/* The factory and its works number are riveted to the bezel four
+             inches away; this plate carries what belongs to the CABIN. */ ''}
+        <div class="cabin-foot-right">
+          <div class="placard">${esc(PLATES.warning.tm)}<br>${esc(PLATES.warning.en)}</div>
+        </div>
+      </div>
     </div>`);
+}
+
+/* ------------------------------------------------------------ thumb rail */
+
+/**
+ * The verbs of the watch, on the glass, for a hand with no keyboard.
+ *
+ * At phone widths the picture panel is gone and the rack is a third of a short
+ * screen that scrolls, so the launch cap was off the bottom of a scroller in
+ * portrait and off the screen entirely in landscape — there was no way to fire
+ * a round with a finger. Two of the seat's verbs were worse than that: stepping
+ * the board and handing a contact over existed only as arrow keys and Shift+1,
+ * which on a phone is not slow, it is impossible.
+ *
+ * This is those verbs, docked above the ticker, never scrolling, thumb-sized.
+ * It is built at every width and hidden by the stylesheet above 900px, so the
+ * same console grows one when the window is narrowed and loses it when it is
+ * widened, and nothing else on the page has to know.
+ *
+ * The emissions control is a two-position switch here as it is everywhere else:
+ * up is RADIATE, down is SILENCE, both engraved, one press to throw.
+ */
+export function renderActionBar(world, ui, els, cabin) {
+  const host = els.actionBar;
+  if (!host) return;
+  host.hidden = false;
+  // Whether this console has a rail is the stylesheet's decision, and the
+  // stylesheet's answer is read back off the box rather than duplicated as a
+  // breakpoint here: a console that is not showing one is not asked to build
+  // one eight times a second.
+  if (host.offsetParent === null) return;
+
+  const crewed = cabin ? world.siteById.get(world.control.crewedBatteryId) : null;
+  const track = ui.selectedTrackId ? world.tracks.get(ui.selectedTrackId) : null;
+
+  // What the rail says it is pointed at. A rail whose caps act on "the
+  // selection" has to print the selection, or it is four unlabelled verbs.
+  const aimed = track ? `${track.tn} ${track.classification === 'unknown'
+    ? track.hostility.toUpperCase() : String(track.classification).toUpperCase()}`
+    : 'NO CONTACT SELECTED';
+
+  const caps = [];
+  caps.push(press(CONTROLS.nextTarget, {
+    act: 'step-target', disabled: world.tracks.size === 0,
+    title: 'Step to the next contact on the board',
+  }));
+
+  if (crewed) {
+    const status = engagementStatus(world, crewed, track);
+    const unfit = track && crewed.alive ? cannotEngageReason(world, crewed, track) : null;
+    caps.push(press(CONTROLS.lock, {
+      act: 'lock', site: crewed.id, disabled: !!unfit || !track,
+      title: unfit ? `Cannot lock: ${unfit}` : 'Put a channel on the selected contact',
+    }));
+    caps.push(press(CONTROLS.launch, {
+      act: 'fire', site: crewed.id, disabled: !status.canFire,
+      extra: `pb-fire pb-rail${status.canFire ? ' is-armed' : ''}`,
+      title: fireCapNote(crewed, status, unfit, !track),
+    }));
+  } else {
+    /*
+     * The net seat's launch is an assignment: the batteries fire themselves,
+     * and handing a contact to one is the decision. The cap names the battery
+     * it will hand it to, which is the card the rack is highlighting.
+     */
+    const target = batteryOrder(world).find((s) => s.id === ui.selectedSiteId)
+      ?? batteryOrder(world).find((s) => s.id === world.homeBatteryId)
+      ?? world.sites[0];
+    const already = target && track
+      && target.engagements.some((en) => en.trackId === track.id);
+    caps.push(press(
+      { tm: CONTROLS.assign.tm, en: already ? 'RELEASE' : CONTROLS.assign.en },
+      {
+        act: 'assign', site: target?.id, disabled: !track || !target,
+        // Only the cap that COMMITS a battery wears the committing colour;
+        // taking one off again is an ordinary cap.
+        extra: already ? 'pb-rail' : 'pb-fire pb-rail',
+        title: target ? `${already ? 'Take' : 'Hand'} the selected contact `
+          + `${already ? 'off' : 'to'} ${target.name}` : 'No battery on your net',
+      },
+    ));
+  }
+
+  const radar = crewed ? world.radarsOf(crewed).find((r) => r.alive)
+    : world.radars.filter((r) => !r.siteId && r.alive)[0];
+  if (radar) {
+    caps.push(switch2(CONTROLS.radiate, CONTROLS.silence, !!radar.on, crewed
+      ? { act: 'emcon', site: crewed.id, disabled: !crewed.alive }
+      : { act: 'emcon-radar', radar: radar.id }));
+  }
+
+  paint(host, `<div class="ab-aim"><label>SELECTED</label><b>${esc(aimed)}</b></div>
+    <div class="ab-caps">${caps.join('')}</div>`);
 }
 
 /* ------------------------------------------------------------ event log */

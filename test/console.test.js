@@ -166,10 +166,24 @@ describe('one control, one key, one legend', () => {
       assert.ok(!CYRILLIC.test(html.replace(/<em class="kc">.*?<\/em>/, '')),
         `the ${entry.en} control legend still carries Cyrillic`);
     }
-    // The one exception is a face that is a figure rather than a word: the
-    // speed rack is marked 1× 2× 4× with the word for it underneath.
-    assert.equal(legend(CONTROLS.speedFast), '<span class="lg lg-stack"><b>2×</b><i>FAST</i></span>');
+    /*
+     * And it is ONE line. The speed rack used to carry a dim REAL / FAST / MAX
+     * under its figure, which built three caps in a six-cap rail to a
+     * different height from the other three and put their key chips somewhere
+     * else — four control treatments in four hundred pixels, on the one strip
+     * that has to read as a single piece of hardware. The word said nothing
+     * the figure did not.
+     */
+    assert.equal(legend(CONTROLS.speedFast), '<span class="lg lg-stack"><b>2×</b></span>');
     assert.equal(legend(CONTROLS.speedHold), '<span class="lg lg-stack"><b>HOLD</b></span>');
+    for (const entry of Object.values(CONTROLS)) {
+      assert.doesNotMatch(legend(entry), /<i>/,
+        `the ${entry.en} cap carries a second line it did not ask for`);
+    }
+    // A caller may still hand a cap a state line — the launch cap says what it
+    // is waiting for under its verb — and that is a decision at the call site,
+    // not a property of the nomenclature.
+    assert.match(legend(CONTROLS.launch, { sub: 'RAILS EMPTY' }), /<i>RAILS EMPTY<\/i>/);
   });
 
   test('every key chip is printed in capitals', () => {

@@ -26,7 +26,7 @@ import { CrewConsole } from './console.js';
 import { Audio } from './audio.js';
 import {
   renderTopbar, renderTrackList, renderFlightStrip, renderFormations, renderBatteries, renderCrewConsole,
-  renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, stampLegends,
+  renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, renderActionBar, stampLegends,
   clearPanelCache, RANGE_SCALES, batteryOrder,
 } from './panels.js';
 import { CONTROLS, POSTURE_CYCLE, legend } from './lexicon.js';
@@ -151,6 +151,9 @@ function cacheEls() {
     viewToggle: id('view-toggle'),
     masterLamps: id('master-lamps'),
     operatorPlate: id('operator-plate'),
+    rankInsignia: id('rank-insignia'),
+    rackKeys: id('rack-keys'),
+    actionBar: id('action-bar'),
     scopeSide: id('scope-side'),
     abortAsk: id('abort-ask'),
     abortLine: id('abort-line'),
@@ -606,6 +609,10 @@ function render(now, frameDtS = 1 / 60) {
       const cabin = !!world.control.crewedBatteryId && ui.view === 'crew';
       if (cabin) renderCrewConsole(world, ui, els);
       else els.crewConsole.hidden = true;
+      // The thumb rail. Built at every width; the stylesheet decides whether
+      // this console has one, so a window dragged narrow grows it and a window
+      // dragged wide loses it without the panels knowing anything about it.
+      renderActionBar(world, ui, els, cabin);
       // With the cabin up the rack is reference, not the control surface: it
       // yields the column so LOCK and the launch cap stay on the screen.
       els.batteryList.classList.toggle('is-secondary', cabin);
@@ -625,8 +632,8 @@ function render(now, frameDtS = 1 / 60) {
 /*
  * A dark console shows the theme's own black. Read from BODY: the theme is
  * stamped on <body>, so asking documentElement for --bg returned the green
- * phosphor default on every watch — the amber and modern sets blanked to a
- * colour from a console they are not.
+ * phosphor default on every watch — the flat tactical panel blanked to a
+ * colour from a console it is not.
  */
 function clearCanvas() {
   const ctx = els.canvas.getContext('2d');
@@ -1144,14 +1151,57 @@ function operate(ctl) {
  * physical cap does.
  */
 let pressArmed = null;
+let pressFrom = null;
+
+/*
+ * How far a finger may travel and still be the same press.
+ *
+ * A mouse pointer sits exactly where it was put. A finger does not, and neither
+ * does the panel under it. Three things happen on a phone that do not happen
+ * with a mouse: a thumb on a cap rolls three or four pixels between contact and
+ * release; the panel scrolls a little under a finger that has not moved at all,
+ * so the cap is no longer where the finger is; and if the browser decides that
+ * roll was a pan it takes the pointer away and sends `pointercancel` instead of
+ * `pointerup`. Requiring the release to land on the control — which is what
+ * this did — therefore meant that on a phone a great many taps committed
+ * nothing at all, silently, which is how the game came to have no way to fire a
+ * round with a finger. A press that never really moved is the press it started
+ * as, however it ended; a deliberate slide off the cap is longer than that and
+ * still cancels, the way a physical cap does.
+ */
+const PRESS_SLOP_PX = 16;
+/* And a cancelled press only counts if it was a tap, not the start of a drag. */
+const PRESS_TAP_MS = 700;
 
 function beginPress(e) {
+  // A right or middle button is not a press. `e.button` is 0 for every touch
+  // and pen contact, so this does not exclude a finger.
   if (e.button !== 0) return;
   ui.pressHeld = true;
   ui.pressHeldAt = performance.now();
   const ctl = controlUnder(e.target);
   pressArmed = ctl && !ctl.disabled ? ctl : null;
+  pressFrom = { x: e.clientX, y: e.clientY, at: performance.now() };
   if (pressArmed) pressArmed.classList.add('is-pressed');
+}
+
+/** Is this release still the press that started on `ctl`? */
+function pressLands(ctl, e) {
+  if (!ctl?.isConnected) return false;
+  const moved = pressFrom && Number.isFinite(e.clientX)
+    ? Math.hypot(e.clientX - pressFrom.x, e.clientY - pressFrom.y) : Infinity;
+  const heldMs = pressFrom ? performance.now() - pressFrom.at : Infinity;
+  // Still on the cap it started on: a press, whatever the pointer did in
+  // between. `elementFromPoint` rather than the event's target, because the
+  // node under the finger may have been rebuilt since it went down.
+  if (e.type === 'pointerup' && Number.isFinite(e.clientX)) {
+    const over = document.elementFromPoint(e.clientX, e.clientY);
+    if (over && ctl.contains(over)) return true;
+  }
+  // Or it never really moved. This is the touch case: the panel scrolled a
+  // hair under a stationary thumb and the browser cancelled the pointer, or
+  // the release landed a few pixels off the cap's edge.
+  return moved <= PRESS_SLOP_PX && heldMs <= PRESS_TAP_MS;
 }
 
 function endPress(e) {
@@ -1159,13 +1209,12 @@ function endPress(e) {
   const wasHeld = ui.pressHeld;
   pressArmed = null;
   ui.pressHeld = false;
-  if (!wasHeld) return;
+  if (!wasHeld) { pressFrom = null; return; }
   if (ctl) {
     ctl.classList.remove('is-pressed');
-    const over = e.type === 'pointerup' && Number.isFinite(e.clientX)
-      ? document.elementFromPoint(e.clientX, e.clientY) : null;
-    if (over && ctl.isConnected && ctl.contains(over)) operate(ctl);
+    if (pressLands(ctl, e)) operate(ctl);
   }
+  pressFrom = null;
   // Lift the freeze and repaint on the very next frame.
   ui.lastPanelAt = 0;
 }
@@ -1185,7 +1234,8 @@ function wirePanelInput() {
     if (e.target.closest?.('button')) e.preventDefault();
   });
 
-  for (const host of [els.trackList, els.batteryList, els.crewConsole, els.formationList]) {
+  for (const host of [els.trackList, els.batteryList, els.crewConsole, els.formationList,
+    els.actionBar]) {
     host.addEventListener('pointerdown', beginPress);
     /*
      * And the keyboard's own press. A click with `detail === 0` was not made
@@ -1273,7 +1323,7 @@ function runAction(act, siteId, radarId, formationId, stateArg) {
    * may say to a formation you are not standing in is its standing order, and
    * that is a formation-level control, not a battery-level one.
    */
-  if (site && !world.commandable(site.id) && act !== 'lock') return;
+  if (site && !world.commandable(site.id) && act !== 'lock' && act !== 'fire') return;
 
   /*
    * The console makes a noise when you operate it. Everything here was silent,
@@ -1349,8 +1399,49 @@ function runAction(act, siteId, radarId, formationId, stateArg) {
       }
       assignSelected(site.id);
       break;
+    /*
+     * The launch cap, as an action rather than as an id.
+     *
+     * `#btn-fire` used to be operated by name in `operate()`, which meant the
+     * one verb in the game that fires a round was the one control that could
+     * not be put anywhere else on the console. It carries `data-act="fire"`
+     * now, so the cabin's cap and the thumb rail's cap are the same control
+     * built twice, and both make the same noise and go through the same guard.
+     */
+    case 'fire': if (crewedBattery()) world.fire(crewedBattery(), ui.selectedTrackId); break;
+    /*
+     * And the two verbs that only ever existed on the keyboard — stepping the
+     * board, and handing the selected contact over. A phone has no arrow keys
+     * and no Shift+1, so on a phone these were not slow, they were impossible.
+     */
+    case 'step-target': stepTrack(1); break;
+    case 'assign': if (siteId) assignSelected(siteId); break;
     default: break;
   }
+}
+
+/** The battery the player is sitting in, or null on a net-only watch. */
+function crewedBattery() {
+  return world?.control.crewedBatteryId ?? null;
+}
+
+/**
+ * Walk the board, one contact at a time.
+ *
+ * The rows are read in the order the panel drew them — which is the order the
+ * shootlists group them in — so a contact under two batteries is stepped
+ * through under both. Shared by the arrow keys and by the thumb rail's NEXT
+ * TARGET cap, because they are the same act.
+ */
+function stepTrack(dir) {
+  const rows = [...els.trackList.querySelectorAll('li[data-track]')];
+  if (!rows.length) return;
+  const ids = rows.map((r) => r.dataset.track);
+  const at = ids.indexOf(ui.selectedTrackId);
+  const next = dir > 0 ? (at + 1) % ids.length : (at <= 0 ? ids.length - 1 : at - 1);
+  ui.selectedTrackId = ids[next];
+  rows[next].scrollIntoView({ block: 'nearest' });
+  ui.lastPanelAt = 0;
 }
 
 /**
@@ -1504,20 +1595,10 @@ function wireGlobalInput() {
         cap.focus();
         break;
       }
-      case 'arrowdown': case 'arrowup': {
-        const rows = [...els.trackList.querySelectorAll('li[data-track]')];
-        if (!rows.length) break;
+      case 'arrowdown': case 'arrowup':
         e.preventDefault();
-        const ids = rows.map((r) => r.dataset.track);
-        const at = ids.indexOf(ui.selectedTrackId);
-        const next = e.key === 'ArrowDown'
-          ? (at + 1) % ids.length
-          : (at <= 0 ? ids.length - 1 : at - 1);
-        ui.selectedTrackId = ids[next];
-        rows[next].scrollIntoView({ block: 'nearest' });
-        ui.lastPanelAt = 0;
+        stepTrack(e.key === 'ArrowDown' ? 1 : -1);
         break;
-      }
       /*
        * From here down a key is the cap.
        *

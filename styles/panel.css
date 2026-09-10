@@ -39,8 +39,9 @@
  * meant four. The Cyrillic moved to the plates, where a plate can be read at
  * leisure; what is left here got the space back, as size.
  *
- * `i` is the quiet second line, used only where the face of a control is a
- * figure and the word for it goes underneath: 1× REAL, 2× FAST, 4× MAX.
+ * `i` is the quiet second line, used where a cap carries its state under its
+ * verb: the launch cap says what it is waiting for, and the nomenclature
+ * plates put their gloss under the stencil.
  */
 .lg { display: inline-flex; flex-direction: column; line-height: 1.15; }
 .lg b {
@@ -221,9 +222,6 @@
   font-size: 9.5px; letter-spacing: .08em; color: var(--engrave-dim);
 }
 .lamp-cap b { font-weight: 700; }
-/* The short caption, for a bar that has run out of room. Only the topbar's
-   master annunciator carries one; see the topbar rules in hud.css. */
-.lamp-cap i { display: none; }
 .lamp-dome {
   width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto;
   background: radial-gradient(circle at 34% 30%, rgba(255,255,255,.28), var(--lamp-off) 62%);
@@ -308,22 +306,51 @@
 .pb:disabled .lg b, .pb:disabled .lg i { color: var(--engrave-dim); text-shadow: none; }
 
 /*
- * A cap that is not a cap: the one control on the bar that ends the watch.
+ * The guarded cap: the one control on the console that cannot be undone.
  *
- * LEAVE POST was the widest and brightest thing in the topbar — a filled,
- * bevelled, moulded cap sitting in the same weight class as the speed rack,
- * which is the whole visual grammar of this console pointed at its one
- * destructive verb. It is a legend on bare metal now, dim, and no wider than
- * the words it carries. It still asks before it acts.
+ * LEAVE POST has been both wrong things. It was the widest, brightest, most
+ * raised cap in the topbar — the console's whole visual grammar pointed at its
+ * one destructive verb — and the correction demoted it to bare dim text with
+ * no housing, no border and no ground, so on a strip of machined caps it read
+ * as a caption and the player could not see it was a button at all.
+ *
+ * A guarded switch on real hardware is neither. It is the same cap as its
+ * neighbours, in the same rail, at the same height — and it is SUNK into its
+ * housing rather than standing out of it, ringed in the alarm colour, with the
+ * hazard hatching painted on the housing beside it. You can see it is a
+ * control, you can see it is not one of the ordinary ones, and you have to
+ * mean it. It still asks before it acts.
  */
-.pb-quiet {
-  background: none; box-shadow: none; border-color: transparent;
-  min-width: 0; padding: 4px 6px 3px;
+.pb-danger {
+  background:
+    repeating-linear-gradient(135deg,
+      color-mix(in srgb, var(--hostile) 32%, transparent) 0 4px,
+      transparent 4px 9px) left / 9px 100% no-repeat,
+    linear-gradient(180deg, var(--metal-lo), var(--metal-edge));
+  border-color: color-mix(in srgb, var(--hostile) 70%, var(--metal-edge));
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, .6),
+    inset 0 0 0 1px color-mix(in srgb, var(--hostile) 22%, transparent),
+    0 1px 0 rgba(255, 255, 255, .06);
+  padding-left: 15px;
 }
-.pb-quiet .lg b { color: var(--engrave-dim); font-size: 9.5px; letter-spacing: .12em; text-shadow: none; }
-.pb-quiet:hover:not(:disabled) { filter: none; }
-.pb-quiet:hover:not(:disabled) .lg b { color: var(--hostile); }
-.pb-quiet:active, .pb-quiet.is-pressed { transform: none; box-shadow: none; }
+/* Engraved, with a warning in the ink — not alarm text. The cap must read as
+   the dangerous one without being the brightest thing on the bar. */
+.pb-danger .lg b { color: color-mix(in srgb, var(--hostile) 32%, var(--engrave-dim)); }
+.pb-danger:hover:not(:disabled) {
+  filter: none;
+  border-color: var(--hostile);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, .6),
+    inset 0 0 0 1px color-mix(in srgb, var(--hostile) 45%, transparent),
+    0 0 10px color-mix(in srgb, var(--hostile) 40%, transparent);
+}
+.pb-danger:hover:not(:disabled) .lg b { color: var(--hostile); }
+/* Already sunk: pressing it presses it further in, it does not fall. */
+.pb-danger:active, .pb-danger.is-pressed {
+  transform: none;
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, .8), inset 0 0 0 1px var(--hostile);
+}
 
 /* The launch button is red, guarded, and larger than everything near it. */
 /* One line instead of two cost the cap nine pixels of height; it takes them
@@ -443,10 +470,21 @@
   font-size: 11px; letter-spacing: .1em; color: var(--engrave); font-weight: 700;
   flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+/*
+ * The nomenclature plate. `overflow: hidden` is here to put an ellipsis on a
+ * name too long for the rack, and it was clipping the LINE BOX as well as the
+ * column: at the default leading the breve on Й was cut clean off, so the two
+ * surviving Russian-looking legends on the console read «ШИРОКИИ ГЛАЗ» and
+ * «НИЗКИИ ВЗГЛЯД» — the one place the game speaks Cyrillic, misspelled, at
+ * every device scale. The line box is taller than the tallest glyph now.
+ */
 .unit-type {
   font-size: 9px; letter-spacing: .08em; color: var(--engrave-dim);
+  line-height: 1.65;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 52%;
 }
+/* A figure that may not be broken: an envelope, a range, a bearing. */
+.nb { white-space: nowrap; }
 /* Bilingual lines are twice as long as monolingual ones; where the gloss
    matters more than the single-line layout, let it wrap instead of truncate. */
 .unit-type.wrap {
