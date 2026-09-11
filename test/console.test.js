@@ -21,6 +21,7 @@ import {
   CONTROLS, POSTURE_CYCLE, EQUIPMENT, legend, keycap, nomenclatureFor, callsignOf,
 } from '../src/ui/lexicon.js';
 import { RADAR_TYPES } from '../src/engine/config.js';
+import { seatPicture } from '../src/ui/panels.js';
 import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, radarNamesIn } from '../src/ui/tutorial.js';
 
 const watch = (id, opts = {}) => new World(scenarioById(id), { role: 'net', seed: 5, ...opts });
@@ -321,5 +322,49 @@ describe('the console a watch actually fits', () => {
     const caps = consoleCaps(undefined);
     assert.equal(caps.salvo, true);
     assert.equal(caps.displace, false);
+  });
+});
+
+describe('the rail steps this seat’s list', () => {
+  /*
+   * The player: "By removing the graphical launch button you now can't launch
+   * on mobile." On a phone the rail is the console, and its NEXT TARGET cap
+   * steps through the list this seat is looking at. In the cabin that list is
+   * the battery's own picture — what its radar holds, plus what the net has
+   * cued it onto — which fills later than the sector's. The cap used to
+   * light on the sector's count, so on a two-seat watch a thumb that tapped
+   * it while the cabin's list was still empty got nothing. The rule is one
+   * function now, and this holds both halves of it.
+   */
+  test('the cabin’s picture is its own radar’s, and empty while that radar is cold', () => {
+    const world = watch('ville-under-fire', { role: 'both' });
+    const site = world.siteById.get(world.control.crewedBatteryId);
+    assert.ok(site, 'the two-seat watch crews a battery');
+    for (const radar of world.radarsOf(site)) world.setRadar(radar.id, false);
+    // The sector's sets bring up the picture; the cabin's own set is cold.
+    for (let t = 0; t < 600 && world.tracks.size === 0; t += 0.5) world.step(0.5);
+    assert.ok(world.tracks.size > 0, 'the sector holds a track');
+    assert.ok(seatPicture(world, { view: 'net' }).length > 0, 'the net’s list has the sector’s track');
+    assert.equal(seatPicture(world, { view: 'crew' }).length, 0,
+      'the cabin’s list is empty while its own radar holds nothing — so NEXT TARGET must be dead there');
+  });
+
+  test('the picture arrives on the cabin’s list when its own radar holds it', () => {
+    const world = watch('ville-under-fire', { role: 'both' });
+    const site = world.siteById.get(world.control.crewedBatteryId);
+    for (const radar of world.radarsOf(site)) world.setRadar(radar.id, true);
+    let mine = [];
+    for (let t = 0; t < 900 && mine.length === 0; t += 0.5) {
+      world.step(0.5);
+      mine = seatPicture(world, { view: 'crew' });
+    }
+    assert.ok(mine.length > 0, 'the crewed battery’s own radar picked something up inside fifteen minutes');
+    const own = new Set(world.radarsOf(site).map((r) => r.id));
+    for (const track of mine) {
+      assert.ok(track.sources.some((id) => own.has(id)) || track.assignedTo.includes(site.id),
+        `${track.tn} is on the cabin’s list but neither held by its radar nor cued to it`);
+    }
+    // And the net still sees everything, in the same order the sector sorts it.
+    assert.ok(seatPicture(world, { view: 'net' }).length >= mine.length);
   });
 });

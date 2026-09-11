@@ -623,17 +623,33 @@ export function answerableBy(world, sites, track) {
   });
 }
 
-export function renderTrackList(world, ui, els) {
-  let tracks = sortedTracks(world);
-
-  // In the operator's seat the panel is their battery's picture: what their own
-  // radar holds, plus what the net has cued them onto. Seeing the whole sector
-  // here would undo the isolation the seat is built around.
+/**
+ * The contacts this seat's list holds.
+ *
+ * On the net it is the sector's picture. In the operator's seat it is their
+ * battery's own: what their radar holds, plus what the net has cued them
+ * onto — seeing the whole sector from the cabin would undo the isolation the
+ * seat is built around. One function rather than a filter inside the list,
+ * because the NEXT TARGET cap steps through this list and has to be dead when
+ * it is empty. It used to light on `world.tracks.size`, so on a two-seat
+ * watch the cabin's cap was live while the cabin's own list was still empty
+ * — measured on Ville Under Fire at 4×: the sector's first track at 13 s, the
+ * first row on the cabin list at 74 s — and a thumb that tapped it in
+ * between got nothing, which on a phone with no keyboard reads as a console
+ * that does not work.
+ */
+export function seatPicture(world, ui) {
+  const tracks = sortedTracks(world);
   if (ui.view === 'crew' && world.control.crewedBatteryId) {
     const site = world.siteById.get(world.control.crewedBatteryId);
-    tracks = tracks.filter((t) => world.radarsOf(site).some((r) => t.sources.includes(r.id))
+    return tracks.filter((t) => world.radarsOf(site).some((r) => t.sources.includes(r.id))
       || t.assignedTo.includes(site.id));
   }
+  return tracks;
+}
+
+export function renderTrackList(world, ui, els) {
+  const tracks = seatPicture(world, ui);
   const rowFor = (track, ownerId = null) => {
     const brg = Math.round(bearing({ x: 0, y: 0 }, track.pos));
     const rng = Math.round(len(track.pos));
@@ -2098,8 +2114,11 @@ export function renderActionBar(world, ui, els, cabin) {
     : 'NO CONTACT SELECTED';
 
   const caps = [];
+  // Live only when there is a row on this seat's list to step to — the
+  // cabin's list fills later than the sector's, and a cap that lights before
+  // it can do anything is a cap a thumb learns to distrust.
   caps.push(press(CONTROLS.nextTarget, {
-    act: 'step-target', disabled: world.tracks.size === 0,
+    act: 'step-target', disabled: seatPicture(world, ui).length === 0,
     title: 'Step to the next contact on the board',
   }));
 
@@ -2158,6 +2177,23 @@ export function renderActionBar(world, ui, els, cabin) {
     caps.push(switch2(CONTROLS.radiate, CONTROLS.silence, !!radar.on, crewed
       ? { act: 'emcon', site: crewed.id, disabled: !crewed.alive }
       : { act: 'emcon-radar', radar: radar.id }));
+  }
+
+  /*
+   * The seat, on a watch that has two.
+   *
+   * The commander's seat toggle lives in the topbar, and the phone does not
+   * draw that part of the topbar — measured at 390x844 and 844x390 on the
+   * two-seat watch, the toggle was 0x0 — so from the net view there was no
+   * way to the cabin, which is the only view with a LAUNCH cap. A narrow cap
+   * at the end of the rail, sized to its two words rather than sharing the
+   * row equally, so NEXT TARGET, LOCK, LAUNCH and the switch keep their
+   * width. Whether the watch has two seats is the topbar toggle's own
+   * answer, read off it rather than duplicated here.
+   */
+  if (els.viewToggle && !els.viewToggle.hidden) {
+    const entry = cabin ? CONTROLS.seatNet : CONTROLS.seatCabin;
+    caps.push(press(entry, { act: 'seat', extra: 'pb-seat', title: entry.hint }));
   }
 
   paint(host, `<div class="ab-aim"><label>SELECTED</label><b>${esc(aimed)}</b></div>

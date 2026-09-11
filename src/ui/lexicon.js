@@ -112,6 +112,16 @@ export const CONTROLS = {
   takeConsole: { tm: 'ЗАНЯТЬ ПОСТ', en: 'TAKE A CONSOLE' },
   backToNet: { tm: 'НА СЕТЬ', en: 'BACK TO THE NET' },
   /*
+   * The same two verbs at the width of a thumb, for the rail. On a phone the
+   * topbar's seat toggle is not drawn at all, so a commander who took a
+   * console had no way from the net view to the cabin and its LAUNCH cap —
+   * the one seat where the phone genuinely could not launch. The rail
+   * carries the seat now, in two words, so the four verbs beside it keep
+   * their width.
+   */
+  seatCabin: { tm: 'В КАБИНУ', en: 'TO CABIN', hint: 'take your own battery’s console' },
+  seatNet: { tm: 'НА СЕТЬ', en: 'TO NET', hint: 'back to the sector picture' },
+  /*
    * The four speed caps. They live here rather than as literals in the markup
    * so that each one can carry its key — the number stencilled on the cap is
    * the number that selects it, which it was not: the keyboard used to map the

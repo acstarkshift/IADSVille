@@ -881,6 +881,22 @@ from the console, and a test in `test/console.test.js` keeps them gone. The
 engraved one-word legends — READY, RADIATING, INBOUND ARM, LOCK, LAUNCH — stay,
 with a plain sentence in each one's tooltip.
 
+On a phone there is no keyboard, and the console is played by touch alone.
+Under 900px a thumb rail docks above the ticker and never scrolls, carrying
+whichever verbs the seat cannot be played without: NEXT TARGET, LOCK, LAUNCH
+and the radar switch in the cabin; NEXT TARGET, ASSIGN and the switch on the
+net; and, on a watch with two seats, TO CABIN / TO NET, because the topbar's
+seat toggle is not drawn at that width and the cabin is the only view with a
+LAUNCH cap. A tap commits the control it started on even if the thumb rolled
+a few pixels or the panel moved under it. NEXT TARGET lights only when the
+seat's own list has a row to step to — the cabin's list is the battery's own
+picture and fills later than the sector's — so a live cap always does
+something when tapped; the switch on the rail is as wide as its engraved
+legends and never narrower. `tools/smoke.js` drives all three seats end to
+end with touch only, in portrait and landscape, with taps that roll between
+contact and release, and fails if a legend is clipped, a live cap selects
+nothing, or a round does not leave a rail.
+
 **Battle manager:** click a contact to select it, drag it onto a battery to
 assign the engagement, right-click a radar to switch it on or off. `Q`, `W` and
 `E` are the three weapons caps — hold, tight, free — three adjacent keys for

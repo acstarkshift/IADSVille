@@ -1795,13 +1795,29 @@ table.ledger .down { color: var(--hostile); }
   .ab-caps > * { flex: 1 1 0; min-width: 0; min-height: 46px; }
   .ab-caps .pb { display: flex; align-items: center; justify-content: center; padding: 5px 4px; }
   .ab-caps .pb .lg { align-items: center; text-align: center; width: 100%; }
+  /*
+   * A legend wraps before it loses letters. The caps are 46px tall, which is
+   * two lines of this type, and on the five-cap rail of a two-seat watch
+   * NEXT TARGET was being cut to NEXT TAR… — a control that cannot say its
+   * own name. It sets on two lines there and on one everywhere else.
+   */
   .ab-caps .pb .lg b {
-    font-size: 10px; letter-spacing: .04em;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+    font-size: 10px; letter-spacing: .04em; line-height: 1.15;
+    white-space: normal; overflow-wrap: normal; max-width: 100%;
   }
   .ab-caps .pb .lg i { font-size: 7.5px; }
   .ab-caps .pb-rail { padding: 5px 4px; margin-top: 0; }
-  .ab-caps .sw { padding: 3px 5px; gap: 5px; }
+  /* The seat cap is as wide as its two words and no wider, so the four
+     verbs that share the rest of the rail do not each lose a fifth. */
+  .ab-caps .pb-seat { flex: 0 0 auto; padding: 5px 9px; }
+  /*
+   * The switch is as wide as its engraved legends, never narrower. Sharing
+   * the row equally gave it 73px on the five-cap rail of a two-seat phone
+   * in portrait and RADIATE was cut to RADIAT… — a switch whose positions
+   * are labelled permanently cannot lose the label. The verbs beside it
+   * share what is left, and NEXT TARGET sets on two lines when it must.
+   */
+  .ab-caps .sw { flex: 0 0 auto; padding: 3px 7px 3px 5px; gap: 5px; }
   .ab-caps .sw-pos { font-size: 9.5px; line-height: 13px; padding: 0 4px; }
   .ab-caps .sw-body { width: 13px; height: 21px; }
   .ab-caps .sw-lever { height: 9px; width: 6px; margin-left: -3px; }

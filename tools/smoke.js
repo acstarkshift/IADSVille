@@ -217,9 +217,18 @@ async function main() {
  * at phone widths. It was not — the launch cap sat off the bottom of a
  * scrolling panel in portrait and off the screen entirely in landscape, and a
  * tap that moved the panel a pixel was cancelled and committed nothing, so
- * there was no way to fire a round with a finger. This drives the crew seat
- * end to end using only `touchscreen.tap`, in both orientations, and fails if
- * a control the watch needs is off screen, or if no round leaves the rail.
+ * there was no way to fire a round with a finger. This drives every seat a
+ * watch can be fought from, end to end, using only touch, in both
+ * orientations, and fails if a control the watch needs is off screen, if a
+ * tap that rolled a few pixels does not commit, or if no round leaves a rail.
+ *
+ * Three seats, because a launch is possible from three:
+ *   the cabin (Solo Battery, crew) — NEXT TARGET, LOCK, LAUNCH;
+ *   the net (First Light, net) — NEXT TARGET, ASSIGN, and the battery fires;
+ *   the commander (Ville Under Fire, both) — the seat cap on the rail, which
+ *   is the only way to a LAUNCH cap on a phone, where the topbar's seat
+ *   toggle is not drawn; then the cabin's own NEXT TARGET, LOCK, LAUNCH,
+ *   and the seat cap back to the net.
  */
 async function touchRun(browser) {
   const failures = [];
@@ -227,23 +236,30 @@ async function touchRun(browser) {
     { name: 'portrait', viewport: { width: 390, height: 844 } },
     { name: 'landscape', viewport: { width: 844, height: 390 } },
   ];
+  const runs = [
+    { mission: 'solo-battery', role: 'crew' },
+    { mission: 'first-light', role: 'net' },
+    { mission: 'ville-under-fire', role: 'both' },
+  ];
   for (const seat of seats) {
-    const context = await browser.newContext({
-      ...seat, deviceScaleFactor: 3, hasTouch: true, isMobile: true,
-    });
-    const page = await context.newPage();
-    const errors = [];
-    page.on('pageerror', (e) => errors.push(`PAGEERROR: ${e.message}`));
-    page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
-    await page.addInitScript((seed) => {
-      try {
-        window.localStorage.setItem('iadsville.campaign.v1', JSON.stringify({ completed: seed }));
-      } catch { /* the run fails on the missing mission button instead */ }
-    }, recordFor('solo-battery'));
+    for (const run of runs) {
+      const context = await browser.newContext({
+        ...seat, deviceScaleFactor: 3, hasTouch: true, isMobile: true,
+      });
+      const page = await context.newPage();
+      const label = `touch/${run.role}/${seat.name}`;
+      const errors = [];
+      page.on('pageerror', (e) => errors.push(`PAGEERROR: ${e.message}`));
+      page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+      await page.addInitScript((seed) => {
+        try {
+          window.localStorage.setItem('iadsville.campaign.v1', JSON.stringify({ completed: seed }));
+        } catch { /* the run fails on the missing mission button instead */ }
+      }, recordFor(run.mission));
+      const cdp = await context.newCDPSession(page);
 
-    /** Tap a control where it is. `scroll` only for the full-page screens. */
-    const tap = async (selector, { scroll = false } = {}) => {
-      const at = await page.evaluate(([sel, doScroll]) => {
+      /** Where a control is, and whether a finger can reach it right now. */
+      const locate = (selector, scroll = false) => page.evaluate(([sel, doScroll]) => {
         const el = document.querySelector(sel);
         if (!el) return { state: 'absent' };
         if (doScroll) el.scrollIntoView({ block: 'center' });
@@ -252,73 +268,173 @@ async function touchRun(browser) {
         if (r.top < 0 || r.bottom > window.innerHeight) return { state: 'off-screen' };
         return { state: el.disabled ? 'disabled' : 'ready', x: r.x + r.width / 2, y: r.y + r.height / 2 };
       }, [selector, scroll]);
-      if (at.state === 'ready') await page.touchscreen.tap(at.x, at.y);
-      return at.state;
-    };
 
-    try {
-      await page.goto(ORIGIN, { waitUntil: 'networkidle' });
-      if (await page.isVisible('#enlist-confirm')) {
-        await tap('[data-background="academy"]', { scroll: true });
-        await tap('[data-household="mother"]', { scroll: true });
-        await tap('#enlist-confirm', { scroll: true });
-        await page.waitForSelector('[data-mission]');
-      }
-      await tap('[data-mission="solo-battery"]', { scroll: true });
-      await tap('[data-role="crew"]', { scroll: true });
-      await tap('#btn-brief', { scroll: true });
-      await tap('#btn-start', { scroll: true });
-      await page.waitForSelector('#scope');
-      await wait(400);
+      /** Tap a control where it is. `scroll` only for the full-page screens. */
+      const tap = async (selector, { scroll = false } = {}) => {
+        const at = await locate(selector, scroll);
+        if (at.state === 'ready') await page.touchscreen.tap(at.x, at.y);
+        return at.state;
+      };
 
-      // Every verb below is on the rail, and every one is reached by tap only.
-      const emissions = await tap('.ab-caps .sw');
-      if (emissions !== 'ready') failures.push(`touch/${seat.name}: emissions switch ${emissions}`);
-      await wait(400);
-      if (!await page.evaluate(() => window.__world.radars.some((r) => r.on))) {
-        failures.push(`touch/${seat.name}: tapping the emissions switch did not bring a set up`);
-        await page.evaluate(() => {
-          for (const r of window.__world.radars) window.__world.setRadar(r.id, true);
-        });
-      }
-      await tap('[data-speed="4"]');
-      await page.waitForFunction(() => window.__world.tracks.size > 0, null, { timeout: 90000 });
-      await wait(400);
+      /**
+       * A thumb that rolls: contact here, release six pixels away. That is
+       * what most real taps are, and it is the case that used to commit
+       * nothing — the browser reads the roll as the start of a pan and sends
+       * pointercancel instead of pointerup. Driven through CDP because
+       * Playwright's tap is a perfect one.
+       */
+      const rolledTap = async (selector) => {
+        const at = await locate(selector);
+        if (at.state !== 'ready') return at.state;
+        const start = [{ x: at.x, y: at.y }];
+        const end = [{ x: at.x + 4, y: at.y + 5 }];
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: start });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: end });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        return 'ready';
+      };
 
-      const step = await tap('.ab-caps [data-act="step-target"]');
-      if (step !== 'ready') failures.push(`touch/${seat.name}: NEXT TARGET ${step}`);
-      await wait(300);
-      if (!await page.evaluate(() => window.__ui.selectedTrackId)) {
-        failures.push(`touch/${seat.name}: NEXT TARGET selected nothing`);
-      }
-      const lock = await tap('.ab-caps [data-act="lock"]');
-      if (lock === 'absent' || lock === 'off-screen') {
-        failures.push(`touch/${seat.name}: LOCK ${lock}`);
-      }
-
-      // The launch cap arms when the solution is ready; tap it until it takes.
-      let fired = 0;
-      let sawCap = false;
-      for (let i = 0; i < 40 && fired === 0; i++) {
-        await wait(700);
-        const state = await tap('.ab-caps [data-act="fire"]');
-        if (state === 'absent' || state === 'off-screen') {
-          failures.push(`touch/${seat.name}: LAUNCH ${state}`);
-          break;
+      /** Wait for a control to be live, then tap it (the rail repaints at a few hertz). */
+      const tapWhenLive = async (selector, timeoutMs, tapper = tap) => {
+        const until = Date.now() + timeoutMs;
+        let state = 'absent';
+        while (Date.now() < until) {
+          state = (await locate(selector)).state;
+          if (state === 'ready') return tapper(selector);
+          if (state === 'absent' || state === 'off-screen') return state;
+          await wait(250);
         }
-        sawCap = true;
-        fired = await page.evaluate(() => window.__world.stats.roundsFired);
+        return state;
+      };
+
+      try {
+        await page.goto(ORIGIN, { waitUntil: 'networkidle' });
+        if (await page.isVisible('#enlist-confirm')) {
+          await tap('[data-background="academy"]', { scroll: true });
+          await tap('[data-household="mother"]', { scroll: true });
+          await tap('#enlist-confirm', { scroll: true });
+          await page.waitForSelector('[data-mission]');
+        }
+        await tap(`[data-mission="${run.mission}"]`, { scroll: true });
+        await tap(`[data-role="${run.role}"]`, { scroll: true });
+        await tap('#btn-brief', { scroll: true });
+        await tap('#btn-start', { scroll: true });
+        await page.waitForSelector('#scope');
+        await wait(400);
+
+        if (run.role === 'both') {
+          /*
+           * The commander's phone: the topbar's seat toggle is not drawn at
+           * this width, so the rail carries the seat. One tap into the cabin
+           * puts LOCK and LAUNCH on the rail, and from there the watch is
+           * fought exactly as the crew seat is, below.
+           */
+          const seatCap = await tap('.ab-caps [data-act="seat"]');
+          if (seatCap !== 'ready') failures.push(`${label}: seat cap ${seatCap}`);
+          await wait(400);
+          const view = await page.evaluate(() => window.__ui.view);
+          if (view !== 'crew') failures.push(`${label}: the seat cap did not take the console (view ${view})`);
+          for (const sel of ['.ab-caps [data-act="lock"]', '.ab-caps [data-act="fire"]', '.ab-caps .sw']) {
+            const at = await locate(sel);
+            if (at.state === 'absent' || at.state === 'off-screen') failures.push(`${label}: ${sel} ${at.state} in the cabin`);
+          }
+        }
+
+        /*
+         * Every legend on the rail is whole. A control that cannot show its
+         * own name is not a control: on the five-cap rail the switch's
+         * RADIATE was once cut to RADIAT… and NEXT TARGET to NEXT TAR….
+         */
+        const cut = await page.$$eval('.ab-caps > *', (caps) => caps.filter((c) => {
+          const b = c.querySelector('.lg b') ?? c;
+          const legends = [...c.querySelectorAll('.sw-pos')];
+          return b.scrollWidth > b.clientWidth + 1 || legends.some((l) => l.scrollWidth > l.clientWidth + 1);
+        }).map((c) => c.textContent.replace(/\s+/g, ' ').trim()));
+        if (cut.length) failures.push(`${label}: rail legend clipped: ${cut.join(', ')}`);
+
+        // Every verb below is on the rail, and every one is reached by tap only.
+        const emissions = await tap('.ab-caps .sw');
+        if (emissions !== 'ready') failures.push(`${label}: emissions switch ${emissions}`);
+        await wait(400);
+        if (!await page.evaluate(() => window.__world.radars.some((r) => r.on))) {
+          failures.push(`${label}: tapping the emissions switch did not bring a set up`);
+          await page.evaluate(() => {
+            for (const r of window.__world.radars) window.__world.setRadar(r.id, true);
+          });
+        }
+        await tap('[data-speed="4"]');
+        await page.waitForFunction(() => window.__world.tracks.size > 0, null, { timeout: 90000 });
+
+        /*
+         * NEXT TARGET lights when this seat's list has a row to step to. The
+         * cabin's list is the battery's own picture and fills later than the
+         * sector's — on the two-seat watch about a minute of simulated time
+         * after the first sector track — so the cap is waited for, and a cap
+         * that is live must select something the first time it is tapped.
+         */
+        const step = await tapWhenLive('.ab-caps [data-act="step-target"]', 60000);
+        if (step !== 'ready') failures.push(`${label}: NEXT TARGET ${step}`);
+        await wait(300);
+        if (!await page.evaluate(() => window.__ui.selectedTrackId)) {
+          failures.push(`${label}: NEXT TARGET selected nothing`);
+        }
+
+        let fired = 0;
+        if (run.role !== 'net') {
+          const lock = await tapWhenLive('.ab-caps [data-act="lock"]', 40000, rolledTap);
+          if (lock === 'absent' || lock === 'off-screen') failures.push(`${label}: LOCK ${lock}`);
+          await wait(400);
+          if (!await page.evaluate(() => window.__world.siteById.get(window.__world.control.crewedBatteryId).engagements.length)) {
+            failures.push(`${label}: a rolled tap on LOCK committed nothing`);
+          }
+          // The launch cap arms when the solution is ready; tap it until it
+          // takes — rolled and perfect taps alternately, because both happen.
+          let sawCap = false;
+          for (let i = 0; i < 40 && fired === 0; i++) {
+            await wait(700);
+            const state = await (i % 2 ? rolledTap : tap)('.ab-caps [data-act="fire"]');
+            if (state === 'absent' || state === 'off-screen') {
+              failures.push(`${label}: LAUNCH ${state}`);
+              break;
+            }
+            sawCap = true;
+            fired = await page.evaluate(() => window.__world.stats.roundsFired);
+          }
+          if (sawCap && fired === 0) failures.push(`${label}: no round left the rail by touch in 28 s`);
+        } else {
+          // The net's launch is the assignment: hand the contact over and the
+          // battery fires it. A rolled tap, because that is the one that failed.
+          const assign = await tapWhenLive('.ab-caps [data-act="assign"]', 40000, rolledTap);
+          if (assign !== 'ready') failures.push(`${label}: ASSIGN ${assign}`);
+          await wait(600);
+          if (!await page.evaluate(() => window.__world.sites.some((s) => s.engagements.length))) {
+            failures.push(`${label}: a rolled tap on ASSIGN handed nothing over`);
+          }
+          for (let i = 0; i < 60 && fired === 0; i++) {
+            await wait(700);
+            fired = await page.evaluate(() => window.__world.stats.roundsFired);
+          }
+          if (fired === 0) failures.push(`${label}: the assigned battery fired nothing in 42 s`);
+        }
+        if (run.role === 'both') {
+          // And one tap hands the net back, with its ASSIGN cap.
+          const back = await tap('.ab-caps [data-act="seat"]');
+          await wait(400);
+          if (back !== 'ready' || (await page.evaluate(() => window.__ui.view)) !== 'net') {
+            failures.push(`${label}: the seat cap did not hand the net back`);
+          }
+          if ((await locate('.ab-caps [data-act="assign"]')).state === 'absent') {
+            failures.push(`${label}: ASSIGN missing after returning to the net`);
+          }
+        }
+        if (errors.length) failures.push(`${label}: ${errors.slice(0, 3).join(' | ')}`);
+        console.log(`${failures.length ? '·' : '✓'} ${label} `
+          + `(${seat.viewport.width}x${seat.viewport.height}) — ${fired} round(s) fired by touch`);
+      } catch (err) {
+        failures.push(`${label}: ${String(err).split('\n')[0]}`);
       }
-      if (sawCap && fired === 0) {
-        failures.push(`touch/${seat.name}: no round left the rail by touch in 28 s`);
-      }
-      if (errors.length) failures.push(`touch/${seat.name}: ${errors.slice(0, 3).join(' | ')}`);
-      console.log(`${failures.length ? '·' : '✓'} touch/${seat.name} `
-        + `(${seat.viewport.width}x${seat.viewport.height}) — ${fired} round(s) fired by tap`);
-    } catch (err) {
-      failures.push(`touch/${seat.name}: ${String(err).split('\n')[0]}`);
+      await context.close();
     }
-    await context.close();
   }
   return failures;
 }

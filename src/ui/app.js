@@ -1397,6 +1397,9 @@ function runAction(act, siteId, radarId, formationId, stateArg, trackArg) {
      */
     case 'step-target': stepTrack(1); break;
     case 'assign': if (siteId) assignSelected(siteId); break;
+    // The rail's seat cap is the topbar's V, for a phone that draws no topbar
+    // toggle; `toggleView` already refuses on a watch with one seat.
+    case 'seat': toggleView(); break;
     default: break;
   }
 }
