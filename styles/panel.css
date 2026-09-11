@@ -656,6 +656,17 @@
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, .7);
 }
 
+/* The rails and, beside them, the store they are filled from: the lamps on
+   the left, the count on the right, one row, never wrapping — the store is
+   a figure the operator watches go down all night. */
+.unit-row.unit-rails { flex-wrap: nowrap; justify-content: space-between; }
+.unit-type.store {
+  flex: 0 0 auto; margin-left: auto; white-space: nowrap;
+  font-variant-numeric: tabular-nums; letter-spacing: .08em;
+}
+.unit-type.store b { color: var(--engrave); font-size: 10.5px; }
+/* Empty is news: the count and the loaders' line go to the warning colour. */
+.unit-type.store.is-empty, .unit-type.store.is-empty b { color: var(--hostile); }
 /* Envelope constants on the battery card: true all night, so they defer to
    the numbers that change. */
 .unit-row .lo { opacity: .62; }

@@ -1143,6 +1143,15 @@ A few decisions worth knowing about if you read the source:
   battery gets a round it did not have before; what it gets is the first of
   them in eight seconds instead of sixty-two, tube lamps that go green one at
   a time, and a bar counting down to the next rail rather than to a full rack.
+  Beside the rail lamps, on every card and in the cabin, is the count of
+  rounds **in store** to reload with: the store the watch issued (the type's
+  magazine times the scenario's `storeMult`), one fewer for every rail the
+  loaders fill. At zero it turns the warning colour, the loaders' line reads
+  NONE LEFT TO LOAD, the RELOAD cap greys, and an order that reaches the
+  engine anyway is refused with STORE EMPTY, NOTHING LEFT TO LOAD — a
+  different line from NO RESUPPLY AUTHORISED, which is a watch that was issued
+  no store at all. `test/world.test.js` holds all of it: the issue, the
+  count-down, and that no round ever appears from an empty store.
   Measured over eight seeds in the cabin, competently played, the share of a
   watch with a legal target in reach and nothing on the rails is now 10% on
   Solo Battery and on First Light, and 20% on Low Riders and on Weasel Hour —

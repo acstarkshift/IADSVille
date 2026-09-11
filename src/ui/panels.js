@@ -238,8 +238,25 @@ function tubes(site) {
     if (i < site.readyRounds) return '<i class="is-loaded"></i>';
     return `<i class="${i === loading ? 'is-loading' : 'is-spent'}"></i>`;
   }).join('');
-  return `<span class="tubes" title="${site.readyRounds} of ${capacity} tubes loaded`
-    + ` · ${site.magazine} rounds in store">${lamps}</span>`;
+  return `<span class="tubes" title="${site.readyRounds} of ${capacity} rails loaded`
+    + ` · ${site.magazine} in store to reload with">${lamps}</span>`;
+}
+
+/**
+ * The count beside the rail lamps: how many rounds are on site to reload
+ * with. The player asked for exactly this — "in addition to the display
+ * showing the missiles which are hot in the launchers, there should be a
+ * count of the missiles available on-site to reload" — and the card had it
+ * only as the second half of "8/16 ROUNDS", which reads as eight of sixteen.
+ * It is the store the watch issued, it falls one for each rail the loaders
+ * fill, and at zero it turns the warning colour, because at zero the loaders
+ * do not go out again.
+ */
+function storeCount(site) {
+  const empty = site.magazine <= 0;
+  return `<span class="unit-type store ${empty ? 'is-empty' : ''}"
+      title="${esc(STATUS.magazine.hint)}${empty ? ' — none left, so the rails cannot be reloaded' : ''}">
+    ${esc(STATUS.magazine.en)} <b>${site.magazine}</b></span>`;
 }
 
 /**
@@ -1269,11 +1286,10 @@ export function renderBatteries(world, ui, els) {
         ${armLamp(armEta)}
       </div>
 
-      <div class="unit-row">
+      ${/* The rails, and beside them the rounds on site to fill them from. */ ''}
+      <div class="unit-row unit-rails">
         ${tubes(site)}
-        <span class="unit-type wrap" title="${esc(DEFENCE_CLASSES[type.class].blurb)}">
-          ${esc(DEFENCE_CLASSES[type.class].en)}
-        </span>
+        ${storeCount(site)}
       </div>
       ${/*
      * What the class IS, on the card the operator is actually looking at.
@@ -1287,8 +1303,15 @@ export function renderBatteries(world, ui, els) {
      */ ''}
       ${ui.selectedSiteId === site.id || crewed || (!ui.selectedSiteId && mine)
     ? `<div class="unit-explain">${esc(DEFENCE_CLASSES[type.class].blurb)}</div>` : ''}
+      ${/*
+     * What the battery is, and what it can reach. The class name moved here
+     * from beside the rail lamps, which now carry the store count; the old
+     * "8/16 ROUNDS" that led this row is gone, because the lamps are the
+     * eight and the store figure is the sixteen, each next to what it counts.
+     */ ''}
       <div class="unit-row">
-        <span class="unit-type wrap">${site.readyRounds}/${site.magazine} ROUNDS
+        <span class="unit-type wrap"><span title="${esc(DEFENCE_CLASSES[type.class].blurb)}">${
+  esc(DEFENCE_CLASSES[type.class].en.toUpperCase())}</span>
           · ${esc(STATUS.channels.en)} ${site.engagements.length}/${channelsFor(site)}${(() => {
     // The battery's own most anxious number, on the net side too: seconds
     // until its nearest round in flight arrives. The crew console had this;
@@ -1681,7 +1704,8 @@ export function renderCrewConsole(world, ui, els) {
     ? { label: `${STATUS.loading.en} ${Math.ceil(site.reloadRemainingS)}s`,
       frac: clamp01(1 - site.reloadRemainingS / Math.max(railLoadS(site), 1e-6)),
       mood: 'is-warn' }
-    : { label: site.magazine <= 0 ? 'STORE EMPTY' : 'LOADERS IDLE', frac: 0, mood: '' };
+    : { label: site.magazine <= 0 ? 'NONE LEFT TO LOAD' : 'LOADERS IDLE', frac: 0,
+      mood: site.magazine <= 0 ? 'is-empty' : '' };
 
   /*
    * The battery's condition, in one strip, with one clock.
@@ -1915,8 +1939,15 @@ export function renderCrewConsole(world, ui, els) {
           ${tubes(site)}
           <b>${site.readyRounds}/${railCount}</b>
           <span class="ammo-work">${esc(loaders.label)}</span>
-          <span class="ammo-label ammo-mag">${esc(STATUS.magazine.en)}</span>
-          <b>${site.magazine}</b>
+          ${/*
+       * The store, as one object: its label and its figure wrap together or
+       * not at all. As two flex items the row could break between them —
+       * measured with the loaders out at 1600: IN STORE at the end of the
+       * first line and 17 alone at the start of the second.
+       */ ''}
+          <span class="ammo-mag" title="${esc(STATUS.magazine.hint)}">
+            <span class="ammo-label">${esc(STATUS.magazine.en)}</span>
+            <b class="ammo-store">${site.magazine}</b></span>
           ${/*
        * The loaders' clock as a hairline under the rail lamps rather than as
        * a row of its own that comes and goes. Every row that appeared when
@@ -1940,7 +1971,7 @@ export function renderCrewConsole(world, ui, els) {
           ${press(CONTROLS.reload, { act: 'reload', site: site.id, key: 'R',
     disabled: !canStartLoading(world, site),
     title: canStartLoading(world, site) ? 'Loaders out — fill the rails now'
-      : site.magazine <= 0 ? 'The store is empty'
+      : site.magazine <= 0 ? 'Nothing left in store to load'
         : site.readyRounds >= railCount ? 'The rails are full'
           : displacing ? 'Not while the battery is on the road' : 'The loaders are already out' })}
 

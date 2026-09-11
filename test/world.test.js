@@ -13,7 +13,7 @@ import { World } from '../src/engine/world.js';
 import { scenarioById, SCENARIOS } from '../src/engine/scenarios.js';
 import { SAM_TYPES, AIR_TYPES, DETECTION, ENGAGEMENT } from '../src/engine/config.js';
 import {
-  beginEngagement, fireEngagement, armTimeToImpact, startReload, railLoadS,
+  beginEngagement, fireEngagement, armTimeToImpact, startReload, railLoadS, canStartLoading,
 } from '../src/engine/doctrine.js';
 import { loseCentralControl, consoleDark } from '../src/engine/damage.js';
 import { cannotEngageReason } from '../src/engine/threat.js';
@@ -289,6 +289,68 @@ describe('engagement mechanics', () => {
     assert.notDeepEqual(site.pos, before, 'the battery is somewhere else now');
     assert.equal(world.radarById.get(site.radarId).exposure, 0, 'and the enemy has to find it again');
     assert.ok(site.scootRemainingS > 0);
+  });
+});
+
+describe('the store behind the rack', () => {
+  /*
+   * The player asked for "a count of the missiles available on-site to
+   * reload", and that "you shouldn't be able to reload indefinitely". The
+   * count is the store the scenario issues — the type's magazine scaled by
+   * the watch's own storeMult — it falls by one for every rail the loaders
+   * fill, and at zero the loaders do not go out, however the order arrives.
+   */
+  test('the store is what the scenario issued, and it pays one round per rail', () => {
+    const scenario = scenarioById('solo-battery');
+    assert.ok(scenario.storeMult, 'this watch sets its own store');
+    const world = readyWorld('solo-battery');
+    const site = world.siteById.get(world.homeBatteryId);
+    const type = SAM_TYPES[site.type];
+    const issued = Math.round(type.magazine * world.modifiers.roundsMult * scenario.storeMult);
+    assert.equal(site.magazine, issued, 'the count on the panel is the issue');
+    assert.equal(site.magazineIssued, issued);
+
+    world.setWeaponsState(site.id, 'hold');
+    site.readyRounds = 0;
+    const railS = (type.reloadS / site.rails) * (site.reloadMult ?? 1);
+    for (let n = 1; n <= 3; n++) {
+      run(world, railS * (n === 1 ? 1.1 : 1));
+      assert.equal(site.readyRounds, n, `rail ${n} is loaded`);
+      assert.equal(site.magazine, issued - n, `and the store is down by ${n}`);
+    }
+  });
+
+  test('an empty store refuses the loaders, says so, and stays empty', () => {
+    const world = readyWorld('solo-battery');
+    const site = world.siteById.get(world.homeBatteryId);
+    world.setWeaponsState(site.id, 'hold');
+    site.readyRounds = 0;
+    site.magazine = 0;
+
+    assert.equal(canStartLoading(world, site), false, 'the RELOAD cap is greyed');
+    const before = world.events.length;
+    assert.equal(world.reload(site.id), false, 'the order is refused');
+    const said = world.events.slice(before).map((e) => e.text).join(' | ');
+    assert.match(said, /STORE EMPTY/, `the console says why: ${said}`);
+    assert.doesNotMatch(said, /NO RESUPPLY AUTHORISED/,
+      'that line is for a watch with no store at all, not an exhausted one');
+
+    // Doctrine, which loads a bare rack on its own, has nothing to load either.
+    run(world, SAM_TYPES[site.type].reloadS * 2);
+    assert.equal(site.readyRounds, 0, 'no round appears from nowhere');
+    assert.equal(site.magazine, 0);
+    assert.equal(site.reloadRemainingS, 0, 'and no loading clock is running');
+  });
+
+  test('a watch with no resupply at all still says so in its own words', () => {
+    const world = new World(scenarioById('first-light'), {
+      role: 'net', seed: 3, modifiers: { reloadsAllowed: false },
+    });
+    const site = world.sites[0];
+    assert.equal(site.magazine, 0, 'nothing was issued');
+    const before = world.events.length;
+    assert.equal(world.reload(site.id), false);
+    assert.match(world.events.slice(before).map((e) => e.text).join(' | '), /NO RESUPPLY AUTHORISED/);
   });
 });
 

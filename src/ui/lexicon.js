@@ -210,7 +210,14 @@ export const STATUS = {
    * neither row named after its own subject.
    */
   rails: { tm: 'СТВОЛЫ', en: 'RAILS' },
-  magazine: { tm: 'БОЕЗАПАС', en: 'MAGAZINE' },
+  /*
+   * IN STORE, not MAGAZINE: the player asked for "a count of the missiles
+   * available on-site to reload", and that is what the figure is — the
+   * rounds behind the rack, issued by the watch (`storeMult`), one fewer for
+   * every rail the loaders fill, and when it reads 0 nothing else can be
+   * loaded however the order arrives. MAGAZINE is what the trade calls it.
+   */
+  magazine: { tm: 'БОЕЗАПАС', en: 'IN STORE', hint: 'missiles on site to reload the rails with' },
   /**
    * What the equipment can reach, as engraved reference on the seat's own card.
    *

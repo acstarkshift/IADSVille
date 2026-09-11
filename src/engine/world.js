@@ -1625,13 +1625,23 @@ export class World {
    * bare, so this is not "start the reload" any more — it is the order to send
    * the crew out on a rack that is only half spent, or across a guidance run.
    * It still fails loudly when there is nothing in the store to break out,
-   * because a denied resupply is a plot point and not a UI state.
+   * because a denied resupply is a plot point and not a UI state — and it
+   * says which of the two it is. A watch issued no store at all is NO
+   * RESUPPLY AUTHORISED; a store the battery has used up is STORE EMPTY, and
+   * the count beside the rail lamps has been reading down to that zero all
+   * night. The two used to share one line, so a battery that had fired its
+   * whole issue was told the depot had refused it.
    */
   reload(siteId) {
     const site = this.siteById.get(siteId);
     if (!site) return false;
-    if (!this.modifiers.reloadsAllowed || site.magazine <= 0) {
+    if (!this.modifiers.reloadsAllowed) {
       this.log('warn', `${site.name} — NO RESUPPLY AUTHORISED`, { siteId });
+      return false;
+    }
+    if (site.magazine <= 0) {
+      this.logThrottled(`storeEmpty:${siteId}`, 8, 'warn',
+        `${site.name} — STORE EMPTY, NOTHING LEFT TO LOAD`, { siteId });
       return false;
     }
     return startReload(this, site);

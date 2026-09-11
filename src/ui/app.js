@@ -1342,14 +1342,13 @@ function runAction(act, siteId, radarId, formationId, stateArg, trackArg) {
      */
     case 'reload':
       if (!site) break;
-      // `world.reload` speaks for itself when the store is dry or resupply is
-      // denied; this covers the refusals it returns silently.
+      // `world.reload` speaks for itself when the store is empty or resupply
+      // is denied; this covers the refusals it returns silently.
       if (!world.reload(site.id) && site.magazine > 0 && world.modifiers.reloadsAllowed) {
         world.logThrottled(`noReload:${site.id}`, 8, 'warn',
-          `${site.name} — ${site.magazine <= 0 ? 'STORE EMPTY'
-            : site.scootRemainingS > 0 ? 'ON THE ROAD, LOADERS STAY IN'
-              : site.readyRounds >= railsOf(site) ? 'RAILS ALREADY FULL'
-                : 'LOADERS ARE ALREADY OUT'}`, { siteId: site.id });
+          `${site.name} — ${site.scootRemainingS > 0 ? 'ON THE ROAD, LOADERS STAY IN'
+            : site.readyRounds >= railsOf(site) ? 'RAILS ALREADY FULL'
+              : 'LOADERS ARE ALREADY OUT'}`, { siteId: site.id });
       }
       break;
     case 'scoot':

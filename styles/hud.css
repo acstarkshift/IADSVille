@@ -1037,7 +1037,8 @@ kbd {
   font-size: var(--fs-plate); letter-spacing: var(--tr-wide); color: var(--engrave-dim);
 }
 .cabin-ammo .tubes { flex: 0 1 auto; }
-.ammo-mag { margin-left: auto; }
+/* The store's label and figure are one unbreakable item at the row's right. */
+.ammo-mag { margin-left: auto; flex: 0 0 auto; white-space: nowrap; display: inline-flex; gap: 6px; align-items: baseline; }
 /* What the loaders are doing, in the same row as what they have loaded. */
 /* Inline, on the rails' own row: as a full-width line of its own it cost the
    readouts above another eight pixels to say LOADERS STOWED. */
@@ -1047,6 +1048,9 @@ kbd {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cabin-ammo.is-warn .ammo-work { color: var(--warn); }
+/* Nothing left in store: the count and the loaders' line say so in the
+   colour the panel keeps for things that cannot be fixed from the seat. */
+.cabin-ammo.is-empty .ammo-work, .cabin-ammo.is-empty .ammo-store { color: var(--hostile); }
 .ammo-bar {
   flex: 1 0 100%; height: 3px; margin-top: 1px;
   background: var(--well); border: 1px solid var(--metal-edge);

@@ -558,7 +558,8 @@ export class CrewConsole {
       : world.tracks.get(site.engagements[0]?.trackId);
     const blockL = [
       site.name,
-      `${type.label}  ${site.readyRounds}/${site.magazine} RDS`,
+      // Two counts, each named: "8/20 RDS" read as eight of twenty.
+      `${type.label} · ${site.readyRounds} ON RAILS · ${site.magazine} IN STORE`,
       radar?.state === 'radiating' ? 'RADIATING' : radar?.state === 'warming' ? 'WARMING' : 'SILENT',
       `RANGE SCALE ${Math.round(this.rangeKm)} km`,
     ];
