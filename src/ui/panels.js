@@ -115,14 +115,24 @@ function roundEtaFor(world, site) {
  * that abbreviates itself to RAD / ARM / FLT when the window narrows is a code
  * nobody was taught, and this row is the console's primary status.
  */
-function lamp(entry, lit, { colour = '', blinking = false, caption = null } = {}) {
+function lamp(entry, lit, { colour = '', blinking = false, caption = null,
+  figure = '', title = '' } = {}) {
   const classes = ['lamp', lit ? 'is-lit' : '', colour ? `is-${colour}` : '', blinking ? 'blinking' : '']
     .filter(Boolean).join(' ');
   const text = caption ?? entry.en;
-  return `<span class="${classes}" title="${esc(`${entry.tm} · ${entry.en}`)}${
+  /*
+   * `figure` is a lamp's own readout — the seconds on an ARM warning — kept
+   * OUT of the caption. Appended to it, 'INBOUND ARM ACQ 14s' overran a
+   * half-width annunciator cell and the browser ellipsised the legend itself,
+   * so the one lamp that means run printed as 'INBOUND ARM ACQ 1…'. The
+   * engraved legend never moves and never truncates; the figure sits in its
+   * own column beside it.
+   */
+  return `<span class="${classes}" title="${esc(title || `${entry.tm} · ${entry.en}`)}${
     entry.hint ? esc(` — ${entry.hint}`) : ''}">
     <span class="lamp-dome"></span>
-    <span class="lamp-cap"><b>${esc(text)}</b></span></span>`;
+    <span class="lamp-cap"><b>${esc(text)}</b></span>${
+  figure ? `<b class="lamp-fig">${esc(figure)}</b>` : ''}</span>`;
 }
 
 /**
@@ -1422,18 +1432,33 @@ function channelRow(entry, focusedTrackId) {
       <span class="chan-fig"></span>
     </div>`;
   }
+  /*
+   * Range, rounds up, and whichever clock this channel is on: the crew's
+   * reaction before it is ready, then the round's time of flight once one is
+   * in the air. Rounds-up is always printed on a busy channel — the column
+   * used to appear only when a round was actually up, so the operator could
+   * not tell a channel holding two rounds from one holding none without
+   * watching the figure change.
+   */
   const figures = [
     entry.rangeKm !== null ? `${Math.round(entry.rangeKm)} km` : '',
-    entry.roundsUp ? `${entry.roundsUp} UP` : '',
-    // Whichever clock this channel is on: the crew's reaction before it is
-    // ready, then the round's time of flight once one is in the air.
+    `${entry.roundsUp} UP`,
     entry.etaS !== null ? `${Math.ceil(entry.etaS)}s`
       : entry.timerS > 0 ? `${entry.timerS.toFixed(1)}s` : '',
   ].filter(Boolean).join(' · ');
-  return `<button class="chan is-live ${entry.trackId === focusedTrackId ? 'is-focus' : ''}
+  const focused = entry.trackId === focusedTrackId;
+  return `<button class="chan is-live ${focused ? 'is-focus' : ''}
       ${entry.state === 'GUIDING' ? 'is-guiding' : ''}" data-track="${esc(entry.trackId)}"
       title="Channel ${entry.channel} — ${esc(entry.tn)}, ${esc(entry.state.toLowerCase())}. Press to bring it up on the readouts.">
-    <span class="chan-n">${entry.channel}</span>
+    ${/*
+   * The foregrounded channel is MARKED, not reprinted.
+   *
+   * The block used to carry a row of its own at the head reading
+   * 'SEL T-001 ON CHANNEL 1' directly above '1 T-001 REACTING' — the same
+   * contact, the same channel, twice, in adjacent rows of the same table. The
+   * caret in the number column says which row the readouts below are about.
+   */ ''}
+    <span class="chan-n">${focused ? '▸' : ''}${entry.channel}</span>
     <span class="chan-tn">${esc(entry.tn)}</span>
     <span class="chan-state">${esc(entry.state)}</span>
     <span class="chan-fig">${esc(figures)}</span>
@@ -1557,12 +1582,21 @@ export function renderCrewConsole(world, ui, els) {
         ? { text: `${guidanceSet.label} CANNOT GUIDE A ROUND`, mood: 'is-bad' }
         : unfit
           ? { text: `CANNOT LOCK ${track.tn} — ${refusalText(unfit)}`, mood: 'is-warn' }
-          : !track
+          /*
+           * A casualty is news, and it belongs on the line the card keeps for
+           * news. It had a readout row of its own reading CREW CLOSED UP for
+           * the whole of every watch that went well — twenty pixels of the one
+           * column whose channel table and kill estimate were being cut off by
+           * the bottom of the panel, to say that nothing had happened.
+           */
+          : site.crewLosses
+            ? { text: `${STATUS.crew.en} — ${site.crewLosses} LOST`, mood: 'is-bad' }
+            : !track
             // Short enough to be read. The full sentence was 358 px of advice
             // in a 302 px slot at both reference widths, so the one
             // instruction the panel gives ended in an ellipsis every time.
-            ? { text: 'NO TARGET — PICK A CONTACT', mood: 'is-quiet' }
-            : { text: '', mood: 'is-quiet' };
+              ? { text: 'NO TARGET — PICK A CONTACT', mood: 'is-quiet' }
+              : { text: '', mood: 'is-quiet' };
 
   /*
    * The loaders, always on the panel whether they are working or not.
@@ -1624,8 +1658,20 @@ export function renderCrewConsole(world, ui, els) {
       <div class="cabin-head">
         <span class="cabin-station">${esc(STATUS.yourSeat.en)}</span>
         <span class="unit-name">${esc(site.name)}</span>
-        <span class="unit-type is-plate" title="${esc(nomenclature?.en ?? type.label)}"
-          >${esc(nomenclature ? pair(nomenclature) : type.label)}</span>
+        ${/*
+       * The nomenclature plate, with the model number printed once.
+       *
+       * `pair()` gives С-200 «БАСТИОН» · S-200 BASTION — thirty characters, of
+       * which the first five are the same figure in two alphabets, and at the
+       * reference width it ran sixteen pixels past the card and ellipsised its
+       * own English gloss away. The Cyrillic stencil is what a plate is for;
+       * the gloss only has to carry the name.
+       */ ''}
+        <span class="unit-type is-plate"
+          title="${esc(nomenclature ? pair(nomenclature) : type.label)}"
+          >${esc(nomenclature
+    ? `${nomenclature.tm} · ${nomenclature.en.replace(/^[A-ZА-Я0-9-]+\s+/, '')}`
+    : type.label)}</span>
       </div>
 
       ${/*
@@ -1643,58 +1689,71 @@ export function renderCrewConsole(world, ui, els) {
         <span class="banner-bar" style="width:${Math.round(condition.frac * 100)}%"></span>
       </div>
 
+      ${/*
+     * The annunciators are above the scroller, not in it.
+     *
+     * They are the console's primary status; a lamp you have to scroll to is
+     * not an annunciator. Four seated lamps on a fixed 2x2 pitch, in the same
+     * two columns as the command pad at the foot of the card.
+     */ ''}
+      <div class="cabin-lamps">
+        ${lamp(STATUS.ready, status.state === 'ready', { colour: 'green' })}
+        ${lamp(STATUS.guiding, status.guidance === 'GUIDING', { colour: 'green' })}
+        ${lamp(STATUS.noGuidance, status.guidance === 'NO GUIDANCE', { colour: 'amber' })}
+        ${lamp(STATUS.armWarning, !!threatened, { colour: 'red', blinking: true,
+    figure: threatened
+      ? `${setName(threatened.radar) ? `${setName(threatened.radar)} ` : ''}${Math.ceil(threatened.etaS)}s`
+      : '',
+    title: threatened
+      ? `A round is homing on ${threatened.radar.label} — ${Math.ceil(threatened.etaS)}s to impact`
+      : `${STATUS.armWarning.tm} · ${STATUS.armWarning.en}` })}
+      </div>
+
+      ${/*
+     * The channel table: what the launcher is holding, one row per channel.
+     *
+     * The card used to state its channels as the fraction 2/2 beside a TARGET
+     * row about whichever contact the mouse had last touched, so a battery
+     * guiding two rounds could read TARGET —, SEQUENCE STANDBY, CHANNELS 2/2
+     * all at once — three rows disagreeing about one battery. The channels ARE
+     * the targets and the sequence: one row each, the worked one marked with a
+     * caret.
+     *
+     * It is exactly as tall as the battery has channels. Ruled to a fixed six
+     * rows it left a hundred and fifty pixels of empty ruled void inside a
+     * bordered box on a two-channel battery, and on a four-channel battery at
+     * 1280 it was the readout that got cut off. The slack belongs below the
+     * instrument, as panel metal, not inside it as blank staves — and it
+     * cannot move the controls, because the command pad is not in the
+     * scroller.
+     *
+     * It is above the scroller for the same reason the lamps are: this is the
+     * instrument the seat works, and REACH and CREW are reference data. When
+     * the column runs short it is the reference that goes under the fold.
+     */ ''}
+      <div class="chan-block">
+        <div class="chan-head">
+          ${legend(STATUS.channels, { inline: true })}
+          <span class="chan-count">${status.channelsUsed}/${status.channels}</span>
+        </div>
+        <div class="chan-rows">${channels.map((c) => channelRow(c, track?.id)).join('')}</div>
+      </div>
+
       <div class="cabin-body">
-        <div class="unit-row is-spaced cabin-lamps">
-          ${lamp(STATUS.ready, status.state === 'ready', { colour: 'green' })}
-          ${lamp(STATUS.guiding, status.guidance === 'GUIDING', { colour: 'green' })}
-          ${lamp(STATUS.noGuidance, status.guidance === 'NO GUIDANCE', { colour: 'amber' })}
-          ${lamp(STATUS.armWarning, !!threatened, { colour: 'red', blinking: true,
-    caption: threatened
-      ? `${STATUS.armWarning.en}${setName(threatened.radar) ? ` ${setName(threatened.radar)}` : ''} ${Math.ceil(threatened.etaS)}s`
-      : STATUS.armWarning.en })}
-        </div>
-
         ${/*
-       * The channel block is the target block.
+       * Which contact every row below this one is about.
        *
-       * The card used to carry a TARGET row and a SEQUENCE row about
-       * whichever contact the mouse had last touched, and state its channels
-       * as the fraction 2/2 — so a battery guiding two rounds could read
-       * TARGET —, SEQUENCE STANDBY, CHANNELS 2/2 all at once, three rows
-       * disagreeing about one battery. The channels ARE the targets and the
-       * sequence: one row each, the focused one lit, in a recessed well that
-       * is ruled at the row pitch all the way down, so a battery with two
-       * channels reads as a two-channel battery rather than as a panel with a
-       * hole in it.
-       *
-       * The selection rides at the head of the block, in a row of its own
-       * that is always there.
-       *
-       * It used to be emitted only when something was selected that held no
-       * channel, so the block — and every control under it — grew and shrank
-       * by a row as the operator clicked about. Its number column reads SEL
-       * rather than the unexplained '·' it had: the rows below it are numbered
-       * 1..4 because they are channels, and this row is not one.
+       * Without it the readouts were a second opinion: OUT OF ZONE +20s and
+       * EST. KILL PROB — printed directly under a channel row reading T-002
+       * READY 46 km, two true statements about two different aeroplanes with
+       * nothing saying so. The row names the contact and where it came from —
+       * the operator's own selection, or the channel the launcher is working
+       * when they have not selected anything.
        */ ''}
-        <div class="chan-block">
-          <div class="chan-head">
-            ${legend(STATUS.channels, { inline: true })}
-            <span class="chan-count">${status.channelsUsed}/${status.channels}</span>
-          </div>
-          <div class="chan-rows">
-            <div class="chan is-prospect ${!track ? 'is-empty' : own ? 'is-held'
-    : unfit ? 'is-unfit' : 'is-focus'}">
-              <span class="chan-n">SEL</span>
-              <span class="chan-tn">${esc(track?.tn ?? '—')}</span>
-              <span class="chan-state">${!track ? 'NO SELECTION'
-    : own ? `ON CHANNEL ${own.channel ?? channels.find((c) => c.trackId === track.id)?.channel ?? ''}`.trim()
-      : unfit ? 'UNFIT' : 'SELECTED'}</span>
-              <span class="chan-fig">${track && status.rangeKm ? `${Math.round(status.rangeKm)} km` : ''}</span>
-            </div>
-            ${channels.map((c) => channelRow(c, track?.id)).join('')}
-          </div>
-        </div>
-
+        ${row(STATUS.target, !track ? '—'
+    : `${track.tn} · ${own ? `CH ${own.channel ?? channels.find((c) => c.trackId === track.id)?.channel ?? ''}`.trim()
+      : selected ? 'SELECTED' : 'CUED'}`,
+    track ? own ? 'is-good' : '' : 'is-dim')}
         ${row(status.inEnvelope ? STATUS.inEnvelope : STATUS.outOfZone, envelopeValue,
     status.inEnvelope ? 'is-good' : '')}
         ${row(STATUS.shotQuality, status.pkEstimate !== null
@@ -1705,58 +1764,63 @@ export function renderCrewConsole(world, ui, els) {
       + (track ? status.fc.onTarget ? ' · ON TARGET' : ` · SLEWING ${Math.ceil(status.fc.slewS)}s` : ''),
     track && status.fc.onTarget ? 'is-good' : track ? 'is-hot' : '') : ''}
 
-        ${!caps.exposure ? '' : `<div class="elint">
-          <span class="ammo-label">${esc(STATUS.exposure.en)}</span>
-          ${sets.map((r) => `<span class="elint-set" title="${esc(r.label)} — how well they have this antenna pinned">
-            ${setName(r) ? `<span class="ammo-label">${setName(r)}</span>` : ''}
-            <span class="gauge ${!r.alive ? '' : (r.exposure ?? 0) > 0.65 ? 'is-hot'
+        ${/*
+       * One exposure row per antenna, on the same row pitch as every other
+       * readout. As a single packed strip — a label, two sub-labels, two bars
+       * and two figures in one fifteen-pixel line — it was the one row on the
+       * card that was off the grid and the one nobody could read.
+       */ ''}
+        ${!caps.exposure ? '' : sets.map((r) => `<div class="crew-row is-gauge"
+          title="${esc(r.label)} — ${esc(STATUS.exposure.hint ?? '')}">
+          <span class="lg"><b>${esc(STATUS.exposure.en)}${setName(r) ? ` ${setName(r)}` : ''}</b></span>
+          <span class="gauge ${!r.alive ? '' : (r.exposure ?? 0) > 0.65 ? 'is-hot'
     : (r.exposure ?? 0) > 0.35 ? 'is-warn' : ''}">
-              <i style="width:${r.alive ? Math.round((r.exposure ?? 0) * 100) : 0}%"></i></span>
-            <b class="elint-fig">${r.alive
-    ? `${Math.round((r.exposure ?? 0) * 100)}%` : '✕'}</b>
-          </span>`).join('')}
-        </div>`}
+            <i style="width:${r.alive ? Math.round((r.exposure ?? 0) * 100) : 0}%"></i></span>
+          <b>${r.alive ? `${Math.round((r.exposure ?? 0) * 100)}%` : '✕'}</b>
+        </div>`).join('')}
 
         ${/*
-       * The crew, always on the panel.
-       *
-       * Conditional on a casualty it was one more row that appeared — and
-       * moved every control below it — on the worst frame of the watch.
+       * What this equipment can do at all: the box it can kill inside, as one
+       * row of engraved reference at the foot of the readouts. It was two rows
+       * — REACH and ALTITUDE — saying one thing, in the column whose channel
+       * table was being cut off by the bottom of the panel.
        */ ''}
-        <div class="crew-row ${site.crewLosses ? 'is-hot' : ''}">${legend(STATUS.crew, { inline: true })}
-          <b>${site.crewLosses ? `${site.crewLosses} LOST` : 'CLOSED UP'}</b></div>
-
-        ${/*
-       * What this equipment can do at all.
-       *
-       * Constants rather than news, so they ride at the foot of the readout
-       * block where a panel puts its reference data — and they answer the
-       * question the seat asks about every new contact before anything else:
-       * can this battery reach that at all. The rack's cards have carried the
-       * figures for watches; the seat that has to act on them did not.
-       *
-       * The works stamps that used to sit under them are gone from here: six
-       * paired fragments of Cyrillic nomenclature at the smallest size on the
-       * panel, run together in a line between the live readouts and the
-       * ammunition strip. A plate saying what this equipment IS belongs on
-       * the card's head, which already carries one, and on the bezel — not in
-       * the column the operator reads figures out of.
-       */ ''}
-        <div class="cabin-reference">
-          <div class="crew-row is-plain">${legend(STATUS.reach, { inline: true })}
-            <b>${type.minRangeKm}–${type.maxRangeKm} km</b></div>
-          <div class="crew-row is-plain">${legend(STATUS.altitudeBand, { inline: true })}
-            <b>${Math.round(type.minAltM)}–${Math.round(type.maxAltM).toLocaleString('en-US')} m</b></div>
-        </div>
+        <div class="crew-row is-plain">${legend(STATUS.reach, { inline: true })}
+          <b>${type.minRangeKm}–${type.maxRangeKm} km · ${Math.round(type.minAltM)}–${Math.round(type.maxAltM).toLocaleString('en-US')} m</b></div>
       </div>
 
       ${/*
-     * More card below the fold, in a strip of its own at the foot of the
-     * scroller rather than crammed onto the end of the advisory line, where
-     * it and the one instruction the panel gives were fighting over the same
-     * three hundred pixels and both losing.
+     * More card below the fold. The scroller's height is snapped to the row
+     * pitch after the paint, so the cut can only land between rows — the fade
+     * that was here instead sliced the REACH row through the middle of its
+     * glyphs under this very cue.
      */ ''}
       <div class="cabin-more"><em>SCROLL FOR MORE ▾</em></div>
+
+      ${/*
+     * The plates, in the slack, hard against the command rule.
+     *
+     * A tall panel — a single-battery watch at the reference size leaves the
+     * seat two hundred and forty spare pixels — used to answer with a field of
+     * black between the last readout and the caps: a rendering hole where a
+     * built object has stampings. This block is the card's only flexible
+     * element: it is nothing at all when the column is tight and it fills the
+     * slack when there is any, so the emptiness is always at the TOP of it,
+     * where a blank field of painted steel is what a panel actually looks
+     * like.
+     *
+     * It is also where the works plate belongs. In the scope bezel's
+     * ninety-eight-pixel gutter it broke to one word a line — ЗАВОД ИМ. /
+     * КОРНЕЛА / KORNEL WORKS down a column — and that gutter did not exist at
+     * all below 1400px, so the seat's furniture changed identity between the
+     * two reference viewports. Here it has three hundred pixels and sets on
+     * one line, at every width the cabin is drawn at.
+     */ ''}
+      <div class="cabin-plates">
+        <span class="data-plate">${esc(PLATES.factory.tm)} · ${esc(PLATES.factory.en)}
+          &nbsp;·&nbsp; ${esc(PLATES.works.tm)}</span>
+        <span class="placard">${esc(PLATES.caution.tm)}<br>${esc(PLATES.caution.en)}</span>
+      </div>
 
       ${/*
      * The command pad: one grid, equal cells, in engagement order.
@@ -1779,9 +1843,9 @@ export function renderCrewConsole(world, ui, els) {
           <span class="ammo-label">${esc(STATUS.rails.en)}</span>
           ${tubes(site)}
           <b>${site.readyRounds}/${railCount}</b>
+          <span class="ammo-work">${esc(loaders.label)}</span>
           <span class="ammo-label ammo-mag">${esc(STATUS.magazine.en)}</span>
           <b>${site.magazine}</b>
-          <span class="ammo-work">${esc(loaders.label)}</span>
           ${/*
        * The loaders' clock as a hairline under the rail lamps rather than as
        * a row of its own that comes and goes. Every row that appeared when
@@ -1844,18 +1908,51 @@ export function renderCrewConsole(world, ui, els) {
     </div>`);
 
   /*
-   * Say when there is more card below the fold.
+   * Cut the readouts between rows, and say when there is more below.
    *
    * The readouts scroll and the commands do not, which is the right way round
    * — but a scroller with no scrollbar (Chromium draws an overlay one, or none
    * at all) and no edge treatment is exactly how the seat used to hide its own
-   * DISPLACE cap. Measured after the paint, because only the browser knows
-   * whether this battery's channel block and exposure rows fit today.
+   * DISPLACE cap. The cue was a fade, and a fade over an arbitrary cut greys
+   * out half a row: measured on the two-set watch, REACH sliced horizontally
+   * through the middle of its glyphs underneath SCROLL FOR MORE.
+   *
+   * Every child of the scroller is exactly one row tall, so flooring its
+   * height to the row pitch puts the cut on a row boundary and the last
+   * visible readout is always whole. The slack — under twenty pixels — goes
+   * above the command pad, which stays where it is.
+   *
+   * Measured after the paint, because only the browser knows whether this
+   * battery's channel table and exposure rows fit today; and skipped entirely
+   * where the stylesheet has said this console does not scroll at all, which
+   * is the phone, where the whole right-hand panel scrolls instead.
    */
+  /*
+   * A plate is whole or it is not there.
+   *
+   * The stampings live in the card's slack, which on a laptop with four
+   * channels up is thirty pixels — and a thirty-pixel window on a forty-four
+   * pixel block showed the bottom two thirds of a red caution placard sliced
+   * horizontally through its own first line, directly under the REACH row.
+   * The block's height is set by the flex layout and does not depend on
+   * whether its contents are drawn, so this cannot oscillate.
+   */
+  const plates = els.crewConsole.querySelector('.cabin-plates');
+  if (plates) plates.classList.toggle('is-fitted', plates.clientHeight >= 56);
+
   const body = els.crewConsole.querySelector('.cabin-body');
   if (body) {
-    const more = body.scrollHeight - body.clientHeight - body.scrollTop > 2;
-    body.classList.toggle('is-overflowing', more);
+    if (getComputedStyle(body).overflowY === 'visible') {
+      body.style.maxHeight = '';
+      body.classList.remove('is-overflowing');
+    } else {
+      const pitch = parseFloat(getComputedStyle(body).getPropertyValue('--cab-row')) || 20;
+      body.style.maxHeight = '';
+      const free = body.clientHeight;
+      const snapped = Math.max(pitch, Math.floor(free / pitch) * pitch);
+      if (snapped < free) body.style.maxHeight = `${snapped}px`;
+      body.classList.toggle('is-overflowing', body.scrollHeight - body.clientHeight > 2);
+    }
   }
 }
 

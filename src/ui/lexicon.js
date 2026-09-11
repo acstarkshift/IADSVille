@@ -194,9 +194,15 @@ export const STATUS = {
    */
   rails: { tm: 'СТВОЛЫ', en: 'RAILS' },
   magazine: { tm: 'БОЕЗАПАС', en: 'MAGAZINE' },
-  /** What the equipment can reach, as engraved reference on the seat's own card. */
+  /**
+   * What the equipment can reach, as engraved reference on the seat's own card.
+   *
+   * Range and altitude band on one line. They were two rows saying one thing —
+   * the box this battery can kill inside — in a column where the channel table
+   * the operator actually works was being cut off by the bottom of the panel.
+   * Reference data gets one row; the instrument gets the rest.
+   */
   reach: { tm: 'ДАЛЬНОСТЬ', en: 'REACH' },
-  altitudeBand: { tm: 'ВЫСОТА', en: 'ALTITUDE' },
   /**
    * The battery's own condition, as the one banner across the top of the seat.
    *
@@ -225,14 +231,20 @@ export const STATUS = {
   crew: { tm: 'РАСЧЁТ', en: 'CREW' },
   inFlight: { tm: 'В ПОЛЁТЕ', en: 'ROUNDS IN FLIGHT' },
   /*
-   * ЦЕЛЬ / TARGET, ЦИКЛ / SEQUENCE, ОЖИДАНИЕ / STANDBY, ПОДГОТОВКА /
-   * PREPARING, ВЫЖИДАНИЕ / HOLDING and ЦЕЛЬ НЕ НАЗНАЧЕНА / NO TARGET
-   * DESIGNATED were six legends for one fact. The cabin used to carry a TARGET
-   * row and a SEQUENCE row about whichever contact the mouse had last touched,
-   * and a NO TARGET row that said the same thing a third time in a third
-   * treatment; the channel block says all of it once, per channel, as the
-   * state of a channel — which is what a sequence IS. They went with the rows.
+   * ЦИКЛ / SEQUENCE, ОЖИДАНИЕ / STANDBY, ПОДГОТОВКА / PREPARING, ВЫЖИДАНИЕ /
+   * HOLDING and ЦЕЛЬ НЕ НАЗНАЧЕНА / NO TARGET DESIGNATED were five legends for
+   * one fact, and they are gone: a sequence is the state of a channel, and the
+   * channel table states it per channel.
+   *
+   * TARGET came back, as exactly one row, because the rows under it are about
+   * ONE contact and the table above it is about four. Without it the panel
+   * could print OUT OF ZONE +20s and EST. KILL PROB — directly beneath a
+   * channel row reading T-002 READY 46 km: two true statements about two
+   * different aeroplanes, stacked, with nothing saying so. This row names the
+   * contact every readout below it is describing, and says where it came from
+   * — the operator's selection, or the channel the launcher is working.
    */
+  target: { tm: 'ЦЕЛЬ', en: 'TARGET' },
   yourSeat: { tm: 'ВАШ ПОСТ', en: 'YOUR POST' },
   /** The stamp the file puts on a watch that was walked out of. */
   postAbandoned: { tm: 'ПОСТ ОСТАВЛЕН', en: 'POST ABANDONED' },

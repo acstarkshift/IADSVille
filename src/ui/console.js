@@ -123,6 +123,8 @@ export class CrewConsole {
     const type = SAM_TYPES[site.type];
     this.rangeKm = type.maxRangeKm * 1.35;
 
+    // Nothing is reserved across frames: the picture is redrawn from scratch.
+    this.reserved = [];
     this.drawPlan(world, site, type, ui);
     this.drawHeightFinder(world, site, type, ui);
 
@@ -149,8 +151,28 @@ export class CrewConsole {
    * corner nobody is standing in.
    */
 
-  /** Start a frame's label layer. */
-  beginLabels() { this.labelBoxes = []; }
+  /**
+   * Keep a rectangle clear of lettering.
+   *
+   * A symbol owns its pixels as much as a numeral does. Labels used to be
+   * placed the instant their own mark was drawn, so the next contact's dot,
+   * bracket, selection ring and bloom were all painted on TOP of a label that
+   * had already found a clear corner — measured on a splash, 'T-001 ✕',
+   * 'T-002 · CH1' and 'T-003' in one smear, and on the height plot two
+   * altitudes across a kill marker. Every mark reserves its own extent first
+   * and the lettering goes on afterwards, over a picture that is finished.
+   */
+  reserve(x, y, w, h) {
+    (this.reserved ??= []).push({ x, y, w, h });
+  }
+
+  /**
+   * Start a frame's label layer, holding everything already reserved.
+   *
+   * That is the axis numerals, the bearing scale, the corner blocks and every
+   * symbol on the glass: a label may not be printed through any of them.
+   */
+  beginLabels() { this.labelBoxes = (this.reserved ?? []).slice(); }
 
   /**
    * Draw a string near (x, y), knocked out of the grid, in a corner that is
@@ -183,18 +205,33 @@ export class CrewConsole {
      */
     const padX = 3 * d;
     const padY = 2 * d;
-    const clashes = (box) => this.labelBoxes.some((b) => box.x - padX < b.x + b.w
-      && box.x + box.w > b.x - padX
-      && box.y - padY < b.y + b.h && box.y + box.h > b.y - padY);
+    /*
+     * How badly a candidate clashes, in square pixels, rather than whether it
+     * clashes at all.
+     *
+     * With a boolean test the last resort was "take the first corner tried and
+     * accept whatever it lands on", which on a busy plot meant a track number
+     * printed squarely through the HORIZON tag while a corner four pixels
+     * further round was clear. Scored, the fallback is the least bad corner of
+     * the thirty-two, which in practice is a corner that clips one grid line
+     * rather than one that buries another label.
+     */
+    const cost = (box) => this.labelBoxes.reduce((sum, b) => {
+      const ox = Math.min(box.x + box.w + padX, b.x + b.w) - Math.max(box.x - padX, b.x);
+      const oy = Math.min(box.y + box.h + padY, b.y + b.h) - Math.max(box.y - padY, b.y);
+      return ox > 0 && oy > 0 ? sum + ox * oy : sum;
+    }, 0);
     let best = null;
+    let bestCost = Infinity;
     let placed = false;
-    for (const ring of [r, r + 13 * d, r + 26 * d]) {
+    for (const ring of [r, r + 13 * d, r + 26 * d, r + 40 * d]) {
       for (const dir of tries) {
         const ox = dir.includes('E') ? ring : dir.includes('W') ? -ring - w : -w / 2;
         const oy = dir.includes('N') ? -ring : dir.includes('S') ? ring + h * 0.8 : h * 0.35;
         const box = { x: x + ox, y: y + oy - h, w, h: h * 1.15 };
-        if (!best) best = box;
-        if (!clashes(box)) { best = box; placed = true; break; }
+        const c = cost(box);
+        if (c === 0) { best = box; placed = true; break; }
+        if (c < bestCost) { bestCost = c; best = box; }
       }
       if (placed) break;
     }
@@ -226,13 +263,20 @@ export class CrewConsole {
     return best;
   }
 
-  /** A string that owns its position — an axis numeral, a title — still knocked out. */
+  /**
+   * A string that owns its position — an axis numeral, a title — knocked out
+   * of the grid and reserved, so no placed label may be printed across it.
+   */
   stamp(text, x, y, colour, { size = 9, align = 'left', weight = '' } = {}) {
     const { ctx } = this;
     const d = this.dpr;
     ctx.save();
     ctx.font = `${weight ? `${weight} ` : ''}${size * d}px ${FONT}`;
     ctx.textAlign = align;
+    const tw = ctx.measureText(text).width;
+    const th = size * d;
+    this.reserve(align === 'right' ? x - tw : align === 'center' ? x - tw / 2 : x,
+      y - th, tw, th * 1.2);
     ctx.lineJoin = 'round';
     ctx.lineWidth = 3 * d;
     ctx.strokeStyle = this.palette.bg;
@@ -528,19 +572,28 @@ export class CrewConsole {
       i === 0 ? (focus ? hostilityColour(p, focus) : p.inkDim) : p.inkDim,
       { size: i === 0 ? 10 : 9, align: 'right', weight: i === 0 ? 'bold' : '' }));
 
-    // Labels go on last, over the grid, and out of each other's way.
-    this.beginLabels();
-    // The corner blocks are already on the glass; nothing may be written over
-    // them, so they are the first two things the label layer knows about.
-    this.labelBoxes.push({ x: 0, y: 0, w: 120 * d, h: 64 * d });
-    this.labelBoxes.push({ x: this.w - 120 * d, y: 0, w: 120 * d, h: 64 * d });
-    this.labelBoxes.push({ x: centre.x - 9 * d, y: centre.y - 9 * d, w: 18 * d, h: 18 * d });
-    this.place(site.name, centre.x, centre.y, p.friendly, { prefer: 'SW', radius: 8, size: 9 });
+    /*
+     * The lettering is a second pass over a finished picture.
+     *
+     * Every string wanted on the glass is collected here while the symbols are
+     * drawn, and none of them is printed until the last mark is down — so a
+     * label can never be buried by a contact drawn after it, which is what
+     * turned a splash into 'T-001 ✕ T-002 · CH1 T-003' in one smear.
+     */
+    const labels = [];
+    const want = (text, x, y, colour, opts = {}) => labels.push({ text, x, y, colour, opts });
+
+    // The corner blocks and the own-battery symbol own their pixels.
+    this.reserve(0, 0, 120 * d, 64 * d);
+    this.reserve(this.w - 120 * d, 0, 120 * d, 64 * d);
+    this.reserve(centre.x - 9 * d, centre.y - 9 * d, 18 * d, 18 * d);
+    want(site.name, centre.x, centre.y, p.friendly, { prefer: 'SW', radius: 8, size: 9 });
     for (const asset of world.assets ?? []) {
       if (asset.destroyed) continue;
       if (dist(site.pos, asset.pos) > this.rangeKm) continue;
       const s = this.toScreen(site, asset.pos);
-      this.place(asset.label ?? ASSET_TYPES[asset.type]?.label ?? asset.type,
+      this.reserve(s.x - 5 * d, s.y - 5 * d, 10 * d, 10 * d);
+      want(asset.label ?? ASSET_TYPES[asset.type]?.label ?? asset.type,
         s.x, s.y, withAlpha(p.friendly, 0.8), { prefer: 'SE', radius: 6, size: 8 });
     }
 
@@ -577,10 +630,9 @@ export class CrewConsole {
         ctx.moveTo(s.x - arm, s.y + arm); ctx.lineTo(s.x + arm, s.y - arm);
         ctx.stroke();
         ctx.restore();
-        ctx.globalAlpha = 1 - age * 0.6;
-        this.place(`${track.tn} ✕`, s.x, s.y, colour,
-          { prefer: 'NE', radius: bloom + 2, size: 8.5 });
-        ctx.globalAlpha = 1;
+        this.reserve(s.x - bloom, s.y - bloom, bloom * 2, bloom * 2);
+        want(`${track.tn} ✕`, s.x, s.y, colour,
+          { prefer: 'NE', radius: bloom + 2, size: 8.5, alpha: 1 - age * 0.6 });
         continue;
       }
 
@@ -606,7 +658,8 @@ export class CrewConsole {
         ctx.closePath();
         ctx.fill();
         ctx.restore();
-        this.place(`${track.tn} ${Math.round(rangeKm)}`, ex, ey, p.inkDim,
+        this.reserve(ex - 7 * d, ey - 7 * d, 14 * d, 14 * d);
+        want(`${track.tn} ${Math.round(rangeKm)}`, ex, ey, p.inkDim,
           { prefer: 'SW', radius: 8, size: 8.5 });
         continue;
       }
@@ -679,8 +732,17 @@ export class CrewConsole {
 
       const tag = track.cueOnly ? `${track.tn} CUE`
         : engagement ? `${track.tn} · CH${channelIndex + 1}` : track.tn;
-      this.place(tag, s.x, s.y, colour,
-        { prefer: 'NE', radius: selected ? 15 : 9, size: 9, weight: selected ? 'bold' : '' });
+      /*
+       * The symbol's whole extent, brackets and selection ring included. The
+       * label used to be allowed to sit on the contact's own acquisition
+       * bracket — offered the NE corner at nine pixels, which is inside a
+       * bracket drawn at nine and a selection ring drawn at thirteen.
+       */
+      const extent = (selected ? 15 : engagement ? 11 : 8) * d;
+      this.reserve(s.x - extent, s.y - extent, extent * 2, extent * 2);
+      want(tag, s.x, s.y, colour,
+        { prefer: 'NE', radius: selected ? 17 : engagement ? 13 : 9, size: 9,
+          weight: selected ? 'bold' : '' });
       /*
        * The range goes on the contact the operator is working, and on no
        * other. Printed under every symbol it doubled the amount of text on
@@ -690,8 +752,8 @@ export class CrewConsole {
        * on the channel rows and in the shootlist for everything else.
        */
       if (!track.cueOnly && selected) {
-        this.place(`${Math.round(env.rangeKm)} km`, s.x, s.y, env.ok ? p.good : p.inkDim,
-          { prefer: 'SE', radius: 15, size: 8.5 });
+        want(`${Math.round(env.rangeKm)} km`, s.x, s.y, env.ok ? p.good : p.inkDim,
+          { prefer: 'SE', radius: 17, size: 8.5 });
       }
     }
 
@@ -714,6 +776,15 @@ export class CrewConsole {
         ctx.arc(s.x, s.y, (6 + pulse * 5) * d, 0, TAU);
         ctx.stroke();
       }
+      this.reserve(s.x - 6 * d, s.y - 6 * d, 12 * d, 12 * d);
+    }
+
+    // The picture is finished; now the lettering, over it and out of its way.
+    this.beginLabels();
+    for (const l of labels) {
+      if (l.opts.alpha !== undefined) ctx.globalAlpha = l.opts.alpha;
+      this.place(l.text, l.x, l.y, l.colour, l.opts);
+      ctx.globalAlpha = 1;
     }
     ctx.restore();
   }
@@ -910,13 +981,28 @@ export class CrewConsole {
      * an axis numeral stops being something a track number can be printed
      * through.
      */
-    this.beginLabels();
-    this.labelBoxes.push(
-      { x: 0, y: top, w: this.w, h: 15 * d },
-      { x: 0, y: top, w: pad.l - 2 * d, h: height },
-      { x: 0, y: top + pad.t + plotH + 2 * d, w: this.w, h: height },
-      { x: this.w - pad.r - 60 * d, y: ry(0) - 14 * d, w: 60 * d, h: 12 * d },
-    );
+    this.reserve(0, top, this.w, 15 * d);
+    this.reserve(0, top, pad.l - 2 * d, height);
+    this.reserve(0, top + pad.t + plotH + 2 * d, this.w, height);
+    this.reserve(this.w - pad.r - 60 * d, ry(0) - 14 * d, 60 * d, 12 * d);
+
+    // As on the plan view: collect, draw every mark, then letter over them.
+    const labels = [];
+    const want = (text, x, y, colour, opts = {}) => labels.push({ text, x, y, colour, opts });
+    /*
+     * Two contacts a hundred feet apart at the same range plot as two dots a
+     * pixel apart, and the de-confliction can only push their labels into the
+     * next free corner — measured at 1280x800, 'T-004 263m' and 'T-005 253m'
+     * almost touching, and 'T-006 243m' under 'T-007 282m'. When a mark is
+     * within a label's height of one already plotted the altitude suffix comes
+     * off: the number that distinguishes them at that spacing is the track
+     * number, and the altitude of both is legible on the axis they are sitting
+     * against.
+     */
+    const marks = [];
+    const crowded = (x, y) => marks.some((m) => Math.abs(m.x - x) < 46 * d
+      && Math.abs(m.y - y) < 11 * d);
+
     let offScale = 0;
     for (const track of this.localTracks(world)) {
       if (track.cueOnly) continue;
@@ -947,10 +1033,11 @@ export class CrewConsole {
         // marker; the height plot drew a bare cross, so the operator could see
         // that SOMETHING had been splashed at that range and altitude and not
         // which of the three contacts on the plot it was.
-        ctx.globalAlpha = 1 - age * 0.6;
-        this.place(`${track.tn} ✕`, x, y, colour,
-          { prefer: 'NE', radius: (5 + age * 7) + 2, size: 8.5 });
-        ctx.globalAlpha = 1;
+        const ring = (5 + age * 7) * d;
+        this.reserve(x - ring, y - ring, ring * 2, ring * 2);
+        marks.push({ x, y });
+        want(`${track.tn} ✕`, x, y, colour,
+          { prefer: 'NE', radius: (5 + age * 7) + 2, size: 8.5, alpha: 1 - age * 0.6 });
         continue;
       }
 
@@ -958,15 +1045,21 @@ export class CrewConsole {
       ctx.beginPath();
       ctx.arc(x, y, 3 * d, 0, TAU);
       ctx.fill();
-      if (ui.selectedTrackId === track.id) {
+      const selected = ui.selectedTrackId === track.id;
+      if (selected) {
         ctx.strokeStyle = p.inkBright;
         ctx.lineWidth = 1.4 * d;
         ctx.beginPath();
         ctx.arc(x, y, 8 * d, 0, TAU);
         ctx.stroke();
       }
-      this.place(`${track.tn} ${Math.round(track.altM).toLocaleString('en-US')}m`,
-        x, y, colour, { prefer: 'NE', radius: 7, size: 8.5 });
+      const tight = crowded(x, y);
+      marks.push({ x, y });
+      const extent = (selected ? 9 : 4) * d;
+      this.reserve(x - extent, y - extent, extent * 2, extent * 2);
+      want(tight ? track.tn
+        : `${track.tn} ${Math.round(track.altM).toLocaleString('en-US')}m`,
+      x, y, colour, { prefer: tight ? 'SE' : 'NE', radius: selected ? 10 : 7, size: 8.5 });
     }
 
     /*
@@ -1006,9 +1099,9 @@ export class CrewConsole {
       ctx.fillStyle = colour;
       ctx.translate(x, y);
       ctx.beginPath();
-      ctx.moveTo(0, -4 * d);
-      ctx.lineTo(2.4 * d, 3 * d);
-      ctx.lineTo(-2.4 * d, 3 * d);
+      ctx.moveTo(0, -5 * d);
+      ctx.lineTo(3 * d, 3.5 * d);
+      ctx.lineTo(-3 * d, 3.5 * d);
       ctx.closePath();
       ctx.fill();
       if (arm) {
@@ -1020,6 +1113,19 @@ export class CrewConsole {
         ctx.stroke();
       }
       ctx.restore();
+      /*
+       * A round says whose it is and what it is chasing.
+       *
+       * It was a four-pixel unlabelled triangle on the one instrument built to
+       * show an intercept closing in the vertical: the operator could see that
+       * a mark was climbing and not whether it was their round, the round on
+       * the other channel, or the one coming for the antenna. Ours carries the
+       * track number it is flying at; theirs says what it is.
+       */
+      this.reserve(x - 6 * d, y - 6 * d, 12 * d, 12 * d);
+      const onto = world.tracks.get(missile.trackId)?.tn ?? missile.trackLabel ?? '';
+      want(arm ? 'ARM ▼' : `▲ ${onto || 'OUR ROUND'}`,
+        x, y, colour, { prefer: arm ? 'NE' : 'NW', radius: 8, size: 8 });
     }
 
     // The kilometre scale, in its own gutter under the plot.
@@ -1037,6 +1143,14 @@ export class CrewConsole {
     if (offScale) {
       this.stamp(`${offScale} BEYOND ▸`, this.w - 12 * d, top + 11 * d, p.inkDim,
         { size: 9, align: 'right' });
+    }
+
+    // And the lettering, over a finished plot.
+    this.beginLabels();
+    for (const l of labels) {
+      if (l.opts.alpha !== undefined) ctx.globalAlpha = l.opts.alpha;
+      this.place(l.text, l.x, l.y, l.colour, l.opts);
+      ctx.globalAlpha = 1;
     }
 
     ctx.restore();
@@ -1196,21 +1310,35 @@ export function engagementStatus(world, site, track) {
       && site.readyRounds > 0 && radar?.state === 'radiating'
       && (fc === null || fc.onTarget),
     /*
-     * Whether this battery is guiding, which is a question about an
-     * engagement and was being answered from the transmitter.
+     * Whether this battery is guiding, which is a question about a round in
+     * the air and was being answered from the transmitter.
      *
-     * The old test was `radar is radiating && the arc is on target`, which
-     * never asked whether there was anything to guide: on a battery whose set
-     * turns through the full circle the GUIDING lamp lit green the moment the
-     * antenna warmed, with the rails full, nothing selected and no channel
-     * open — and on a battalion with a sectored fire-control set the SAME
-     * state lit NO GUIDANCE instead, because an arc cannot be on a target
-     * that does not exist. Two batteries, one situation, opposite lamps, and
-     * neither of them true. With no channel open, neither lamp lights.
+     * The first version asked `is the set radiating && is the arc on target`,
+     * which never asked whether there was anything to guide: on a battery
+     * whose set turns through the full circle the GUIDING lamp lit green the
+     * moment the antenna warmed, with the rails full and no channel open — and
+     * on a battalion with a sectored fire-control set the SAME state lit NO
+     * GUIDANCE instead, because an arc cannot be on a target that does not
+     * exist. Two batteries, one situation, opposite lamps, neither true.
+     *
+     * Gating it on a channel was not enough either: a channel in REACTING is a
+     * crew swinging an antenna round, with nothing whatever in the air, and
+     * the lamp lit through the whole of it. A guidance lamp answers one
+     * question — is a round of mine being flown onto a target right now — so:
+     *
+     *   GUIDING      a round of this engagement is up AND the set can fly it.
+     *   NO GUIDANCE  something needs guidance (a round up, or a channel held)
+     *                and the set cannot give it: dark, slewed off, wrecked.
+     *   STANDBY      neither. Both lamps dark, on every battery type.
      */
-    guidance: !engagement ? 'NO CHANNEL'
-      : radar?.state === 'radiating' && (fc === null || fc.onTarget)
-        ? 'GUIDING' : 'NO GUIDANCE',
+    guidance: (() => {
+      const canGuide = !!radar?.alive && radar.state === 'radiating'
+        && (fc === null || fc.onTarget);
+      const up = engagement?.missileIds?.length ?? 0;
+      if (up > 0) return canGuide ? 'GUIDING' : 'NO GUIDANCE';
+      if (engagement && !canGuide) return 'NO GUIDANCE';
+      return 'STANDBY';
+    })(),
     radarState: radar?.state ?? 'off',
     exposure: radar?.exposure ?? 0,
     channelsUsed: site.engagements.length,

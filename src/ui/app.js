@@ -607,6 +607,19 @@ function render(now, frameDtS = 1 / 60) {
       renderBatteries(world, ui, els);
       renderScopeSide(world, ui, els, ui.view === 'crew' ? crew.rangeKm : scope.rangeKm);
       const cabin = !!world.control.crewedBatteryId && ui.view === 'crew';
+      /*
+       * The bezel's range strip belongs to the net seat.
+       *
+       * In the cabin the range scale is the battery's own reach and the knob
+       * is inert — the click handler has always returned early in the crew
+       * view — so it stood in a ninety-eight-pixel gutter doing nothing, above
+       * a works plate breaking to one word a line, in a strip the stylesheet
+       * deleted below 1400px. So the seat's hardware framing had a tall empty
+       * column at 1600 and none at all at 1280: two different consoles. A dead
+       * control is not furniture. The cabin gives the width back to the tube
+       * and looks the same at both reference sizes.
+       */
+      els.scopeSide.hidden = cabin;
       if (cabin) renderCrewConsole(world, ui, els);
       else els.crewConsole.hidden = true;
       // The thumb rail. Built at every width; the stylesheet decides whether

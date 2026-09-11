@@ -472,7 +472,15 @@ kbd {
  * words where it ends, rather than trailing off into painted steel.
  */
 .battery-list.is-secondary { flex: 0 0 auto; max-height: 128px; min-height: 0; }
-@media (max-height: 860px) { .battery-list.is-secondary { max-height: 96px; } }
+/* On a laptop the column is the seat's, and the reference rack gets two strips
+   and the word that says how many more there are. Measured at 1280x800 on the
+   two-city watch: with the rack at 96 px and the orders panel at 65 the cabin's
+   readout block was squeezed to ZERO — the target, the envelope, the kill
+   estimate and both ELINT gauges rendered into a nought-pixel scroller. */
+@media (max-height: 860px) {
+  .battery-list.is-secondary { max-height: 64px; }
+  .formation-list.is-secondary { max-height: 48px; min-height: 0; }
+}
 .rack-empty {
   padding: 10px 8px; font-size: 9px; letter-spacing: .14em;
   color: var(--engrave-dim); opacity: .75;
@@ -540,22 +548,73 @@ kbd {
   flex: 1 1 auto; min-height: 0; overflow: hidden;
   background: linear-gradient(180deg, color-mix(in srgb, var(--metal-hi) 22%, var(--bg-panel)), var(--bg-panel) 90px);
 }
+/*
+ * One grid, one type scale, one row pitch — the cabin's whole measure.
+ *
+ * A blind pass over the card counted ten type sizes (8, 8.5, 9, 9.5, 10, 10.5,
+ * 11, 12, 12.5 and 15 px) and seventeen distinct letter-spacings inside one
+ * 320 px column; the readout rows stepped 20, 20, 22, 15 and 26 px; and the
+ * text columns started at x = 10, 20, 26, 52, 103, 104, 177, 180 and 210, none
+ * of which was a column of anything else. A panel is a grid or it is a pile.
+ *
+ *   --cab-row    every readout row, exactly, and the scroller's cut pitch
+ *   --cab-gut    the card's one side gutter: every left origin and every
+ *                right-aligned figure lands on it, the banner included
+ *   --cab-mark   the marker column — lamp domes, channel numbers
+ *   --cab-tn     the track-number column
+ *   --cab-gap    the one gutter between the card's two columns, used by the
+ *                lamp pairs and by the command pad, so they share an axis
+ *
+ * Four sizes: --fs-plate for stamped sub-legends, --fs-legend for engraved
+ * row labels, --fs-value for everything a figure is written in, --fs-head for
+ * the card's name and its condition strip. Two trackings: wide for engraved
+ * lettering, tight for figures.
+ */
 .crew-console .unit.cabin {
-  margin: 0; height: 100%; min-height: 0; padding: 6px 8px 8px;
+  --cab-row: 20px;
+  --cab-gut: 8px;
+  --cab-mark: 26px;
+  --cab-tn: 48px;
+  --cab-gap: 6px;
+  --fs-plate: 8.5px;
+  --fs-legend: 9.5px;
+  --fs-value: 11px;
+  --fs-head: 13px;
+  /* Absolute, not em: two trackings on the card means two numbers on the
+     glass. In em they resolve to one value per type size, which is how a
+     column with four sizes came to be measured at seventeen of them. */
+  --tr-wide: 1.3px;
+  --tr-tight: .5px;
+  margin: 0; height: 100%; min-height: 0;
+  padding: 6px var(--cab-gut) 8px;
   display: flex; flex-direction: column; gap: 0;
   border-left: 2px solid color-mix(in srgb, var(--accent) 34%, var(--metal-edge));
 }
 /* The seat says whose it is. It is not another card in the rack. */
+/* One line. Wrapping, the plate dropped under the battery's name and the head
+   took two rows of a column whose readouts had none to spare. */
 .cabin-head {
-  display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;
-  padding-bottom: 5px; border-bottom: 1px solid var(--metal-edge);
+  flex: 0 0 auto;
+  display: flex; align-items: baseline; gap: 7px; flex-wrap: nowrap;
+  height: calc(var(--cab-row) + 3px);
+  border-bottom: 1px solid var(--metal-edge);
+}
+.cabin-head .unit-name, .cabin-head .unit-type {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
 .cabin-station {
-  font-size: 8.5px; letter-spacing: .18em; color: var(--bg-panel);
+  flex: 0 0 auto; white-space: nowrap;
+  font-size: var(--fs-plate); letter-spacing: var(--tr-wide); color: var(--bg-panel);
   background: var(--accent); padding: 1px 5px; border-radius: 1px; font-weight: 700;
 }
-.cabin-head .unit-name { font-size: 12.5px; letter-spacing: .1em; }
-.cabin-head .unit-type { flex: 1 1 auto; text-align: right; }
+.cabin-head .unit-name { font-size: var(--fs-head); letter-spacing: var(--tr-wide); }
+/* The battery's name is the one thing on this line that may not be cut; the
+   nomenclature plate beside it gives its width up first. */
+.cabin-head .unit-name { flex: 0 1 auto; }
+.cabin-head .unit-type {
+  flex: 1 1 0; min-width: 0; text-align: right;
+  font-size: var(--fs-plate); letter-spacing: var(--tr-tight);
+}
 
 /*
  * The readouts scroll; the pad below them does not. A scroller with nothing to
@@ -566,7 +625,7 @@ kbd {
  * cap row below them and the column had two right edges.
  */
 .cabin-body {
-  flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  flex: 0 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
   display: flex; flex-direction: column;
   scrollbar-width: thin; scrollbar-color: var(--metal-hi) var(--well);
 }
@@ -577,23 +636,14 @@ kbd {
  * panel and the glyphs of OUT OF ZONE printed through the CHANNELS header
  * above it. A row is the height a row is, and when they no longer fit the
  * scroller says so.
+ *
+ * Every child is exactly one row, which is what lets the renderer floor the
+ * scroller's height to the row pitch and put the cut between rows. There is no
+ * fade: a gradient over an arbitrary cut greys out half a line of type, which
+ * is what it was doing to REACH on the two-set watch. A whole row, a hard
+ * edge, a drawn scrollbar and a lit chevron under it.
  */
-.cabin-body > * { flex: 0 0 auto; }
-.cabin-body > .chan-block { flex: 1 0 auto; min-height: 72px; }
-/*
- * More card below the fold, said in a way that does not depend on the browser
- * drawing a scrollbar: the readouts darken into the cut, and the advisory line
- * immediately under it lights a chevron. Chromium draws an overlay scrollbar
- * here (measured: the gutter is zero pixels wide), which is exactly how a
- * panel comes to hide a control. The chevron rides in a row that is reserved
- * anyway, so saying it costs the readouts no height.
- */
-.cabin-body.is-overflowing {
-  /* Long enough that a row caught by the cut is faded out rather than sliced
-     through the middle of its glyphs: a readout row is 20px. */
-  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 30px), transparent);
-  mask-image: linear-gradient(180deg, #000 calc(100% - 30px), transparent);
-}
+.cabin-body > * { flex: 0 0 auto; height: var(--cab-row); min-height: var(--cab-row); }
 /*
  * The cue has a strip of its own at the foot of the scroller.
  *
@@ -603,14 +653,27 @@ kbd {
  * at both reference widths and the cue was crammed against it. Its own strip,
  * full width, centred, and only there when there is something below the cut.
  */
-.cabin-more { flex: 0 0 auto; height: 0; overflow: hidden; }
+/*
+ * The strip is always there and only sometimes lit.
+ *
+ * Appearing with the overflow it caused, it took thirteen pixels off the
+ * scroller the moment the scroller ran out of room — which made the scroller
+ * overflow harder, which kept the strip: a card that resized itself in a loop,
+ * and a cut that never settled on a row boundary.
+ */
+.cabin-more {
+  flex: 0 0 auto; height: 13px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  border-top: 1px solid transparent;
+}
 .cabin-body.is-overflowing + .cabin-more {
-  height: 13px; display: flex; align-items: center; justify-content: center;
-  border-top: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-top-color: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .cabin-more em {
-  font-style: normal; font-size: 8px; letter-spacing: .16em; color: var(--accent);
+  font-style: normal; font-size: var(--fs-plate); letter-spacing: var(--tr-wide);
+  color: var(--accent); visibility: hidden;
 }
+.cabin-body.is-overflowing + .cabin-more em { visibility: visible; }
 .cabin-body::-webkit-scrollbar { width: 7px; }
 .cabin-body::-webkit-scrollbar-track { background: var(--well); }
 .cabin-body::-webkit-scrollbar-thumb {
@@ -618,18 +681,70 @@ kbd {
   border: 1px solid var(--metal-edge); border-radius: 1px;
 }
 /*
- * The annunciator row: four lamps on a fixed 2x2 pitch.
+ * The annunciator block: four seated lamps on a fixed 2x2 pitch.
  *
  * As a wrapping flex row the fourth lamp dropped to a line of its own at some
  * widths and not at others, so the block that is the console's primary status
- * changed height with the window. Two by two at every width, and the row is
- * the same height all watch.
+ * changed height with the window. Two by two at every width, on the same two
+ * columns and the same gutter as the command pad at the foot of the card.
+ *
+ * And they are lamps, not dots. For most of a watch all four are dark, and
+ * dark they were four identical flat grey circles with a word beside them —
+ * CSS, next to capped buttons and a bat-handle switch. Each one is now a
+ * housing punched into the panel: a recessed plate, an engraved caption on it,
+ * and a glass dome seated in a machined bezel that catches the light whether
+ * or not there is a filament behind it.
  */
 .cabin-lamps {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 8px; margin: 8px 0 2px;
+  flex: 0 0 auto;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px var(--cab-gap); margin: 5px 0 2px;
 }
-.cabin-lamps .lamp { min-width: 0; }
-.cabin-lamps .lamp-cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cabin-lamps .lamp {
+  display: grid; grid-template-columns: var(--cab-mark) minmax(0, 1fr) auto;
+  align-items: center; gap: 0; min-width: 0; height: 18px;
+  padding-right: 4px;
+  grid-template-areas: none;
+  border: 1px solid var(--metal-edge); border-radius: 2px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .30), rgba(255, 255, 255, .04));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07), 0 1px 0 rgba(255, 255, 255, .04);
+  font-size: var(--fs-legend); letter-spacing: var(--tr-tight);
+}
+.cabin-lamps .lamp-cap {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .65);
+}
+/* A lamp's own figure: the seconds on an ARM warning, in its own column so
+   the engraved legend beside it is never the thing that gets truncated. */
+.cabin-lamps .lamp-fig {
+  font-size: var(--fs-plate); letter-spacing: var(--tr-tight);
+  font-variant-numeric: tabular-nums; color: inherit; padding-left: 4px;
+}
+/* The dome sits down in a machined bezel — two rings of plating and a shadow
+   under the glass — rather than floating on the panel as a flat disc. */
+.cabin-lamps .lamp-dome {
+  justify-self: center; width: 10px; height: 10px;
+  box-shadow:
+    inset 0 0 3px rgba(0, 0, 0, .85),
+    0 0 0 1px var(--metal-lo),
+    0 0 0 2px var(--metal-edge),
+    0 1px 2px rgba(0, 0, 0, .55);
+}
+.cabin-lamps .lamp.is-lit .lamp-dome {
+  box-shadow:
+    inset 0 0 3px rgba(255, 255, 255, .6),
+    0 0 0 1px var(--metal-lo),
+    0 0 0 2px var(--metal-edge),
+    0 0 9px var(--lamp-colour, var(--accent));
+}
+/* Lit, the housing lights with the dome: a lamp behind glass throws onto its
+   own plate, and it means the state survives a monochrome print. */
+.cabin-lamps .lamp.is-lit {
+  border-color: color-mix(in srgb, var(--lamp-colour, var(--accent)) 45%, var(--metal-edge));
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--lamp-colour, var(--accent)) 13%, transparent),
+    rgba(0, 0, 0, .22));
+}
 
 /*
  * A readout row: what it is on the left, what it says on the right.
@@ -640,22 +755,34 @@ kbd {
  * because a row that appears when an engagement starts moves every control
  * under it at exactly the wrong moment.
  */
+/*
+ * Exactly one row pitch, with no padding of its own: the block used to step
+ * 20, 20, 22, then 15 px into the exposure strip and 26 px out of it, so no
+ * two readouts on the card sat on the same rhythm. Label left on the gutter,
+ * figure right on the gutter, nothing in between.
+ */
 .crew-row {
   display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  font-size: 11px; padding: 2px 0; min-height: 20px;
+  font-size: var(--fs-value); padding: 0; height: var(--cab-row);
   border-bottom: 1px solid rgba(0, 0, 0, .35);
 }
 .crew-row .lg { flex: 0 1 auto; min-width: 0; }
 .crew-row .lg b {
-  font-size: 9.5px; letter-spacing: .11em; color: var(--engrave-dim);
+  font-size: var(--fs-legend); letter-spacing: var(--tr-wide); color: var(--engrave-dim);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .crew-row > b {
   flex: 0 0 auto; color: var(--engrave); font-variant-numeric: tabular-nums;
-  font-size: 11px; letter-spacing: .04em;
+  font-size: var(--fs-value); letter-spacing: var(--tr-tight);
 }
 .crew-row.is-hot > b { color: var(--hostile); }
 .crew-row.is-good > b { color: var(--good); }
+.crew-row.is-dim > b { color: var(--engrave-dim); }
+/* An exposure row: engraved name, bar, figure — on the row pitch like the
+   rest, instead of a packed strip of its own height with its own two type
+   sizes and its own two column origins. */
+.crew-row.is-gauge .gauge { flex: 1 1 auto; min-width: 40px; margin: 0 2px; }
+.crew-row.is-gauge > b { min-width: 3.1em; text-align: right; }
 
 /*
  * The condition strip: IN ACTION, OUT OF ACTION, ANTENNAS GONE, DESTROYED.
@@ -665,11 +792,24 @@ kbd {
  * the readouts it is explaining. Always drawn, so the controls beneath it do
  * not move the moment it has something to say.
  */
+/*
+ * Full-bleed, and its figure lands on the card's gutter like every other
+ * right-aligned value.
+ *
+ * With six pixels of padding of its own inside a card padded by eight, ON THE
+ * AIR sat sixteen pixels from the panel's edge while BASTION, 0/4, 98 km, 56%,
+ * CLOSED UP, 6–120 km and MAGAZINE 28 all sat at nine — a seven-pixel ragged
+ * right edge on the loudest line in the column. The negative margin takes the
+ * strip out to the card's edges and the padding brings its lettering back to
+ * the same gutter the rows use.
+ */
 .cabin-banner {
-  position: relative; overflow: hidden;
+  position: relative; overflow: hidden; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  margin: 6px 0 2px; padding: 3px 6px;
-  border: 1px solid var(--metal-edge); color: var(--engrave-dim);
+  margin: 6px calc(var(--cab-gut) * -1) 2px; padding: 0 var(--cab-gut);
+  height: var(--cab-row);
+  border-top: 1px solid var(--metal-edge); border-bottom: 1px solid var(--metal-edge);
+  color: var(--engrave-dim);
   background: linear-gradient(180deg, rgba(255, 255, 255, .05), rgba(0, 0, 0, .16));
 }
 .cabin-banner.is-warn { border-color: var(--warn); color: var(--warn);
@@ -678,15 +818,15 @@ kbd {
   background: color-mix(in srgb, var(--hostile) 16%, transparent); }
 .cabin-banner .cond-name {
   flex: 1 1 auto; min-width: 0; font-weight: 700;
-  font-size: 10.5px; letter-spacing: .16em; color: inherit;
+  font-size: var(--fs-legend); letter-spacing: var(--tr-wide); color: inherit;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* The figure on the right only — scoped to the direct child, because as a
    descendant selector it also caught the stencil's own <b> and set a second
    size and a numeric variant on it. */
 .cabin-banner > b {
-  flex: 0 0 auto; font-variant-numeric: tabular-nums; font-size: 12px;
-  letter-spacing: .06em;
+  flex: 0 0 auto; font-variant-numeric: tabular-nums; font-size: var(--fs-value);
+  letter-spacing: var(--tr-tight); font-weight: 700;
 }
 /* The clock's progress, as the banner's own underline. The card used to draw
    it as a free-standing stub of a rule under the rail lamps, ninety pixels
@@ -713,92 +853,66 @@ kbd {
  * pitch all the way down, and the empty part of it is obviously the empty
  * part of an instrument rather than a gap in the panel.
  */
-.chan-block {
-  flex: 1 1 auto; min-height: 0; margin-top: 7px;
-  display: flex; flex-direction: column;
-}
-/* It grows into slack and never shrinks below its own rows: as a scroller it
-   sliced the fourth channel of a battalion in half at its own bottom edge.
-   When the whole card runs out of column it is the body that scrolls, and the
-   body says so. */
+.chan-block { flex: 0 0 auto; margin-top: 7px; display: flex; flex-direction: column; }
+/*
+ * The well is exactly as deep as the battery has channels.
+ *
+ * Ruled at a fixed six rows it left about a hundred and fifty pixels of empty
+ * staves inside a bordered box on a two-channel battery — a rendering hole
+ * with a frame round it — and the ruling made the emptiness look like rows
+ * that had failed to draw. The rows rule themselves; the box hugs them; the
+ * slack goes below the readouts as panel metal, where it reads as panel.
+ */
 .chan-rows {
-  flex: 1 0 auto; min-height: 0; margin-top: 3px; padding: 3px;
-  overflow: hidden;
+  flex: 0 0 auto; margin-top: 3px; padding: 3px;
   border: 1px solid var(--metal-edge);
-  background:
-    repeating-linear-gradient(180deg,
-      transparent 0 21px,
-      color-mix(in srgb, var(--metal-edge) 45%, transparent) 21px 22px)
-    0 3px / 100% 22px,
-    var(--well);
+  background: var(--well);
   box-shadow: inset 0 2px 5px rgba(0, 0, 0, .5);
 }
 .chan-head {
-  display: flex; align-items: baseline; justify-content: space-between; line-height: 1.2;
-  border-top: 1px solid var(--metal-edge); padding-top: 4px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 18px;
+  border-top: 1px solid var(--metal-edge);
 }
-.chan-head .lg b { font-size: 9.5px; letter-spacing: .14em; color: var(--engrave-dim); }
-.chan-count { font-size: 10.5px; color: var(--engrave); font-variant-numeric: tabular-nums; }
+.chan-head .lg b {
+  font-size: var(--fs-legend); letter-spacing: var(--tr-wide); color: var(--engrave-dim);
+}
+.chan-count {
+  font-size: var(--fs-value); color: var(--engrave);
+  font-variant-numeric: tabular-nums; letter-spacing: var(--tr-tight);
+}
 .chan {
-  display: grid; grid-template-columns: 26px 46px 1fr auto;
-  align-items: center; gap: 6px; width: 100%; height: 19px;
+  display: grid; grid-template-columns: var(--cab-mark) var(--cab-tn) 1fr auto;
+  align-items: center; gap: var(--cab-gap); width: 100%; height: 19px;
   margin-bottom: 3px; padding: 0 5px; text-align: left;
-  font: inherit; font-size: 10px; letter-spacing: .06em;
+  font: inherit; font-size: var(--fs-legend); letter-spacing: var(--tr-tight);
   border: 1px solid var(--metal-edge); border-radius: 1px;
   background: linear-gradient(180deg, var(--bg-raised), var(--well));
   color: var(--engrave);
 }
-/* The channel's number, or the word SEL on the selection row above them: the
-   marker in that column used to be a bare '·' that nothing explained. */
+.chan:last-child { margin-bottom: 0; }
+/* The channel's number, with the caret marking the one the readouts describe. */
 .chan-n {
-  color: var(--engrave-dim); font-size: 9px; text-align: center;
-  letter-spacing: .06em; border-right: 1px solid var(--metal-edge);
+  color: var(--engrave-dim); font-size: var(--fs-legend); text-align: center;
+  letter-spacing: var(--tr-tight); border-right: 1px solid var(--metal-edge);
 }
-.chan-tn { font-weight: 700; letter-spacing: .08em; }
+.chan-tn { font-weight: 700; letter-spacing: var(--tr-tight); }
 .chan-state { color: var(--ink); }
-.chan-fig { color: var(--engrave-dim); font-variant-numeric: tabular-nums; font-size: 9.5px; }
+.chan-fig {
+  color: var(--engrave-dim); font-variant-numeric: tabular-nums;
+  font-size: var(--fs-plate);
+}
 .chan.is-free { color: var(--engrave-dim); border-style: dashed; background: none; }
 .chan.is-free .chan-tn, .chan.is-free .chan-state { color: var(--engrave-dim); font-weight: 400; }
-/* A contact that is designated but holds no channel yet: the row the LOCK cap
-   is about, so designating something is never met with a silent block. */
-.chan.is-prospect { border-style: dashed; }
-.chan.is-prospect .chan-state { color: var(--engrave-dim); }
-/* Nothing selected, and nothing pretending otherwise. */
-.chan.is-prospect.is-empty { color: var(--engrave-dim); background: none; }
-.chan.is-prospect.is-empty .chan-tn { font-weight: 400; }
-/* Selected, and already holding one of the numbered rows below. */
-.chan.is-prospect.is-held .chan-state { color: var(--good); }
-.chan.is-unfit { border-color: color-mix(in srgb, var(--warn) 55%, var(--metal-edge)); }
-.chan.is-unfit .chan-state { color: var(--warn); }
 .chan.is-live { cursor: pointer; }
 .chan.is-live:hover { filter: brightness(1.15); }
 .chan.is-guiding .chan-state { color: var(--warn); }
-/* The channel the readouts above are about. */
+/* The channel the readouts below are about. */
 .chan.is-focus {
   border-color: var(--accent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
-
-/* One row per antenna, because they are hunted one at a time: a battalion's
-   acquisition set and its fire control diverge by tenths of an exposure with
-   a separate round tracking each, and the cabin reported only the first. */
-.elint { display: flex; align-items: center; gap: 7px; margin-top: 6px; font-size: 10px; }
-.elint-set { display: flex; align-items: center; gap: 4px; flex: 1 1 0; min-width: 0; }
-.elint .gauge { min-width: 24px; }
-.elint-fig {
-  min-width: 2.6em; text-align: right; font-variant-numeric: tabular-nums;
-  color: var(--engrave);
-}
-
-/*
- * The reference block closes the readouts: what the equipment can reach.
- * Constants, so they sit below everything that changes, and they are the first
- * thing to go under the fold on a short panel rather than the last thing above
- * it. It no longer floats to the bottom of the body on a `margin-top: auto`,
- * which is what opened the unframed void in the middle of the card.
- */
-.cabin-reference { flex: 0 0 auto; padding-top: 6px; }
-.cabin-reference .crew-row { border-bottom: 0; }
+.chan.is-focus .chan-n { color: var(--accent); }
 
 /*
  * There is no HIGH VOLTAGE placard at the foot of the cabin any more.
@@ -812,17 +926,84 @@ kbd {
  * where a plate saying what this equipment IS belongs.
  */
 
+/*
+ * The stampings, and the card's only flexible element.
+ *
+ * `flex: 1 1 0` — no base size at all, so it is exactly zero on a column that
+ * has nothing to spare and exactly the slack on one that has. The plates sit
+ * at the BOTTOM of it against the command rule, so what grows is the blank
+ * field of painted steel above them, which is what a panel with room on it
+ * looks like. Two hundred and forty pixels of unexplained black is not.
+ */
+.cabin-plates {
+  flex: 1 1 0; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  align-items: flex-end; gap: 4px; padding-top: 6px;
+}
+/* Nothing at all unless the whole block fits — see renderCrewConsole. */
+.cabin-plates > *, .cabin-plates::before { display: none; }
+.cabin-plates.is-fitted > * { display: block; }
+.cabin-plates .data-plate { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.cabin-plates .placard { align-self: stretch; }
+/* The blank field is a louvre, because a cabinet with room in it has one.
+   It takes whatever height is going and is nothing at all when there is
+   none — so a short column loses the decoration and keeps every readout. */
+.cabin-plates.is-fitted::before {
+  content: ''; display: block; flex: 1 1 auto; min-height: 0; align-self: stretch;
+  margin-bottom: 7px;
+  border-top: 1px solid var(--metal-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+  background: repeating-linear-gradient(180deg,
+    rgba(0, 0, 0, .55) 0 3px,
+    rgba(255, 255, 255, .07) 3px 4px,
+    transparent 4px 11px);
+}
+
+/*
+ * Four sizes and two trackings on this card, with no exceptions.
+ *
+ * The hardware builders in panel.css are shared with the rack, the topbar and
+ * the thumb rail, and they bring their own type: a 15px launch face on .24em,
+ * a 9px key chip, a 9px sub-legend, a 12px switch position. Inside the cabin
+ * they are pulled onto the card's own scale, so a blind pass over this column
+ * counts 8.5 / 9.5 / 11 / 13 and nothing else.
+ */
+.crew-console .unit.cabin .lg b,
+.crew-console .unit.cabin .sw-pos {
+  font-size: var(--fs-value); letter-spacing: var(--tr-tight);
+}
+.crew-console .unit.cabin .lg i,
+.crew-console .unit.cabin .kc {
+  font-size: var(--fs-plate); letter-spacing: var(--tr-tight);
+}
+/* The commit control is the one thing on the card set in the head size, and
+   it earns it by being the only control the card is built around. */
+.crew-console .unit.cabin .pb-fire .lg b {
+  font-size: var(--fs-head); letter-spacing: var(--tr-wide);
+}
+.crew-console .unit.cabin .tubes i { letter-spacing: var(--tr-tight); }
+/* Engraved lettering — row labels, block headings — keeps the wide tracking;
+   figures and control faces keep the tight one. That is the whole rule. */
+.crew-console .unit.cabin .crew-row .lg b,
+.crew-console .unit.cabin .chan-head .lg b {
+  font-size: var(--fs-legend); letter-spacing: var(--tr-wide);
+}
+
 /* ------------------------------------------------------- the command pad */
 
+/*
+ * The pad takes the slack, so the readouts above it can end where they end
+ * and the caps are still in the same rectangle they were last time.
+ */
 .cabin-commands {
-  flex: 0 0 auto; margin-top: 6px; padding-top: 6px;
+  flex: 0 0 auto; margin-top: 4px; padding-top: 5px;
   border-top: 2px solid var(--metal-edge);
   box-shadow: 0 -1px 0 color-mix(in srgb, var(--metal-hi) 40%, transparent);
 }
 /* One line, one voice, one height — whether or not it has anything to say. */
 .cabin-advisory {
-  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
-  min-height: 14px; font-size: 9.5px; letter-spacing: .07em; line-height: 1.35;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  height: 14px; font-size: var(--fs-legend); letter-spacing: var(--tr-tight);
   color: var(--engrave-dim);
 }
 /* One line, always: a caution that wrapped to two would move the pad under
@@ -835,18 +1016,28 @@ kbd {
 .cabin-advisory.is-bad { color: var(--hostile); }
 .cabin-advisory.is-good { color: var(--good); }
 
+/* Fixed at two lines of its own — the rail lamps and their figures, with the
+   loaders' hairline under them — so a long loading word cannot grow the block
+   and take a readout row off the panel above it. */
 .cabin-ammo {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 3px 6px; margin-top: 4px;
-  font-size: 10px; font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; flex-wrap: wrap; gap: 1px 6px; margin-top: 2px;
+  height: 28px; align-content: center;
+  font-size: var(--fs-value); font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tr-tight);
 }
 .cabin-ammo b { color: var(--engrave); }
-.ammo-label { font-size: 8.5px; letter-spacing: .12em; color: var(--engrave-dim); }
+.ammo-label {
+  font-size: var(--fs-plate); letter-spacing: var(--tr-wide); color: var(--engrave-dim);
+}
 .cabin-ammo .tubes { flex: 0 1 auto; }
 .ammo-mag { margin-left: auto; }
 /* What the loaders are doing, in the same row as what they have loaded. */
+/* Inline, on the rails' own row: as a full-width line of its own it cost the
+   readouts above another eight pixels to say LOADERS STOWED. */
 .ammo-work {
-  flex: 0 0 auto; font-size: 8.5px; letter-spacing: .1em; color: var(--engrave-dim);
-  width: 100%; text-align: right; margin-top: -2px;
+  flex: 0 0 auto; font-size: var(--fs-plate); letter-spacing: var(--tr-wide);
+  color: var(--engrave-dim); margin-left: 2px; flex: 0 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cabin-ammo.is-warn .ammo-work { color: var(--warn); }
 .ammo-bar {
@@ -869,14 +1060,41 @@ kbd {
  */
 .cabin-pad {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px; margin-top: 6px;
+  gap: var(--cab-gap); margin-top: 6px;
 }
 .cabin-pad > .pb, .cabin-pad > .cabin-emcon { min-width: 0; }
-.cabin-pad > .pb { min-height: 32px; }
-/* The emissions switch is a cap-sized cell in the pad like everything else. */
-.cabin-pad .cabin-emcon .sw { padding-top: 2px; padding-bottom: 2px; }
-.cabin-pad .cabin-emcon .sw-body { height: 22px; }
-.cabin-pad .cabin-emcon .sw-pos { font-size: 10px; line-height: 14px; }
+.cabin-pad > .pb { min-height: 28px; }
+/* The launch cap keeps its height when the others give theirs up. */
+.cabin-pad > #btn-fire { min-height: 34px; }
+/*
+ * The emissions switch is a cell in the pad like everything else, and its
+ * lettering starts and ends where a cap's does.
+ *
+ * As drawn it kept the bat-handle's own 16px key gutter against a cap's 22px,
+ * so the last row of the card read as a 163px block beside a 150px one with a
+ * six-pixel seam where the row above had ten — four objects that did not look
+ * like one row of hardware.
+ */
+.cabin-pad .cabin-emcon { display: flex; }
+.cabin-pad .cabin-emcon .sw { padding: 2px 22px 2px 5px; }
+.cabin-pad .cabin-emcon .sw-body { height: 18px; }
+.cabin-pad .cabin-emcon .sw-legends { gap: 2px; }
+/*
+ * On a desk with room on it the caps are cap-sized.
+ *
+ * A console's commit control is the biggest object on its panel; at the
+ * reference height the pad was three rows of thirty pixels under two hundred
+ * of blank field, which makes the launcher's own controls look like web
+ * buttons parked at the bottom of a column. They keep their small sizes on a
+ * laptop, where the readouts need every pixel.
+ */
+@media (min-height: 900px) {
+  .cabin-pad > .pb { min-height: 40px; }
+  .cabin-pad > #btn-fire { min-height: 54px; }
+  .cabin-pad .cabin-emcon .sw-body { height: 26px; }
+  .cabin-pad .cabin-emcon .sw-legends { gap: 3px; }
+}
+.cabin-pad .cabin-emcon .sw-pos { font-size: var(--fs-value); line-height: 14px; }
 .cabin-pad #btn-fire { grid-column: 1 / -1; }
 .cabin-pad .cabin-emcon .sw { width: 100%; height: 100%; }
 /* On a watch with no DISPLACE cap the emissions switch has the row to
@@ -889,7 +1107,10 @@ kbd {
 /* Every cap in the pad reserves the same corner for its key chip, so the
    chips cannot make one cap wider than its neighbour. */
 .cabin-pad .pb { padding-right: 22px; }
-.cabin-pad .pb:not(#btn-fire) .lg b { font-size: 11px; letter-spacing: .06em; }
+.cabin-pad .pb:not(#btn-fire) .lg b {
+  font-size: var(--fs-value); letter-spacing: var(--tr-tight);
+}
+.cabin-pad .pb .lg i { font-size: var(--fs-plate); letter-spacing: var(--tr-tight); }
 
 /* A battery on the road cannot see, guide or shoot, and the card says so
    rather than looking exactly like one that is fighting. */
@@ -942,6 +1163,7 @@ kbd {
   width: 98px; flex: 0 0 auto; padding: 4px 2px 2px 8px;
   text-align: center;
 }
+.scope-side[hidden] { display: none; }
 .scope-side .placard { width: 100%; }
 .scope-side .data-plate { width: 100%; text-align: left; white-space: normal; }
 .scope-side .data-plate.is-footer { margin-top: auto; }
@@ -1215,6 +1437,8 @@ kbd {
 /* Same bargain as the rack above: on a short column the seat takes the room.
    See the note on .battery-list.is-secondary. */
 @media (max-height: 880px) { .formation-list.is-secondary { max-height: 10%; } }
+/* On a laptop the orders panel is one strip: see .battery-list.is-secondary. */
+@media (max-height: 860px) { .formation-list.is-secondary { max-height: 44px; } }
 /*
  * Where there are formations, they are what the watch is played on and the
  * rack is mostly detached batteries you may not touch — so the rack takes
@@ -1491,10 +1715,30 @@ table.ledger .down { color: var(--hostile); }
    * the cabin out of the same thirty per cent and left a sliced card head. The
    * reservation is added back on top of the cap, not taken out of it.
    */
+  /*
+   * On a phone the COLUMN scrolls, not the boxes inside it.
+   *
+   * Nested scrollers on 250 px of panel is how the cabin came to report a body
+   * 0 px tall against 247 px of content: the channel table, the target, the
+   * envelope, the kill estimate and the ELINT gauges were all unreachable, and
+   * the condition strip was sliced to six pixels of a thirteen-pixel line, cut
+   * straight through the words IN ACTION and ON THE AIR. The card is drawn at
+   * its natural height and the panel it is in scrolls, so every row of it can
+   * be reached by dragging the column — while LOCK, LAUNCH and the emissions
+   * switch stay on the thumb rail at the foot of the screen, out of the
+   * scroller entirely.
+   */
   .panel-right {
     border-left: none; border-top: 1px solid var(--edge);
-    max-height: calc(30vh + var(--net-h, 0px));
+    max-height: calc(34vh + var(--net-h, 0px));
+    overflow-y: auto; scrollbar-width: thin;
+    scrollbar-color: var(--metal-hi) var(--well);
   }
+  .crew-console { flex: 0 0 auto; overflow: visible; }
+  .crew-console .unit.cabin { height: auto; }
+  .cabin-body { overflow: visible; max-height: none !important; }
+  .cabin-commands { margin-top: 6px; }
+  .battery-list.is-secondary { max-height: none; }
   .event-log { height: 52px; }
   /* The tube's instruction line is the rail's job here, and the tube needs
      every pixel it has. */
