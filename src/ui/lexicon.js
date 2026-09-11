@@ -197,7 +197,21 @@ export const STATUS = {
   /** What the equipment can reach, as engraved reference on the seat's own card. */
   reach: { tm: 'ДАЛЬНОСТЬ', en: 'REACH' },
   altitudeBand: { tm: 'ВЫСОТА', en: 'ALTITUDE' },
-  /** The whole battery is off the air and on the road: the one banner state. */
+  /**
+   * The battery's own condition, as the one banner across the top of the seat.
+   *
+   * It reads IN ACTION for the whole of an ordinary watch and changes to one
+   * of the other three when the position is hurt. That it is always there is
+   * the point: the strip is a fixed row, so the controls below it do not walk
+   * up the card the moment the battery goes on the road — and "out of action"
+   * has exactly one place on the panel to appear, with exactly one clock.
+   *
+   * The strip prints the English face. These are states, not stencils: the
+   * Trans-Mordovian is kept here as the table's record of the word, and the
+   * Cyrillic the seat actually shows is on the nomenclature plate at the head
+   * of the same card.
+   */
+  inAction: { tm: 'В БОЮ', en: 'IN ACTION' },
   outOfAction: { tm: 'ВНЕ БОЯ', en: 'OUT OF ACTION' },
   exposure: { tm: 'ЗАСВЕТКА', en: 'ELINT EXPOSURE', hint: 'how well they have you pinned' },
   fireControl: {

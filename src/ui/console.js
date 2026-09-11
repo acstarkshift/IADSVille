@@ -169,16 +169,39 @@ export class CrewConsole {
     const order = ['NE', 'E', 'SE', 'N', 'S', 'NW', 'W', 'SW'];
     const from = order.indexOf(prefer);
     const tries = order.slice(from < 0 ? 0 : from).concat(order.slice(0, from < 0 ? 0 : from));
+    /*
+     * Three rings of eight, and a gap that counts as a collision.
+     *
+     * With one ring the eighth try was often still taken and the label was
+     * dropped where it fell: measured on the range-height plot, 'T-002 6,721m'
+     * came to rest with its last glyph touching the first of 'T-003 6,879m' —
+     * boxes that do not overlap by the arithmetic and are unreadable on the
+     * glass. The box is padded by three pixels on every side before it is
+     * tested, so "touching" is a clash; and when all eight corners at the
+     * mark's own radius are taken the label steps out to a second ring and
+     * draws a leader back, which is what a crowded plot needs anyway.
+     */
+    const padX = 3 * d;
+    const padY = 2 * d;
+    const clashes = (box) => this.labelBoxes.some((b) => box.x - padX < b.x + b.w
+      && box.x + box.w > b.x - padX
+      && box.y - padY < b.y + b.h && box.y + box.h > b.y - padY);
     let best = null;
-    for (const dir of tries) {
-      const ox = dir.includes('E') ? r : dir.includes('W') ? -r - w : -w / 2;
-      const oy = dir.includes('N') ? -r : dir.includes('S') ? r + h * 0.8 : h * 0.35;
-      const box = { x: x + ox, y: y + oy - h, w, h: h * 1.15 };
-      if (!best) best = box;
-      const clash = this.labelBoxes.some((b) => box.x < b.x + b.w && box.x + box.w > b.x
-        && box.y < b.y + b.h && box.y + box.h > b.y);
-      if (!clash) { best = box; break; }
+    let placed = false;
+    for (const ring of [r, r + 13 * d, r + 26 * d]) {
+      for (const dir of tries) {
+        const ox = dir.includes('E') ? ring : dir.includes('W') ? -ring - w : -w / 2;
+        const oy = dir.includes('N') ? -ring : dir.includes('S') ? ring + h * 0.8 : h * 0.35;
+        const box = { x: x + ox, y: y + oy - h, w, h: h * 1.15 };
+        if (!best) best = box;
+        if (!clashes(box)) { best = box; placed = true; break; }
+      }
+      if (placed) break;
     }
+    // And inside the glass. A label that ran off the right-hand edge lost its
+    // altitude figure to the frame; clamped, it keeps its leader line back to
+    // the mark, which is what the leader is for.
+    best.x = Math.max(2 * d, Math.min(best.x, this.w - w - 2 * d));
     this.labelBoxes.push(best);
     ctx.save();
     // A label that had to move to find room says which mark it belongs to.
@@ -763,7 +786,8 @@ export class CrewConsole {
     ctx.lineTo(this.w, top + 0.5);
     ctx.stroke();
 
-    this.stamp('RANGE / HEIGHT', pad.l, top + 11 * d, p.inkDim, { size: 9 });
+    this.stamp('RANGE / HEIGHT — NOTHING BELOW THE HORIZON IS SEEN',
+      pad.l, top + 11 * d, p.inkDim, { size: 9 });
 
     // Axes.
     ctx.strokeStyle = p.grid;
@@ -862,13 +886,37 @@ export class CrewConsole {
       ctx.strokeStyle = withAlpha(p.hostile, 0.8);
       ctx.lineWidth = 1.4 * d;
       ctx.stroke();
+      /*
+       * The line gets a tag; the sentence is in the instrument's title.
+       *
+       * As a full clause riding on the line's right-hand end it ran from the
+       * envelope's trailing edge to the frame and sat seven pixels above the
+       * kilometre numerals — three pieces of the display in one strip. The tag
+       * names the line where the line is, and the explanation is one line up,
+       * in the gutter above the plot, where there is nothing to collide with.
+       */
       const last = curve[curve.length - 1];
-      this.stamp('RADAR HORIZON — NOTHING UNDER IT IS SEEN',
-        Math.min(last[0], this.w - pad.r) - 4 * d, last[1] - 7 * d,
-        withAlpha(p.hostile, 0.8), { size: 8.5, align: 'right' });
+      this.stamp('HORIZON',
+        Math.min(last[0], this.w - pad.r) - 4 * d, last[1] - 6 * d,
+        withAlpha(p.hostile, 0.85), { size: 8.5, align: 'right' });
     }
 
+    /*
+     * The plot's own furniture is in the label layer before any contact is.
+     *
+     * The title strip, the altitude gutter on the left, the kilometre gutter
+     * under the plot and the horizon tag all own their pixels; a track label
+     * that wants one of those corners has to go somewhere else, which is how
+     * an axis numeral stops being something a track number can be printed
+     * through.
+     */
     this.beginLabels();
+    this.labelBoxes.push(
+      { x: 0, y: top, w: this.w, h: 15 * d },
+      { x: 0, y: top, w: pad.l - 2 * d, h: height },
+      { x: 0, y: top + pad.t + plotH + 2 * d, w: this.w, h: height },
+      { x: this.w - pad.r - 60 * d, y: ry(0) - 14 * d, w: 60 * d, h: 12 * d },
+    );
     let offScale = 0;
     for (const track of this.localTracks(world)) {
       if (track.cueOnly) continue;
@@ -895,6 +943,14 @@ export class CrewConsole {
         ctx.arc(x, y, (5 + age * 7) * d, 0, TAU);
         ctx.stroke();
         ctx.restore();
+        // And it keeps its number. The plan view has always labelled its kill
+        // marker; the height plot drew a bare cross, so the operator could see
+        // that SOMETHING had been splashed at that range and altitude and not
+        // which of the three contacts on the plot it was.
+        ctx.globalAlpha = 1 - age * 0.6;
+        this.place(`${track.tn} ✕`, x, y, colour,
+          { prefer: 'NE', radius: (5 + age * 7) + 2, size: 8.5 });
+        ctx.globalAlpha = 1;
         continue;
       }
 

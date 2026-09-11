@@ -17,7 +17,7 @@ import {
   armTimeToImpact, canStartLoading, channelsFor, railLoadS, railsOf, spanLimit, spanLoad,
 } from '../engine/doctrine.js';
 import {
-  STATE, CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, keycap, pair, pairHtml,
+  STATE, CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, keycap, pair,
 } from './lexicon.js';
 import { rankOf } from '../engine/character.js';
 import { consoleCaps } from '../engine/scenarios.js';
@@ -1040,6 +1040,72 @@ export function rackBatteries(world, ui) {
     .filter((site) => !(crewedUp && site.id === world.control.crewedBatteryId));
 }
 
+/**
+ * The rest of the net, as one line each, above the seat.
+ *
+ * In the cabin the rack is reference material — what else is on the air, and
+ * whether any of it is being shot at — and reference material rendered as full
+ * cards does not fit above a console that needs the column. What it did
+ * instead was worse than not fitting: the rack is a scroller, so its first
+ * card was sliced horizontally through the middle of its ELINT EXPOSURE row by
+ * the console's top edge and every card under it was out of sight, on a panel
+ * with no scrollbar drawn.
+ *
+ * So: uniform strips, one row per set, on one pitch. A cut between strips is a
+ * cut between rows and never through a line of text, every unit on the net is
+ * legible at a glance, and the emissions switch — the one control on this
+ * panel a watch cannot be played without — is still on every one of them.
+ */
+function crewRack(world, ui, caps) {
+  const rows = [];
+  for (const radar of world.radars.filter((r) => !r.siteId)) {
+    const nomenclature = Object.values(EQUIPMENT).find((e) => e.en.includes(radar.label));
+    rows.push({
+      key: `data-radar="${radar.id}"`,
+      name: nomenclature?.en ?? radar.label,
+      dead: !radar.alive,
+      armEtaS: radar.alive ? armTimeToImpact(world, radar) : Infinity,
+      figure: radar.alive ? `${radar.rangeKm} km` : STATUS.destroyed.en,
+      exposure: caps.exposure && radar.alive ? radar.exposure ?? 0 : null,
+      control: switch2(CONTROLS.radiate, CONTROLS.silence, !!radar.on,
+        { act: 'emcon-radar', radar: radar.id, disabled: !radar.alive }),
+    });
+  }
+  for (const site of rackBatteries(world, ui)) {
+    const sets = world.radarsOf(site);
+    const radar = sets.find((r) => r.alive) ?? world.radarById.get(site.radarId);
+    const armEtaS = Math.min(...sets.filter((r) => r.alive)
+      .map((r) => armTimeToImpact(world, r)), Infinity);
+    rows.push({
+      key: `data-site="${site.id}"`,
+      name: site.name,
+      dead: !site.alive,
+      armEtaS,
+      figure: site.alive
+        ? `${site.readyRounds}/${railsOf(site)} · ${site.engagements.length} ENG`
+        : STATUS.destroyed.en,
+      exposure: caps.exposure && radar?.alive ? radar.exposure ?? 0 : null,
+      control: switch2(CONTROLS.radiate, CONTROLS.silence, !!radar?.on,
+        { act: 'emcon', site: site.id, disabled: !site.alive || !radar?.alive }),
+    });
+  }
+  return rows.map((r) => `<div class="rack-strip ${r.dead ? 'is-dead' : ''}" ${r.key}>
+    <span class="rs-name">${esc(r.name)}</span>
+    ${Number.isFinite(r.armEtaS)
+    ? `<span class="rs-arm" title="Anti-radiation round tracking this set"
+        >ARM ${Math.ceil(r.armEtaS)}s</span>` : ''}
+    ${r.exposure === null ? '' : `<span class="gauge rs-gauge ${r.exposure > 0.65 ? 'is-hot'
+    : r.exposure > 0.35 ? 'is-warn' : ''}" title="${esc(STATUS.exposure.en)}"
+      ><i style="width:${Math.round(r.exposure * 100)}%"></i></span>`}
+    <span class="rs-fig">${esc(r.figure)}</span>
+    ${r.control}
+  </div>`).join('')
+    // A list says when it has come to an end, rather than trailing off into
+    // painted steel and leaving the player wondering what is under the fold.
+    + `<div class="rack-empty">${rows.length === 1 ? 'NOTHING ELSE ON THIS NET'
+      : 'END OF THE NET'}</div>`;
+}
+
 export function renderBatteries(world, ui, els) {
   // One answer for what this watch's console carries, shared with the key map
   // and the handbook. See consoleCaps().
@@ -1248,7 +1314,7 @@ export function renderBatteries(world, ui, els) {
     </div>`;
   }).join('');
 
-  paint(els.batteryList, surveillance + units);
+  paint(els.batteryList, ui.view === 'crew' ? crewRack(world, ui, caps) : surveillance + units);
 
   /*
    * Which card the keyboard is pointed at, said at the head of the rack.
@@ -1263,7 +1329,15 @@ export function renderBatteries(world, ui, els) {
     const target = ui.view === 'crew' ? null
       : batteryOrder(world).find((s) => s.id === ui.selectedSiteId)
         ?? batteryOrder(world).find((s) => s.id === world.homeBatteryId);
-    const text = ui.view === 'crew' ? '' : target ? `KEYS → ${target.name}` : '';
+    /*
+     * In the cabin the head says what the strips under it are instead. It was
+     * the word WEAPONS alone on a full-width band of empty painted steel at
+     * the top of the column — a heading with nothing to head.
+     */
+    const text = ui.view === 'crew'
+      ? `${rackBatteries(world, ui).length + world.radars.filter((r) => !r.siteId).length}`
+        + ' ON THE NET · NOT YOUR SEAT'
+      : target ? `KEYS → ${target.name}` : '';
     if (els.rackKeys.textContent !== text) els.rackKeys.textContent = text;
   }
 }
@@ -1473,15 +1547,21 @@ export function renderCrewConsole(world, ui, els) {
    * priority wins, and the slot keeps its height when there is nothing to say.
    */
   const advisory = !site.alive
-    ? { text: `${STATUS.destroyed.en} — THIS POSITION IS OFF THE AIR`, mood: 'is-bad' }
+    ? { text: 'THIS POSITION IS OFF THE AIR', mood: 'is-bad' }
     : displacing
-      ? { text: `SETS DOWN · ROLLING · ${Math.ceil(site.scootRemainingS)}s TO SET UP AGAIN`, mood: 'is-warn' }
+      // The clock for this is on the banner, and only on the banner: the card
+      // used to print the same countdown three times — banner, advisory and
+      // rail row — three figures of the same number in forty pixels.
+      ? { text: 'SETS DOWN — NOTHING PAINTS, NOTHING GUIDES', mood: 'is-warn' }
       : wrecked
-        ? { text: `${STATUS.antennasGone.en} — ${guidanceSet.label} CANNOT GUIDE A ROUND`, mood: 'is-bad' }
+        ? { text: `${guidanceSet.label} CANNOT GUIDE A ROUND`, mood: 'is-bad' }
         : unfit
           ? { text: `CANNOT LOCK ${track.tn} — ${refusalText(unfit)}`, mood: 'is-warn' }
           : !track
-            ? { text: 'NO TARGET — CLICK A CONTACT ON THE TUBE OR THE SHOOTLIST', mood: 'is-quiet' }
+            // Short enough to be read. The full sentence was 358 px of advice
+            // in a 302 px slot at both reference widths, so the one
+            // instruction the panel gives ended in an ellipsis every time.
+            ? { text: 'NO TARGET — PICK A CONTACT', mood: 'is-quiet' }
             : { text: '', mood: 'is-quiet' };
 
   /*
@@ -1492,16 +1572,36 @@ export function renderCrewConsole(world, ui, els) {
    * the operator sent the crew out. It holds its place now and says what the
    * loaders are doing, which on a quiet rack is nothing.
    */
-  const loaders = displacing
-    ? { label: `${STATUS.displacing.en} ${Math.ceil(site.scootRemainingS)}s`,
-      frac: clamp01(1 - site.scootRemainingS
-        / Math.max(type.scootS * (site.scootMult ?? 1) * 1.5, 1e-6)),
+  const loaders = site.reloadRemainingS > 0
+    ? { label: `${STATUS.loading.en} ${Math.ceil(site.reloadRemainingS)}s`,
+      frac: clamp01(1 - site.reloadRemainingS / Math.max(railLoadS(site), 1e-6)),
       mood: 'is-warn' }
-    : site.reloadRemainingS > 0
-      ? { label: `${STATUS.loading.en} ${Math.ceil(site.reloadRemainingS)}s`,
-        frac: clamp01(1 - site.reloadRemainingS / Math.max(railLoadS(site), 1e-6)),
-        mood: 'is-warn' }
-      : { label: site.magazine <= 0 ? 'STORE EMPTY' : 'LOADERS STOWED', frac: 0, mood: '' };
+    : { label: site.magazine <= 0 ? 'STORE EMPTY' : 'LOADERS STOWED', frac: 0, mood: '' };
+
+  /*
+   * The battery's condition, in one strip, with one clock.
+   *
+   * Always drawn — IN ACTION for most of a watch — because a banner that
+   * appears only when the position is hurt is a banner that shoves every
+   * control under it thirty pixels down the card at the exact moment the
+   * operator is reaching for one. The displacement clock lives here and
+   * nowhere else, and the strip's own underline is the progress bar for it,
+   * which is why there is no orphan stub of a rule further down the card.
+   */
+  const condition = !site.alive
+    ? { entry: STATUS.destroyed, mood: 'is-bad', figure: '', frac: 0 }
+    : displacing
+      ? { entry: STATUS.outOfAction, mood: 'is-warn',
+        figure: `${Math.ceil(site.scootRemainingS)}s`,
+        frac: clamp01(1 - site.scootRemainingS
+          / Math.max(type.scootS * (site.scootMult ?? 1) * 1.5, 1e-6)) }
+      : wrecked
+        ? { entry: STATUS.antennasGone, mood: 'is-bad', figure: '', frac: 0 }
+        // The right-hand figure is the battery's emissions, stated rather than
+        // commanded: ON THE AIR / SILENT, not the verb engraved on the switch
+        // at the foot of the card, which would be the same word twice.
+        : { entry: STATUS.inAction, mood: '', frac: 0,
+          figure: radar?.on ? 'ON THE AIR' : 'SILENT' };
 
   const lockEntry = own ? CONTROLS.breakOff : CONTROLS.lock;
   const railCount = railsOf(site);
@@ -1528,11 +1628,20 @@ export function renderCrewConsole(world, ui, els) {
           >${esc(nomenclature ? pair(nomenclature) : type.label)}</span>
       </div>
 
-      ${displacing || wrecked || !site.alive ? `<div class="cabin-banner ${!site.alive || wrecked ? 'is-bad' : ''}">
-        ${pairHtml(!site.alive ? STATUS.destroyed
-    : displacing ? STATUS.outOfAction : STATUS.antennasGone)}
-        <b>${esc(displacing ? `${Math.ceil(site.scootRemainingS)}s` : '')}</b>
-      </div>` : ''}
+      ${/*
+     * English, on its own.
+     *
+     * The strip is a live readout that changes four times a watch, not a plate
+     * bolted to the frame, and the player's rule is that the Cyrillic lives on
+     * the plates — the card's head carries this battery's, two rows up. It is
+     * also the only way this line is legible: at ten pixels bold the stencil's
+     * О and Ю are drawn wider than their advance and ran into each other.
+     */ ''}
+      <div class="cabin-banner ${condition.mood}">
+        <span class="cond-name">${esc(condition.entry.en)}</span>
+        <b>${esc(condition.figure)}</b>
+        <span class="banner-bar" style="width:${Math.round(condition.frac * 100)}%"></span>
+      </div>
 
       <div class="cabin-body">
         <div class="unit-row is-spaced cabin-lamps">
@@ -1553,23 +1662,37 @@ export function renderCrewConsole(world, ui, els) {
        * as the fraction 2/2 — so a battery guiding two rounds could read
        * TARGET —, SEQUENCE STANDBY, CHANNELS 2/2 all at once, three rows
        * disagreeing about one battery. The channels ARE the targets and the
-       * sequence: one row each, the focused one lit, and a dashed row at the
-       * top for a contact that is selected but holds nothing yet, so
-       * designating something never leaves the block silent about it.
+       * sequence: one row each, the focused one lit, in a recessed well that
+       * is ruled at the row pitch all the way down, so a battery with two
+       * channels reads as a two-channel battery rather than as a panel with a
+       * hole in it.
+       *
+       * The selection rides at the head of the block, in a row of its own
+       * that is always there.
+       *
+       * It used to be emitted only when something was selected that held no
+       * channel, so the block — and every control under it — grew and shrank
+       * by a row as the operator clicked about. Its number column reads SEL
+       * rather than the unexplained '·' it had: the rows below it are numbered
+       * 1..4 because they are channels, and this row is not one.
        */ ''}
         <div class="chan-block">
           <div class="chan-head">
             ${legend(STATUS.channels, { inline: true })}
             <span class="chan-count">${status.channelsUsed}/${status.channels}</span>
           </div>
-          ${!track || own ? '' : `<button class="chan is-prospect ${!unfit ? 'is-focus' : 'is-unfit'}"
-            data-track="${esc(track.id)}" title="Selected, and holding no channel on this battery">
-            <span class="chan-n">·</span>
-            <span class="chan-tn">${esc(track.tn)}</span>
-            <span class="chan-state">${unfit ? 'UNFIT' : 'SELECTED'}</span>
-            <span class="chan-fig">${status.rangeKm ? `${Math.round(status.rangeKm)} km` : ''}</span>
-          </button>`}
-          ${channels.map((c) => channelRow(c, track?.id)).join('')}
+          <div class="chan-rows">
+            <div class="chan is-prospect ${!track ? 'is-empty' : own ? 'is-held'
+    : unfit ? 'is-unfit' : 'is-focus'}">
+              <span class="chan-n">SEL</span>
+              <span class="chan-tn">${esc(track?.tn ?? '—')}</span>
+              <span class="chan-state">${!track ? 'NO SELECTION'
+    : own ? `ON CHANNEL ${own.channel ?? channels.find((c) => c.trackId === track.id)?.channel ?? ''}`.trim()
+      : unfit ? 'UNFIT' : 'SELECTED'}</span>
+              <span class="chan-fig">${track && status.rangeKm ? `${Math.round(status.rangeKm)} km` : ''}</span>
+            </div>
+            ${channels.map((c) => channelRow(c, track?.id)).join('')}
+          </div>
         </div>
 
         ${row(status.inEnvelope ? STATUS.inEnvelope : STATUS.outOfZone, envelopeValue,
@@ -1594,33 +1717,46 @@ export function renderCrewConsole(world, ui, els) {
           </span>`).join('')}
         </div>`}
 
-        ${site.crewLosses ? `<div class="crew-row is-hot">${legend(STATUS.crew, { inline: true })}
-          <b>${site.crewLosses} CASUALTIES</b></div>` : ''}
+        ${/*
+       * The crew, always on the panel.
+       *
+       * Conditional on a casualty it was one more row that appeared — and
+       * moved every control below it — on the worst frame of the watch.
+       */ ''}
+        <div class="crew-row ${site.crewLosses ? 'is-hot' : ''}">${legend(STATUS.crew, { inline: true })}
+          <b>${site.crewLosses ? `${site.crewLosses} LOST` : 'CLOSED UP'}</b></div>
 
         ${/*
-       * What this equipment can do at all, and who built it.
+       * What this equipment can do at all.
        *
        * Constants rather than news, so they ride at the foot of the readout
        * block where a panel puts its reference data — and they answer the
        * question the seat asks about every new contact before anything else:
        * can this battery reach that at all. The rack's cards have carried the
        * figures for watches; the seat that has to act on them did not.
+       *
+       * The works stamps that used to sit under them are gone from here: six
+       * paired fragments of Cyrillic nomenclature at the smallest size on the
+       * panel, run together in a line between the live readouts and the
+       * ammunition strip. A plate saying what this equipment IS belongs on
+       * the card's head, which already carries one, and on the bezel — not in
+       * the column the operator reads figures out of.
        */ ''}
         <div class="cabin-reference">
           <div class="crew-row is-plain">${legend(STATUS.reach, { inline: true })}
             <b>${type.minRangeKm}–${type.maxRangeKm} km</b></div>
           <div class="crew-row is-plain">${legend(STATUS.altitudeBand, { inline: true })}
             <b>${Math.round(type.minAltM)}–${Math.round(type.maxAltM).toLocaleString('en-US')} m</b></div>
-          ${/* A plate carries its number once: the gloss says what the number
-               is called, not the number again. See glossWord. */ ''}
-          <div class="cabin-stamp">
-            <span class="lg"><b>${esc(PLATES.type.tm)}</b><i>${esc(glossWord(PLATES.type))}</i></span> ·
-            <span class="lg"><b>${esc(PLATES.works.tm)}</b><i>${esc(glossWord(PLATES.works))}</i></span> ·
-            <span class="lg"><b>${esc(PLATES.factory.tm)}</b><i>${esc(PLATES.factory.en)}</i></span>
-          </div>
         </div>
-
       </div>
+
+      ${/*
+     * More card below the fold, in a strip of its own at the foot of the
+     * scroller rather than crammed onto the end of the advisory line, where
+     * it and the one instruction the panel gives were fighting over the same
+     * three hundred pixels and both losing.
+     */ ''}
+      <div class="cabin-more"><em>SCROLL FOR MORE ▾</em></div>
 
       ${/*
      * The command pad: one grid, equal cells, in engagement order.
@@ -1637,9 +1773,6 @@ export function renderCrewConsole(world, ui, els) {
       <div class="cabin-commands">
         <div class="cabin-advisory ${advisory.mood}">
           <span>${esc(advisory.text) || '&nbsp;'}</span>
-          ${/* Lit by the class the paint below puts on the readout region when
-               it does not all fit: the cut is at the line above this one. */ ''}
-          <em class="more-cue">SCROLL FOR MORE ▾</em>
         </div>
 
         <div class="cabin-ammo ${loaders.mood}">
@@ -1655,7 +1788,10 @@ export function renderCrewConsole(world, ui, els) {
        * the crew went out used to shove the launch cap and LOCK down the card
        * by its own height — measured, 41 px across one engagement, which is
        * most of a cap — so the bar is always drawn and simply has nothing in
-       * it when the loaders are stowed.
+       * it when the loaders are stowed. It counts the LOADERS and nothing
+       * else: with the displacement clock in it too, a battery on the road
+       * drew a ninety-pixel unlabelled stub of a rule here that read as a
+       * stray hairline, next to a rail row saying the same seconds again.
        */ ''}
           <span class="ammo-bar"><i style="width:${Math.round(loaders.frac * 100)}%"></i></span>
         </div>
@@ -1682,8 +1818,12 @@ export function renderCrewConsole(world, ui, els) {
        * player with reduced motion set was being shown a cold cap and a
        * live one as the same pixels.
        */ ''}
-          <button class="pb pb-fire ${status.canFire ? 'is-armed' : ''}
-              ${status.canFire && status.pkEstimate !== null && status.pkEstimate < 0.5 ? 'is-marginal' : ''}"
+          <button class="${['pb', 'pb-fire', status.canFire ? 'is-armed' : '',
+    status.canFire && status.pkEstimate !== null && status.pkEstimate < 0.5 ? 'is-marginal' : '',
+    // A cap on a battery that is on the road or wrecked is dead metal, not a
+    // red cap that happens to be disabled: it was the loudest object on the
+    // panel while the banner above it said OUT OF ACTION.
+    !site.alive || displacing ? 'is-safed' : ''].filter(Boolean).join(' ')}"
             id="btn-fire" data-act="fire" data-site="${site.id}"
             ${track ? `data-track="${esc(track.id)}"` : ''}
             title="${esc(fireCapNote(site, status, unfit, !track))}"
