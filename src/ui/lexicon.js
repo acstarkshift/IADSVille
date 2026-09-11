@@ -46,6 +46,14 @@ export const CONTROLS = {
   radiate: { tm: 'ИЗЛУЧЕНЬ', en: 'RADIATE', hint: 'high voltage to the antenna' },
   silence: { tm: 'ЗАТИХ', en: 'SILENCE', hint: 'kill the transmitter' },
   lock: { tm: 'ЗАХВАТ', en: 'LOCK' },
+  /*
+   * The other half of the LOCK cap. LOCK is a toggle — a second press hands
+   * the channel back — and the cap said ЗАХВАТ / LOCK in both states, so the
+   * one control that can throw away a firing solution was the only control on
+   * the console that did not say what pressing it would do. Every other toggle
+   * here flips its legend (RADIATE/SILENCE, TAKE/RELEASE); this one does now.
+   */
+  breakOff: { tm: 'СБРОС', en: 'BREAK OFF', hint: 'hand the channel back and drop this contact' },
   launch: { tm: 'ПУСК', en: 'LAUNCH' },
   /*
    * The key still says RELOAD because that is what it is called and what the
@@ -167,6 +175,30 @@ export const STATUS = {
   airborne: { tm: 'В ВОЗДУХЕ', en: 'AIRBORNE' },
   clock: { tm: 'ВРЕМЯ', en: 'TIME' },
   channels: { tm: 'КАНАЛЫ', en: 'CHANNELS' },
+  /*
+   * The fire-control channels, one row each.
+   *
+   * The cabin used to state the whole of its channel business as one fraction
+   * — CHANNELS 3/4 — beside a TARGET row that showed only whatever the player
+   * had last clicked. Three engagements the seat could not see, name or break
+   * off, reported as a debug counter. A channel is a thing with a target and a
+   * state, so it is a row with a target and a state.
+   */
+  channel: { tm: 'КАНАЛ', en: 'CHANNEL' },
+  channelFree: { tm: 'СВОБОДЕН', en: 'FREE' },
+  /**
+   * The two ammunition readouts, named after what they show rather than after
+   * the buttons near them. The rail lamps were captioned LAUNCH and the store
+   * figure RELOAD, which put both control legends on the panel twice and left
+   * neither row named after its own subject.
+   */
+  rails: { tm: 'СТВОЛЫ', en: 'RAILS' },
+  magazine: { tm: 'БОЕЗАПАС', en: 'MAGAZINE' },
+  /** What the equipment can reach, as engraved reference on the seat's own card. */
+  reach: { tm: 'ДАЛЬНОСТЬ', en: 'REACH' },
+  altitudeBand: { tm: 'ВЫСОТА', en: 'ALTITUDE' },
+  /** The whole battery is off the air and on the road: the one banner state. */
+  outOfAction: { tm: 'ВНЕ БОЯ', en: 'OUT OF ACTION' },
   exposure: { tm: 'ЗАСВЕТКА', en: 'ELINT EXPOSURE', hint: 'how well they have you pinned' },
   fireControl: {
     tm: 'СТАНЦИЯ НАВЕДЕНЬЯ', en: 'FIRE CONTROL',
@@ -176,14 +208,17 @@ export const STATUS = {
     tm: 'ВЕР. ПОРАЖЕНИЯ', en: 'EST. KILL PROB',
     hint: 'what the firing tables say this shot is worth right now',
   },
-  target: { tm: 'ЦЕЛЬ', en: 'TARGET' },
-  sequence: { tm: 'ЦИКЛ', en: 'SEQUENCE' },
   crew: { tm: 'РАСЧЁТ', en: 'CREW' },
-  standby: { tm: 'ОЖИДАНИЕ', en: 'STANDBY' },
-  preparing: { tm: 'ПОДГОТОВКА', en: 'PREPARING' },
   inFlight: { tm: 'В ПОЛЁТЕ', en: 'ROUNDS IN FLIGHT' },
-  holding: { tm: 'ВЫЖИДАНИЕ', en: 'HOLDING FOR RANGE', hint: 'the shot improves every second the target closes' },
-  noTarget: { tm: 'ЦЕЛЬ НЕ НАЗНАЧЕНА', en: 'NO TARGET DESIGNATED' },
+  /*
+   * ЦЕЛЬ / TARGET, ЦИКЛ / SEQUENCE, ОЖИДАНИЕ / STANDBY, ПОДГОТОВКА /
+   * PREPARING, ВЫЖИДАНИЕ / HOLDING and ЦЕЛЬ НЕ НАЗНАЧЕНА / NO TARGET
+   * DESIGNATED were six legends for one fact. The cabin used to carry a TARGET
+   * row and a SEQUENCE row about whichever contact the mouse had last touched,
+   * and a NO TARGET row that said the same thing a third time in a third
+   * treatment; the channel block says all of it once, per channel, as the
+   * state of a channel — which is what a sequence IS. They went with the rows.
+   */
   yourSeat: { tm: 'ВАШ ПОСТ', en: 'YOUR POST' },
   /** The stamp the file puts on a watch that was walked out of. */
   postAbandoned: { tm: 'ПОСТ ОСТАВЛЕН', en: 'POST ABANDONED' },

@@ -12,12 +12,12 @@ import { SIM, SAM_TYPES, AIR_TYPES, ASSET_TYPES, DEFENCE_CLASSES } from '../engi
 import { bearing, dist, len, clockString, clamp01 } from '../engine/math.js';
 import { sortedTracks, cannotEngageReason, huntsTheFlight } from '../engine/threat.js';
 import { trackProfile } from '../engine/detection.js';
-import { engagementStatus } from './console.js';
+import { engagementStatus, channelStatus } from './console.js';
 import {
   armTimeToImpact, canStartLoading, channelsFor, railLoadS, railsOf, spanLimit, spanLoad,
 } from '../engine/doctrine.js';
 import {
-  STATE, CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, keycap, pair,
+  STATE, CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, keycap, pair, pairHtml,
 } from './lexicon.js';
 import { rankOf } from '../engine/character.js';
 import { consoleCaps } from '../engine/scenarios.js';
@@ -219,8 +219,9 @@ function reloadBar(site, type) {
 }
 
 /** A legend-cap pushbutton, with its one key stencilled in the corner. */
-function press(entry, { act, site, state = '', disabled = false, extra = '', key = '', title = '' } = {}) {
+function press(entry, { act, site, track = '', state = '', disabled = false, extra = '', key = '', title = '' } = {}) {
   return `<button class="pb ${extra}" data-act="${act}" ${site ? `data-site="${site}"` : ''}
+      ${track ? `data-track="${esc(track)}"` : ''}
       ${state ? `data-state="${state}"` : ''}
       ${disabled ? 'disabled' : ''} title="${esc(title || entry.en)}${key ? ` (${key})` : ''}"
       >${legend(entry, { key })}</button>`;
@@ -1023,11 +1024,39 @@ export function batteryOrder(world) {
   return [...world.sites].sort((a, b) => rank(a) - rank(b));
 }
 
+/**
+ * The cards the rack actually draws, which is where its numbering comes from.
+ *
+ * With the cabin up the crewed battery is not a card in the rack — it is the
+ * console below it. It used to be both: on a single-battery watch the column
+ * showed LANCE EAST twice, the rack's copy clipped mid-button by its own
+ * height cap and wearing the brighter border of the two. The keyboard reads
+ * this list as well, so the number on a card is still the number that
+ * addresses it.
+ */
+export function rackBatteries(world, ui) {
+  const crewedUp = ui?.view === 'crew' && !!world.control.crewedBatteryId;
+  return batteryOrder(world)
+    .filter((site) => !(crewedUp && site.id === world.control.crewedBatteryId));
+}
+
 export function renderBatteries(world, ui, els) {
   // One answer for what this watch's console carries, shared with the key map
   // and the handbook. See consoleCaps().
   const caps = consoleCaps(world.scenario);
-  const units = batteryOrder(world).map((site, index) => {
+  /*
+   * The rack is the OTHER batteries.
+   *
+   * With the cabin up, the crewed battery was drawn twice in the same column:
+   * once as a rack card with its own lamps, rail lamps, refusal line and caps,
+   * and once as the console below it — and on a single-battery watch the copy
+   * wearing the bright selection border was the rack's, clipped mid-button by
+   * the rack's own height cap. One battery, two consoles, the duplicate the
+   * more prominent of the two. The seat is the seat; the rack is what else is
+   * on the net, and dropping the duplicate is also the height the cabin's own
+   * controls needed.
+   */
+  const units = rackBatteries(world, ui).map((site, index) => {
     const type = SAM_TYPES[site.type];
     /*
      * The battery's emissions lamp and switch follow whichever set is still
@@ -1085,7 +1114,7 @@ export function renderBatteries(world, ui, els) {
           ${esc(nomenclature ? pair(nomenclature) : type.label)}${crewed ? ` · ${esc(STATUS.yourSeat.en)}` : ''}</span>
       </div>
       ${unfit ? `<div class="unit-row unit-unfit" title="Against the selected contact">
-        <span>✗ CANNOT TAKE ${esc(selectedTrack.tn)} — ${esc(unfit.toUpperCase())}</span>
+        <span>✗ CANNOT TAKE ${esc(selectedTrack.tn)} — ${esc(refusalText(unfit))}</span>
       </div>` : ''}
 
       <div class="unit-row">
@@ -1242,65 +1271,191 @@ export function renderBatteries(world, ui, els) {
 /* -------------------------------------------------------- crew console */
 
 /**
+ * A refusal, in the console's own voice.
+ *
+ * `cannotEngageReason` answers in sentence-case English with its units glued
+ * to their figures, because it is written for the ticker — and the cabin was
+ * printing it through `toUpperCase()`, which turned the units into part
+ * numbers: ABOVE ITS CEILING (15KM), BELOW ITS FLOOR (60M), OUT OF REACH FOR
+ * 137S, on a panel whose every other figure is typeset 41 km / 39s / 80%. The
+ * engine keeps its prose for the log; the panel keeps its engraving.
+ */
+function refusalText(reason) {
+  if (!reason) return '';
+  const table = [
+    [/^battery destroyed$/, 'BATTERY DESTROYED'],
+    [/^not under your command$/, 'NOT YOUR COMMAND'],
+    [/^fire control destroyed$/, 'FIRE CONTROL DESTROYED'],
+    [/^above its ceiling \((\d+)km\)$/, 'ABOVE CEILING · $1 km'],
+    [/^below its floor \((\d+)m\)$/, 'BELOW FLOOR · $1 m'],
+    [/^no rounds on the rails$/, 'RAILS EMPTY'],
+    [/^all channels engaged$/, 'ALL CHANNELS ENGAGED'],
+    [/^will never be in reach$/, 'OUT OF REACH'],
+    [/^out of reach for (\d+)s$/, 'OUT OF REACH · $1 s'],
+  ];
+  for (const [pattern, form] of table) {
+    if (pattern.test(reason)) return reason.replace(pattern, form);
+  }
+  return String(reason).toUpperCase();
+}
+
+/**
  * The second line on the launch cap: what the cap is waiting for.
  *
  * Short enough to be engraved, and it always says something — a cap that is
  * ready says how many rounds it will fire from, and a cap that is dead says
- * which of the four reasons it is dead for. Both are things the operator was
+ * which of the reasons it is dead for. Both are things the operator was
  * otherwise reading off three different rows above it.
+ *
+ * What it never does any more is REPLACE the cap's legend. During a guidance
+ * run the cap used to print '1 IN FLIGHT · 37s TO INTERCEPT' where the word
+ * LAUNCH goes, so for the twenty-five to forty seconds that matter most the
+ * primary control of the seat lost its identity and became a countdown. The
+ * cap says LAUNCH in every state; the countdown is a readout, and readouts
+ * live on rows.
  */
 function fireCapNote(site, status, unfit, noTarget) {
-  if (status.state === 'guiding') return `${status.roundsUp} ROUNDS IN FLIGHT`;
   if (!site.alive) return 'BATTERY DESTROYED';
+  if (site.scootRemainingS > 0) return 'ON THE ROAD';
+  if (status.state === 'guiding') {
+    return `${status.roundsUp} IN FLIGHT`
+      + (status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}s` : '');
+  }
   if (site.readyRounds <= 0) return 'RAILS EMPTY';
   if (noTarget) return 'NO TARGET DESIGNATED';
-  if (unfit) return String(unfit).toUpperCase();
-  if (status.canFire) {
-    return `${site.readyRounds} ON THE RAILS · SALVO ${site.salvoSize}`;
-  }
+  if (unfit) return refusalText(unfit);
+  if (status.canFire) return `${site.readyRounds} ON THE RAILS · SALVO ${site.salvoSize}`;
   if (status.holding) return 'HOLDING FOR RANGE';
   if (status.state === 'reacting') return 'CREW PREPARING';
   return 'NO FIRING SOLUTION';
 }
 
 /**
- * The operator's own panel: the engagement sequence on the left of their brain,
- * and the "are they about to kill me" numbers on the right.
+ * One fire-control channel, as a row of the cabin's channel block.
+ *
+ * An occupied channel is a button: pressing it foregrounds its contact in the
+ * readouts above, which is how the operator moves between three engagements
+ * without hunting for their symbols on the tube. A free one is a dashed row
+ * that holds its place, so the block is the same height whatever the battery
+ * is doing and nothing below it moves when a channel opens or closes.
+ */
+function channelRow(entry, focusedTrackId) {
+  if (entry.free) {
+    return `<div class="chan is-free">
+      <span class="chan-n">${entry.channel}</span>
+      <span class="chan-tn">—</span>
+      <span class="chan-state">${esc(STATUS.channelFree.en)}</span>
+      <span class="chan-fig"></span>
+    </div>`;
+  }
+  const figures = [
+    entry.rangeKm !== null ? `${Math.round(entry.rangeKm)} km` : '',
+    entry.roundsUp ? `${entry.roundsUp} UP` : '',
+    // Whichever clock this channel is on: the crew's reaction before it is
+    // ready, then the round's time of flight once one is in the air.
+    entry.etaS !== null ? `${Math.ceil(entry.etaS)}s`
+      : entry.timerS > 0 ? `${entry.timerS.toFixed(1)}s` : '',
+  ].filter(Boolean).join(' · ');
+  return `<button class="chan is-live ${entry.trackId === focusedTrackId ? 'is-focus' : ''}
+      ${entry.state === 'GUIDING' ? 'is-guiding' : ''}" data-track="${esc(entry.trackId)}"
+      title="Channel ${entry.channel} — ${esc(entry.tn)}, ${esc(entry.state.toLowerCase())}. Press to bring it up on the readouts.">
+    <span class="chan-n">${entry.channel}</span>
+    <span class="chan-tn">${esc(entry.tn)}</span>
+    <span class="chan-state">${esc(entry.state)}</span>
+    <span class="chan-fig">${esc(figures)}</span>
+  </button>`;
+}
+
+/**
+ * The operator's own station.
+ *
+ * Three rules hold this card together, and all three were broken:
+ *
+ *   The panel is about the BATTERY, not about the cursor. With nothing
+ *   selected it used to go blank — TARGET —, SEQUENCE STANDBY, both guidance
+ *   lamps dark — while its own launcher guided three rounds. The channel block
+ *   is the readout now, and the rows above it foreground the selected contact
+ *   or, failing one, the channel the battery is actually working.
+ *
+ *   Controls do not move. Every optional row used to sit ABOVE the caps, so
+ *   the launch cap and LOCK slid up and down by up to 41 px as an engagement
+ *   progressed — which is to say, exactly when the operator was reaching for
+ *   them. The commands are a fixed pad at the foot of the card; only the
+ *   readouts above them scroll.
+ *
+ *   A control that cannot act says so. RELOAD and DISPLACE were live-looking
+ *   caps that ate presses in silence on a displacing battery.
  */
 export function renderCrewConsole(world, ui, els) {
   const site = world.siteById.get(world.control.crewedBatteryId);
   if (!site) { els.crewConsole.hidden = true; return; }
   els.crewConsole.hidden = false;
 
-  const track = ui.selectedTrackId ? world.tracks.get(ui.selectedTrackId) : null;
-  const status = engagementStatus(world, site, track);
-  const radar = world.radarById.get(site.radarId);
-  const armEta = radar?.alive ? armTimeToImpact(world, radar) : Infinity;
   const type = SAM_TYPES[site.type];
   const nomenclature = EQUIPMENT[site.type];
   /*
    * The teaching watch shows the seat, not the trade: displacement and the
    * ELINT game wait until a watch where somebody is actually shooting back.
-   * And so does every other watch where nobody is — measured on Solo Battery,
-   * not one of its sixteen aircraft carries an anti-radiation round, so the
-   * exposure gauge sat pinned at 100% in red from the four-minute mark of
-   * three hand-played watches with nothing behind it and the INBOUND ARM lamp
-   * never lit once.
-   *
    * `consoleCaps` is that whole judgement in one place, and the key map and
    * the handbook read the same answer this card does.
    */
   const caps = consoleCaps(world.scenario);
+  const channels = channelStatus(world, site);
+  const sets = world.radarsOf(site);
+  const radar = sets.find((r) => r.alive) ?? world.radarById.get(site.radarId);
+  const guidanceSet = world.radarById.get(site.fcRadarId ?? site.radarId);
+  const wrecked = site.alive && guidanceSet && !guidanceSet.alive;
+  const displacing = site.alive && site.scootRemainingS > 0;
 
-  const sequence = status.holding ? STATUS.holding : {
-    idle: STATUS.standby, reacting: STATUS.preparing, ready: STATUS.ready, guiding: STATUS.inFlight,
-  }[status.state] ?? STATUS.standby;
+  /*
+   * Which contact the readouts are about.
+   *
+   * The selection, when there is one. When there is not, the battery's own
+   * busiest channel — because a cabin whose launcher is guiding a round and
+   * whose panel says NO TARGET DESIGNATED is not reporting the battery, it is
+   * reporting the mouse. The rows say which of the two they are showing.
+   */
+  const selected = ui.selectedTrackId ? world.tracks.get(ui.selectedTrackId) : null;
+  const adopted = selected ? null
+    : channels.find((c) => !c.free && !c.lost && c.state === 'READY')
+      ?? channels.find((c) => !c.free && !c.lost);
+  const track = selected ?? (adopted ? world.tracks.get(adopted.trackId) : null);
+  const status = engagementStatus(world, site, track);
 
-  const envelope = !status.hasTarget ? STATUS.noTarget
-    : status.inEnvelope ? STATUS.inEnvelope : STATUS.outOfZone;
+  /*
+   * A refusal about the contact you are already shooting at is not a refusal.
+   *
+   * `cannotEngageReason` answers 'all channels engaged' whenever the channels
+   * are full, without asking whether the track in question is holding one of
+   * them — so the cabin printed ✗ CANNOT LOCK T-001 — ALL CHANNELS ENGAGED
+   * directly under a live red launch cap, an IN ENVELOPE range and a 36% kill
+   * estimate for that same T-001, and greyed out the LOCK cap, which is also
+   * the break-off control. The console refusing and offering the same target
+   * in adjacent rows, and no way to let the channel go.
+   */
+  const own = track ? site.engagements.find((e) => e.trackId === track.id) : null;
+  const unfit = track && site.alive && !own ? cannotEngageReason(world, site, track) : null;
 
-  const envelopeDetail = !status.hasTarget ? '—'
-    : status.inEnvelope ? `${Math.round(status.rangeKm)} KM`
+  /*
+   * The anti-radiation watch, per antenna.
+   *
+   * A battalion has two sets and they are hunted separately: measured on the
+   * weasel watch, two rounds in the air, one tracking the acquisition set and
+   * one the fire control, their exposures diverged to 0.997 and 0.892 — and
+   * the cabin showed one un-timed lamp and one bar, both for the acquisition
+   * set, with nothing at all about the antenna being shot at. The lamp names
+   * the set being hunted and counts it down, because the seconds are what the
+   * DISPLACE cap beside it is answering.
+   */
+  const threatened = sets
+    .filter((r) => r.alive)
+    .map((r) => ({ radar: r, etaS: armTimeToImpact(world, r) }))
+    .filter((t) => Number.isFinite(t.etaS))
+    .sort((a, b) => a.etaS - b.etaS)[0] ?? null;
+  const setName = (r) => (sets.length < 2 ? '' : r.id === site.fcRadarId ? 'FC' : 'ACQ');
+
+  const envelopeValue = !track ? '—'
+    : status.inEnvelope ? `${Math.round(status.rangeKm)} km`
       : status.timeToRangeS !== null ? `+${Math.ceil(status.timeToRangeS)}s`
         : STATUS.noSolution.en;
 
@@ -1308,135 +1463,260 @@ export function renderCrewConsole(world, ui, els) {
     `<div class="crew-row ${mood}">${legend(entry, { inline: true })}<b>${esc(value)}</b></div>`;
 
   /*
-   * Why the lock will not take, said before the operator presses the button.
-   * The net seat's battery cards have carried this line for watches; the seat
-   * with the LOCK button on it had nothing, so a refused lock was silence and
-   * the rule had to be guessed at. There is no hidden rule — you may lock
-   * anything this battery can physically engage, whether or not the net
-   * assigned it to you — and when you cannot, this says which of the seven
-   * reasons it is.
+   * One advisory line, in one place, at one height.
+   *
+   * With nothing selected the card used to say the same thing three times in
+   * three treatments — TARGET —, then NO TARGET DESIGNATED wearing the
+   * envelope row's label, then a shouted NO TARGET SELECTED — PICK A CONTACT
+   * — in a column where the DISPLACE cap did not fit. With the antennas gone
+   * it said DESTROYED three times across two lines. One line, highest
+   * priority wins, and the slot keeps its height when there is nothing to say.
    */
-  const unfit = track && site.alive ? cannotEngageReason(world, site, track) : null;
+  const advisory = !site.alive
+    ? { text: `${STATUS.destroyed.en} — THIS POSITION IS OFF THE AIR`, mood: 'is-bad' }
+    : displacing
+      ? { text: `SETS DOWN · ROLLING · ${Math.ceil(site.scootRemainingS)}s TO SET UP AGAIN`, mood: 'is-warn' }
+      : wrecked
+        ? { text: `${STATUS.antennasGone.en} — ${guidanceSet.label} CANNOT GUIDE A ROUND`, mood: 'is-bad' }
+        : unfit
+          ? { text: `CANNOT LOCK ${track.tn} — ${refusalText(unfit)}`, mood: 'is-warn' }
+          : !track
+            ? { text: 'NO TARGET — CLICK A CONTACT ON THE TUBE OR THE SHOOTLIST', mood: 'is-quiet' }
+            : { text: '', mood: 'is-quiet' };
+
   /*
-   * And when the answer is that the antennas are wreckage, say THAT, whether
-   * or not a contact happens to be selected. A cabin whose fire-control set
-   * had been destroyed showed "NO TARGET SELECTED — PICK A CONTACT" for the
-   * rest of the watch, which is advice about the wrong problem given to
-   * somebody who has just been bombed. Photographed three minutes apart on
-   * two different watches, unchanged both times.
+   * The loaders, always on the panel whether they are working or not.
+   *
+   * The bar used to be emitted only while something was happening, which made
+   * it one more optional row shoving the launch cap down the card the moment
+   * the operator sent the crew out. It holds its place now and says what the
+   * loaders are doing, which on a quiet rack is nothing.
    */
-  const guidance = world.radarById.get(site.fcRadarId ?? site.radarId);
-  const wrecked = site.alive && guidance && !guidance.alive;
-  const noTarget = !track && !wrecked;
+  const loaders = displacing
+    ? { label: `${STATUS.displacing.en} ${Math.ceil(site.scootRemainingS)}s`,
+      frac: clamp01(1 - site.scootRemainingS
+        / Math.max(type.scootS * (site.scootMult ?? 1) * 1.5, 1e-6)),
+      mood: 'is-warn' }
+    : site.reloadRemainingS > 0
+      ? { label: `${STATUS.loading.en} ${Math.ceil(site.reloadRemainingS)}s`,
+        frac: clamp01(1 - site.reloadRemainingS / Math.max(railLoadS(site), 1e-6)),
+        mood: 'is-warn' }
+      : { label: site.magazine <= 0 ? 'STORE EMPTY' : 'LOADERS STOWED', frac: 0, mood: '' };
+
+  const lockEntry = own ? CONTROLS.breakOff : CONTROLS.lock;
+  const railCount = railsOf(site);
 
   paint(els.crewConsole, `
-    <div class="unit is-mine">
-      <span class="screw a"></span>
-      <div class="unit-head">
+    <div class="unit cabin ${displacing ? 'is-displacing' : ''} ${!site.alive ? 'is-dead' : ''}">
+      <span class="screw a"></span><span class="screw b"></span>
+
+      ${/*
+     * The seat says whose it is.
+     *
+     * The card used to be a second copy of the rack's battery card with no
+     * heading at all, directly under the rack's own copy of the same battery
+     * — on a single-battery watch the right-hand column showed LANCE EAST
+     * twice, and the copy wearing the bright selection border was the one
+     * that was clipped mid-button. The rack no longer carries the crewed
+     * battery (see renderBatteries); this is titled, and framed as the one
+     * thing on the panel the operator's hands are on.
+     */ ''}
+      <div class="cabin-head">
+        <span class="cabin-station">${esc(STATUS.yourSeat.en)}</span>
         <span class="unit-name">${esc(site.name)}</span>
-        <span class="unit-type wrap is-plate" title="${esc(nomenclature?.en ?? type.label)}">
-          ${esc(nomenclature ? pair(nomenclature) : type.label)}</span>
+        <span class="unit-type is-plate" title="${esc(nomenclature?.en ?? type.label)}"
+          >${esc(nomenclature ? pair(nomenclature) : type.label)}</span>
       </div>
 
-      <div class="unit-row is-spaced">
-        ${lamp(STATUS.ready, status.state === 'ready', { colour: 'green' })}
-        ${lamp(STATUS.guiding, status.guidance === 'GUIDING', { colour: 'green' })}
-        ${lamp(STATUS.noGuidance, status.guidance !== 'GUIDING', { colour: 'amber' })}
-        ${lamp(STATUS.armWarning, Number.isFinite(armEta), { colour: 'red', blinking: true })}
-      </div>
+      ${displacing || wrecked || !site.alive ? `<div class="cabin-banner ${!site.alive || wrecked ? 'is-bad' : ''}">
+        ${pairHtml(!site.alive ? STATUS.destroyed
+    : displacing ? STATUS.outOfAction : STATUS.antennasGone)}
+        <b>${esc(displacing ? `${Math.ceil(site.scootRemainingS)}s` : '')}</b>
+      </div>` : ''}
 
-      ${row(STATUS.target, status.trackLabel)}
-      ${row(envelope, envelopeDetail, status.inEnvelope ? 'is-good' : '')}
-      ${status.fc ? row(STATUS.fireControl,
+      <div class="cabin-body">
+        <div class="unit-row is-spaced cabin-lamps">
+          ${lamp(STATUS.ready, status.state === 'ready', { colour: 'green' })}
+          ${lamp(STATUS.guiding, status.guidance === 'GUIDING', { colour: 'green' })}
+          ${lamp(STATUS.noGuidance, status.guidance === 'NO GUIDANCE', { colour: 'amber' })}
+          ${lamp(STATUS.armWarning, !!threatened, { colour: 'red', blinking: true,
+    caption: threatened
+      ? `${STATUS.armWarning.en}${setName(threatened.radar) ? ` ${setName(threatened.radar)}` : ''} ${Math.ceil(threatened.etaS)}s`
+      : STATUS.armWarning.en })}
+        </div>
+
+        ${/*
+       * The channel block is the target block.
+       *
+       * The card used to carry a TARGET row and a SEQUENCE row about
+       * whichever contact the mouse had last touched, and state its channels
+       * as the fraction 2/2 — so a battery guiding two rounds could read
+       * TARGET —, SEQUENCE STANDBY, CHANNELS 2/2 all at once, three rows
+       * disagreeing about one battery. The channels ARE the targets and the
+       * sequence: one row each, the focused one lit, and a dashed row at the
+       * top for a contact that is selected but holds nothing yet, so
+       * designating something never leaves the block silent about it.
+       */ ''}
+        <div class="chan-block">
+          <div class="chan-head">
+            ${legend(STATUS.channels, { inline: true })}
+            <span class="chan-count">${status.channelsUsed}/${status.channels}</span>
+          </div>
+          ${!track || own ? '' : `<button class="chan is-prospect ${!unfit ? 'is-focus' : 'is-unfit'}"
+            data-track="${esc(track.id)}" title="Selected, and holding no channel on this battery">
+            <span class="chan-n">·</span>
+            <span class="chan-tn">${esc(track.tn)}</span>
+            <span class="chan-state">${unfit ? 'UNFIT' : 'SELECTED'}</span>
+            <span class="chan-fig">${status.rangeKm ? `${Math.round(status.rangeKm)} km` : ''}</span>
+          </button>`}
+          ${channels.map((c) => channelRow(c, track?.id)).join('')}
+        </div>
+
+        ${row(status.inEnvelope ? STATUS.inEnvelope : STATUS.outOfZone, envelopeValue,
+    status.inEnvelope ? 'is-good' : '')}
+        ${row(STATUS.shotQuality, status.pkEstimate !== null
+    ? `${Math.round(status.pkEstimate * 100)}%` : '—',
+    status.pkEstimate !== null && status.pkEstimate >= 0.5 ? 'is-good' : '')}
+        ${status.fc ? row(STATUS.fireControl,
     `${String(status.fc.boresightDeg).padStart(3, '0')}° ± ${status.fc.fovDeg / 2}°`
-      + (status.hasTarget ? status.fc.onTarget ? ' · ON TARGET'
-        : ` · SLEWING ${Math.ceil(status.fc.slewS)}s` : ''),
-    status.hasTarget && status.fc.onTarget ? 'is-good' : status.hasTarget ? 'is-hot' : '') : ''}
-      ${status.pkEstimate !== null
-    ? row(STATUS.shotQuality, `${Math.round(status.pkEstimate * 100)}%`,
-      status.pkEstimate >= 0.5 ? 'is-good' : '')
-    : ''}
-      ${row(STATUS.sequence, `${sequence.en}${status.reactionRemainingS > 0 ? ` ${status.reactionRemainingS.toFixed(1)}s` : ''}`)}
-      ${row(STATUS.channels, `${status.channelsUsed}/${status.channels}`)}
-      ${row(CONTROLS.reload, `${site.readyRounds} / ${site.magazine}`)}
-      <div class="crew-row crew-tubes">${legend(CONTROLS.launch, { inline: true })}${tubes(site)}</div>
-      ${reloadBar(site, type)}
+      + (track ? status.fc.onTarget ? ' · ON TARGET' : ` · SLEWING ${Math.ceil(status.fc.slewS)}s` : ''),
+    track && status.fc.onTarget ? 'is-good' : track ? 'is-hot' : '') : ''}
 
-      ${/*
-     * The launch cap, with something on it.
-     *
-     * The legend was one 76×17 word floating in a 291×48 cap — six times its
-     * own type block — which reads as a blank plate somebody stencilled in the
-     * middle. A launch cap on hardware carries its state under its verb, and
-     * this one has a state worth carrying: how many rounds are on the rails,
-     * or what is stopping it. It is also `data-act="fire"` rather than an id
-     * the handler looks up by name, so the thumb rail can carry the same cap.
-     */ ''}
-      <button class="pb pb-fire ${status.canFire && (status.pkEstimate === null || status.pkEstimate >= 0.5) ? 'is-armed' : ''}" id="btn-fire"
-        data-act="fire" data-site="${site.id}"
-        title="${esc(fireCapNote(site, status, unfit, noTarget))}"
-        ${status.canFire ? '' : 'disabled'}>
-        ${status.state === 'guiding'
-    ? `<span class="lg lg-stack"><b>${status.roundsUp} IN FLIGHT</b>${status.roundEtaS !== null ? `<i>${Math.ceil(status.roundEtaS)}s TO INTERCEPT</i>` : ''}</span>`
-    : legend(CONTROLS.launch, { key: 'F', sub: fireCapNote(site, status, unfit, noTarget) })}
-      </button>
+        ${!caps.exposure ? '' : `<div class="elint">
+          <span class="ammo-label">${esc(STATUS.exposure.en)}</span>
+          ${sets.map((r) => `<span class="elint-set" title="${esc(r.label)} — how well they have this antenna pinned">
+            ${setName(r) ? `<span class="ammo-label">${setName(r)}</span>` : ''}
+            <span class="gauge ${!r.alive ? '' : (r.exposure ?? 0) > 0.65 ? 'is-hot'
+    : (r.exposure ?? 0) > 0.35 ? 'is-warn' : ''}">
+              <i style="width:${r.alive ? Math.round((r.exposure ?? 0) * 100) : 0}%"></i></span>
+            <b class="elint-fig">${r.alive
+    ? `${Math.round((r.exposure ?? 0) * 100)}%` : '✕'}</b>
+          </span>`).join('')}
+        </div>`}
 
-      ${unfit ? `<div class="unit-row unit-unfit" title="Why this battery cannot take the selected contact">
-        <span>✗ CANNOT LOCK ${esc(track.tn)} — ${esc(unfit.toUpperCase())}</span>
-      </div>` : ''}
-      ${noTarget ? `<div class="unit-row unit-unfit is-quiet">
-        <span>NO TARGET SELECTED — PICK A CONTACT ON THE SCOPE OR THE LIST</span>
-      </div>` : ''}
-      ${wrecked ? `<div class="unit-row unit-unfit">
-        <span>${esc(STATUS.antennasGone.en)} — ${esc(guidance.label)} DESTROYED. THIS BATTERY
-        CANNOT GUIDE A ROUND.</span>
-      </div>` : ''}
+        ${site.crewLosses ? `<div class="crew-row is-hot">${legend(STATUS.crew, { inline: true })}
+          <b>${site.crewLosses} CASUALTIES</b></div>` : ''}
 
-      <div class="unit-switches">
-        ${switch2(CONTROLS.radiate, CONTROLS.silence, !!radar?.on,
-    { act: 'emcon', site: site.id, key: 'A', extra: 'sw-primary', disabled: !radar?.alive })}
-      </div>
-      <div class="unit-controls">
-        ${press(CONTROLS.lock, { act: 'lock', site: site.id, key: 'L', disabled: !!unfit || noTarget })}
-        ${press(CONTROLS.reload, { act: 'reload', site: site.id, key: 'R' })}
-        ${caps.displace ? press(CONTROLS.displace, { act: 'scoot', site: site.id, key: 'X' }) : ''}
+        ${/*
+       * What this equipment can do at all, and who built it.
+       *
+       * Constants rather than news, so they ride at the foot of the readout
+       * block where a panel puts its reference data — and they answer the
+       * question the seat asks about every new contact before anything else:
+       * can this battery reach that at all. The rack's cards have carried the
+       * figures for watches; the seat that has to act on them did not.
+       */ ''}
+        <div class="cabin-reference">
+          <div class="crew-row is-plain">${legend(STATUS.reach, { inline: true })}
+            <b>${type.minRangeKm}–${type.maxRangeKm} km</b></div>
+          <div class="crew-row is-plain">${legend(STATUS.altitudeBand, { inline: true })}
+            <b>${Math.round(type.minAltM)}–${Math.round(type.maxAltM).toLocaleString('en-US')} m</b></div>
+          ${/* A plate carries its number once: the gloss says what the number
+               is called, not the number again. See glossWord. */ ''}
+          <div class="cabin-stamp">
+            <span class="lg"><b>${esc(PLATES.type.tm)}</b><i>${esc(glossWord(PLATES.type))}</i></span> ·
+            <span class="lg"><b>${esc(PLATES.works.tm)}</b><i>${esc(glossWord(PLATES.works))}</i></span> ·
+            <span class="lg"><b>${esc(PLATES.factory.tm)}</b><i>${esc(PLATES.factory.en)}</i></span>
+          </div>
+        </div>
+
       </div>
 
-      ${caps.exposure ? `<div class="unit-row is-spaced">
-        ${legend(STATUS.exposure, { inline: true })}
-        <span class="gauge ${(radar?.exposure ?? 0) > 0.65 ? 'is-hot' : (radar?.exposure ?? 0) > 0.35 ? 'is-warn' : ''}">
-          <i style="width:${Math.round((radar?.exposure ?? 0) * 100)}%"></i></span>
-        <span class="unit-type">${Math.round((radar?.exposure ?? 0) * 100)}%</span>
-      </div>` : ''}
-      ${site.crewLosses ? `<div class="crew-row is-hot">${legend(STATUS.crew, { inline: true })}
-        <b>${site.crewLosses} CASUALTIES</b></div>` : ''}
-
       ${/*
-     * The foot of the cabin: the plates the cabin was built with.
+     * The command pad: one grid, equal cells, in engagement order.
      *
-     * Below the high-voltage placard there used to be a hundred and forty
-     * pixels of blank painted panel at 950, and two hundred and thirty at
-     * 1080 — dead metal under a column whose controls all sat in the top two
-     * thirds. A real cabin has its works plates down there, riveted where
-     * they were riveted at the factory, and they anchor the bottom of the
-     * column the way the bezel's plate anchors the scope. This is also the
-     * one place on the console Cyrillic belongs: stamped nomenclature, with
-     * its gloss under it.
+     * It was a flex-wrap row of four objects at four sizes whose widths were
+     * set by the length of their captions — LOCK 58px wide and 55 tall,
+     * SILENCE a different shape on a different baseline, RELOAD 86 by 48, and
+     * DISPLACE wide enough to wrap onto a line of its own — with LOCK, the
+     * second control of the engagement, rendered UNDER the launch cap. The
+     * sequence is designate, lock, launch; the pad reads in that order, on one
+     * pitch, and it is pinned to the foot of the card so it is where it was
+     * last time whatever the readouts above are doing.
      */ ''}
-      <div class="cabin-foot">
-        <span class="data-plate">
-          <b>${esc(nomenclature ? nomenclature.tm : type.label)}</b><br>
-          ${esc(nomenclature ? nomenclature.en : type.label)}<br>
-          <b>${esc(PLATES.works.tm)}</b><br>${esc(glossWord(PLATES.works))}<br>
-          <b>${esc(PLATES.standard.tm)}</b><br>${esc(PLATES.standard.en)}
-        </span>
-        ${/* The factory and its works number are riveted to the bezel four
-             inches away; this plate carries what belongs to the CABIN. */ ''}
-        <div class="cabin-foot-right">
-          <div class="placard">${esc(PLATES.warning.tm)}<br>${esc(PLATES.warning.en)}</div>
+      <div class="cabin-commands">
+        <div class="cabin-advisory ${advisory.mood}">
+          <span>${esc(advisory.text) || '&nbsp;'}</span>
+          ${/* Lit by the class the paint below puts on the readout region when
+               it does not all fit: the cut is at the line above this one. */ ''}
+          <em class="more-cue">SCROLL FOR MORE ▾</em>
+        </div>
+
+        <div class="cabin-ammo ${loaders.mood}">
+          <span class="ammo-label">${esc(STATUS.rails.en)}</span>
+          ${tubes(site)}
+          <b>${site.readyRounds}/${railCount}</b>
+          <span class="ammo-label ammo-mag">${esc(STATUS.magazine.en)}</span>
+          <b>${site.magazine}</b>
+          <span class="ammo-work">${esc(loaders.label)}</span>
+          ${/*
+       * The loaders' clock as a hairline under the rail lamps rather than as
+       * a row of its own that comes and goes. Every row that appeared when
+       * the crew went out used to shove the launch cap and LOCK down the card
+       * by its own height — measured, 41 px across one engagement, which is
+       * most of a cap — so the bar is always drawn and simply has nothing in
+       * it when the loaders are stowed.
+       */ ''}
+          <span class="ammo-bar"><i style="width:${Math.round(loaders.frac * 100)}%"></i></span>
+        </div>
+
+        <div class="cabin-pad">
+          ${press(lockEntry, { act: 'lock', site: site.id, track: track?.id, key: 'L',
+    extra: own ? 'pb-breakoff' : '',
+    disabled: !site.alive || displacing || (!own && (!!unfit || !track)),
+    title: own ? `Hand channel back and drop ${track.tn}`
+      : unfit ? `Cannot lock: ${refusalText(unfit)}` : 'Put a channel on the selected contact' })}
+          ${press(CONTROLS.reload, { act: 'reload', site: site.id, key: 'R',
+    disabled: !canStartLoading(world, site),
+    title: canStartLoading(world, site) ? 'Loaders out — fill the rails now'
+      : site.magazine <= 0 ? 'The store is empty'
+        : site.readyRounds >= railCount ? 'The rails are full'
+          : displacing ? 'Not while the battery is on the road' : 'The loaders are already out' })}
+
+          ${/*
+       * The launch cap, and nothing else on this panel is allowed to look
+       * like it. It keeps its legend in every state — the countdown that
+       * used to replace it lives on the cap's own second line and on the
+       * channel row — and it states ARMED with a border and an ink colour
+       * as well as with the halo, because the halo is an animation and a
+       * player with reduced motion set was being shown a cold cap and a
+       * live one as the same pixels.
+       */ ''}
+          <button class="pb pb-fire ${status.canFire ? 'is-armed' : ''}
+              ${status.canFire && status.pkEstimate !== null && status.pkEstimate < 0.5 ? 'is-marginal' : ''}"
+            id="btn-fire" data-act="fire" data-site="${site.id}"
+            ${track ? `data-track="${esc(track.id)}"` : ''}
+            title="${esc(fireCapNote(site, status, unfit, !track))}"
+            ${status.canFire ? '' : 'disabled'}>
+            ${legend(CONTROLS.launch, { key: 'F', sub: fireCapNote(site, status, unfit, !track) })}
+          </button>
+
+          <div class="cabin-emcon">
+            ${switch2(CONTROLS.radiate, CONTROLS.silence, !!radar?.on,
+    { act: 'emcon', site: site.id, key: 'A', extra: 'sw-primary',
+      disabled: !radar?.alive || displacing })}
+          </div>
+          ${!caps.displace ? '' : press(CONTROLS.displace, { act: 'scoot', site: site.id, key: 'X',
+    extra: 'pb-scoot', disabled: !site.alive || displacing,
+    title: displacing ? 'Already on the road' : 'Strike the position and move — sixty seconds off the air' })}
         </div>
       </div>
     </div>`);
+
+  /*
+   * Say when there is more card below the fold.
+   *
+   * The readouts scroll and the commands do not, which is the right way round
+   * — but a scroller with no scrollbar (Chromium draws an overlay one, or none
+   * at all) and no edge treatment is exactly how the seat used to hide its own
+   * DISPLACE cap. Measured after the paint, because only the browser knows
+   * whether this battery's channel block and exposure rows fit today.
+   */
+  const body = els.crewConsole.querySelector('.cabin-body');
+  if (body) {
+    const more = body.scrollHeight - body.clientHeight - body.scrollTop > 2;
+    body.classList.toggle('is-overflowing', more);
+  }
 }
 
 /* ------------------------------------------------------------ thumb rail */
@@ -1485,16 +1765,29 @@ export function renderActionBar(world, ui, els, cabin) {
   }));
 
   if (crewed) {
-    const status = engagementStatus(world, crewed, track);
-    const unfit = track && crewed.alive ? cannotEngageReason(world, crewed, track) : null;
-    caps.push(press(CONTROLS.lock, {
-      act: 'lock', site: crewed.id, disabled: !!unfit || !track,
-      title: unfit ? `Cannot lock: ${unfit}` : 'Put a channel on the selected contact',
+    /*
+     * The rail's caps are the cabin's caps: same verbs, same contact, same
+     * refusals. The contact is the cabin's own — the selection, or the channel
+     * the battery is working when there is no selection — so a thumb that has
+     * selected nothing can still fire the shot the launcher already has.
+     */
+    const railChannel = track ? null
+      : channelStatus(world, crewed).find((c) => !c.free && !c.lost);
+    const aim = track ?? (railChannel ? world.tracks.get(railChannel.trackId) : null);
+    const status = engagementStatus(world, crewed, aim);
+    const own = aim ? crewed.engagements.find((e) => e.trackId === aim.id) : null;
+    const unfit = aim && crewed.alive && !own ? cannotEngageReason(world, crewed, aim) : null;
+    caps.push(press(own ? CONTROLS.breakOff : CONTROLS.lock, {
+      act: 'lock', site: crewed.id, track: aim?.id,
+      extra: own ? 'pb-breakoff' : '',
+      disabled: !own && (!!unfit || !aim),
+      title: own ? `Hand the channel back and drop ${aim.tn}`
+        : unfit ? `Cannot lock: ${unfit}` : 'Put a channel on the selected contact',
     }));
     caps.push(press(CONTROLS.launch, {
-      act: 'fire', site: crewed.id, disabled: !status.canFire,
+      act: 'fire', site: crewed.id, track: aim?.id, disabled: !status.canFire,
       extra: `pb-fire pb-rail${status.canFire ? ' is-armed' : ''}`,
-      title: fireCapNote(crewed, status, unfit, !track),
+      title: fireCapNote(crewed, status, unfit, !aim),
     }));
   } else {
     /*

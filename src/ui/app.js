@@ -15,7 +15,7 @@ import {
   loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign,
   missionModifiers, enlist,
 } from '../engine/campaign.js';
-import { armTimeToImpact } from '../engine/doctrine.js';
+import { armTimeToImpact, railsOf } from '../engine/doctrine.js';
 import { stepCommand } from '../engine/command.js';
 import { cannotEngageReason } from '../engine/threat.js';
 import { AIR_TYPES } from '../engine/config.js';
@@ -27,7 +27,7 @@ import { Audio } from './audio.js';
 import {
   renderTopbar, renderTrackList, renderFlightStrip, renderFormations, renderBatteries, renderCrewConsole,
   renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, renderActionBar, stampLegends,
-  clearPanelCache, RANGE_SCALES, batteryOrder,
+  clearPanelCache, RANGE_SCALES, batteryOrder, rackBatteries,
 } from './panels.js';
 import { CONTROLS, POSTURE_CYCLE, legend } from './lexicon.js';
 import { SPEED_BY_KEY, digitPressed } from './keymap.js';
@@ -658,7 +658,10 @@ function applyEffects() {
     if (age > life) continue;
     if (effect.kind === 'shake') {
       shaking = true;
-      shakeMag = Math.max(shakeMag, effect.magnitude ?? 1);
+      // Decaying, not looping at full amplitude for the effect's whole life:
+      // a room settles. `applyEffects` runs every frame, so writing the
+      // property each frame is the decay envelope.
+      shakeMag = Math.max(shakeMag, (effect.magnitude ?? 1) * (1 - 0.55 * clamp01(age / life)));
     }
     if (effect.kind === 'alarm') alarm = true;
     /*
@@ -676,10 +679,11 @@ function applyEffects() {
 
   els.shell.classList.toggle('is-shaking', shaking);
   // A near miss and a direct hit used to produce the same fixed two-pixel
-  // wiggle; the amplitude now carries the difference, over a range wide
-  // enough to read: your own rail at 2.0px, a bomb that nearly had you at
-  // 3.4px, a direct hit at 6.2px.
-  if (shaking) els.shell.style.setProperty('--shake-px', `${(0.8 + shakeMag * 3.4).toFixed(1)}px`);
+  // wiggle; the amplitude carries the difference, over a range wide enough to
+  // read now that the whole console moves rather than the picture inside a
+  // rigid bezel: your own rail at about 2.6px, a bomb that nearly had you at
+  // 4.5px, a direct hit at 8px.
+  if (shaking) els.shell.style.setProperty('--shake-px', `${(1.2 + shakeMag * 4).toFixed(1)}px`);
 
   // A launch aimed at one of your own sets: a red breath at the edges of the
   // tube. The engine has queued this effect since the first build; nothing
@@ -808,9 +812,15 @@ function updateLegend() {
    * who has not already been told. Plain sentences, and the key beside the
    * verb it performs.
    */
+  /*
+   * A is the emissions switch, not E — E has been the weapons-free cap for
+   * watches, and this line was still teaching the old binding: a first-timer
+   * in the cabin who followed it set the battery weapons free and wondered
+   * why the antenna never came up.
+   */
   els.scopeLegend.textContent = ui.hoverInfo ?? (ui.view === 'crew'
     ? 'Click a contact to designate it. L locks a channel onto it, F launches. '
-      + 'E turns your own radar on and off — that one decision is the whole game.'
+      + 'A is the transmitter — off is invisible, on is a target.'
     : 'Point at anything to read what it is. Drag a contact onto a battery to hand it over, '
       + 'or press Shift and the battery’s number. Right-click a radar to switch it on or off.');
 }
@@ -1058,19 +1068,20 @@ function wireCanvasInput() {
   }, { passive: false });
 }
 
-function assignSelected(siteId) {
-  if (!ui.selectedTrackId) return;
+function assignSelected(siteId, trackArg) {
+  const trackId = trackArg ?? ui.selectedTrackId;
+  if (!trackId) return;
   const site = world.siteById.get(siteId);
-  const existing = site?.engagements.find((en) => en.trackId === ui.selectedTrackId);
+  const existing = site?.engagements.find((en) => en.trackId === trackId);
   if (existing) {
-    world.unassign(ui.selectedTrackId, siteId);
+    world.unassign(trackId, siteId);
     return;
   }
-  if (!world.assign(ui.selectedTrackId, siteId)) {
+  if (!world.assign(trackId, siteId)) {
     // A refused assignment says why, at the moment of the decision. The old
     // behaviour was worse than silence: some refusals printed ENGAGING and
     // then broke off fifteen seconds later in the dimmest line the log has.
-    const track = world.tracks.get(ui.selectedTrackId);
+    const track = world.tracks.get(trackId);
     const reason = site && track ? cannotEngageReason(world, site, track) : null;
     if (reason) {
       /*
@@ -1117,10 +1128,17 @@ function operate(ctl) {
   // dead as the display (belt to the CSS pointer-events braces).
   if (!ctl || !world || world.dark) return;
   if (ctl.dataset.act) {
+    /*
+     * A cap that acts on a contact carries the contact. The cabin's LOCK and
+     * LAUNCH used to act on `ui.selectedTrackId` alone, which is why the seat
+     * could show nothing at all while its own launcher was guiding: with no
+     * selection there was no contact for a cap to act on, so the panel had
+     * nothing to offer. The cabin foregrounds the battery's own channel when
+     * there is no selection, and stamps that contact on the caps, so what the
+     * readouts are about is what the caps will act on.
+     */
     runAction(ctl.dataset.act, ctl.dataset.site, ctl.dataset.radar, ctl.dataset.formation,
-      ctl.dataset.state);
-  } else if (ctl.id === 'btn-fire') {
-    world.fire(world.control.crewedBatteryId, ui.selectedTrackId);
+      ctl.dataset.state, ctl.dataset.track);
   } else if (ctl.dataset.track) {
     ui.selectedTrackId = ctl.dataset.track;
   } else if (ctl.dataset.site) {
@@ -1312,7 +1330,7 @@ function closeAbort() {
   document.getElementById('btn-abort')?.focus();
 }
 
-function runAction(act, siteId, radarId, formationId, stateArg) {
+function runAction(act, siteId, radarId, formationId, stateArg, trackArg) {
   if (!world) return;
   const site = siteId ? world.siteById.get(siteId) : null;
   const formation = formationId ? world.formationById.get(formationId) : null;
@@ -1378,8 +1396,36 @@ function runAction(act, siteId, radarId, formationId, stateArg) {
     case 'ride':
       if (site) world.setEmconOrder(site.id, site.emconOrder === 'ride' ? 'doctrine' : 'ride');
       break;
-    case 'reload': if (site) world.reload(site.id); break;
-    case 'scoot': if (site) world.scoot(site.id); break;
+    /*
+     * The two housekeeping caps, with their refusals spoken.
+     *
+     * Both are greyed by the panel when they cannot act (see the cabin's
+     * command pad), but a guard on the cap is not the same as an answer from
+     * the equipment: a press that arrives here anyway — a stale keystroke, a
+     * cap pressed on the frame the state changed — used to return absolutely
+     * nothing. No line, no lamp, no refusal. A cap that eats a press in
+     * silence reads as broken hardware, so every press says something.
+     */
+    case 'reload':
+      if (!site) break;
+      // `world.reload` speaks for itself when the store is dry or resupply is
+      // denied; this covers the refusals it returns silently.
+      if (!world.reload(site.id) && site.magazine > 0 && world.modifiers.reloadsAllowed) {
+        world.logThrottled(`noReload:${site.id}`, 8, 'warn',
+          `${site.name} — ${site.magazine <= 0 ? 'STORE EMPTY'
+            : site.scootRemainingS > 0 ? 'ON THE ROAD, LOADERS STAY IN'
+              : site.readyRounds >= railsOf(site) ? 'RAILS ALREADY FULL'
+                : 'LOADERS ARE ALREADY OUT'}`, { siteId: site.id });
+      }
+      break;
+    case 'scoot':
+      if (!site) break;
+      if (!world.scoot(site.id)) {
+        world.logThrottled(`noScoot:${site.id}`, 8, 'warn',
+          `${site.name} — ${site.scootRemainingS > 0 ? 'ALREADY ON THE ROAD'
+            : 'CANNOT DISPLACE'}`, { siteId: site.id });
+      }
+      break;
     /*
      * LOCK is the cabin's assignment. It used to call world.assign directly
      * and drop the null on the floor, so a refused lock in the SAM seat did
@@ -1392,12 +1438,12 @@ function runAction(act, siteId, radarId, formationId, stateArg) {
      */
     case 'lock':
       if (!site) break;
-      if (!ui.selectedTrackId) {
+      if (!(trackArg ?? ui.selectedTrackId)) {
         world.log('warn', `${site.name} — NO TARGET SELECTED. PICK A CONTACT FIRST.`,
           { siteId: site.id });
         break;
       }
-      assignSelected(site.id);
+      assignSelected(site.id, trackArg);
       break;
     /*
      * The launch cap, as an action rather than as an id.
@@ -1408,7 +1454,9 @@ function runAction(act, siteId, radarId, formationId, stateArg) {
      * now, so the cabin's cap and the thumb rail's cap are the same control
      * built twice, and both make the same noise and go through the same guard.
      */
-    case 'fire': if (crewedBattery()) world.fire(crewedBattery(), ui.selectedTrackId); break;
+    case 'fire':
+      if (crewedBattery()) world.fire(crewedBattery(), trackArg ?? ui.selectedTrackId);
+      break;
     /*
      * And the two verbs that only ever existed on the keyboard — stepping the
      * board, and handing the selected contact over. A phone has no arrow keys
@@ -1545,7 +1593,7 @@ function wireGlobalInput() {
       } else if (e.shiftKey) {
         // The same order the panel numbers its cards in — your own battery
         // first — so Shift+1 hands the selected contact to the card marked 1.
-        const target = batteryOrder(world)[n];
+        const target = rackBatteries(world, ui)[n];
         if (target) {
           e.preventDefault();
           ui.selectedSiteId = target.id;
@@ -1629,8 +1677,26 @@ function wireGlobalInput() {
         if (target) runAction('emcon', target.id);
         break;
       }
-      case 'f': if (crewedId) world.fire(crewedId, ui.selectedTrackId); break;
-      case 'l': if (crewedId) runAction('lock', crewedId); break;
+      /*
+       * F is the launch cap and L is the LOCK cap, so both go through the cap's
+       * own path: the same noise, the same guards, the same refusal in the
+       * ticker — and the same contact. That last one matters now the cabin
+       * foregrounds the battery's own channel when nothing is selected: the
+       * cap is armed for a contact, and the key must fire at THAT contact
+       * rather than at a selection the operator never made.
+       */
+      case 'f':
+        if (crewedId) {
+          runAction('fire', crewedId, null, null, null,
+            document.getElementById('btn-fire')?.dataset.track);
+        }
+        break;
+      case 'l':
+        if (crewedId) {
+          runAction('lock', crewedId, null, null, null,
+            els.crewConsole.querySelector('[data-act="lock"]')?.dataset.track);
+        }
+        break;
       case 'r': if (site) runAction('reload', site.id); break;
       /*
        * S, G and X answer to the same predicate their caps do.

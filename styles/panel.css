@@ -110,6 +110,8 @@
 
 .tube {
   position: relative; flex: 1; min-width: 0; min-height: 0;
+  /* The instrument, then its caption strip: see .scope-legend. */
+  display: flex; flex-direction: column;
   border-radius: 10px;
   overflow: hidden;
   background: var(--tube-face);
@@ -352,31 +354,66 @@
   box-shadow: inset 0 3px 6px rgba(0, 0, 0, .8), inset 0 0 0 1px var(--hostile);
 }
 
-/* The launch button is red, guarded, and larger than everything near it. */
-/* One line instead of two cost the cap nine pixels of height; it takes them
-   back as padding, because the launch cap is the largest control in the cabin
-   on purpose and a thin one reads as a toolbar button. */
+/*
+ * The launch cap.
+ *
+ * It is the largest, reddest, most raised object on the panel in every state,
+ * and it says which state it is in with paint rather than with movement. It
+ * used to say ARMED with an animated halo and nothing else — so a player with
+ * prefers-reduced-motion set (where the global rule collapses every animation
+ * to a single microsecond cycle) was shown a live cap and a cold one as
+ * literally the same pixels, on the one control the game exists to press. The
+ * border, the ink and the inner ring carry it now; the halo is the flourish
+ * on top.
+ */
 .pb-fire {
-  width: 100%; padding: 15px 8px 14px; margin-top: 7px;
+  width: 100%; padding: 11px 8px 10px;
   background: linear-gradient(180deg, var(--fire-cap), var(--fire-cap-lo));
   border-color: var(--fire-cap-edge);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 3px 0 var(--fire-cap-edge), 0 4px 6px rgba(0, 0, 0, .5);
 }
 .pb-fire .lg b { color: var(--fire-ink); font-size: 15px; letter-spacing: .24em; }
-.pb-fire .lg i { color: var(--fire-ink-dim); }
-.pb-fire.is-armed { animation: fire-ready 1.05s infinite; }
-/* A dead launch cap is still the launch cap — grey and cold, not swapped for
-   a piece of grey panel. */
+.pb-fire .lg i { color: var(--fire-ink-dim); font-size: 8.5px; letter-spacing: .08em; }
+/* ARMED: a white-hot rim, brighter ink, and the halo on top of both. */
+.pb-fire.is-armed {
+  border-color: var(--fire-ink);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--fire-cap) 82%, #ff6a58), var(--fire-cap-lo));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .3),
+    inset 0 0 0 2px rgba(var(--fire-halo-rgb), .55),
+    0 3px 0 var(--fire-cap-edge), 0 0 14px rgba(var(--fire-halo-rgb), .45);
+  animation: fire-ready 1.05s infinite;
+}
+.pb-fire.is-armed .lg b { color: #fff; text-shadow: 0 0 8px rgba(var(--fire-halo-rgb), .8); }
+/* Armed, but the firing tables do not think much of the shot: the cap is live
+   and says so in the ink rather than pretending the odds are good. */
+.pb-fire.is-marginal .lg i { color: var(--warn); }
+/* A dead launch cap is still the launch cap — a red cap safed under its
+   shroud, not a piece of grey panel. It keeps its shape, its rim and its
+   lettering; what it loses is the fire in the ink. */
 .pb-fire:disabled {
-  background: linear-gradient(180deg, var(--fire-cap), var(--fire-cap-lo));
-  border-color: var(--fire-cap-edge);
-  filter: grayscale(.75) brightness(.66);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .55);
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--fire-cap) 58%, var(--metal-edge)),
+    color-mix(in srgb, var(--fire-cap-lo) 58%, var(--metal-edge)));
+  border-color: color-mix(in srgb, var(--fire-ink-dim) 34%, var(--fire-cap-edge));
+  filter: none; opacity: 1;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(0, 0, 0, .35);
 }
+.pb-fire:disabled .lg b { color: color-mix(in srgb, var(--fire-ink) 52%, var(--metal-edge)); text-shadow: none; }
+.pb-fire:disabled .lg i { color: color-mix(in srgb, var(--fire-ink-dim) 60%, var(--metal-edge)); }
 @keyframes fire-ready {
-  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 0 var(--fire-cap-edge), 0 0 0 rgba(var(--fire-halo-rgb), 0); }
-  50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 3px 0 var(--fire-cap-edge), 0 0 22px rgba(var(--fire-halo-rgb), .75); }
+  0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.3), inset 0 0 0 2px rgba(var(--fire-halo-rgb), .55), 0 3px 0 var(--fire-cap-edge), 0 0 10px rgba(var(--fire-halo-rgb), .3); }
+  50% { box-shadow: inset 0 1px 0 rgba(255,255,255,.3), inset 0 0 0 2px rgba(var(--fire-halo-rgb), .8), 0 3px 0 var(--fire-cap-edge), 0 0 24px rgba(var(--fire-halo-rgb), .8); }
 }
+
+/*
+ * BREAK OFF is the same cap as LOCK with the opposite meaning, so it wears the
+ * warning ink: a press that throws away a firing solution must not look like a
+ * press that takes one.
+ */
+.pb-breakoff { border-color: color-mix(in srgb, var(--warn) 60%, var(--metal-edge)); }
+.pb-breakoff .lg b { color: var(--warn); }
 
 .pb-accept { background: linear-gradient(180deg, var(--accept-cap), var(--accept-cap-lo)); border-color: var(--accept-cap-edge); }
 .pb-refuse { background: linear-gradient(180deg, var(--refuse-cap), var(--refuse-cap-lo)); border-color: var(--refuse-cap-edge); }
@@ -569,11 +606,12 @@
 @keyframes tube-hoist { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .tubes i.is-loading { animation: none; } }
 
-/* Reloading or displacing: the bar empties and the seconds count down beside
-   it, so "out of the fight" has a number on it. */
+/* Reloading or displacing, on the rack's cards: the bar empties and the
+   seconds count down beside it, so "out of the fight" has a number on it. The
+   cabin states the same thing in its own ammunition strip, which is in the
+   command pad rather than in the scrolling readouts — see .cabin-ammo. */
 .reload-row { align-items: center; gap: 6px; }
 .reload-left { font-variant-numeric: tabular-nums; color: var(--warn); min-width: 3.2em; text-align: right; }
-.crew-tubes { display: flex; align-items: center; gap: 8px; }
 
 /* A meter with a needle-ish fill, for exposure and timers. */
 .gauge {
@@ -624,6 +662,8 @@
   transform: translateY(2px);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, .55), 0 0 0 var(--metal-edge);
 }
+/* The launch cap stands proudest of the pad, so it travels furthest. */
+.pb-fire.is-pressed { transform: translateY(3px); }
 
 /* --------------------------------------------------------------- the ring */
 

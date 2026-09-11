@@ -445,51 +445,309 @@ kbd {
 .pill.tight { color: var(--warn); }
 .pill.free { color: var(--good); }
 
-/* In the cabin both of the panels above give way to the seat itself. */
-.battery-list.is-secondary { flex: 0 1 auto; max-height: 30%; }
+/*
+ * In the cabin both of the panels above give way to the seat itself.
+ *
+ * They were capped at 30% each, which on a 1280x800 laptop left the console
+ * 282 px of a 512 px card and put LOCK below the bottom of the screen. In the
+ * crew seat the rack and the formation panel are reference material — the
+ * batteries that are not yours, and the standing orders you are fighting
+ * under — and reference material does not get to push the seat's own controls
+ * off the panel. They keep a scrollbar of their own.
+ */
+.battery-list.is-secondary { flex: 0 1 auto; max-height: 16%; min-height: 52px; }
 
 /* -------------------------------------------------------- crew console */
 
+/*
+ * The cabin: a scrolling instrument block over a command pad that never moves.
+ *
+ * What was here was one scroller holding everything, which is how the seat
+ * came to render its own primary controls off the bottom of the panel. At
+ * 1280x800 in the crew seat the console was 391 px of window onto 450 px of
+ * card, with no scrollbar drawn and nothing on screen to say the seat
+ * continued: the LOCK / SILENCE / RELOAD row was bisected by the panel edge
+ * and the DISPLACE cap — the survival control — was 37 px below it, invisible.
+ * Scrolling down to reach it took the battery's name, its lamps and its
+ * envelope readout off the top, so the operator could see the state or reach
+ * the control and never both.
+ *
+ * The command pad is out of the scroller. Whatever the readouts do, LOCK, the
+ * launch cap, the emissions switch, RELOAD and DISPLACE are in the same
+ * rectangle at the foot of the panel at every supported size.
+ */
 .crew-console {
-  border-top: 1px solid var(--metal-edge); padding: 7px 5px;
+  border-top: 2px solid var(--metal-edge); padding: 0;
+  flex: 1 1 auto; min-height: 0; overflow: hidden;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--metal-hi) 22%, var(--bg-panel)), var(--bg-panel) 90px);
+}
+.crew-console .unit.cabin {
+  margin: 0; height: 100%; min-height: 0; padding: 6px 7px 7px;
+  display: flex; flex-direction: column; gap: 0;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 34%, var(--metal-edge));
+}
+/* The seat says whose it is. It is not another card in the rack. */
+.cabin-head {
+  display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap;
+  padding-bottom: 5px; border-bottom: 1px solid var(--metal-edge);
+}
+.cabin-station {
+  font-size: 8.5px; letter-spacing: .18em; color: var(--bg-panel);
+  background: var(--accent); padding: 1px 5px; border-radius: 1px; font-weight: 700;
+}
+.cabin-head .unit-name { font-size: 12.5px; letter-spacing: .1em; }
+.cabin-head .unit-type { flex: 1 1 auto; text-align: right; }
+
+/*
+ * The readouts scroll; the pad below them does not. A scroller with nothing to
+ * say that it scrolls is how a control ends up unreachable, so this one draws
+ * a real scrollbar and casts a shadow up from its own bottom edge whenever
+ * there is more card under it.
+ */
+.cabin-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; padding-right: 3px;
+  scrollbar-width: thin; scrollbar-color: var(--metal-hi) var(--well);
+  box-shadow: inset 0 -12px 10px -11px rgba(0, 0, 0, .85);
 }
 /*
- * The cabin fills its column, and its plates sit at the bottom of it.
- *
- * Below the high-voltage placard there used to be a hundred and forty pixels
- * of blank painted panel at 950 and two hundred and thirty at 1080 — every
- * control in the top two thirds and dead metal under them. The card is as tall
- * as the console it is screwed into, and the works plates ride at its foot,
- * where a factory rivets them.
+ * More card below the fold, said in a way that does not depend on the browser
+ * drawing a scrollbar: the readouts darken into the cut, and the advisory line
+ * immediately under it lights a chevron. Chromium draws an overlay scrollbar
+ * here (measured: the gutter is zero pixels wide), which is exactly how a
+ * panel comes to hide a control. The chevron rides in a row that is reserved
+ * anyway, so saying it costs the readouts no height.
  */
-.crew-console .unit {
-  margin: 0; min-height: 100%;
-  display: flex; flex-direction: column;
+.cabin-body.is-overflowing {
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 16px), transparent);
 }
-.crew-console .unit-controls, .crew-console .placard { margin-top: 9px; }
-.cabin-foot {
-  margin-top: auto; padding-top: 12px;
-  display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+.more-cue { display: none; }
+.cabin-body.is-overflowing ~ .cabin-commands .more-cue {
+  display: inline; flex: 0 0 auto; font-style: normal;
+  font-size: 8px; letter-spacing: .14em; color: var(--accent);
 }
-.cabin-foot .data-plate { line-height: 1.55; }
-.cabin-foot-right {
-  display: flex; flex-direction: column; align-items: stretch; gap: 6px;
-  min-width: 0; flex: 0 1 auto; text-align: right;
+.cabin-body::-webkit-scrollbar { width: 7px; }
+.cabin-body::-webkit-scrollbar-track { background: var(--well); }
+.cabin-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--metal-hi), var(--metal-lo));
+  border: 1px solid var(--metal-edge); border-radius: 1px;
 }
-.cabin-foot .placard { margin-top: 0; }
-.crew-console h3 {
-  margin: 0 0 6px; font-size: 10px; letter-spacing: .16em;
-  color: var(--engrave-dim); text-transform: uppercase;
+/*
+ * The annunciator row: four lamps on a fixed 2x2 pitch.
+ *
+ * As a wrapping flex row the fourth lamp dropped to a line of its own at some
+ * widths and not at others, so the block that is the console's primary status
+ * changed height with the window. Two by two at every width, and the row is
+ * the same height all watch.
+ */
+.cabin-lamps {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; margin-top: 7px;
 }
+.cabin-lamps .lamp { min-width: 0; }
+.cabin-lamps .lamp-cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/*
+ * A readout row: what it is on the left, what it says on the right.
+ *
+ * Every figure is tabular, so a range counting down does not shuffle the
+ * digits beside it, and every row is the same height whether or not it has
+ * anything to report — the rows print an em dash rather than being left out,
+ * because a row that appears when an engagement starts moves every control
+ * under it at exactly the wrong moment.
+ */
 .crew-row {
   display: flex; justify-content: space-between; align-items: center; gap: 8px;
-  font-size: 11px; padding: 2px 0;
+  font-size: 11px; padding: 1px 0; min-height: 17px;
   border-bottom: 1px solid rgba(0, 0, 0, .35);
 }
-.crew-row b { color: var(--engrave); font-variant-numeric: tabular-nums; font-size: 10.5px; }
-.crew-row.is-hot b { color: var(--hostile); }
-.crew-row.is-good b { color: var(--good); }
+.crew-row .lg { flex: 0 1 auto; min-width: 0; }
+.crew-row .lg b {
+  font-size: 9.5px; letter-spacing: .11em; color: var(--engrave-dim);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.crew-row > b {
+  flex: 0 0 auto; color: var(--engrave); font-variant-numeric: tabular-nums;
+  font-size: 11px; letter-spacing: .04em;
+}
+.crew-row.is-hot > b { color: var(--hostile); }
+.crew-row.is-good > b { color: var(--good); }
+
+/*
+ * Out of action, said once, across the top of the card, above the scroller —
+ * a caution that can be scrolled off the panel is not a caution, and it must
+ * not go grey with the readouts it is explaining.
+ */
+.cabin-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: 6px 0 2px; padding: 3px 6px;
+  border: 1px solid var(--warn); color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+}
+.cabin-banner.is-bad { border-color: var(--hostile); color: var(--hostile);
+  background: color-mix(in srgb, var(--hostile) 16%, transparent); }
+.cabin-banner .lg b { font-size: 10px; letter-spacing: .1em; color: inherit; }
+.cabin-banner .lg i { color: inherit; opacity: .8; }
+.cabin-banner b { font-variant-numeric: tabular-nums; font-size: 12px; }
+
+/*
+ * The channel block: one row per fire-control channel, occupied or not.
+ * Fixed height for the life of the watch, because a block that grows a row
+ * when a channel opens moves everything under it at the worst moment.
+ */
+.chan-block { margin-top: 7px; border-top: 1px solid var(--metal-edge); padding-top: 4px; }
+.chan-head {
+  display: flex; align-items: baseline; justify-content: space-between; line-height: 1.2;
+}
+.chan-head .lg b { font-size: 9.5px; letter-spacing: .14em; color: var(--engrave-dim); }
+.chan-count { font-size: 10.5px; color: var(--engrave); font-variant-numeric: tabular-nums; }
+.chan {
+  display: grid; grid-template-columns: 15px 46px 1fr auto;
+  align-items: center; gap: 6px; width: 100%;
+  margin-top: 3px; padding: 1px 5px; text-align: left;
+  font: inherit; font-size: 10px; letter-spacing: .06em;
+  border: 1px solid var(--metal-edge); border-radius: 1px;
+  background: linear-gradient(180deg, var(--bg-raised), var(--well));
+  color: var(--engrave);
+}
+.chan-n {
+  color: var(--engrave-dim); font-size: 9px; text-align: center;
+  border-right: 1px solid var(--metal-edge);
+}
+.chan-tn { font-weight: 700; letter-spacing: .08em; }
+.chan-state { color: var(--ink); }
+.chan-fig { color: var(--engrave-dim); font-variant-numeric: tabular-nums; font-size: 9.5px; }
+.chan.is-free { color: var(--engrave-dim); border-style: dashed; background: none; }
+.chan.is-free .chan-tn, .chan.is-free .chan-state { color: var(--engrave-dim); font-weight: 400; }
+/* A contact that is designated but holds no channel yet: the row the LOCK cap
+   is about, so designating something is never met with a silent block. */
+.chan.is-prospect { border-style: dashed; }
+.chan.is-prospect .chan-state { color: var(--engrave-dim); }
+.chan.is-unfit { border-color: color-mix(in srgb, var(--warn) 55%, var(--metal-edge)); }
+.chan.is-unfit .chan-state { color: var(--warn); }
+.chan.is-live { cursor: pointer; }
+.chan.is-live:hover { filter: brightness(1.15); }
+.chan.is-guiding .chan-state { color: var(--warn); }
+/* The channel the readouts above are about. */
+.chan.is-focus {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+/* One row per antenna, because they are hunted one at a time: a battalion's
+   acquisition set and its fire control diverge by tenths of an exposure with
+   a separate round tracking each, and the cabin reported only the first. */
+.elint { display: flex; align-items: center; gap: 7px; margin-top: 6px; font-size: 10px; }
+.elint-set { display: flex; align-items: center; gap: 4px; flex: 1 1 0; min-width: 0; }
+.elint .gauge { min-width: 24px; }
+.elint-fig {
+  min-width: 2.6em; text-align: right; font-variant-numeric: tabular-nums;
+  color: var(--engrave);
+}
+
+/*
+ * The reference block rides at the foot of the readouts: what the equipment
+ * can reach, and the plate that says what it is. Constants, so they sit below
+ * everything that changes, and they are the first thing to go under the fold
+ * on a short panel rather than the last thing above it.
+ */
+.cabin-reference { margin-top: auto; padding-top: 8px; }
+.cabin-reference .crew-row { border-bottom: 0; }
+.cabin-stamp {
+  margin-top: 4px; padding-top: 5px; border-top: 1px solid var(--metal-edge);
+  font-size: 8px; letter-spacing: .1em; color: var(--engrave-dim); opacity: .8;
+}
+.cabin-stamp .lg { display: inline-flex; flex-direction: row; gap: 4px; align-items: baseline; }
+.cabin-stamp .lg b { font-size: 8px; letter-spacing: .1em; }
+.cabin-stamp .lg i { font-size: 8px; font-style: normal; opacity: .8; }
+
+/*
+ * There is no HIGH VOLTAGE placard at the foot of the cabin any more.
+ *
+ * The card used to end in a two-column block of stamped nomenclature and a
+ * HIGH VOLTAGE placard — about ninety pixels of decoration at the bottom of
+ * the one column whose ELINT gauge and DISPLACE cap were being rendered below
+ * the bottom of the panel. The scope bezel and the topbar carry the works
+ * plates, four inches away and unclipped; the seat carries controls. The
+ * battery's own nomenclature plate is still on the card's head, which is
+ * where a plate saying what this equipment IS belongs.
+ */
+
+/* ------------------------------------------------------- the command pad */
+
+.cabin-commands {
+  flex: 0 0 auto; margin-top: 6px; padding-top: 6px;
+  border-top: 2px solid var(--metal-edge);
+  box-shadow: 0 -1px 0 color-mix(in srgb, var(--metal-hi) 40%, transparent);
+}
+/* One line, one voice, one height — whether or not it has anything to say. */
+.cabin-advisory {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  min-height: 14px; font-size: 9.5px; letter-spacing: .07em; line-height: 1.35;
+  color: var(--engrave-dim);
+}
+/* One line, always: a caution that wrapped to two would move the pad under
+   it, which is the whole thing this block exists not to do. */
+.cabin-advisory > span {
+  flex: 1 1 auto; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cabin-advisory.is-warn { color: var(--warn); }
+.cabin-advisory.is-bad { color: var(--hostile); }
+.cabin-advisory.is-good { color: var(--good); }
+
+.cabin-ammo {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 3px 6px; margin-top: 4px;
+  font-size: 10px; font-variant-numeric: tabular-nums;
+}
+.cabin-ammo b { color: var(--engrave); }
+.ammo-label { font-size: 8.5px; letter-spacing: .12em; color: var(--engrave-dim); }
+.cabin-ammo .tubes { flex: 0 1 auto; }
+.ammo-mag { margin-left: auto; }
+/* What the loaders are doing, in the same row as what they have loaded. */
+.ammo-work {
+  flex: 0 0 auto; font-size: 8.5px; letter-spacing: .1em; color: var(--engrave-dim);
+  width: 100%; text-align: right; margin-top: -2px;
+}
+.cabin-ammo.is-warn .ammo-work { color: var(--warn); }
+.ammo-bar {
+  flex: 1 0 100%; height: 3px; margin-top: 1px;
+  background: var(--well); border: 1px solid var(--metal-edge);
+}
+.ammo-bar i { display: block; height: 100%; background: var(--metal-hi); transition: width .25s; }
+.cabin-ammo.is-warn .ammo-bar i { background: var(--warn); }
+
+/*
+ * The pad itself: two columns on one pitch, in engagement order.
+ * LOCK, then the launch cap across both columns, then the housekeeping row.
+ */
+.cabin-pad {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 6px;
+}
+.cabin-pad > .pb, .cabin-pad > .cabin-emcon { min-width: 0; }
+.cabin-pad > .pb { min-height: 32px; }
+/* The emissions switch is a cap-sized cell in the pad like everything else. */
+.cabin-pad .cabin-emcon .sw { padding-top: 2px; padding-bottom: 2px; }
+.cabin-pad .cabin-emcon .sw-body { height: 22px; }
+.cabin-pad .cabin-emcon .sw-pos { font-size: 10px; line-height: 14px; }
+.cabin-pad #btn-fire { grid-column: 1 / -1; }
+.cabin-pad .cabin-emcon .sw { width: 100%; height: 100%; }
+/* On a watch with no DISPLACE cap the emissions switch has the row to
+   itself rather than leaving a hole beside it. */
+.cabin-pad .cabin-emcon:last-child { grid-column: 1 / -1; }
+.cabin-pad .pb .lg { width: 100%; }
+.cabin-pad .pb .lg b, .cabin-pad .pb .lg i {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+}
+/* Every cap in the pad reserves the same corner for its key chip, so the
+   chips cannot make one cap wider than its neighbour. */
+.cabin-pad .pb { padding-right: 22px; }
+.cabin-pad .pb:not(#btn-fire) .lg b { font-size: 11px; letter-spacing: .06em; }
+
+/* A battery on the road cannot see, guide or shoot, and the card says so
+   rather than looking exactly like one that is fighting. */
+.unit.cabin.is-displacing .cabin-body { filter: saturate(.3) brightness(.78); }
+.unit.cabin.is-displacing .cabin-pad { opacity: .96; }
 
 .meter { height: 6px; background: var(--bg-raised); border: 1px solid var(--edge); border-radius: 999px; overflow: hidden; margin: 3px 0 6px; }
 .meter i { display: block; height: 100%; background: var(--warn); transition: width .3s; }
@@ -497,7 +755,7 @@ kbd {
 /* ----------------------------------------------------------------- scope */
 
 .scope-wrap { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
-#scope { display: block; width: 100%; height: 100%; }
+#scope { display: block; width: 100%; flex: 1 1 auto; min-height: 0; }
 /* Curved glass over the tube: a highlight across the top-left, nothing more. */
 .tube::after {
   content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
@@ -516,7 +774,7 @@ kbd {
 @media (max-width: 1100px) { .scope-side { display: none; } }
 
 .scope-overlay {
-  position: absolute; inset: 0; pointer-events: none;
+  position: absolute; inset: 0 0 30px; pointer-events: none;
   /* --flash-a is set per frame by the app from the effect's magnitude. */
   background-color: rgba(var(--flash-rgb), var(--flash-a, 0));
   display: flex; align-items: center; justify-content: center;
@@ -527,32 +785,49 @@ kbd {
 .scope-overlay .huge { font-size: 22px; color: var(--hostile); text-shadow: var(--glow); animation: blink .7s infinite steps(1); }
 
 /*
- * The line under the tube stands off the banner that floats over it.
+ * The line under the tube has its own strip, out of the picture.
  *
- * The command net overlays the bottom of the stage rather than growing the
- * footer — a directive that resized the picture mid-watch was worse — but the
- * scope's own instruction line was pinned 8px from the tube's bottom edge and
- * was therefore sliced horizontally by the banner's top border, two of its
- * three lines cut through the middle of their glyphs at 1280. The banner hands
- * its height to the shell as `--net-h`; the legend clears it, and rides back
- * down when the directive is answered.
+ * It used to be an overlay pinned to the bottom of the glass, in the display's
+ * own ink, over the range-height plot's x-axis: at 1280 the sentence printed
+ * straight through the 0, 20, 40, 60, 80, 100 and 120 km numerals and the
+ * horizon label, two pieces of text at one size in one colour occupying the
+ * same pixels. It is a caption, so it is under the instrument rather than on
+ * it, in a strip of fixed height — fixed because this line doubles as the
+ * hover readout, and a caption that grew a second line as the pointer moved
+ * would resize the canvas and rescale the whole picture.
  */
 .scope-legend {
-  position: absolute; left: 8px; right: 8px;
-  bottom: calc(8px + var(--net-h, 0px));
-  pointer-events: none; transition: bottom .12s;
-  font-size: 10px; color: var(--ink-dim); line-height: 1.7; letter-spacing: .06em;
+  flex: 0 0 auto; height: 30px; overflow: hidden;
+  padding: 5px 9px; pointer-events: none;
+  border-top: 1px solid var(--metal-edge);
+  background: linear-gradient(180deg, var(--bg-panel), var(--bg));
+  font-size: 10px; color: var(--ink-dim); line-height: 1.5; letter-spacing: .06em;
 }
 
-/* Amplitude carries the difference between a near miss and a direct hit;
-   --shake-px is set per-effect by the app from the engine's magnitude. */
-.shell.is-shaking .scope-wrap { animation: shake .28s linear infinite; }
+/*
+ * The whole cabin moves, not the picture inside a rigid bezel.
+ *
+ * This animated `.scope-wrap` alone: measured through the shake that follows
+ * the operator's own launch, the phosphor translated by up to two pixels while
+ * the bezel around it, the panels beside it and the steel the operator's hands
+ * are on all stayed at `transform: none`. A missile left the rail forty feet
+ * away and only the image twitched, which reads as a rendering artefact rather
+ * than as a launch. The shell carries it now — bezel, rack, cabin and ticker
+ * travelling together — with a little rotation, because a room does not slide
+ * on rails.
+ *
+ * --shake-px is set per-effect by the app from the engine's magnitude.
+ */
+.shell.is-shaking { animation: shake .3s linear infinite; will-change: transform; }
 @keyframes shake {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(var(--shake-px, 2px), calc(var(--shake-px, 2px) * -0.5)); }
-  50% { transform: translate(calc(var(--shake-px, 2px) * -1), calc(var(--shake-px, 2px) * 0.5)); }
-  75% { transform: translate(calc(var(--shake-px, 2px) * 0.5), var(--shake-px, 2px)); }
-  100% { transform: translate(0, 0); }
+  0% { transform: translate(0, 0) rotate(0deg); }
+  20% { transform: translate(var(--shake-px, 2px), calc(var(--shake-px, 2px) * -0.55))
+    rotate(calc(var(--shake-px, 2px) * 0.03deg)); }
+  45% { transform: translate(calc(var(--shake-px, 2px) * -0.9), calc(var(--shake-px, 2px) * 0.5))
+    rotate(calc(var(--shake-px, 2px) * -0.035deg)); }
+  70% { transform: translate(calc(var(--shake-px, 2px) * 0.5), var(--shake-px, 2px))
+    rotate(calc(var(--shake-px, 2px) * 0.02deg)); }
+  100% { transform: translate(0, 0) rotate(0deg); }
 }
 
 /* A weapon aimed at one of your own sets: a red breath at the tube's edges,
@@ -741,7 +1016,10 @@ kbd {
   min-height: 0; overflow-y: auto;
   box-shadow: inset 0 -14px 12px -12px rgba(0, 0, 0, .8);
 }
-.formation-list.is-secondary { max-height: 30%; }
+.formation-list.is-secondary { max-height: 13%; min-height: 44px; }
+/* Same bargain as the rack above: on a short column the seat takes the room.
+   See the note on .battery-list.is-secondary. */
+@media (max-height: 880px) { .formation-list.is-secondary { max-height: 10%; } }
 /*
  * Where there are formations, they are what the watch is played on and the
  * rack is mostly detached batteries you may not touch — so the rack takes
