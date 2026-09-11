@@ -545,7 +545,7 @@ function frame(now) {
     ui.speedHintShown = true;
     // The keys are the numbers on the caps: 2 for twice, 4 for four times.
     world.log('info',
-      'NOTHING CLOSE YET. TIME COMPRESSION IS ON THE BOARD — KEYS 2 AND 4. THE WATCH KEEPS AT 1.');
+      'NOTHING CLOSE YET. THE 2× AND 4× CAPS AT THE TOP SPEED THE CLOCK UP; IT STAYS AT 1× UNTIL YOU PRESS ONE.');
   }
 
   /*
@@ -831,12 +831,20 @@ function updateLegend() {
    * watches, and this line was still teaching the old binding: a first-timer
    * in the cabin who followed it set the battery weapons free and wondered
    * why the antenna never came up.
+   *
+   * And it says what each action does FOR the player, in words a person who
+   * has never seen a radar can follow. "Designate", "locks a channel onto
+   * it", "the transmitter — off is invisible, on is a target" were the
+   * trade talking to itself; the player's verdict on the line was that it
+   * was garbage, and it was.
    */
+  // The strip under the tube reserves two lines at the narrowest reference
+  // width, so each sentence is written to fit two lines at 1280 and no more.
   els.scopeLegend.textContent = ui.hoverInfo ?? (ui.view === 'crew'
-    ? 'Click a contact to designate it. L locks a channel onto it, F launches. '
-      + 'A is the transmitter — off is invisible, on is a target.'
-    : 'Point at anything to read what it is. Drag a contact onto a battery to hand it over, '
-      + 'or press Shift and the battery’s number. Right-click a radar to switch it on or off.');
+    ? 'Click a contact to make it your target. L locks your battery onto it, F launches a missile. '
+      + 'A switches your radar on or off: off, the enemy cannot find you; on, you can see and shoot.'
+    : 'Hover over anything to read what it is. Drag a contact onto a battery symbol (or press Shift '
+      + 'and its number) to give it the shot. Right-click a radar symbol to switch it on or off.');
 }
 
 /** One sentence for whatever the scope's hit-test found under the pointer. */
@@ -849,7 +857,7 @@ function describeEntity(hit) {
       ? 'unidentified contact' : (AIR_TYPES[t.classification]?.name?.toLowerCase() ?? t.classification);
     const dest = t.predictedAssetId ? world.assetById.get(t.predictedAssetId) : null;
     return `${t.tn} — ${t.hostility} ${kindName}`
-      + (dest ? `, appears bound for ${dest.label}` : ', destination not yet established');
+      + (dest ? `, looks to be heading for ${dest.label}` : ', heading nowhere in particular yet');
   }
   if (hit.kind === 'site') {
     const s = world.siteById.get(hit.id);
@@ -860,8 +868,9 @@ function describeEntity(hit) {
   if (hit.kind === 'radar') {
     const r = world.radarById.get(hit.id);
     if (!r) return null;
-    return `${r.label} — surveillance radar, ${r.rangeKm} km. `
-      + (r.alive ? (r.on ? 'Radiating.' : 'Cold — nothing paints until a set radiates.') : 'Destroyed.');
+    return `${r.label} — search radar, sees out to ${r.rangeKm} km. `
+      + (r.alive ? (r.on ? 'Switched on — and the enemy can find it.'
+        : 'Switched off — it sees nothing until it is on.') : 'Destroyed.');
   }
   if (hit.kind === 'asset') {
     const a = world.assetById.get(hit.id);

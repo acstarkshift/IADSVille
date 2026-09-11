@@ -30,20 +30,23 @@
 export const NET_TUTORIAL_STEPS = [
   {
     id: 'radiate',
-    en: 'The surveillance set is cold and nothing will paint. Find WIDE EYE on the right panel and press RADIATE.',
+    en: 'Your long-range radar, WIDE EYE, is switched off, so the scope is blank. '
+      + 'Find WIDE EYE at the top of the right-hand panel and flip its switch up to RADIATE.',
     tm: 'ВКЛЮЧИТЕ ИЗЛУЧЕНИЕ',
     radars: ['WIDE EYE'],
     done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > 120,
   },
   {
     id: 'select',
-    en: 'Contacts paint as the beam sweeps. Click a contact on the scope, or a row in the TRACKS list.',
+    en: 'Contacts appear on the scope as the beam sweeps past them. '
+      + 'Click a contact on the scope, or its row in the AIR PICTURE list, to pick it.',
     tm: 'ВЫБЕРИТЕ ЦЕЛЬ',
     done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
   },
   {
     id: 'assign',
-    en: 'Hand it to a battery: drag the contact onto a battery symbol, or press Shift+1. The battery answers on the log.',
+    en: 'Give it to a battery: drag the contact onto a battery symbol, or press Shift+1 '
+      + 'for battery 1. The battery reports back on the log at the bottom.',
     tm: 'НАЗНАЧЬТЕ БАТАРЕЮ',
     // Ninety seconds, not a hundred and fifty. A card that is still up when
     // the watch has moved on is furniture — and this one used to be
@@ -53,13 +56,15 @@ export const NET_TUTORIAL_STEPS = [
   },
   {
     id: 'intercept',
-    en: 'The battery fires when the shot is right — HOLDING FOR RANGE is aiming, not refusal. Watch the intercept.',
+    en: 'The battery fires when the shot is good. WAITING FOR RANGE means it is aiming, '
+      + 'not refusing. Watch the missile fly out and meet the contact.',
     tm: 'ЖДИТЕ ПЕРЕХВАТА',
     done: (w, u, sinceS) => w.stats.kills > 0 || sinceS > 150,
   },
   {
     id: 'net',
-    en: 'When sector command transmits, Y acknowledges and N refuses. Both are recorded. The rest of the watch is yours.',
+    en: 'When sector command calls, press Y to acknowledge or N to refuse. '
+      + 'Both go on your record. The rest of the watch is yours.',
     tm: 'СЕТЬ ВАША',
     done: (w, u, sinceS) => sinceS > 16,
   },
@@ -72,40 +77,50 @@ export const NET_TUTORIAL_STEPS = [
  * off for the third of them, so a player who chose SAM OPERATOR on the watch
  * whose entire job is teaching the controls got no cards at all. The cabin is
  * not the net with fewer buttons: its lesson is that the battery you are
- * sitting in has an antenna of its own, and that the sequence is
- * acquire → lock → wait → launch. Same five-step shape, same dismiss button,
- * same rule that a step is cleared by doing the thing.
+ * sitting in has a radar of its own, and that the sequence is pick a target,
+ * lock, wait, launch. Same five-step shape, same dismiss button, same rule
+ * that a step is cleared by doing the thing.
+ *
+ * And, like the net's, written for somebody who has never seen a radar.
+ * "Designate", "put a channel on it", "the TRACKS list" (the panel says AIR
+ * PICTURE) and "sector's picture is not a firing solution" were shop talk;
+ * each card says what to do, where the control is, and what will happen.
  */
 export const CREW_TUTORIAL_STEPS = [
   {
     id: 'radiate-own',
-    en: 'Your own set is cold, and sector’s picture is not a firing solution. Press RADIATE on your battery.',
+    en: 'Your battery’s own radar is switched off. Sector’s picture shows you where the '
+      + 'contacts are, but you cannot shoot on it — flip your switch up to RADIATE.',
     tm: 'ВКЛЮЧИТЕ ИЗЛУЧЕНИЕ',
     done: (w, u, sinceS) => w.radarsOf(w.siteById.get(w.control.crewedBatteryId) ?? {})
       .some((r) => r.on) || sinceS > 120,
   },
   {
     id: 'designate',
-    en: 'Contacts paint as the beam sweeps. Click one on the scope, or a row in the shootlist, to designate it.',
+    en: 'Contacts appear as your beam sweeps past them. Click one on the scope, or its '
+      + 'row in the list on the left, to make it your target.',
     tm: 'ВЫБЕРИТЕ ЦЕЛЬ',
     done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
   },
   {
     id: 'lock',
-    en: 'Press LOCK to put a channel on it. The battalion refuses in plain words when it cannot — read the refusal.',
+    en: 'Press LOCK to lock a fire-control channel onto your target. If the battery '
+      + 'cannot take the shot, the console says why in plain words.',
     tm: 'ЗАХВАТ ЦЕЛИ',
     done: (w, u, sinceS) => (w.siteById.get(w.control.crewedBatteryId)?.engagements.length ?? 0) > 0
       || sinceS > 150,
   },
   {
     id: 'launch',
-    en: 'The cap lights when the solution is ready. LAUNCH — and keep the set radiating until the round arrives.',
+    en: 'LAUNCH lights up when the shot is ready. Press it — and keep your radar on '
+      + 'until the missile arrives, because your radar is steering it.',
     tm: 'ПУСК',
     done: (w, u, sinceS) => w.stats.roundsFired > 0 || sinceS > 150,
   },
   {
     id: 'net-crew',
-    en: 'When sector command transmits, Y acknowledges and N refuses. Both are recorded. The rest of the watch is yours.',
+    en: 'When sector command calls, press Y to acknowledge or N to refuse. '
+      + 'Both go on your record. The rest of the watch is yours.',
     tm: 'СЕТЬ ВАША',
     done: (w, u, sinceS) => sinceS > 16,
   },

@@ -1111,7 +1111,10 @@ export class Scope {
     ctx.fillText(`RANGE ${Math.round(this.rangeKm)} KM`, 10 * this.dpr, 16 * this.dpr);
     if (!world.fusionOnline) {
       ctx.fillStyle = p.hostile;
-      ctx.fillText('LOCAL CONTROL — NO FUSION', 10 * this.dpr, 30 * this.dpr);
+      // What it means for the person looking at the tube, not the name of
+      // the mode: every radar is now reporting on its own, and the same
+      // aircraft can wear a different track number on each of them.
+      ctx.fillText('SECTOR LINK DOWN — EACH RADAR REPORTS ON ITS OWN', 10 * this.dpr, 30 * this.dpr);
     }
     ctx.restore();
   }

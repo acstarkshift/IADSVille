@@ -872,6 +872,15 @@ A watch that removes a control removes its key with it: the teaching console
 has no SALVO, RIDE or DISPLACE cap, so `S`, `G` and `X` are inert there and say
 so once on the log rather than quietly putting your only battery on the road.
 
+Every hint, legend and status line on and under the scope is written for a
+person who has never seen a radar: it says what the action does for them
+("Click a contact to make it your target"), where the control is, and what
+will happen. "Right-click a radar to blink it", "designate", "nothing is being
+painted", "no firing solution" and the board's UNPAIRED / UNCOMMITTED are gone
+from the console, and a test in `test/console.test.js` keeps them gone. The
+engraved one-word legends — READY, RADIATING, INBOUND ARM, LOCK, LAUNCH — stay,
+with a plain sentence in each one's tooltip.
+
 **Battle manager:** click a contact to select it, drag it onto a battery to
 assign the engagement, right-click a radar to switch it on or off. `Q`, `W` and
 `E` are the three weapons caps — hold, tight, free — three adjacent keys for
@@ -999,7 +1008,7 @@ A few decisions worth knowing about if you read the source:
   now go through one gate at twenty seconds — the interval the engine already
   used for a set announcing it was shutting down — keyed per battery and per
   reason, so two batteries declining the same track are still both heard. And
-  the shootlist's UNPAIRED count is work you can actually do: contacts nothing
+  the shootlist's NOT ASSIGNED count is work you can actually do: contacts nothing
   of yours can reach stay on the panel under OUT OF REACH with their reason,
   and neither the count nor the red header sees them. It was telling the
   operator they were failing at ten contacts that were all outbound, for six

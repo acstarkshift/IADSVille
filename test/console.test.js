@@ -11,6 +11,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
 
 import { World } from '../src/engine/world.js';
 import { scenarioById, consoleCaps } from '../src/engine/scenarios.js';
@@ -23,6 +24,52 @@ import { RADAR_TYPES } from '../src/engine/config.js';
 import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, radarNamesIn } from '../src/ui/tutorial.js';
 
 const watch = (id, opts = {}) => new World(scenarioById(id), { role: 'net', seed: 5, ...opts });
+
+describe('plain English on and under the scope', () => {
+  /*
+   * The player: "The text at the bottom of the scope is neuralese garbage.
+   * 'Right click a target to blink it?' What's that even mean? Scrub all
+   * that text so that a human can understand it." These are the phrases the
+   * scrub retired from the console's own words — the legend line, the
+   * tutorial, the stamps on the tube, the board's heads and the cap notes —
+   * and none of them may come back into the interface sources.
+   */
+  test('no retired phrase survives in the interface', () => {
+    const retired = [
+      'blink it', 'to blink', 'NOTHING IS BEING PAINTED', 'NOTHING BELOW THE HORIZON IS SEEN',
+      'NO CONTACT DESIGNATED', 'NO TARGET DESIGNATED', "'NO CONTACT', 'DESIGNATED'",
+      'the TRACKS list', 'is not a firing solution', 'NO FIRING SOLUTION',
+      'HOLDING FOR RANGE', "'UNPAIRED'", "'UNCOMMITTED'", 'WITH NOBODY ON THEM',
+      'NOTHING OF YOURS CAN TAKE', 'off is invisible, on is a target',
+      'high voltage to the antenna', 'kill the transmitter', 'ENGAGEMENT ENVELOPE',
+      'LOCAL CONTROL — NO FUSION', 'Nothing paints until', 'to designate it',
+      'put a channel on it', 'CREW PREPARING', 'LOADERS STOWED',
+    ];
+    const offenders = [];
+    for (const file of readdirSync('src/ui').filter((f) => f.endsWith('.js'))) {
+      const source = readFileSync(`src/ui/${file}`, 'utf8');
+      source.split('\n').forEach((line, i) => {
+        // Comments may quote the old words to say why they went; code may not.
+        const code = line.replace(/^\s*(\/\/|\*|\/\*).*$/, '').replace(/\/\/.*$/, '');
+        for (const phrase of retired) {
+          if (code.includes(phrase)) offenders.push(`${file}:${i + 1} still says "${phrase}"`);
+        }
+      });
+    }
+    assert.deepEqual(offenders, [], offenders.join('\n'));
+  });
+
+  test('every tutorial card is a sentence a first-timer can act on', () => {
+    for (const step of [...NET_TUTORIAL_STEPS, ...CREW_TUTORIAL_STEPS]) {
+      assert.ok(/[.!]$/.test(step.en), `${step.id} should end as a sentence: "${step.en}"`);
+      for (const jargon of ['designate', 'paint', 'firing solution', 'channel on it', 'TRACKS list', 'set is cold']) {
+        assert.ok(!step.en.toLowerCase().includes(jargon.toLowerCase()),
+          `${step.id} still says "${jargon}": "${step.en}"`);
+      }
+      assert.ok(step.tm && !/[A-Za-z]/.test(step.tm), `${step.id} keeps its stencil line`);
+    }
+  });
+});
 
 describe('one name for one radar', () => {
   /*

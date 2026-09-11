@@ -571,7 +571,7 @@ function shootlistState(world, site) {
    * the number the reader wants is seconds to the NEXT one, not to a full
    * rack, because one round is all it takes to be back in the fight.
    */
-  if (site.readyRounds > 0) return { text: `${site.readyRounds} RDY`, cls: '' };
+  if (site.readyRounds > 0) return { text: `${site.readyRounds} READY`, cls: '' };
   if (site.reloadRemainingS > 0) {
     return { text: `LOADING ${Math.ceil(site.reloadRemainingS)}s`, cls: 'is-busy' };
   }
@@ -709,16 +709,22 @@ export function renderTrackList(world, ui, els) {
   const unpaired = unassigned.filter(answerable);
   const beyond = unassigned.filter((t) => !answerable(t));
   const sections = [];
+  /*
+   * The heads say it in words a first-timer reads: NOT ASSIGNED, and how
+   * many are waiting for a battery. UNPAIRED / 3 WITH NOBODY ON THEM /
+   * UNCOMMITTED was the board talking to itself.
+   */
   if (unassigned.length || !tracks.length) {
-    sections.push(head('UNPAIRED', unpaired.length ? `${unpaired.length} WITH NOBODY ON THEM` : 'NOTHING WAITING',
-      unpaired.some((t) => t.hostility === 'hostile') ? 'is-urgent' : ''));
+    sections.push(head('NOT ASSIGNED', unpaired.length
+      ? `${unpaired.length} WAITING FOR A BATTERY` : 'NONE WAITING',
+    unpaired.some((t) => t.hostility === 'hostile') ? 'is-urgent' : ''));
     sections.push(unpaired.length
       ? unpaired.map(rowFor).join('')
       : `<li class="track-row is-empty" role="presentation"><span>—</span><span>${
-        ui.view === 'crew' ? 'nothing held' : 'no contacts'}</span></li>`);
+        ui.view === 'crew' ? 'nothing on your radar' : 'no contacts'}</span></li>`);
   }
   if (beyond.length) {
-    sections.push(head('OUT OF REACH', `${beyond.length} NOTHING OF YOURS CAN TAKE`, 'is-idle'));
+    sections.push(head('OUT OF REACH', `${beyond.length} TOO FAR FOR ANY BATTERY OF YOURS`, 'is-idle'));
     sections.push(beyond.map((t) => rowFor(t)).join(''));
   }
 
@@ -741,10 +747,10 @@ export function renderTrackList(world, ui, els) {
     sections.push(head(site.name, state.text, state.cls));
     sections.push(held.length
       ? held.map((t) => rowFor(t, site.id)).join('')
-      : '<li class="track-row is-empty" role="presentation"><span>—</span><span>nothing paired</span></li>');
+      : '<li class="track-row is-empty" role="presentation"><span>—</span><span>nothing assigned</span></li>');
   }
   if (idle.length && ui.view !== 'crew') {
-    sections.push(head('UNCOMMITTED', idle.map((s) => s.name).join(' · '), 'is-idle'));
+    sections.push(head('NOT ENGAGING', idle.map((s) => s.name).join(' · '), 'is-idle'));
   }
 
   paint(els.trackList, sections.join(''));
@@ -788,10 +794,10 @@ function renderBoardState(world, ui, els, { tracks, unpaired, mine }) {
     <div class="bs-figures">
       ${figure('CONTACTS', tracks.length)}
       ${figure('HOSTILE', hostile, hostile ? 'is-bad' : '')}
-      ${figure('UNPAIRED', unpaired.length, unpaired.length ? 'is-warn' : '')}
-      ${figure('PAIRED', paired, paired ? 'is-good' : '')}
-      ${figure('ROUNDS UP', roundsUp)}
-      ${figure('ARMED', `${armed.length}/${mine.length}`,
+      ${figure('NOT ASSIGNED', unpaired.length, unpaired.length ? 'is-warn' : '')}
+      ${figure('ASSIGNED', paired, paired ? 'is-good' : '')}
+      ${figure('IN FLIGHT', roundsUp)}
+      ${figure('CAN FIRE', `${armed.length}/${mine.length}`,
     armed.length ? '' : 'is-bad')}
     </div>
     <div class="bs-note">${rails} round${rails === 1 ? '' : 's'} on the rails${(() => {
@@ -822,13 +828,13 @@ function pictureSources(world, ui) {
   const rows = sets.map((radar) => {
     const state = !radar.alive ? STATUS.destroyed.en
       : radar.state === 'warming' ? STATUS.warming.en
-        : radar.on ? STATUS.radiating.en : 'COLD';
+        : radar.on ? 'ON' : 'OFF';
     const cls = !radar.alive ? 'is-lost' : radar.on ? '' : 'is-hurt';
     // The callsign, which is the set's one name everywhere on the console.
     return `<div class="bs-row ${cls}" title="${esc(nomenclatureFor(radar.label)?.en ?? radar.label)}">`
       + `<span>${esc(radar.label)}</span><b>${esc(state)}</b></div>`;
   }).join('');
-  return `<div class="bs-head is-second">THE PICTURE</div>${rows}`;
+  return `<div class="bs-head is-second">YOUR RADARS</div>${rows}`;
 }
 
 /**
@@ -855,7 +861,7 @@ function groundState(world) {
 function renderTrackDetail(world, ui, els) {
   const track = ui.selectedTrackId ? world.tracks.get(ui.selectedTrackId) : null;
   if (!track) {
-    els.trackDetail.innerHTML = '<i>Select a contact to see what it is doing.</i>';
+    els.trackDetail.innerHTML = '<i>Click a contact to read what it is and where it is heading.</i>';
     return;
   }
   const asset = track.predictedAssetId ? world.assetById.get(track.predictedAssetId) : null;
@@ -863,15 +869,18 @@ function renderTrackDetail(world, ui, els) {
   const speedKts = Math.round(len(track.vel) * 1943.8);
   const idPct = Math.round(100 * clamp01(track.idProgressS / 26));
 
+  // "Identifying 40%", "track 80% sure", "not seen lately — position
+  // estimated": the readout says what the figures mean rather than naming
+  // the field they came from.
   els.trackDetail.innerHTML = `
     <b>${esc(track.tn)}</b> ${esc(track.hostility.toUpperCase())}
-    · ${esc(track.classification === 'unknown' ? `ID ${idPct}%` : AIR_TYPES[track.classification]?.name ?? '')}<br>
-    ${speedKts} kt · ${Math.round(track.altM)} m · quality ${Math.round(track.quality * 100)}%
-    ${track.coasting ? '· <em>COASTING</em>' : ''}<br>
+    · ${esc(track.classification === 'unknown' ? `identifying ${idPct}%` : AIR_TYPES[track.classification]?.name ?? '')}<br>
+    ${speedKts} kt · ${Math.round(track.altM)} m · track ${Math.round(track.quality * 100)}% sure
+    ${track.coasting ? '· <em>NOT SEEN LATELY — POSITION ESTIMATED</em>' : ''}<br>
     ${huntsTheFlight(world, track)
-    ? `Tracking toward <b>${esc(world.vipAircraft()?.name ?? 'THE STATE AIRCRAFT')}</b>.`
-    : asset ? `Tracking toward <b>${esc(asset.label)}</b>, ${tti} out.` : 'No obvious objective.'}
-    ${track.assignedTo.length ? `<br>Assigned: <b>${esc(track.assignedTo.map((id) => world.siteById.get(id)?.name).join(', '))}</b>` : ''}`;
+    ? `Heading for <b>${esc(world.vipAircraft()?.name ?? 'THE STATE AIRCRAFT')}</b>.`
+    : asset ? `Heading for <b>${esc(asset.label)}</b>, ${tti} away.` : 'Heading nowhere in particular yet.'}
+    ${track.assignedTo.length ? `<br>Assigned to: <b>${esc(track.assignedTo.map((id) => world.siteById.get(id)?.name).join(', '))}</b>` : ''}`;
 }
 
 /* ---------------------------------------------------------- formations */
@@ -1364,8 +1373,8 @@ export function renderBatteries(world, ui, els) {
      * picture, word for word, directly under its own nomenclature plate.
      */ ''}
       <div class="unit-explain">${esc(nomenclature === EQUIPMENT.gapfiller
-    ? 'Gap-filler radar — covers the low approaches the big set cannot see.'
-    : 'Early-warning radar — the long-range surveillance picture. Nothing paints until a set radiates.')}</div>
+    ? 'Gap-filler radar — sees the low approaches the big set cannot.'
+    : 'Early-warning radar — the long-range search set. Nothing shows on the scope until a radar is switched on.')}</div>
       <div class="unit-row unit-lamps">
         ${emissionsLamp(radar)}
         ${armLamp(armEta)}
@@ -1432,12 +1441,12 @@ function refusalText(reason) {
     [/^battery destroyed$/, 'BATTERY DESTROYED'],
     [/^not under your command$/, 'NOT YOUR COMMAND'],
     [/^fire control destroyed$/, 'FIRE CONTROL DESTROYED'],
-    [/^above its ceiling \((\d+)km\)$/, 'ABOVE CEILING · $1 km'],
-    [/^below its floor \((\d+)m\)$/, 'BELOW FLOOR · $1 m'],
+    [/^above its ceiling \((\d+)km\)$/, 'TOO HIGH · CEILING $1 km'],
+    [/^below its floor \((\d+)m\)$/, 'TOO LOW · FLOOR $1 m'],
     [/^no rounds on the rails$/, 'RAILS EMPTY'],
-    [/^all channels engaged$/, 'ALL CHANNELS ENGAGED'],
+    [/^all channels engaged$/, 'ALL CHANNELS BUSY'],
     [/^will never be in reach$/, 'OUT OF REACH'],
-    [/^out of reach for (\d+)s$/, 'OUT OF REACH · $1 s'],
+    [/^out of reach for (\d+)s$/, 'OUT OF REACH FOR $1 s'],
   ];
   for (const [pattern, form] of table) {
     if (pattern.test(reason)) return reason.replace(pattern, form);
@@ -1462,18 +1471,18 @@ function refusalText(reason) {
  */
 function fireCapNote(site, status, unfit, noTarget) {
   if (!site.alive) return 'BATTERY DESTROYED';
-  if (site.scootRemainingS > 0) return 'ON THE ROAD';
+  if (site.scootRemainingS > 0) return 'MOVING — CANNOT FIRE';
   if (status.state === 'guiding') {
     return `${status.roundsUp} IN FLIGHT`
-      + (status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}s` : '');
+      + (status.roundEtaS !== null ? ` · ${Math.ceil(status.roundEtaS)}s TO GO` : '');
   }
   if (site.readyRounds <= 0) return 'RAILS EMPTY';
-  if (noTarget) return 'NO TARGET DESIGNATED';
+  if (noTarget) return 'NO TARGET PICKED';
   if (unfit) return refusalText(unfit);
-  if (status.canFire) return `${site.readyRounds} ON THE RAILS · SALVO ${site.salvoSize}`;
-  if (status.holding) return 'HOLDING FOR RANGE';
-  if (status.state === 'reacting') return 'CREW PREPARING';
-  return 'NO FIRING SOLUTION';
+  if (status.canFire) return `${site.readyRounds} ON THE RAILS · ${site.salvoSize} PER SHOT`;
+  if (status.holding) return 'WAITING FOR RANGE';
+  if (status.state === 'reacting') return 'CREW SETTING UP';
+  return 'NO SHOT YET';
 }
 
 /**
@@ -1504,7 +1513,7 @@ function channelRow(entry, focusedTrackId) {
    */
   const figures = [
     entry.rangeKm !== null ? `${Math.round(entry.rangeKm)} km` : '',
-    `${entry.roundsUp} UP`,
+    `${entry.roundsUp} IN AIR`,
     entry.etaS !== null ? `${Math.ceil(entry.etaS)}s`
       : entry.timerS > 0 ? `${entry.timerS.toFixed(1)}s` : '',
   ].filter(Boolean).join(' · ');
@@ -1634,14 +1643,14 @@ export function renderCrewConsole(world, ui, els) {
    * priority wins, and the slot keeps its height when there is nothing to say.
    */
   const advisory = !site.alive
-    ? { text: 'THIS POSITION IS OFF THE AIR', mood: 'is-bad' }
+    ? { text: 'THIS BATTERY HAS BEEN DESTROYED', mood: 'is-bad' }
     : displacing
       // The clock for this is on the banner, and only on the banner: the card
       // used to print the same countdown three times — banner, advisory and
       // rail row — three figures of the same number in forty pixels.
-      ? { text: 'SETS DOWN — NOTHING PAINTS, NOTHING GUIDES', mood: 'is-warn' }
+      ? { text: 'ON THE MOVE — CANNOT SEE, GUIDE OR FIRE', mood: 'is-warn' }
       : wrecked
-        ? { text: `${guidanceSet.label} CANNOT GUIDE A ROUND`, mood: 'is-bad' }
+        ? { text: `${guidanceSet.label} DESTROYED — CANNOT GUIDE A MISSILE`, mood: 'is-bad' }
         : unfit
           ? { text: `CANNOT LOCK ${track.tn} — ${refusalText(unfit)}`, mood: 'is-warn' }
           /*
@@ -1672,7 +1681,7 @@ export function renderCrewConsole(world, ui, els) {
     ? { label: `${STATUS.loading.en} ${Math.ceil(site.reloadRemainingS)}s`,
       frac: clamp01(1 - site.reloadRemainingS / Math.max(railLoadS(site), 1e-6)),
       mood: 'is-warn' }
-    : { label: site.magazine <= 0 ? 'STORE EMPTY' : 'LOADERS STOWED', frac: 0, mood: '' };
+    : { label: site.magazine <= 0 ? 'STORE EMPTY' : 'LOADERS IDLE', frac: 0, mood: '' };
 
   /*
    * The battery's condition, in one strip, with one clock.
@@ -1926,8 +1935,8 @@ export function renderCrewConsole(world, ui, els) {
           ${press(lockEntry, { act: 'lock', site: site.id, track: track?.id, key: 'L',
     extra: own ? 'pb-breakoff' : '',
     disabled: !site.alive || displacing || (!own && (!!unfit || !track)),
-    title: own ? `Hand channel back and drop ${track.tn}`
-      : unfit ? `Cannot lock: ${refusalText(unfit)}` : 'Put a channel on the selected contact' })}
+    title: own ? `Let ${track.tn} go and free the channel`
+      : unfit ? `Cannot lock: ${refusalText(unfit)}` : 'Lock a fire-control channel onto the selected contact' })}
           ${press(CONTROLS.reload, { act: 'reload', site: site.id, key: 'R',
     disabled: !canStartLoading(world, site),
     title: canStartLoading(world, site) ? 'Loaders out — fill the rails now'
@@ -2080,8 +2089,8 @@ export function renderActionBar(world, ui, els, cabin) {
       act: 'lock', site: crewed.id, track: aim?.id,
       extra: own ? 'pb-breakoff' : '',
       disabled: !own && (!!unfit || !aim),
-      title: own ? `Hand the channel back and drop ${aim.tn}`
-        : unfit ? `Cannot lock: ${unfit}` : 'Put a channel on the selected contact',
+      title: own ? `Let ${aim.tn} go and free the channel`
+        : unfit ? `Cannot lock: ${unfit}` : 'Lock a fire-control channel onto the selected contact',
     }));
     caps.push(press(CONTROLS.launch, {
       act: 'fire', site: crewed.id, track: aim?.id, disabled: !status.canFire,

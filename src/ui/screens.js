@@ -577,11 +577,11 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
         ${key('Shift+1 … 4', 'hand the selected contact to battery 1–4, in the order the cards are numbered')}
         ${key('Alt+1 … 4', 'take or hand back subordinate command 1–4 (district and national watches)')}
         ${key('Q / W / E', 'the three weapons caps on the selected battery: hold, tight, free')}
-        ${key('A', 'throw the selected battery’s emissions switch — careful: this silences your own set')}
-        ${ride ? key('G', 'throw its beam switch to HOLD BEAM — guide through an inbound ARM (the crew never will)') : ''}
-        ${key('R', 'loaders out — start the selected battery’s rack filling now, short or not')}
-        ${displace ? key('X', 'displace the selected battery') : ''}
-        ${key('`', 'toggle every surveillance radar')}
+        ${key('A', 'flip the selected battery’s radar switch — careful: this switches your own radar off')}
+        ${ride ? key('G', 'HOLD BEAM — keep its radar on and guide the missile even with an enemy anti-radar missile inbound (the crew never will on its own)') : ''}
+        ${key('R', 'loaders out — start filling the selected battery’s rails now, short or not')}
+        ${displace ? key('X', 'move the selected battery — a minute off the air, and the enemy has to find it again') : ''}
+        ${key('`', 'switch every search radar on or off')}
       </div>
       <p class="note">Every key on that list acts on the <b>selected</b> battery, which is why the
       key chips are stamped on the selected card and on no other: the rack shows six keys once,
@@ -590,13 +590,13 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
     <div class="card">
       <h3>SAM operator</h3>
       <div class="keys">
-        ${key('Click a contact', 'designate it')}
-        ${key('L', 'lock — start the engagement sequence')}
-        ${key('F', 'fire')}
-        ${key('A', 'the emissions switch — up radiates, down is silent (this is the whole game)')}
-        ${salvo ? key('S', 'salvo size') : ''}
-        ${key('R', 'loaders out — top the rack up now, instead of waiting for the rails to go bare')}
-        ${displace ? key('X', 'displace') : ''}
+        ${key('Click a contact', 'make it your target')}
+        ${key('L', 'lock a fire-control channel onto it; press again to let it go')}
+        ${key('F', 'launch a missile at it, once LAUNCH lights')}
+        ${key('A', 'your radar switch — up is RADIATE (you can see and shoot, and be found), down is SILENCE (this is the whole game)')}
+        ${salvo ? key('S', 'missiles per shot — one or two') : ''}
+        ${key('R', 'loaders out — top the rails up now, instead of waiting for them to go bare')}
+        ${displace ? key('X', 'move the battery — a minute off the air, and the enemy has to find it again') : ''}
       </div>
     </div>
     ${salvo && ride && displace ? '' : `<div class="card">

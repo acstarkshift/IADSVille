@@ -43,9 +43,21 @@ export const STATE = {
 
 /** Controls the operator physically touches. */
 export const CONTROLS = {
-  radiate: { tm: 'ИЗЛУЧЕНЬ', en: 'RADIATE', hint: 'high voltage to the antenna' },
-  silence: { tm: 'ЗАТИХ', en: 'SILENCE', hint: 'kill the transmitter' },
-  lock: { tm: 'ЗАХВАТ', en: 'LOCK' },
+  /*
+   * The hints are what a switch position means for the person throwing it,
+   * not what it does to the equipment: "high voltage to the antenna" and
+   * "kill the transmitter" told a first-timer nothing about seeing, shooting
+   * or being found, which is the whole trade.
+   */
+  radiate: {
+    tm: 'ИЗЛУЧЕНЬ', en: 'RADIATE',
+    hint: 'the radar is on: it can see and guide missiles, and the enemy can find it.',
+  },
+  silence: {
+    tm: 'ЗАТИХ', en: 'SILENCE',
+    hint: 'the radar is off: the enemy cannot find it, and it cannot see or guide anything.',
+  },
+  lock: { tm: 'ЗАХВАТ', en: 'LOCK', hint: 'lock a fire-control channel onto the picked contact' },
   /*
    * The other half of the LOCK cap. LOCK is a toggle — a second press hands
    * the channel back — and the cap said ЗАХВАТ / LOCK in both states, so the
@@ -53,7 +65,7 @@ export const CONTROLS = {
    * the console that did not say what pressing it would do. Every other toggle
    * here flips its legend (RADIATE/SILENCE, TAKE/RELEASE); this one does now.
    */
-  breakOff: { tm: 'СБРОС', en: 'BREAK OFF', hint: 'hand the channel back and drop this contact' },
+  breakOff: { tm: 'СБРОС', en: 'BREAK OFF', hint: 'let this contact go and free the channel' },
   launch: { tm: 'ПУСК', en: 'LAUNCH' },
   /*
    * The key still says RELOAD because that is what it is called and what the
@@ -79,11 +91,11 @@ export const CONTROLS = {
    */
   ride: {
     tm: 'ДЕРЖАТЬ ЛУЧ', en: 'HOLD BEAM',
-    hint: 'keep guiding with a round homing on this set',
+    hint: 'keep the radar on and guide your missile even with an enemy anti-radar missile homing on this set.',
   },
   perDoctrine: {
     tm: 'ПО УСТАВУ', en: 'PER DOCTRINE',
-    hint: 'the crew blinks when its own arithmetic says so',
+    hint: 'the crew switches the radar off to dodge an enemy anti-radar missile when its own rules say to.',
   },
   abort: { tm: 'СДАТЬ', en: 'LEAVE POST' },
   /*
@@ -153,12 +165,17 @@ export const STATUS = {
   },
   emconHeld: {
     tm: 'ПО ПРИКАЗУ', en: 'BY ORDER',
-    hint: 'this battery holds the emissions posture you gave it; its crew will not change it back',
+    hint: 'This battery holds the switch where you put it; its crew will not change it back.',
   },
   inEnvelope: { tm: 'В ЗОНЕ', en: 'IN ENVELOPE' },
   outOfZone: { tm: 'ВНЕ ЗОНЫ', en: 'OUT OF ZONE' },
-  noSolution: { tm: 'НЕТ РЕШЕНЬЯ', en: 'NO FIRING SOLUTION' },
-  armWarning: { tm: 'ОБЛУЧЕНЬЕ', en: 'INBOUND ARM', hint: 'a round is homing on you' },
+  // The OUT OF ZONE row's answer when the target will never come into reach
+  // — said as that, rather than as the trade's "no firing solution".
+  noSolution: { tm: 'НЕТ РЕШЕНЬЯ', en: 'NEVER IN REACH' },
+  armWarning: {
+    tm: 'ОБЛУЧЕНЬЕ', en: 'INBOUND ARM',
+    hint: 'an enemy anti-radar missile is homing on this radar',
+  },
   protectedFlight: {
     tm: 'ОСОБО ОХРАНЯЕМЫЙ БОРТ',
     en: 'PROTECTED FLIGHT',
@@ -219,14 +236,17 @@ export const STATUS = {
    */
   inAction: { tm: 'В БОЮ', en: 'IN ACTION' },
   outOfAction: { tm: 'ВНЕ БОЯ', en: 'OUT OF ACTION' },
-  exposure: { tm: 'ЗАСВЕТКА', en: 'ELINT EXPOSURE', hint: 'how well they have you pinned' },
+  exposure: {
+    tm: 'ЗАСВЕТКА', en: 'ELINT EXPOSURE',
+    hint: 'how well the enemy has located this radar from its own transmissions',
+  },
   fireControl: {
     tm: 'СТАНЦИЯ НАВЕДЕНЬЯ', en: 'FIRE CONTROL',
     hint: 'where the guidance antenna is pointing, and whether the target is inside its arc',
   },
   shotQuality: {
     tm: 'ВЕР. ПОРАЖЕНИЯ', en: 'EST. KILL PROB',
-    hint: 'what the firing tables say this shot is worth right now',
+    hint: 'the estimated chance that a missile fired now destroys the target',
   },
   crew: { tm: 'РАСЧЁТ', en: 'CREW' },
   inFlight: { tm: 'В ПОЛЁТЕ', en: 'ROUNDS IN FLIGHT' },

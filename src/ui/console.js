@@ -450,7 +450,9 @@ export class CrewConsole {
       ctx.lineWidth = 1.5 * d;
       ctx.stroke();
     } else {
-      this.stamp('SET DARK — NOTHING IS BEING PAINTED', 10 * d, this.planH - 10 * d,
+      // Plain words: "SET DARK — NOTHING IS BEING PAINTED" told a new player
+      // nothing about what to do, and nothing about what "painted" meant.
+      this.stamp('RADAR OFF — THE SCOPE SHOWS NOTHING UNTIL IT IS ON', 10 * d, this.planH - 10 * d,
         withAlpha(p.hostile, 0.85), { size: 12 });
     }
 
@@ -565,7 +567,7 @@ export class CrewConsole {
       `BRG ${String(Math.round(bearing(site.pos, focus.pos))).padStart(3, '0')}°`,
       `RNG ${Math.round(dist(site.pos, focus.pos))} km`,
       `ALT ${Math.round(focus.altM).toLocaleString('en-US')} m`,
-    ] : ['NO CONTACT', 'DESIGNATED'];
+    ] : ['NO TARGET', 'PICKED'];
     blockL.forEach((line, i) => this.stamp(line, 10 * d, (16 + i * 12) * d,
       i === 0 ? p.ink : p.inkDim, { size: i === 0 ? 10 : 9, weight: i === 0 ? 'bold' : '' }));
     blockR.forEach((line, i) => this.stamp(line, this.w - 10 * d, (16 + i * 12) * d,
@@ -857,7 +859,7 @@ export class CrewConsole {
     ctx.lineTo(this.w, top + 0.5);
     ctx.stroke();
 
-    this.stamp('RANGE / HEIGHT — NOTHING BELOW THE HORIZON IS SEEN',
+    this.stamp('RANGE AND HEIGHT — THE RADAR CANNOT SEE BELOW THE HORIZON LINE',
       pad.l, top + 11 * d, p.inkDim, { size: 9 });
 
     // Axes.
@@ -913,8 +915,10 @@ export class CrewConsole {
     ctx.lineWidth = 1.2 * d;
     ctx.stroke();
     ctx.restore();
-    this.stamp(ceilingOnScale ? 'ENGAGEMENT ENVELOPE'
-      : `ENGAGEMENT ENVELOPE — CEILING ${type.maxAltM.toLocaleString('en-US')} m ABOVE SCALE`,
+    // The shape is where a missile from this battery can reach; that is what
+    // it is called, rather than the trade's "engagement envelope".
+    this.stamp(ceilingOnScale ? 'MISSILE REACH — A TARGET MUST BE INSIDE THIS SHAPE'
+      : `MISSILE REACH — REACHES ${type.maxAltM.toLocaleString('en-US')} m, ABOVE THIS CHART`,
     rx((type.minRangeKm + type.maxRangeKm) / 2),
     ry(Math.min(type.maxAltM, maxAltM)) + (ceilingOnScale ? -5 * d : 11 * d),
     withAlpha(p.accent, 0.75), { size: 8, align: 'center' });
@@ -1203,7 +1207,9 @@ export function channelStatus(world, site) {
        * (GUIDING). `holding` is a flag on a ready engagement, so it is tested
        * first or it never shows.
        */
-      state: engagement.holding && engagement.state === 'ready' ? 'HOLDING'
+      // WAITING, not HOLDING: it is waiting for the target to come into
+      // range, and the launch cap says WAITING FOR RANGE in the same words.
+      state: engagement.holding && engagement.state === 'ready' ? 'WAITING'
         : { reacting: 'REACTING', ready: 'READY', guiding: 'GUIDING' }[engagement.state] ?? 'IDLE',
       roundsUp: engagement.missileIds?.length ?? 0,
       /** Seconds of crew reaction still to run before the channel is ready. */
