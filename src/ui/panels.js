@@ -128,8 +128,10 @@ function lamp(entry, lit, { colour = '', blinking = false, caption = null,
    * engraved legend never moves and never truncates; the figure sits in its
    * own column beside it.
    */
-  return `<span class="${classes}" title="${esc(title || `${entry.tm} · ${entry.en}`)}${
-    entry.hint ? esc(` — ${entry.hint}`) : ''}">
+  // A caller's own title is the whole tooltip; the table's hint is the
+  // fallback for a lamp nobody has written a sentence for.
+  return `<span class="${classes}" title="${esc(title
+    || `${entry.tm} · ${entry.en}${entry.hint ? ` — ${entry.hint}` : ''}`)}">
     <span class="lamp-dome"></span>
     <span class="lamp-cap"><b>${esc(text)}</b></span>${
   figure ? `<b class="lamp-fig">${esc(figure)}</b>` : ''}</span>`;
@@ -157,7 +159,9 @@ function lamp(entry, lit, { colour = '', blinking = false, caption = null,
  * card — the same aria-pressed RADIATE read lit on one card and inert on the
  * one below it, which is the exact failure a lever exists to prevent.
  */
-function switch2(up, down, on, { act, site, radar, disabled = false, key = '', extra = '' } = {}) {
+function switch2(up, down, on, {
+  act, site, radar, disabled = false, key = '', extra = '', note = '',
+} = {}) {
   const attrs = [
     act ? `data-act="${act}"` : '',
     site ? `data-site="${site}"` : '',
@@ -165,12 +169,50 @@ function switch2(up, down, on, { act, site, radar, disabled = false, key = '', e
     disabled ? 'disabled' : '',
   ].filter(Boolean).join(' ');
   const pos = (entry, live) => `<span class="sw-pos ${live ? 'is-on' : ''}">${esc(entry.en)}</span>`;
+  // The tooltip says where the lever is and what one click will do, in the
+  // order a person reads a switch: the state, then the other position.
+  const title = `${on ? up.en : down.en} — ${(on ? up : down).hint ?? ''}`
+    + ` Click to switch to ${on ? down.en : up.en}.${note ? ` ${note}` : ''}`;
   return `<button class="sw ${extra}" aria-pressed="${on}" ${attrs}
-      title="${esc(up.en)} / ${esc(down.en)} — ${esc((on ? up : down).hint ?? '')}">
+      title="${esc(title)}">
     <span class="sw-body"><span class="sw-lever"></span></span>
     <span class="sw-legends">${pos(up, on)}${pos(down, !on)}</span>
     ${keycap(key)}
   </button>`;
+}
+
+/**
+ * The emissions lamp: one engraved word, RADIATING, lit amber while the set
+ * is warming up and green once it is on the air.
+ *
+ * It used to change its word to WARMING for the warm-up, which is a readout
+ * pretending to be a lamp: the caption got thirteen pixels narrower and the
+ * lamp beside it slid along the row every time the switch was thrown. A lamp
+ * has one caption for the life of the panel; the warm-up is a colour, and the
+ * tooltip says which.
+ */
+function emissionsLamp(radar) {
+  const warming = radar?.state === 'warming';
+  const lit = radar?.state === 'radiating' || warming;
+  return lamp(STATUS.radiating, lit, {
+    colour: warming ? 'amber' : 'green',
+    title: !radar?.alive ? 'Radar destroyed'
+      : warming ? 'Warming up — amber until the set is on the air'
+        : lit ? 'On the air — this radar is switched on and can be found'
+          : 'Off the air — this radar is switched off and sees nothing',
+  });
+}
+
+/** The ARM lamp with its countdown in the figure column, not in the caption. */
+function armLamp(armEtaS) {
+  const inbound = Number.isFinite(armEtaS);
+  return lamp(STATUS.armWarning, inbound, {
+    colour: 'red', blinking: true,
+    figure: inbound ? `${Math.ceil(armEtaS)}s` : '',
+    title: inbound
+      ? `An enemy anti-radar missile is homing on this set — ${Math.ceil(armEtaS)}s to impact`
+      : 'Lights when an enemy anti-radar missile is homing on this set',
+  });
 }
 
 /**
@@ -348,12 +390,16 @@ export function renderTopbar(world, ui, els) {
    * the speed rack, which lost the dim second line it did not need.
    */
   paint(els.masterLamps, [
-    lamp(STATUS.radiating, anyRadiating, { colour: 'green' }),
-    lamp(STATUS.armWarning, armInbound, {
-      colour: 'red', blinking: true,
-      caption: armInbound ? `${STATUS.armWarning.en} ${Math.ceil(soonestArm)}s` : STATUS.armWarning.en,
-    }),
-    lamp(STATUS.fault, faulted, { colour: 'amber' }),
+    lamp(STATUS.radiating, anyRadiating, { colour: 'green',
+      title: anyRadiating ? 'At least one of your radars is switched on'
+        : 'Every radar is switched off — nothing can be seen or guided' }),
+    // The seconds are the lamp's own figure, not part of its caption: as a
+    // caption the word grew by the width of the figure and shoved FAULT
+    // along the bar whenever a round was inbound.
+    armLamp(soonestArm),
+    lamp(STATUS.fault, faulted, { colour: 'amber',
+      title: faulted ? 'A radar or battery of yours has been destroyed'
+        : 'Lights when a radar or battery of yours is destroyed' }),
   ].join(''));
 
   /*
@@ -1193,14 +1239,25 @@ export function renderBatteries(world, ui, els) {
         <span>✗ CANNOT TAKE ${esc(selectedTrack.tn)} — ${esc(refusalText(unfit))}</span>
       </div>` : ''}
 
-      <div class="unit-row">
-        ${lamp(STATUS.ready, site.alive && site.readyRounds > 0 && site.scootRemainingS === 0, { colour: 'green' })}
-        ${lamp(radar?.state === 'warming' ? STATUS.warming : STATUS.radiating,
-    radar?.state === 'radiating' || radar?.state === 'warming',
-    { colour: radar?.state === 'warming' ? 'amber' : 'green' })}
-        ${lamp(STATUS.armWarning, Number.isFinite(armEta), { colour: 'red', blinking: true,
-    caption: Number.isFinite(armEta) ? `${STATUS.armWarning.en} ${Math.ceil(armEta)}s` : STATUS.armWarning.en })}
-        ${!site.alive ? lamp(STATUS.fault, true, { colour: 'red' }) : ''}
+      ${/*
+     * Three lamps on three fixed cells, and every caption engraved for good.
+     *
+     * The player's complaint was that throwing the switch made "the text
+     * change and stuff move around": the emissions lamp used to swap its
+     * word between RADIATING and WARMING, which made it thirteen pixels
+     * narrower and slid INBOUND ARM along the row; the ARM lamp appended its
+     * countdown to its own caption and grew; and a dead battery grew a
+     * fourth lamp. The captions are fixed now — warming is the amber of the
+     * RADIATING lamp, the seconds are the ARM lamp's own figure column, and a
+     * dead battery's FAULT lights in the cell READY can never light in — so
+     * the only thing on the card that moves when the switch is thrown is
+     * the lever. See `emissionsLamp` and `armLamp`.
+     */ ''}
+      <div class="unit-row unit-lamps">
+        ${!site.alive ? lamp(STATUS.fault, true, { colour: 'red' })
+    : lamp(STATUS.ready, site.readyRounds > 0 && site.scootRemainingS === 0, { colour: 'green' })}
+        ${emissionsLamp(radar)}
+        ${armLamp(armEta)}
       </div>
 
       <div class="unit-row">
@@ -1239,14 +1296,20 @@ export function renderBatteries(world, ui, els) {
       </div>
       ${reloadBar(site, type)}
 
-      ${site.emconHold && !crewed ? `<div class="unit-row is-quiet">
-        <span class="unit-type wrap">${esc(STATUS.emconHeld.en)} — ${esc(
-    site.emconHold === 'silent' ? 'SILENT' : 'RADIATING')} UNTIL YOU SAY OTHERWISE</span>
-      </div>` : ''}
-
+      ${/*
+     * No row appears when the switch is thrown.
+     *
+     * There used to be one — BY ORDER — SILENT UNTIL YOU SAY OTHERWISE — that
+     * came into being the moment the operator threw a battery's switch and
+     * pushed the switch and every cap under it down the card, which is the
+     * exact thing the player asked to have stopped. A switch that stays
+     * where you put it needs no notice saying so; the fact is in the
+     * switch's own tooltip.
+     */ ''}
       <div class="unit-switches">
         ${switch2(CONTROLS.radiate, CONTROLS.silence, !!radar?.on,
-    { act: 'emcon', site: site.id, key: keyed ? 'A' : '', disabled: detached || !anyAlive })}
+    { act: 'emcon', site: site.id, key: keyed ? 'A' : '', disabled: detached || !anyAlive,
+      note: site.emconHold && !crewed ? STATUS.emconHeld.hint : '' })}
         ${!caps.ride ? '' : switch2(CONTROLS.ride, CONTROLS.perDoctrine, site.emconOrder === 'ride',
     { act: 'ride', site: site.id, key: keyed ? 'G' : '', disabled: detached || !anyAlive })}
       </div>
@@ -1301,12 +1364,9 @@ export function renderBatteries(world, ui, els) {
       <div class="unit-explain">${esc(nomenclature === EQUIPMENT.gapfiller
     ? 'Gap-filler radar — covers the low approaches the big set cannot see.'
     : 'Early-warning radar — the long-range surveillance picture. Nothing paints until a set radiates.')}</div>
-      <div class="unit-row">
-        ${lamp(radar.state === 'warming' ? STATUS.warming : STATUS.radiating,
-    radar.state === 'radiating' || radar.state === 'warming',
-    { colour: radar.state === 'warming' ? 'amber' : 'green' })}
-        ${lamp(STATUS.armWarning, Number.isFinite(armEta), { colour: 'red', blinking: true,
-    caption: Number.isFinite(armEta) ? `${STATUS.armWarning.en} ${Math.ceil(armEta)}s` : STATUS.armWarning.en })}
+      <div class="unit-row unit-lamps">
+        ${emissionsLamp(radar)}
+        ${armLamp(armEta)}
         <span class="unit-type reach">${radar.alive ? `${radar.rangeKm} KM` : esc(STATUS.destroyed.en)}</span>
       </div>
       ${caps.exposure ? `<div class="unit-row">

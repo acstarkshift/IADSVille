@@ -824,8 +824,15 @@ kbd {
 /* The figure on the right only — scoped to the direct child, because as a
    descendant selector it also caught the stencil's own <b> and set a second
    size and a numeric variant on it. */
+/*
+ * The figure has a width of its own, so ON THE AIR and SILENT sit in the same
+ * box: measured, the flip used to change the figure's box by 28 px and the
+ * name's by the same, which on a strip whose one job is to hold still was
+ * the strip moving.
+ */
 .cabin-banner > b {
-  flex: 0 0 auto; font-variant-numeric: tabular-nums; font-size: var(--fs-value);
+  flex: 0 0 auto; min-width: 78px; text-align: right;
+  font-variant-numeric: tabular-nums; font-size: var(--fs-value);
   letter-spacing: var(--tr-tight); font-weight: 700;
 }
 /* The clock's progress, as the banner's own underline. The card used to draw

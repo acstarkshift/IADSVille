@@ -819,7 +819,15 @@ decision the whole game is built on, and it should feel like throwing a switch.
 A switch carries **both** of its positions, engraved beside the lever and never
 moving: up is RADIATE, down is SILENCE, one click throws it, and the position
 the lever is standing in is a lit window rather than a colour — colour alone did
-not survive the fill of the card underneath it. A cap carries **one** key, stamped in its own corner rather than added to
+not survive the fill of the card underneath it. And throwing it moves nothing
+but the lever. A lamp's caption is engraved once — the emissions lamp reads
+RADIATING for the life of the panel, amber while the set warms up and green
+once it is on the air — the seconds on an inbound anti-radar round sit in the
+lamp's own figure column rather than in its word, and no row appears or
+disappears with the switch's position. Measured across a single press on the
+surveillance card, a battery card and the cabin at 1280, 1600 and 1920 wide:
+every bounding box on the panel is identical before and after, lever excepted.
+A cap carries **one** key, stamped in its own corner rather than added to
 the legend — so a control says what pressing it will do, and the key that does
 that is printed on it. Weapons state is three latching caps (HOLD · `Q`,
 TIGHT · `W`, FREE · `E`) with the live one pressed in, rather than one cap that

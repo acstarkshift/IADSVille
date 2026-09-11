@@ -534,6 +534,31 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .unit-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 5px; }
+/*
+ * The lamp row is three cells on a fixed grid, not a flex row of lamps as
+ * wide as their words.
+ *
+ * As a flex row, any change to one caption moved the lamps beside it: the
+ * emissions lamp swapping RADIATING for WARMING when the switch was thrown
+ * slid INBOUND ARM thirteen pixels along the row, and the ARM countdown
+ * appended to its caption did the same to the reach figure. On a grid each
+ * lamp owns a third of the row whatever it says, its caption is cut with an
+ * ellipsis rather than pushing anything, and its figure — the ARM seconds —
+ * has a column of its own.
+ */
+.unit-row.unit-lamps {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px; align-items: center;
+}
+.unit-lamps .lamp {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: 0 4px; min-width: 0;
+}
+.unit-lamps .lamp-cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.unit-lamps .lamp-fig, .lamps .lamp-fig {
+  font-variant-numeric: tabular-nums; font-weight: 700; color: inherit;
+}
+.unit-lamps .unit-type.reach { justify-self: end; margin-left: 0; }
 /* A line that is present as context rather than as news. */
 .unit-row.is-quiet .unit-type, .unit-unfit.is-quiet span { color: var(--engrave-dim); }
 .unit-row.is-spaced { margin-top: 9px; }
