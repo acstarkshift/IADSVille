@@ -16,9 +16,50 @@ import { World } from '../src/engine/world.js';
 import { scenarioById, consoleCaps } from '../src/engine/scenarios.js';
 import { emptyCampaign, enlist, recordMission, briefingNote } from '../src/engine/campaign.js';
 import { SPEED_BY_KEY, digitPressed } from '../src/ui/keymap.js';
-import { CONTROLS, POSTURE_CYCLE, legend, keycap } from '../src/ui/lexicon.js';
+import {
+  CONTROLS, POSTURE_CYCLE, EQUIPMENT, legend, keycap, nomenclatureFor, callsignOf,
+} from '../src/ui/lexicon.js';
+import { RADAR_TYPES } from '../src/engine/config.js';
+import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, radarNamesIn } from '../src/ui/tutorial.js';
 
 const watch = (id, opts = {}) => new World(scenarioById(id), { role: 'net', seed: 5, ...opts });
+
+describe('one name for one radar', () => {
+  /*
+   * The player: "The tutorial tells me to have WIDE EYE radiate, but the
+   * console doesn't call that radar WIDE EYE, it calls it P-31." A set has
+   * one name everywhere — the callsign the config gives it — and the
+   * nomenclature is what the plate under that name is stencilled with.
+   */
+  test('every radar a lesson names is a callsign a set actually carries', () => {
+    const callsigns = Object.values(RADAR_TYPES).map((t) => t.label);
+    const named = radarNamesIn([...NET_TUTORIAL_STEPS, ...CREW_TUTORIAL_STEPS]);
+    assert.ok(named.includes('WIDE EYE'), 'the first lesson is about the surveillance set');
+    for (const name of named) {
+      assert.ok(callsigns.includes(name), `the tutorial says "${name}"; no radar is called that`);
+    }
+  });
+
+  test('the teaching watch fields the set the lesson names', () => {
+    const world = watch('first-light');
+    const labels = world.radars.filter((r) => !r.siteId).map((r) => r.label);
+    assert.ok(labels.includes('WIDE EYE'), `First Light's sets are ${labels.join(', ')}`);
+  });
+
+  test('every callsign has a plate, and the plate is the model number then the callsign', () => {
+    for (const type of Object.values(RADAR_TYPES)) {
+      const plate = nomenclatureFor(type.label);
+      assert.ok(plate, `${type.label} has no nomenclature plate`);
+      assert.equal(callsignOf(plate), type.label,
+        `${plate.en} should name the set ${type.label} after its model number`);
+      assert.ok(/^[A-Z]+-\d+ /.test(plate.en), `${plate.en} should begin with a model number`);
+    }
+    // WIDE EYE's plate ends in EYE, and a set called EYE must still not get it.
+    assert.equal(nomenclatureFor('EYE'), null, 'a partial callsign matches nothing');
+    assert.equal(nomenclatureFor(''), null);
+    assert.equal(nomenclatureFor('WIDE EYE'), EQUIPMENT.ewr);
+  });
+});
 
 describe('leaving the post', () => {
   test('an abandoned watch is not a victory, and pays nothing', () => {

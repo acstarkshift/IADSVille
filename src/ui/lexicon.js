@@ -259,7 +259,17 @@ export const STATUS = {
   loading: { tm: 'ПОДАЧА', en: 'LOADING' },
 };
 
-/** Equipment nomenclature. Every system carries a type and a works number. */
+/**
+ * Equipment nomenclature. Every system carries a type and a works number.
+ *
+ * This is what the PLATE says. It is not what a set is called: a set is
+ * called by the callsign the config gives it — WIDE EYE, LOW LOOK — which is
+ * the name the tutorial uses, the name the radio uses, and the name at the
+ * head of its card. The plate under the head carries the nomenclature, the
+ * same way a battery card puts BASTION on the head and С-200 «БАСТИОН» ·
+ * S-200 BASTION on the plate. The rack used to print P-31 WIDE EYE as the
+ * head while the lesson two inches away said "find WIDE EYE".
+ */
 export const EQUIPMENT = {
   ewr: { tm: 'П-31 «ШИРОКИЙ ГЛАЗ»', en: 'P-31 WIDE EYE' },
   gapfiller: { tm: 'П-14 «НИЗКИЙ ВЗГЛЯД»', en: 'P-14 LOW LOOK' },
@@ -268,6 +278,25 @@ export const EQUIPMENT = {
   thistle: { tm: 'С-12 «ОСОТ»', en: 'S-12 THISTLE' },
   hammer: { tm: 'ЗУ-4 «МОЛОТ»', en: 'ZU-4 HAMMER' },
 };
+
+/**
+ * The plate for a set with this callsign, or null for a set with no plate.
+ *
+ * The English half of a plate is the model number and then the callsign —
+ * P-31 WIDE EYE — and the match is on the whole callsign after the model
+ * number, so a set called EYE could never pick up WIDE EYE's plate. Every
+ * place that names a standalone radar reads this rather than searching the
+ * table by hand, so the callsign and its plate cannot come apart.
+ */
+export function nomenclatureFor(label) {
+  if (!label) return null;
+  return Object.values(EQUIPMENT).find((e) => callsignOf(e) === label) ?? null;
+}
+
+/** The callsign a plate names: everything after its model number. */
+export function callsignOf(entry) {
+  return entry?.en?.replace(/^\S+\s+/, '') ?? '';
+}
 
 /**
  * Wording for the plates riveted to the console itself. These are set dressing,

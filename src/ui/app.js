@@ -31,6 +31,7 @@ import {
 } from './panels.js';
 import { CONTROLS, POSTURE_CYCLE, legend } from './lexicon.js';
 import { SPEED_BY_KEY, digitPressed } from './keymap.js';
+import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS } from './tutorial.js';
 import { renderMenu, renderBriefing, renderDebrief, renderControls } from './screens.js';
 import { renderEnlistment, renderDossier } from './dossier.js';
 import { learnSkill } from '../engine/character.js';
@@ -875,100 +876,11 @@ function describeEntity(hit) {
 }
 
 /*
- * The teaching watch's interactive tutorial. Five steps, each cleared by the
- * player actually doing the thing — the chatter can say "bring the set up",
- * but an instruction that waits until you have done it is the only kind a
- * first watch reliably reads. Dismissable, and it never touches the sim.
+ * The teaching watch's interactive tutorial: five steps a seat, each cleared
+ * by the player actually doing the thing. The cards themselves are in
+ * tutorial.js, away from the DOM, so the names they use can be tested
+ * against the names on the rack. Dismissable, and it never touches the sim.
  */
-const NET_TUTORIAL_STEPS = [
-  {
-    id: 'radiate',
-    en: 'The surveillance set is cold and nothing will paint. Find WIDE EYE on the right panel and press RADIATE.',
-    tm: 'ВКЛЮЧИТЕ ИЗЛУЧЕНИЕ',
-    done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > 120,
-  },
-  {
-    id: 'select',
-    en: 'Contacts paint as the beam sweeps. Click a contact on the scope, or a row in the TRACKS list.',
-    tm: 'ВЫБЕРИТЕ ЦЕЛЬ',
-    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
-  },
-  {
-    id: 'assign',
-    en: 'Hand it to a battery: drag the contact onto a battery symbol, or press Shift+1. The battery answers on the log.',
-    tm: 'НАЗНАЧЬТЕ БАТАРЕЮ',
-    // Ninety seconds, not a hundred and fifty. A card that is still up when
-    // the watch has moved on is furniture — and this one used to be
-    // unclearable by the key it teaches, so it sat here for two and a half
-    // minutes while the raid ran on around it.
-    done: (w, u, sinceS) => [...w.tracks.values()].some((t) => t.assignedTo.length > 0) || sinceS > 90,
-  },
-  {
-    id: 'intercept',
-    en: 'The battery fires when the shot is right — HOLDING FOR RANGE is aiming, not refusal. Watch the intercept.',
-    tm: 'ЖДИТЕ ПЕРЕХВАТА',
-    done: (w, u, sinceS) => w.stats.kills > 0 || sinceS > 150,
-  },
-  {
-    id: 'net',
-    en: 'When sector command transmits, Y acknowledges and N refuses. Both are recorded. The rest of the watch is yours.',
-    tm: 'СЕТЬ ВАША',
-    done: (w, u, sinceS) => sinceS > 16,
-  },
-];
-
-/*
- * And the cabin's five, which did not exist.
- *
- * The teaching watch advertises three seats and gated the whole walk-through
- * off for the third of them, so a player who chose SAM OPERATOR on the watch
- * whose entire job is teaching the controls got no cards at all. The cabin is
- * not the net with fewer buttons: its lesson is that the battery you are
- * sitting in has an antenna of its own, and that the sequence is
- * acquire → lock → wait → launch. Same five-step shape, same dismiss button,
- * same rule that a step is cleared by doing the thing.
- *
- * Every step also times out. Measured before this: a player who left the
- * scope alone was still reading "2 / 5" at t=630 s of a 660 s watch, because
- * the arrival arc on this raid is 300-345° and steps one to three had no way
- * out but success. A card that is still up when the watch has moved on is
- * furniture.
- */
-const CREW_TUTORIAL_STEPS = [
-  {
-    id: 'radiate-own',
-    en: 'Your own set is cold, and sector’s picture is not a firing solution. Press RADIATE on your battery.',
-    tm: 'ВКЛЮЧИТЕ ИЗЛУЧЕНИЕ',
-    done: (w, u, sinceS) => w.radarsOf(w.siteById.get(w.control.crewedBatteryId) ?? {})
-      .some((r) => r.on) || sinceS > 120,
-  },
-  {
-    id: 'designate',
-    en: 'Contacts paint as the beam sweeps. Click one on the scope, or a row in the shootlist, to designate it.',
-    tm: 'ВЫБЕРИТЕ ЦЕЛЬ',
-    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
-  },
-  {
-    id: 'lock',
-    en: 'Press LOCK to put a channel on it. The battalion refuses in plain words when it cannot — read the refusal.',
-    tm: 'ЗАХВАТ ЦЕЛИ',
-    done: (w, u, sinceS) => (w.siteById.get(w.control.crewedBatteryId)?.engagements.length ?? 0) > 0
-      || sinceS > 150,
-  },
-  {
-    id: 'launch',
-    en: 'The cap lights when the solution is ready. LAUNCH — and keep the set radiating until the round arrives.',
-    tm: 'ПУСК',
-    done: (w, u, sinceS) => w.stats.roundsFired > 0 || sinceS > 150,
-  },
-  {
-    id: 'net-crew',
-    en: 'When sector command transmits, Y acknowledges and N refuses. Both are recorded. The rest of the watch is yours.',
-    tm: 'СЕТЬ ВАША',
-    done: (w, u, sinceS) => sinceS > 16,
-  },
-];
-
 function tutorialSteps() {
   return state.role === 'crew' ? CREW_TUTORIAL_STEPS : NET_TUTORIAL_STEPS;
 }

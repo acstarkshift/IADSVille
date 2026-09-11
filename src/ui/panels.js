@@ -18,6 +18,7 @@ import {
 } from '../engine/doctrine.js';
 import {
   STATE, CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, keycap, pair,
+  nomenclatureFor,
 } from './lexicon.js';
 import { rankOf } from '../engine/character.js';
 import { consoleCaps } from '../engine/scenarios.js';
@@ -819,13 +820,13 @@ function pictureSources(world, ui) {
   const sets = world.radars.filter((r) => !r.siteId);
   if (!sets.length) return '';
   const rows = sets.map((radar) => {
-    const nomenclature = Object.values(EQUIPMENT).find((e) => e.en.includes(radar.label));
     const state = !radar.alive ? STATUS.destroyed.en
       : radar.state === 'warming' ? STATUS.warming.en
         : radar.on ? STATUS.radiating.en : 'COLD';
     const cls = !radar.alive ? 'is-lost' : radar.on ? '' : 'is-hurt';
-    return `<div class="bs-row ${cls}"><span>${esc(nomenclature?.en ?? radar.label)}</span>`
-      + `<b>${esc(state)}</b></div>`;
+    // The callsign, which is the set's one name everywhere on the console.
+    return `<div class="bs-row ${cls}" title="${esc(nomenclatureFor(radar.label)?.en ?? radar.label)}">`
+      + `<span>${esc(radar.label)}</span><b>${esc(state)}</b></div>`;
   }).join('');
   return `<div class="bs-head is-second">THE PICTURE</div>${rows}`;
 }
@@ -1115,10 +1116,9 @@ export function rackBatteries(world, ui) {
 function crewRack(world, ui, caps) {
   const rows = [];
   for (const radar of world.radars.filter((r) => !r.siteId)) {
-    const nomenclature = Object.values(EQUIPMENT).find((e) => e.en.includes(radar.label));
     rows.push({
       key: `data-radar="${radar.id}"`,
-      name: nomenclature?.en ?? radar.label,
+      name: radar.label,
       dead: !radar.alive,
       armEtaS: radar.alive ? armTimeToImpact(world, radar) : Infinity,
       figure: radar.alive ? `${radar.rangeKm} km` : STATUS.destroyed.en,
@@ -1338,21 +1338,23 @@ export function renderBatteries(world, ui, els) {
     && world.aircraft.some((a) => a.alive && !AIR_TYPES[a.type]?.friendly);
 
   const surveillance = world.radars.filter((r) => !r.siteId).map((radar, index) => {
-    const nomenclature = Object.values(EQUIPMENT).find((e) => e.en.includes(radar.label));
+    const nomenclature = nomenclatureFor(radar.label);
     const armEta = radar.alive ? armTimeToImpact(world, radar) : Infinity;
     return `<div class="unit" data-radar="${radar.id}">
       <span class="screw ${'abcd'[index % 4]}"></span>
       <div class="unit-head">
         ${/*
-       * Callsign first, then the plate — the same head the battery cards have,
-       * because the player's rule is that a set has one name everywhere and
-       * the tutorial calls this one WIDE EYE. The range figure moved down to
-       * the lamp row: it read "449 КМ/KM" — two spellings of one unit — in the
-       * most prominent slot on the first card of the rack.
+       * The callsign on the head, the nomenclature on the plate — the same
+       * head the battery cards have (1. BASTION over С-200 «БАСТИОН» · S-200
+       * BASTION). The player's rule is that a set has one name everywhere:
+       * the tutorial says "find WIDE EYE", so the card says WIDE EYE, and
+       * P-31 is what the plate under it is stencilled with. It used to say
+       * P-31 WIDE EYE on the head with a bare Cyrillic plate, which was the
+       * one card on the rack built the other way round from its neighbours.
        */ ''}
-        <span class="unit-name">${esc(nomenclature?.en ?? radar.label)}</span>
-        <span class="unit-type is-plate" title="${esc(nomenclature?.en ?? radar.label)}">
-          ${esc(nomenclature ? nomenclature.tm : radar.label)}</span>
+        <span class="unit-name">${esc(radar.label)}</span>
+        <span class="unit-type is-plate" title="${esc(nomenclature ? pair(nomenclature) : radar.label)}">
+          ${esc(nomenclature ? pair(nomenclature) : radar.label)}</span>
       </div>
       ${/*
      * What this set is, read off the set rather than off its range figure.

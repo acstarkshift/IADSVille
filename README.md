@@ -838,6 +838,13 @@ each. The Cyrillic is on the plates — the nomenclature plate on each battery,
 the works plate on the bezel, the placards and the stamps — which is where a
 foundry puts it and where it can be read at leisure rather than at a glance.
 
+A set has one name. The tutorial says "find WIDE EYE", the radio says "WIDE
+EYE reports ready", and the card at the top of the rack says WIDE EYE, with
+П-31 «ШИРОКИЙ ГЛАЗ» · P-31 WIDE EYE on the plate under it — the same head the
+battery cards have, BASTION over its nomenclature. The card used to say P-31
+WIDE EYE while the lesson two inches away said WIDE EYE, and a test now holds
+every radar a lesson names to a callsign a set actually carries.
+
 ## Controls
 
 | Key | Action |
