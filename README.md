@@ -36,9 +36,7 @@ npm run smoke      # drive the real page in a headless browser
 
 A radar that is not radiating cannot see anything. A radar that *is* radiating
 can be found, and suppression aircraft carry rounds that home on exactly that.
-So:
-
-> **Emit to see. Emit to shoot. Emit and they will find you. Pick two.**
+So the whole job is knowing when to radiate and when to go silent.
 
 Every mechanic hangs off that trade. Most sharply: a surface-to-air round is
 guided by the radar that launched it. Shut that radar down to dodge an incoming

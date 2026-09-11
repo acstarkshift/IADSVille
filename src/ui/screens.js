@@ -81,7 +81,8 @@ export function renderMenu(host, state) {
       <p>A raid is coming for the town you are sitting under. You have radars that can see only
       while they are radiating, batteries with more targets than rounds, and a command that reads
       your log afterwards.</p>
-      <p class="note">Emit to see. Emit to shoot. Emit and they will find you. Pick two.</p>
+      <p class="note">While a radar is on, the enemy can find it. Knowing when to radiate and when to
+      go silent is the whole job.</p>
     </div>
 
     <div class="card record-card">
