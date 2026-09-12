@@ -34,6 +34,7 @@ import { SPEED_BY_KEY, digitPressed } from './keymap.js';
 import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS } from './tutorial.js';
 import { renderMenu, renderBriefing, renderDebrief, renderEndCard, renderControls } from './screens.js';
 import { scenesFor, ScenePlayer } from './scenes.js';
+import { ContextMenu } from './contextmenu.js';
 import { renderEnlistment, renderDossier } from './dossier.js';
 import { learnSkill } from '../engine/character.js';
 
@@ -160,6 +161,7 @@ function cacheEls() {
     scopeSide: id('scope-side'),
     abortAsk: id('abort-ask'),
     scene: id('scene'),
+    contextMenu: id('context-menu'),
     abortLine: id('abort-line'),
     abortConfirm: id('abort-confirm'),
     abortCancel: id('abort-cancel'),
@@ -447,6 +449,7 @@ function startMission() {
 }
 
 function endMission() {
+  contextMenu?.close();
   const result = world.outcome ?? world.result('aborted');
   const entry = recordMission(state.campaign, result);
   saveCampaign(store, state.campaign);
@@ -875,7 +878,8 @@ function updateLegend() {
     ? 'Click a contact to make it your target. L locks your battery onto it, F launches a missile. '
       + 'A switches your radar on or off: off, the enemy cannot find you; on, you can see and shoot.'
     : 'Hover over anything to read what it is. Drag a contact onto a battery symbol (or press Shift '
-      + 'and its number) to give it the shot. Right-click a radar symbol to switch it on or off.');
+      + 'and its number) to give it the shot, or right-click the contact for every battery that could take it. '
+      + 'Right-click a radar symbol to switch it on or off.');
 }
 
 /** One sentence for whatever the scope's hit-test found under the pointer. */
@@ -962,7 +966,19 @@ function wireCanvasInput() {
   const canvas = els.canvas;
   let panning = null;
 
-  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  /*
+   * A right click on a contact opens its menu: every battery that could
+   * take it, with the figures, and the reason on every one that cannot. On
+   * a radar or a battery symbol the right click still blinks the set, in
+   * the pointerdown handler below.
+   */
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (state.phase !== 'mission' || !world || world.dark) return;
+    const rect = canvas.getBoundingClientRect();
+    const hit = (ui.view === 'crew' ? crew : scope).pick(e.clientX - rect.left, e.clientY - rect.top, world);
+    if (hit?.kind === 'track') openContactMenu(hit.id, e.clientX, e.clientY);
+  });
 
   canvas.addEventListener('pointerdown', (e) => {
     if (state.phase !== 'mission') return;
@@ -1077,6 +1093,38 @@ function assignSelected(siteId, trackArg) {
  * measured, 60 of the 792 sample points across the cap — hit the span, failed
  * `e.target.id === 'btn-fire'`, and did nothing at all.
  */
+/**
+ * The contact's menu, from wherever the contact was clicked.
+ *
+ * The player: "The process of dragging targets to SAMs is convoluted. In
+ * addition to that assignment mechanic, there should be a right click context
+ * menu that is available for each target which shows a list of SAMs to which
+ * the target can be assigned." The drag stays; this is the other way.
+ */
+let contextMenu = null;
+function openContactMenu(trackId, x, y) {
+  if (!world || state.phase !== 'mission' || world.dark) return;
+  const track = world.tracks.get(trackId);
+  if (!track || track.destroyed) return;
+  contextMenu ??= new ContextMenu(els.contextMenu, {
+    onPick: (siteId, pickedTrackId) => {
+      assignSelected(siteId, pickedTrackId);
+      ui.lastPanelAt = 0;
+    },
+  });
+  ui.selectedTrackId = trackId;
+  ui.lastPanelAt = 0;
+  contextMenu.show(world, track, x, y);
+}
+
+/** The menu from the keyboard: the selected contact, at its row or at the tube. */
+function openSelectedContactMenu() {
+  if (!ui.selectedTrackId) return;
+  const row = els.trackList.querySelector(`li[data-track="${ui.selectedTrackId}"]`);
+  const r = (row ?? els.canvas).getBoundingClientRect();
+  openContactMenu(ui.selectedTrackId, row ? r.left + 24 : r.left + r.width / 2, row ? r.bottom : r.top + r.height / 2);
+}
+
 function controlUnder(target) {
   if (!target?.closest) return null;
   return target.closest('[data-act]')
@@ -1217,6 +1265,14 @@ function wirePanelInput() {
     if (e.target.closest?.('button')) e.preventDefault();
   });
 
+  for (const host of [els.trackList, els.crewConsole]) {
+    host.addEventListener('contextmenu', (e) => {
+      const row = e.target.closest?.('[data-track]');
+      if (!row?.dataset.track) return;
+      e.preventDefault();
+      openContactMenu(row.dataset.track, e.clientX, e.clientY);
+    });
+  }
   for (const host of [els.trackList, els.batteryList, els.crewConsole, els.formationList,
     els.actionBar]) {
     host.addEventListener('pointerdown', beginPress);
@@ -1510,6 +1566,12 @@ function wireGlobalInput() {
      */
     if (!els.abortAsk.hidden) {
       if (e.key === 'Escape') { e.preventDefault(); closeAbort(); }
+      return;
+    }
+
+    if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+      e.preventDefault();
+      openSelectedContactMenu();
       return;
     }
 

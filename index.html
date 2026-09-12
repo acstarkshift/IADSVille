@@ -178,6 +178,10 @@
     <ol id="event-log" class="event-log strip" aria-live="polite"></ol>
   </footer>
 
+  <!-- The contact's menu: every battery that could take it, on a right click.
+       Filled by src/ui/contextmenu.js. -->
+  <div class="ctx-menu" id="context-menu" role="menu" aria-label="Batteries that can take this contact" hidden></div>
+
   <!-- Leaving the post is a decision the game scores, so it is confirmed like
        one, and the card states the cost before it is paid. The simulation
        deliberately keeps running underneath: this is a question, not a pause. -->

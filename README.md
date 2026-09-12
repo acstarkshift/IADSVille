@@ -944,7 +944,13 @@ contact and release, and fails if a legend is clipped, a live cap selects
 nothing, or a round does not leave a rail.
 
 **Battle manager:** click a contact to select it, drag it onto a battery to
-assign the engagement, right-click a radar to switch it on or off. `Q`, `W` and
+assign the engagement — or right-click the contact for its menu: every battery
+on the net, one row each, with the range to the contact, how long until it is
+inside that battery's ring, rounds on the rails and in store, the crew's own
+estimate of the shot and whose command the battery is under; one click on a
+live row hands the contact over, and a row that cannot take it says why in the
+words the refusal on the net would use. The menu key, or Shift+F10, opens it
+for the selected contact. Right-click a radar to switch it on or off. `Q`, `W` and
 `E` are the three weapons caps — hold, tight, free — three adjacent keys for
 three adjacent caps, each printed on the cap it presses; `A` throws the
 selected battery's emissions switch — the one key on this console that takes a

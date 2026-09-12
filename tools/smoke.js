@@ -153,6 +153,25 @@ async function main() {
       detected = true;
     } catch { /* reported below */ }
 
+    /*
+     * The contact's menu: a right click on a row lists the batteries, with a
+     * live row for one that can take the contact, and Escape closes it.
+     */
+    if (detected && run.role === 'net') {
+      await page.click('#track-list li[data-track]', { button: 'right' });
+      await wait(150);
+      const menu = await page.evaluate(() => {
+        const m = document.getElementById('context-menu');
+        return { open: m && !m.hidden, rows: m?.querySelectorAll('.ctx-row').length ?? 0,
+          live: m?.querySelectorAll('.ctx-row.is-live').length ?? 0, why: m?.querySelectorAll('.ctx-why').length ?? 0 };
+      });
+      if (!menu.open || menu.rows === 0) failures.push(`${run.mission}/${run.role}: right-click on a contact opened no menu`);
+      if (menu.rows && menu.live === 0 && menu.why === 0) failures.push(`${run.mission}/${run.role}: the menu offers nothing and explains nothing`);
+      await page.keyboard.press('Escape');
+      await wait(100);
+      if (await page.evaluate(() => !document.getElementById('context-menu').hidden)) failures.push(`${run.mission}/${run.role}: Escape did not close the contact menu`);
+    }
+
     // Exercise both renderers where the seat allows it.
     if (run.role === 'both') {
       await page.click('#view-toggle');

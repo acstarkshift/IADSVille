@@ -598,6 +598,7 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
       <div class="keys">
         ${key('Click a contact', 'select it')}
         ${key('Drag contact → battery', 'hand it to that battery')}
+        ${key('Right-click a contact', 'every battery that could take it — range, time to its ring, rounds, the odds — one click to hand it over')}
         ${key('Shift+1 … 4', 'hand the selected contact to battery 1–4, in the order the cards are numbered')}
         ${key('Alt+1 … 4', 'take or hand back subordinate command 1–4 (district and national watches)')}
         ${key('Q / W / E', 'the three weapons caps on the selected battery: hold, tight, free')}
