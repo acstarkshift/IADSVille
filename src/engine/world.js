@@ -552,7 +552,7 @@ export class World {
        * so the player is never told they are being ordered about by
        * themselves.
        */
-      netCallsign: 'ЦЕНТР · CONTROL',
+      netCallsign: 'CONTROL',
     }];
 
     for (const spec of specs) {
@@ -1499,7 +1499,7 @@ export class World {
        * watch's actual traffic to say it.
        */
       this.logThrottled(`dryFire:${siteId}`, 20, 'warn',
-        `${site.name} — НЕТ РЕШЕНЬЯ · NO FIRING SOLUTION (lock a target first)`, { siteId });
+        `${site.name} — NOTHING LOCKED. LOCK A TARGET FIRST.`, { siteId });
       return 0;
     }
     return fireEngagement(this, site, engagement);

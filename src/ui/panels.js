@@ -132,7 +132,7 @@ function lamp(entry, lit, { colour = '', blinking = false, caption = null,
   // A caller's own title is the whole tooltip; the table's hint is the
   // fallback for a lamp nobody has written a sentence for.
   return `<span class="${classes}" title="${esc(title
-    || `${entry.tm} · ${entry.en}${entry.hint ? ` — ${entry.hint}` : ''}`)}">
+    || `${entry.en}${entry.hint ? ` — ${entry.hint}` : ''}`)}">
     <span class="lamp-dome"></span>
     <span class="lamp-cap"><b>${esc(text)}</b></span>${
   figure ? `<b class="lamp-fig">${esc(figure)}</b>` : ''}</span>`;
@@ -338,7 +338,6 @@ export function stampLegends(root = document) {
        * the lamp captions, the switch and cap legends.
        */
       el.textContent = entry.en;
-      el.title = `${entry.tm} · ${entry.en}`;
     } else el.textContent = `${entry.tm} · ${entry.en}`;
   }
   /*
@@ -380,7 +379,7 @@ export function renderTopbar(world, ui, els) {
   // ЕДИНАЯ КАРТА, sitting in the header of the panel the whole seat reads.
   const fusion = world.fusionOnline ? STATUS.fusion : STATUS.localControl;
   els.fusionState.textContent = fusion.en;
-  els.fusionState.title = `${fusion.tm} · ${fusion.en}`;
+  els.fusionState.title = fusion.en;
   els.fusionState.classList.toggle('is-bad', !world.fusionOnline);
 
   // Master annunciator: the three things that would have someone shouting.
@@ -445,7 +444,7 @@ export function renderTopbar(world, ui, els) {
     els.rankInsignia.dataset.rank = String(world.character.rankIndex);
     const rank = rankOf(world.character);
     els.rankInsignia.innerHTML = rankInsignia(world.character.rankIndex);
-    els.rankInsignia.title = `${rank.tm} · ${rank.en}`;
+    els.rankInsignia.title = rank.en;
   }
   const post = world.character
     ? `${rankOf(world.character).en} · ${world.echelon.appointment.en}`
@@ -1817,7 +1816,7 @@ export function renderCrewConsole(world, ui, els) {
       : '',
     title: threatened
       ? `A round is homing on ${threatened.radar.label} — ${Math.ceil(threatened.etaS)}s to impact`
-      : `${STATUS.armWarning.tm} · ${STATUS.armWarning.en}` })}
+      : `${STATUS.armWarning.en} — lights when ${STATUS.armWarning.hint}` })}
       </div>
 
       ${/*

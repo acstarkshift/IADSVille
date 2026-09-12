@@ -803,9 +803,10 @@ toggle switches whose lever position *is* the state, domed indicator lamps,
 legend-cap pushbuttons, a screwed bezel around the tube, riveted data plates
 carrying a type and a works number, and a high-voltage placard nobody reads.
 
-The plates carry the Cyrillic; the controls do not. A nomenclature plate, the
-works plate, a placard and a rubber stamp are objects with a foundry's lettering
-on them, and they are what make the panel read as manufactured:
+The plates carry the Cyrillic; nothing else does. A nomenclature plate, the
+works plate, a placard, a rubber stamp and the operator's own identity card are
+objects with a foundry's lettering on them, and they are what make the panel
+read as manufactured:
 
 ```
 С-200 «БАСТИОН» · S-200 BASTION        П-31 «ШИРОКИЙ ГЛАЗ» · P-31 WIDE EYE
@@ -839,9 +840,17 @@ TIGHT · `W`, FREE · `E`) with the live one pressed in, rather than one cap tha
 printed the state it was in and then moved to the next one when you pressed it.
 
 The caps, the switch positions and the lamp captions are in English, one line
-each. The Cyrillic is on the plates — the nomenclature plate on each battery,
-the works plate on the bezel, the placards and the stamps — which is where a
-foundry puts it and where it can be read at leisure rather than at a glance.
+each, and so is everything else the player reads to act: the tutorial card,
+the tooltips, the ticker, the roster, the debrief's headings and figures, the
+file's field labels, and the name of a rank, a skill or a quarter wherever it
+is written in a sentence. The Cyrillic is on the plates — the nomenclature
+plate on each battery, the works plate on the bezel, the placards, the stamps,
+the identity card — and, small and second, on a medal's name and a class of
+weapon in the handbook, which is where a foundry or a mint puts it and where
+it can be read at leisure rather than at a glance. The player's verdict on the
+earlier console was that it was littered with it, and it was: the lesson card
+carried a stencil line under every instruction, the score cells were labelled
+twice, and a rank was never once written alone.
 
 A set has one name. The tutorial says "find WIDE EYE", the radio says "WIDE
 EYE reports ready", and the card at the top of the rack says WIDE EYE, with

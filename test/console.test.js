@@ -68,7 +68,9 @@ describe('plain English on and under the scope', () => {
         assert.ok(!step.en.toLowerCase().includes(jargon.toLowerCase()),
           `${step.id} still says "${jargon}": "${step.en}"`);
       }
-      assert.ok(step.tm && !/[A-Za-z]/.test(step.tm), `${step.id} keeps its stencil line`);
+      // The card is the console speaking; it speaks English only.
+      assert.equal(step.tm, undefined, `${step.id} carries no stencil line`);
+      assert.ok(!/[Ѐ-ӿ]/.test(step.en), `${step.id} is English`);
     }
   });
 });

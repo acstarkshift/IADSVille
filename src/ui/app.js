@@ -918,7 +918,7 @@ function renderTutorial() {
   els.tutorialCard.innerHTML = `
     <button class="tut-skip" id="tut-skip" title="Dismiss the tutorial">×</button>
     <span class="tut-step">${ui.tutorialStep + 1} / ${steps.length}</span>
-    <b>${step.en}</b><i>${step.tm}</i>`;
+    <b>${step.en}</b>`;
   els.tutorialCard.querySelector('#tut-skip').onclick = () => {
     ui.tutorialStep = -1;
     els.tutorialCard.hidden = true;

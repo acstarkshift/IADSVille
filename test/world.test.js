@@ -789,12 +789,12 @@ describe('a refusal is said once, not two hundred and eleven times', () => {
     const before = world.events.length;
     // A hundred presses in ten seconds, which is a person leaning on a key.
     for (let i = 0; i < 100; i++) { world.fire(site.id); world.step(0.1); }
-    const lines = world.events.slice(before).filter((e) => /NO FIRING SOLUTION/.test(e.text));
+    const lines = world.events.slice(before).filter((e) => /NOTHING LOCKED/.test(e.text));
     assert.equal(lines.length, 1, `ten seconds of pressing is one line, got ${lines.length}`);
 
     run(world, 20);
     world.fire(site.id);
-    const after = world.events.filter((e) => /NO FIRING SOLUTION/.test(e.text));
+    const after = world.events.filter((e) => /NOTHING LOCKED/.test(e.text));
     assert.equal(after.length, 2, 'and it is said again once the gate has run out');
   });
 
@@ -803,7 +803,7 @@ describe('a refusal is said once, not two hundred and eleven times', () => {
     const [a, b] = world.sites;
     world.fire(a.id);
     world.fire(b.id);
-    const lines = world.events.filter((e) => /NO FIRING SOLUTION/.test(e.text));
+    const lines = world.events.filter((e) => /NOTHING LOCKED/.test(e.text));
     assert.equal(lines.length, 2, 'a refusal from a different battery is different news');
     assert.ok(lines.some((e) => e.text.includes(a.name)));
     assert.ok(lines.some((e) => e.text.includes(b.name)));

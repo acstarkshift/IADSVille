@@ -54,12 +54,12 @@ export function renderMenu(host, state) {
         ? `<button class="mission is-sealed" disabled>
             <b>▓▓▓▓▓▓▓▓ ▓▓▓▓▓▓</b>
             <small>Not on the roster. This watch has not happened yet.</small>
-            <div class="flags"><span class="pill tight">ЗАПЕЧАТАНО · SEALED</span></div>
+            <div class="flags"><span class="pill tight">SEALED</span></div>
           </button>`
         : `<button class="mission is-sealed" disabled>
             <b>${esc(sc.name)}</b>
             <small>Above your appointment. You will be given it when you are given it.</small>
-            <div class="flags"><span class="pill tight">НЕ ПО ДОЛЖНОСТИ · NOT YOUR COMMAND</span></div>
+            <div class="flags"><span class="pill tight">NOT YOUR COMMAND</span></div>
           </button>`;
     }
     return `<button class="mission ${active ? 'is-active' : ''}" data-mission="${sc.id}">
@@ -75,7 +75,7 @@ export function renderMenu(host, state) {
 
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title">IADSVILLE</h1>
-    <p class="subtitle">${esc(STATE.country.tm)} · ${esc(STATE.service.en)} · sector 4-B</p>
+    <p class="subtitle">${esc(STATE.country.en)} · ${esc(STATE.service.en)} · SECTOR 4-B</p>
 
     <div class="card">
       <p>A raid is coming for the town you are sitting under. You have radars that can see only
@@ -87,17 +87,17 @@ export function renderMenu(host, state) {
 
     <div class="card record-card">
       <div class="record-stamp">${esc(tier.label)}</div>
-      <h3>Personnel file${character ? ` — ${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}` : ''}</h3>
+      <h3>Personnel file${character ? ` — ${esc(rank.en)} ${esc(character.name)}` : ''}</h3>
       <div class="score-grid">
-        <div class="score-cell is-word"><label>ЗВАНИЕ · RANK</label><b>${esc(rank?.en ?? '—')}</b></div>
-        <div class="score-cell is-word"><label>ДОЛЖНОСТЬ · APPOINTMENT</label>
+        <div class="score-cell is-word"><label>RANK</label><b>${esc(rank?.en ?? '—')}</b></div>
+        <div class="score-cell is-word"><label>APPOINTMENT</label>
           <b>${esc(appointment.en)}</b></div>
-        <div class="score-cell"><label>АТТЕСТАЦИЯ · STANDING</label><b>${Math.round(campaign.standing)}</b></div>
-        <div class="score-cell"><label>ОПЫТ · EXPERIENCE</label><b>${character?.xp ?? 0}</b></div>
-        <div class="score-cell"><label>ВАХТ · WATCHES</label><b>${flown}</b></div>
-        <div class="score-cell ${character?.points ? 'is-good' : ''}"><label>ПОДГОТОВКА · TRAINING</label><b>${character?.points ?? 0}</b></div>
-        <div class="score-cell is-word ${character?.wounded ? 'is-bad' : ''}"><label>СОСТОЯНИЕ · CONDITION</label>
-          <b>${character?.wounded ? 'РАНЕН · INJURED' : 'ГОДЕН · FIT'}</b></div>
+        <div class="score-cell"><label>STANDING</label><b>${Math.round(campaign.standing)}</b></div>
+        <div class="score-cell"><label>EXPERIENCE</label><b>${character?.xp ?? 0}</b></div>
+        <div class="score-cell"><label>WATCHES</label><b>${flown}</b></div>
+        <div class="score-cell ${character?.points ? 'is-good' : ''}"><label>TRAINING</label><b>${character?.points ?? 0}</b></div>
+        <div class="score-cell is-word ${character?.wounded ? 'is-bad' : ''}"><label>CONDITION</label>
+          <b>${character?.wounded ? 'INJURED' : 'FIT'}</b></div>
       </div>
       ${campaign.ending ? `<p class="verdict grave">
         <b>${esc(endingSummary(campaign.ending) ?? '')}</b> — the last watch has been stood.</p>` : ''}
@@ -112,15 +112,14 @@ export function renderMenu(host, state) {
     <div class="card">
       <h3>Select a watch</h3>
       <p class="lede">
-        You currently hold <b class="urgent">${esc(appointment.appointment.tm)} ·
-        ${esc(appointment.appointment.en)}</b>. ${esc(appointment.blurb)}</p>
+        You currently hold <b class="urgent">${esc(appointment.appointment.en)}</b>. ${esc(appointment.blurb)}</p>
       ${ECHELON_ORDER.map((echelon) => {
     const watches = SCENARIOS.filter((sc) => sc.echelon === echelon.id);
     if (!watches.length) return '';
     const reached = echelon.order <= appointment.order;
     return `<div class="act ${reached ? '' : 'is-locked'}">
           <div class="act-head">
-            <span class="lg"><b>${esc(echelon.tm)}</b><i>${esc(echelon.en.toUpperCase())} COMMAND</i></span>
+            <span class="lg"><b>${esc(echelon.en.toUpperCase())} COMMAND</b></span>
             <span>${reached ? esc(echelon.teaches) : 'Not yet held.'}</span>
           </div>
           <div class="mission-grid">${watches.map(missionCard).join('')}</div>
@@ -199,7 +198,7 @@ export function renderBriefing(host, state) {
     <p class="subtitle">${esc(mission.subtitle)}</p>
     ${character ? `<div class="card record-card is-tight">
       <div class="record-stamp">${esc(STATE.serviceShort.tm)}</div>
-      <p>Posting order for <b>${esc(rank.tm)} · ${esc(rank.en)} ${esc(character.name)}</b>.
+      <p>Posting order for <b>${esc(rank.en)} ${esc(character.name)}</b>.
       Origin: ${esc(backgroundOf(character).en)}. Home: ${esc(STATE.town.en)}, ${esc(STATE.country.en)}.
       ${character.wounded ? '<span class="grave">Returned to duty against medical advice.</span>' : ''}</p>
     </div>` : ''}
@@ -430,7 +429,7 @@ export function renderDebrief(host, state, result, entry) {
           <td class="${a.destroyed ? 'down' : a.damagePct || result.abandoned ? '' : 'up'}">
             ${a.destroyed ? 'DESTROYED' : a.damagePct ? `${a.damagePct}% damage` : 'intact'}
             ${a.casualties ? ` · ${a.casualties} casualties` : ''}
-            ${struck ? `<br><span class="grave">${esc(quarter.tm)} — ${esc(quarter.en)}, where your people live, is on the returns.</span>` : ''}
+            ${struck ? `<br><span class="grave">${esc(quarter.en.charAt(0).toUpperCase() + quarter.en.slice(1))}, where your people live, is on the returns.</span>` : ''}
           </td></tr>`;
   }).join('')}
       </table>
@@ -479,7 +478,7 @@ export function renderDebrief(host, state, result, entry) {
     </div>` : ''}
 
     ${divergences.length ? `<div class="card">
-      <h3>ДВЕ АРИФМЕТИКИ · THE FILE AND THE NIGHT</h3>
+      <h3>THE FILE AND THE NIGHT</h3>
       <p class="lede">What each decision did to your file, beside
       what the night actually was. When these two columns agree, this table is empty.</p>
       <table class="ledger">
@@ -510,23 +509,23 @@ export function renderDebrief(host, state, result, entry) {
     </div>`}
 
     ${state.narrativePressure && entry?.letter ? `<div class="card letter-card">
-      <h3>${esc(entry.letter.tm)} · ${esc(entry.letter.title)}</h3>
+      <h3>${esc(entry.letter.title)}</h3>
       ${entry.letter.note ? `<p class="note quoted">${esc(entry.letter.note)}</p>` : ''}
       ${entry.letter.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>` : ''}
 
     ${entry?.appointment ? `<div class="card file-entry is-good">
-      <h3>ПРИКАЗ О НАЗНАЧЕНИИ · ORDER OF APPOINTMENT</h3>
-      <p><b>${esc(entry.appointment.echelon.appointment.tm)} · ${esc(entry.appointment.echelon.appointment.en)}</b></p>
+      <h3>ORDER OF APPOINTMENT</h3>
+      <p><b>${esc(entry.appointment.echelon.appointment.en)}</b></p>
       ${entry.appointment.gazetted ? `<p>You are gazetted to
-        ${esc(entry.appointment.gazetted.tm)} · ${esc(entry.appointment.gazetted.en)} on the same order.</p>` : ''}
+        ${esc(entry.appointment.gazetted.en)} on the same order.</p>` : ''}
       ${state.narrativePressure && entry.appointment.note
     ? `<p>${esc(entry.appointment.note)}</p>` : ''}
       <p class="note">${esc(entry.appointment.echelon.blurb)}</p>
     </div>` : ''}
 
     ${state.narrativePressure && entry?.revelation ? `<div class="card revelation-card">
-      <h3>${esc(entry.revelation.tm)} · ${esc(entry.revelation.title)}</h3>
+      <h3>${esc(entry.revelation.title)}</h3>
       ${entry.revelation.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>` : ''}
 
@@ -608,7 +607,7 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
       <table class="ledger">
         ${Object.values(DEFENCE_CLASSES).map((c) => {
     const sys = Object.values(SAM_TYPES).find((t) => t.class === c.id);
-    return `<tr><td><b class="stencil">${esc(c.tm)}</b> · ${esc(c.en)}<br>
+    return `<tr><td><b>${esc(c.en)}</b> <span class="stencil note">${esc(c.tm)}</span><br>
       <span class="note">${esc(c.blurb)}</span></td>
       <td>${esc(sys.label)}<br><span class="note">${sys.minRangeKm}–${sys.maxRangeKm} km<br>
       ${sys.minAltM}–${sys.maxAltM} m</span></td></tr>`;

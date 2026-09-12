@@ -185,3 +185,32 @@ describe('the interface source', () => {
     assert.deepEqual(offenders, [], `unpaired Cyrillic:\n${offenders.join('\n')}`);
   });
 });
+
+describe('how much of it there is', () => {
+  /*
+   * The player: "The game overuses the Cyrillic text. It's good in limited
+   * amounts. The console, however, is littered with it and it's useless.
+   * Scale it back." Outside the lexicon's own tables, the interface sources
+   * now print Cyrillic from a handful of lines — the file's title and stamps
+   * and the nomenclature plate — and this pins that handful so it cannot
+   * creep back up a label at a time. Raising the number is a decision, not
+   * an accident: the plates, the stamps and the identity card carry it, and
+   * everything a player reads to act is English.
+   */
+  test('the interface prints Cyrillic from a handful of lines, and no more', () => {
+    const lines = [];
+    for (const file of readdirSync('src/ui').filter((f) => f.endsWith('.js') && f !== 'lexicon.js')) {
+      const source = readFileSync(`src/ui/${file}`, 'utf8');
+      source.split('\n').forEach((line, i) => {
+        const code = line.replace(/^\s*(\/\/|\*|\/\*).*$/, '').replace(/\/\/.*$/, '');
+        if (CYRILLIC.test(code)) lines.push(`${file}:${i + 1}`);
+      });
+    }
+    assert.ok(lines.length <= 5, `Cyrillic literals are back on the console:\n${lines.join('\n')}`);
+  });
+
+  test('the lesson card speaks English only', () => {
+    const source = readFileSync('src/ui/tutorial.js', 'utf8');
+    assert.ok(!CYRILLIC.test(source.replace(/^\s*(\/\/|\*|\/\*).*$/gm, '')), 'no stencil line on a tutorial card');
+  });
+});

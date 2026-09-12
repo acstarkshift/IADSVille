@@ -394,14 +394,12 @@ export class Scope {
         ctx.arc(q.x, q.y, (town.capital ? 3 : 2) * this.dpr, 0, TAU);
         ctx.fill();
         this.queueLabel({
-          // Both names, always: the Cyrillic is what is printed on the map
-          // sheet, and the English is what makes it readable to everyone else.
-          lines: [town.name, town.en],
-          colours: [
-            withAlpha(p.inkDim, town.capital ? 0.7 : 0.5),
-            withAlpha(p.inkDim, town.capital ? 0.5 : 0.34),
-          ],
-          colour: withAlpha(p.inkDim, 0.5),
+          // One name, in English. Every town used to be lettered twice —
+          // the Cyrillic over the English — which doubled the text on the
+          // tube for no one's benefit; the player asked for the Cyrillic to
+          // be scaled back to the plates, and a map label is not a plate.
+          text: town.en,
+          colour: withAlpha(p.inkDim, town.capital ? 0.7 : 0.5),
           x: q.x, y: q.y,
           priority: town.capital ? 8 : 4,
           offset: 5,

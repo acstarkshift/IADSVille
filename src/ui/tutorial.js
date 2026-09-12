@@ -22,7 +22,7 @@
  * A step that names a radar says so in `radars`, and the test holds that the
  * sentence really contains that name and that a set really carries it.
  *
- * @typedef {{ id: string, en: string, tm: string, radars?: string[],
+ * @typedef {{ id: string, en: string, radars?: string[],
  *   done: (w: any, u: any, sinceS: number) => boolean }} Step
  */
 
@@ -32,7 +32,6 @@ export const NET_TUTORIAL_STEPS = [
     id: 'radiate',
     en: 'Your long-range radar, WIDE EYE, is switched off, so the scope is blank. '
       + 'Find WIDE EYE at the top of the right-hand panel and flip its switch up to RADIATE.',
-    tm: 'ВКЛЮЧИТЕ ИЗЛУЧЕНИЕ',
     radars: ['WIDE EYE'],
     done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > 120,
   },
@@ -40,14 +39,12 @@ export const NET_TUTORIAL_STEPS = [
     id: 'select',
     en: 'Contacts appear on the scope as the beam sweeps past them. '
       + 'Click a contact on the scope, or its row in the AIR PICTURE list, to pick it.',
-    tm: 'ВЫБЕРИТЕ ЦЕЛЬ',
     done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
   },
   {
     id: 'assign',
     en: 'Give it to a battery: drag the contact onto a battery symbol, or press Shift+1 '
       + 'for battery 1. The battery reports back on the log at the bottom.',
-    tm: 'НАЗНАЧЬТЕ БАТАРЕЮ',
     // Ninety seconds, not a hundred and fifty. A card that is still up when
     // the watch has moved on is furniture — and this one used to be
     // unclearable by the key it teaches, so it sat here for two and a half
@@ -58,14 +55,12 @@ export const NET_TUTORIAL_STEPS = [
     id: 'intercept',
     en: 'The battery fires when the shot is good. WAITING FOR RANGE means it is aiming, '
       + 'not refusing. Watch the missile fly out and meet the contact.',
-    tm: 'ЖДИТЕ ПЕРЕХВАТА',
     done: (w, u, sinceS) => w.stats.kills > 0 || sinceS > 150,
   },
   {
     id: 'net',
     en: 'When sector command calls, press Y to acknowledge or N to refuse. '
       + 'Both go on your record. The rest of the watch is yours.',
-    tm: 'СЕТЬ ВАША',
     done: (w, u, sinceS) => sinceS > 16,
   },
 ];
@@ -91,7 +86,6 @@ export const CREW_TUTORIAL_STEPS = [
     id: 'radiate-own',
     en: 'Your battery’s own radar is switched off. Sector’s picture shows you where the '
       + 'contacts are, but you cannot shoot on it — flip your switch up to RADIATE.',
-    tm: 'ВКЛЮЧИТЕ ИЗЛУЧЕНИЕ',
     done: (w, u, sinceS) => w.radarsOf(w.siteById.get(w.control.crewedBatteryId) ?? {})
       .some((r) => r.on) || sinceS > 120,
   },
@@ -99,14 +93,12 @@ export const CREW_TUTORIAL_STEPS = [
     id: 'designate',
     en: 'Contacts appear as your beam sweeps past them. Click one on the scope, or its '
       + 'row in the list on the left, to make it your target.',
-    tm: 'ВЫБЕРИТЕ ЦЕЛЬ',
     done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
   },
   {
     id: 'lock',
     en: 'Press LOCK to lock a fire-control channel onto your target. If the battery '
       + 'cannot take the shot, the console says why in plain words.',
-    tm: 'ЗАХВАТ ЦЕЛИ',
     done: (w, u, sinceS) => (w.siteById.get(w.control.crewedBatteryId)?.engagements.length ?? 0) > 0
       || sinceS > 150,
   },
@@ -114,14 +106,12 @@ export const CREW_TUTORIAL_STEPS = [
     id: 'launch',
     en: 'LAUNCH lights up when the shot is ready. Press it — and keep your radar on '
       + 'until the missile arrives, because your radar is steering it.',
-    tm: 'ПУСК',
     done: (w, u, sinceS) => w.stats.roundsFired > 0 || sinceS > 150,
   },
   {
     id: 'net-crew',
     en: 'When sector command calls, press Y to acknowledge or N to refuse. '
       + 'Both go on your record. The rest of the watch is yours.',
-    tm: 'СЕТЬ ВАША',
     done: (w, u, sinceS) => sinceS > 16,
   },
 ];
