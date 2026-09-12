@@ -34,6 +34,8 @@ export const ECHELONS = {
     tm: 'ДИВИЗИОН',
     en: 'Battalion',
     appointment: { tm: 'КОМАНДИР ДИВИЗИОНА', en: 'Battalion commander' },
+    /** The formation's own name, for headings about the formation. */
+    heading: 'BATTALION COMMAND',
     short: 'BN',
     /** Everything on the board is yours, personally. */
     directLimit: Infinity,
@@ -58,7 +60,7 @@ export const ECHELONS = {
     /** Seats this appointment may be played from. */
     roles: ['net', 'crew', 'both'],
     blurb: 'Four batteries in one valley. Every one of them is yours to point.',
-    teaches: 'The engagement itself: see it, hand it to something that can reach it, watch the round.',
+    teaches: 'You see a contact, hand it to something that can reach it, and watch the round go.',
   },
 
   sector: {
@@ -67,6 +69,7 @@ export const ECHELONS = {
     tm: 'СЕКТОР',
     en: 'Sector',
     appointment: { tm: 'НАЧАЛЬНИК СЕКТОРА', en: 'Sector commander' },
+    heading: 'SECTOR COMMAND',
     short: 'SEC',
     directLimit: Infinity,
     handoverS: 0,
@@ -75,7 +78,7 @@ export const ECHELONS = {
     rankFloor: 'slt',
     roles: ['net', 'crew', 'both'],
     blurb: 'A sector, its radars, and more contacts than you have rounds.',
-    teaches: 'Triage, emissions discipline, and the fact that the centre holding your picture together is a building somebody can bomb.',
+    teaches: 'You choose what is worth a round, and you learn that the building holding your picture together can be bombed.',
   },
 
   region: {
@@ -84,6 +87,7 @@ export const ECHELONS = {
     tm: 'ОКРУГ ПВО',
     en: 'Air Defence District',
     appointment: { tm: 'КОМАНДУЮЩИЙ ОКРУГОМ', en: 'District commander' },
+    heading: 'DISTRICT COMMAND',
     short: 'DIST',
     /**
      * Two. There are four sectors under you and you may stand in two of them.
@@ -101,7 +105,7 @@ export const ECHELONS = {
      */
     roles: ['net'],
     blurb: 'Four sectors, three hundred kilometres, and one of you.',
-    teaches: 'That a standing order given to somebody you cannot see is a real weapon, and usually the only one you have.',
+    teaches: 'You fight through other people, and the order you leave them with is usually the only weapon you have.',
   },
 
   national: {
@@ -110,6 +114,7 @@ export const ECHELONS = {
     tm: 'ГЛАВНЫЙ ШТАБ ПВО',
     en: 'National Air Defence Command',
     appointment: { tm: 'НАЧАЛЬНИК ГЛАВНОГО ШТАБА', en: 'Chief of Air Defence' },
+    heading: 'NATIONAL COMMAND',
     short: 'NAT',
     /** One. The country is yours and you may be in one place in it. */
     directLimit: 1,
@@ -128,7 +133,7 @@ export const ECHELONS = {
      */
     roles: ['net', 'both'],
     blurb: 'The whole country, one seat, and a reserve that will not cover two of anything.',
-    teaches: 'That the schedule of defended places was always a schedule of people, and that you sign it now.',
+    teaches: 'You decide which places are defended, which means you decide which people are, and you sign it.',
   },
 };
 
@@ -174,12 +179,10 @@ export function withinAppointment(scenario, campaign, scenarios) {
  */
 export function appointmentNote(echelon) {
   return {
-    battalion: 'You have the battalion. Four batteries, one radar, and the valley they sit in.',
-    sector: 'You are appointed to the sector. The appointment carries the rank on the same order,'
-      + ' which is how you learn you have it.',
-    region: 'You are appointed to command of the district. Four sectors answer to you. You will'
-      + ' not meet three of the four commanders during this war.',
-    national: 'You are appointed Chief of Air Defence. The order is two lines long and does not'
-      + ' say who held the appointment before you.',
+    battalion: 'Four batteries, one radar, and the valley they sit in.',
+    sector: 'Nobody told you this was coming. Nobody tells anybody.',
+    region: 'Four sectors answer to you. You will not meet three of the four commanders during'
+      + ' this war.',
+    national: 'The order is two lines long and does not say who held the appointment before you.',
   }[echelon.id] ?? null;
 }

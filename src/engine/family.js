@@ -54,33 +54,34 @@ export const LETTERS = [
     lines: (hh) => ({
       mother: [
         'Your mother writes that the weather has turned and the queue at the dispensary has moved'
-          + ' indoors for the season. The stove is drawing well. Веселин\'s boy has been taken for'
+          + ' indoors for the season. The stove is drawing well. Veselin\'s boy has been taken for'
           + ' the army too, and his mother has been impossible about it.',
-        'She asks nothing about your duties. She has never asked anything about your duties.',
-        'She closes the way she always closes: all well here. The letter reads like a letter'
-          + ' written for two readers. It was.',
+        'She does not ask what you do at night.',
+        'She closes the way she closes everything: all well here. She writes knowing somebody at the'
+          + ' sector office reads it before you do, and she writes it anyway.',
       ],
       sister: [
         'Your sister writes that the younger one has started drawing aircraft, all of them flying'
           + ' away to the left, and that the elder has learned your rank and corrects anyone who'
           + ' gets it wrong.',
-        'The mill quarter is fine. Everyone is fine.',
-        'She has numbered the sheets — 2 of 3, 3 of 3 — the habit of somebody who knows pages can'
-          + ' go missing in the post.',
+        'The mill quarter is well enough, she says, and so is everybody in it.',
+        'She has numbered the sheets: 2 of 3, 3 of 3. She started doing that when pages began going'
+          + ' missing in the post.',
       ],
       grandmother: [
-        'Your grandmother\'s letter is six lines. The garden, the frost, the price of paraffin,'
-          + ' and the sentence she has closed letters with since the last war: keep your boots dry.',
+        'Your grandmother\'s letter is six lines long. It covers the garden, the frost and the price'
+          + ' of paraffin, and it ends on the sentence she has closed letters with since the last'
+          + ' war: keep your boots dry.',
         'She does not name your posting, your service, or the war.',
-        'She has done this before. A reader gets nothing from Вера that Вера did not intend to'
-          + ' give.',
+        'She has written letters through a censor before. Nobody reading this one will get anything'
+          + ' out of Vera that she did not mean to give them.',
       ],
       brother: [
-        'Your brother\'s letter is mostly about the pump at the river road, which he has fixed,'
-          + ' and the medical board, which he has appealed again.',
-        'He asks what the service is like in exactly one sentence, then spends a paragraph saying'
-          + ' it does not matter to him.',
-        'He has underlined nothing. Илья underlines things when he means them.',
+        'Your brother\'s letter is mostly about the pump at the river road, which he has fixed, and'
+          + ' the medical board, which he has appealed again.',
+        'He asks what the service is like in exactly one sentence, then spends a paragraph saying it'
+          + ' does not matter to him.',
+        'He has underlined nothing, and Ilya underlines what he means.',
       ],
     }[hh]),
   },
@@ -92,22 +93,21 @@ export const LETTERS = [
     tm: 'ОЧЕРЕДНОЕ ПИСЬМО',
     title: 'THE FORTNIGHTLY LETTER',
     lines: (hh) => [
-      'The fortnightly letter. The queue at the dispensary, the weather over the valley, the'
-        + ' price of flour against the price of paraffin — the register of a place reporting'
-        + ' itself ordinary.',
-      'Aircraft have been crossing the valley at night for three weeks. The letter does not'
-        + ' mention aircraft. The letters never mention anything that flies.',
+      'The fortnightly letter covers the queue at the dispensary, the weather over the valley, and'
+        + ' the price of flour against the price of paraffin.',
+      'Aircraft have crossed the valley at night for three weeks. The letter does not mention them,'
+        + ' and none of the letters ever has.',
       {
         mother: 'Your mother adds that she has repainted the kitchen, which she last did the'
           + ' month you enlisted.',
-        sister: 'Ната adds that the children now sleep in the room facing away from the valley.'
-          + ' No reason is given. It is described as warmer.',
-        grandmother: 'Вера adds one line about the cellar: it has been aired, and the shelves'
-          + ' restocked. She does not say for what.',
-        brother: 'Илья adds that he has been up on the mill roof fixing the weathervane, and that'
+        sister: 'Nata adds that the children now sleep in the room facing away from the valley. She'
+          + ' does not say why, only that it is the warmer room.',
+        grandmother: 'Vera adds one line about the cellar: it has been aired and the shelves'
+          + ' restocked. She does not say what for.',
+        brother: 'Ilya adds that he has been up on the mill roof fixing the weathervane, and that'
           + ' you can see a long way from the mill roof.',
       }[hh],
-      'It is signed the way it is always signed. All well.',
+      'It is signed the way every one of them is signed: all well.',
     ],
   },
 
@@ -117,21 +117,19 @@ export const LETTERS = [
     tm: 'ПИСЬМО О ДОРОГЕ',
     title: 'THE ROAD IS CLOSED FOR WORKS',
     lines: (hh) => [
-      'The letter mentions, in passing, that the Kubin road is closed at the twenty-first'
-        + ' kilometre for works, and the dispensary run now goes the long way round, which adds'
-        + ' an hour.',
+      'The letter mentions in passing that the Kubin road is closed at the twenty-first kilometre'
+        + ' for works, and that the dispensary run now goes the long way round, which adds an hour.',
       'Nobody in the Ville has seen any works.',
       {
-        mother: 'Your mother has taken the long way round twice this week. The queue, she'
-          + ' reports, is unchanged. Only elsewhere.',
-        sister: 'The elder child asked Ната why the buses stop at the twenty-first kilometre. She'
-          + ' writes that she told him: works.',
-        grandmother: 'Вера remarks that the last time that road was closed for works she was'
-          + ' younger than you are now, and it was not works then either.',
-        brother: 'Илья walked out to the closure and was turned back by men who were not road'
-          + ' men. He describes their boots in some detail.',
+        mother: 'Your mother has taken the long way round twice this week. It is the same queue at'
+          + ' the far end of it, she reports, only an hour further away.',
+        sister: 'The elder child asked Nata why the buses stop at the twenty-first kilometre. She'
+          + ' writes that she told him it was works.',
+        grandmother: 'Vera remarks that the last time that road was closed for works she was younger'
+          + ' than you are now, and it was not works then either.',
+        brother: 'Ilya walked out to the closure and was turned back by men who were not road men.'
+          + ' He describes their boots in some detail.',
       }[hh],
-      'The letter does not connect any of this to anything. It is a letter about a road.',
     ],
   },
 
@@ -141,22 +139,22 @@ export const LETTERS = [
     tm: 'ПИСЬМО ПОСЛЕ НАЛЁТА',
     title: 'A LETTER, AFTER',
     lines: (hh, ctx) => [
-      'The first letter since the night the sector log calls the main effort.',
+      'This is the first letter since the night the sector log calls the main effort.',
       ctx.hit
-        ? 'It is about repairs. The glazier\'s waiting list, the tarpaulin over the roof beam,'
-          + ' whose cart carried what. The night itself is one sentence long: there was some'
-          + ' excitement here. Nothing else in the letter admits that anything happened at all.'
+        ? 'It is about repairs: the glazier\'s waiting list, the tarpaulin over the roof beam, and'
+          + ' whose cart carried what. The night itself gets one sentence. There was some excitement'
+          + ' here, it says, and nothing else in the letter admits that anything happened.'
         : 'It mentions the other quarters — the mill got it worst, and the river road — and then'
-          + ' returns to the dispensary queue. About your own street it says nothing, and it asks'
-          + ' nothing, and the not-asking is the letter.',
+          + ' goes back to the dispensary queue. About your own street it says nothing at all, and'
+          + ' it asks you nothing. That is new.',
       {
         mother: 'The handwriting is smaller than usual. The words are the same as always.',
         sister: 'The children have added a drawing. It is a house, with very heavy lines where'
           + ' the roof is.',
-        grandmother: 'Вера\'s postscript: the cellar shelving held. She had mentioned the cellar'
-          + ' before.',
-        brother: 'Илья writes that he has been helping with the roofs, and that his heart murmur'
-          + ' has not been mentioned by anybody all week.',
+        grandmother: 'Vera\'s postscript is one line: the cellar shelving held. She had mentioned'
+          + ' the cellar before.',
+        brother: 'Ilya writes that he has been helping with the roofs, and that nobody has mentioned'
+          + ' his heart murmur all week.',
       }[hh],
     ],
   },
@@ -166,12 +164,21 @@ export const LETTERS = [
     after: 'four-sectors',
     tm: 'КОРОТКОЕ ПИСЬМО',
     title: 'A SHORTER LETTER',
-    lines: () => [
-      'The letter is addressed to your rank, correctly, with the new appointment underneath in'
-        + ' brackets. The salutation used to be a name.',
-      'It is one page. The dispensary, the weather, the road. It reads like the letters, only'
-        + ' abridged — the way one writes to an office.',
-      'Nothing in it is wrong. That is the thing you keep noticing.',
+    lines: (hh) => [
+      'The letter is addressed to your rank, correctly, with the new appointment underneath it in'
+        + ' brackets. The salutation used to be your name.',
+      'It is one page: the dispensary, the weather, the road. It reads like the other letters with'
+        + ' the warmth taken out of it, the way anybody writes to an office.',
+      {
+        mother: 'Nothing in it is wrong. The stove is still drawing well; she says so in the same'
+          + ' words as last time.',
+        sister: 'Nothing in it is wrong. Nata names both children and gives their ages, as though'
+          + ' you might need reminding.',
+        grandmother: 'Nothing in it is wrong. Vera has sent an inventory of the cellar, itemised,'
+          + ' which is not a thing anybody puts in a letter.',
+        brother: 'Nothing in it is wrong. Ilya has signed with his full name and added the word'
+          + ' brother after it, the way you would sign a return.',
+      }[hh],
     ],
   },
 
@@ -184,31 +191,27 @@ export const LETTERS = [
       mother: [
         'Your mother writes that the valley has been loud at night, and that she has taken the'
           + ' photographs down off the west wall. For cleaning, she writes.',
-        'She asks, for the first time since you enlisted, when you are next permitted to'
-          + ' telephone. She has never asked before.',
-        'She closes: all well here. You have read that sentence forty times. This is the first'
-          + ' time it reads like a request.',
+        'She asks, for the first time since you enlisted, when you are next permitted to telephone.',
+        'She closes: all well here. It is the fortieth time she has written that sentence and the'
+          + ' first time it reads like a request.',
       ],
       sister: [
-        'Ната\'s letter is mostly the children. The younger one\'s aircraft now fly to the right,'
-          + ' toward the edge of the page. The elder has stopped correcting people about your'
-          + ' rank.',
+        'Nata\'s letter is mostly the children. The younger one\'s aircraft now fly to the right,'
+          + ' toward the edge of the page. The elder has stopped correcting people about your rank.',
         'At the bottom, after her name, a line was started and then crossed out — neatly, so that'
           + ' you would see it had been crossed out.',
       ],
       grandmother: [
-        'Вера\'s letter is nine lines, which for Вера is a speech. Paraffin, the frost coming'
-          + ' early, the cellar.',
-        'The ninth line: she has taken the enamel box down from the shelf — you know the one —'
-          + ' and keeps it by the door now.',
-        'She refuses, as ever, to discuss the last war. She has begun, without discussion, to'
-          + ' prepare for this one.',
+        'Vera\'s letter runs to nine lines, which for Vera is a speech. It covers the paraffin, the'
+          + ' frost coming early, and the cellar.',
+        'The ninth line: she has taken the enamel box down from the shelf — you know the one — and'
+          + ' keeps it by the door now.',
+        'She still will not discuss the last war. She has begun preparing for this one anyway.',
       ],
       brother: [
-        'Илья writes one page about the pump and one about the weather, and then, at the end,'
-          + ' without preamble: the board can keep its decision. He has joined the fire pickets'
-          + ' at the mill. Nobody asks the pickets about their hearts.',
-        'He has underlined nothing. He did not need to.',
+        'Ilya writes one page about the pump and one about the weather. Then, at the end and without'
+          + ' any preamble: the board can keep its decision.',
+        'He has joined the fire pickets at the mill. Nobody asks the pickets about their hearts.',
       ],
     }[hh]),
   },
@@ -395,13 +398,13 @@ export function briefLine(campaign, missionId) {
   if (!character) return null;
   if (missionId === 'ville-under-fire') {
     const quarter = districtOf(character);
-    return 'The main effort is coming down the valley, and the valley is not a map feature: your'
-      + ` people are in ${quarter.en} tonight. The sector chart does not mark that. It does not`
-      + ' need to.';
+    return 'The main effort is coming down the valley tonight, and your people are in'
+      + ` ${quarter.en}. The sector chart marks the crossing, the headquarters and the town. It`
+      + ' does not mark which street they live on.';
   }
   if ((campaign.family?.permit ?? 'standing') === 'review') {
-    return 'The residence permit is still listed as under review. Nobody has written to you'
-      + ' about it, which is not the same as nothing happening.';
+    return 'Your family\'s residence permit is still listed as under review. Nobody has written to'
+      + ' you about it, and nobody will until there is something to write.';
   }
   return null;
 }
@@ -410,10 +413,16 @@ export function briefLine(campaign, missionId) {
  * A family override for the quiet line before the shooting starts. Returns
  * null to let the tier note speak instead.
  */
-export function familyBriefingNote(campaign) {
+export function familyBriefingNote(campaign, missionId = null) {
   const family = campaign.family;
   if (!family) return null;
-  if (campaign.ending) {
+  /*
+   * Only on the watch after the campaign ended. This line used to print on
+   * every briefing once an ending existed, including a replayed First Light,
+   * where a sector office that has stopped reading anything is two watches in
+   * the future.
+   */
+  if (campaign.ending && missionId === 'presidents-flight') {
     return 'No letter this week. The office that reads them first has stopped reading anything.';
   }
   const last = family.lastDisposition;

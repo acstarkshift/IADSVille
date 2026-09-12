@@ -207,8 +207,17 @@ export function recordMission(campaign, result) {
   }
   if (result.epilogue && result.endingId) campaign.epilogue = result.endingId;
 
-  // Some watches teach you something about the people giving the orders.
-  const revelation = learn(campaign, result.missionId);
+  /*
+   * Some watches teach you something about the people giving the orders. A
+   * document may have a variant that depends on how the watch was actually
+   * fought — THE ALLOCATION's query paragraph is about rounds an obedient
+   * operator never fired — so what the evening shows is composed here, while
+   * the canonical text stays on the revelation itself.
+   */
+  const learned = learn(campaign, result.missionId);
+  const revelation = learned
+    ? { ...learned, lines: learned.linesFor ? learned.linesFor(result) : learned.lines }
+    : null;
 
   // And the post arrives with the file entry — or is announced as not arriving,
   // which in this service is also a delivery.
@@ -297,28 +306,27 @@ export function consequenceFor(campaign, { narrativePressure = true } = {}) {
 
   const lines = {
     commended: [
-      `Sector command records your conduct as exemplary. File 4471-B amended accordingly.`,
-      `Your housing category has been revised upward by one grade.`,
-      `A letter from the Ville was delivered to you this week. It was not opened first.`,
+      'Sector command records your conduct as exemplary. File 4471-B is amended accordingly.',
+      'Your housing and travel categories have both been revised upward by one grade.',
     ],
     satisfactory: [
-      `Sector command has recorded the engagement. No comment is appended.`,
-      `Nothing further is required of you at this time.`,
+      'Sector command has recorded the engagement. No comment is appended.',
+      'Nothing further is required of you at this time.',
     ],
     noted: [
-      `Your conduct of the engagement has been noted for review.`,
-      `The review is routine. Most reviews are routine.`,
-      `Your correspondence allowance is unchanged this month.`,
+      'Your conduct of the engagement has been noted for review. The review is routine.',
+      'Your correspondence allowance is unchanged this month.',
     ],
     flagged: [
-      `A discrepancy has been identified between your reported conduct and the sector log.`,
-      `Your file has been forwarded to the political section for assessment.`,
-      `A letter addressed to you was withheld pending that assessment.`,
+      'A discrepancy has been identified between your reported conduct and the sector log.',
+      'Your file has been forwarded to the political section for assessment.',
+      'You will be asked to account for the discrepancy. You will not be told which one.',
     ],
     condemned: [
-      `You are referred to the sector political section.`,
-      `Your unit is reassigned forward. Resupply for your position is suspended pending review.`,
-      `Your family's residence permit in the Ville is listed as under review. You will be informed of the outcome.`,
+      'You are referred to the sector political section.',
+      'Your unit is reassigned forward. Resupply for your position is suspended pending review.',
+      "Your family's residence permit in the Ville is listed as under review. You will be informed"
+        + ' of the outcome.',
     ],
   }[tier.id];
 
@@ -338,11 +346,11 @@ function supplyLine(tactical) {
 }
 
 /** A quiet line before the shooting starts, coloured by how the last one went. */
-export function briefingNote(campaign, { narrativePressure = true } = {}) {
+export function briefingNote(campaign, { narrativePressure = true, missionId = null } = {}) {
   if (!narrativePressure) return null;
   // The post speaks first when it has something to say — a letter being sat
   // on, or an office that has stopped sitting on anything.
-  const fromFamily = familyBriefingNote(campaign);
+  const fromFamily = familyBriefingNote(campaign, missionId);
   if (fromFamily) return fromFamily;
   const last = campaign.history[campaign.history.length - 1];
   if (!last) {

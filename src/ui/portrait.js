@@ -35,6 +35,20 @@ const INK = '#1a1614';
 const WHITE = '#f4f1ea';
 
 /**
+ * The four steps of one person's skin, deep to lit.
+ *
+ * The photograph is drawn in two inks; a hand at 320 x 180 needs four — a
+ * knuckle ridge, a lit finger tip, the shaded side of a palm — and they belong
+ * here, beside the pair they extend, rather than as a fifth and sixth hex
+ * literal in the scenes. The middle two steps ARE `portraitFeatures().skin`,
+ * so a face and the hands below it agree.
+ */
+export function skinRamp(seed) {
+  const [lit, shaded] = portraitFeatures(seed ?? 'nobody').skin;
+  return [shade(shaded, -34), shaded, lit, shade(lit, 14)];
+}
+
+/**
  * Everything about the face that the name decides, as plain data.
  *
  * Read by the drawing below and by nothing else that needs to agree with it;

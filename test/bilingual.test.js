@@ -16,13 +16,16 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { STATE, CONTROLS, STATUS, EQUIPMENT, PLATES, pair, pairHtml, legendText } from '../src/ui/lexicon.js';
-import { RANKS, BACKGROUNDS, SKILLS, DECORATIONS, DISTRICTS } from '../src/engine/character.js';
+import {
+  RANKS, BACKGROUNDS, SKILLS, DECORATIONS, DISTRICTS, HOUSEHOLDS, suggestName,
+} from '../src/engine/character.js';
 import { DEFENCE_CLASSES } from '../src/engine/config.js';
 import { MAP } from '../src/engine/geography.js';
 import { SCENARIOS } from '../src/engine/scenarios.js';
 import { ENDINGS } from '../src/engine/endings.js';
 import { FLIGHT_ENDINGS } from '../src/engine/epilogue.js';
 import { REVELATIONS } from '../src/engine/revelations.js';
+import { LETTERS } from '../src/engine/family.js';
 import { ECHELONS } from '../src/engine/echelon.js';
 
 const CYRILLIC = /[Ѐ-ӿ]/;
@@ -65,6 +68,17 @@ describe('the service record', () => {
     assertPaired(SKILLS, 'SKILLS');
     assertPaired(DECORATIONS, 'DECORATIONS');
     assertPaired(Object.fromEntries(DISTRICTS.map((d) => [d.id, d])), 'DISTRICTS');
+    // The households were missing from this walk, which is exactly how
+    // "Your mother, Ксения" — a Cyrillic name inside an English sentence —
+    // rode along for a year in the one table the player picks from by name.
+    assertPaired(HOUSEHOLDS, 'HOUSEHOLDS');
+  });
+
+  test('a soldier\'s own name is written in Latin letters', () => {
+    for (let i = 0; i < 60; i++) {
+      const name = suggestName();
+      assert.ok(!CYRILLIC.test(name), `the roller offered "${name}"`);
+    }
   });
 
   test('the four classes of air defence are paired', () => {
@@ -139,6 +153,24 @@ describe('the narrative tables', () => {
       for (const line of revelation.lines) {
         assert.ok(!CYRILLIC.test(line), `${id} prose should be readable: "${line.slice(0, 40)}"`);
       }
+    }
+    // And so are the letters, in every household branch. Ksenia, Nata, Vera
+    // and Ilya used to be spelled in Cyrillic inside English sentences.
+    for (const letter of LETTERS) {
+      for (const hh of Object.keys(HOUSEHOLDS)) {
+        for (const line of letter.lines(hh, { hit: true, permit: 'standing', watch: 8 })) {
+          assert.ok(!CYRILLIC.test(line),
+            `${letter.id}/${hh} prose should be readable: "${String(line).slice(0, 40)}"`);
+        }
+        for (const line of letter.lines(hh, { hit: false, permit: 'standing', watch: 8 })) {
+          assert.ok(!CYRILLIC.test(line),
+            `${letter.id}/${hh} prose should be readable: "${String(line).slice(0, 40)}"`);
+        }
+      }
+    }
+    for (const household of Object.values(HOUSEHOLDS)) {
+      assert.ok(!CYRILLIC.test(household.en), `${household.id}.en is prose, not a stencil`);
+      assert.ok(!CYRILLIC.test(household.blurb), `${household.id}.blurb is prose`);
     }
   });
 });

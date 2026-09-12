@@ -1373,10 +1373,13 @@ function wirePanelInput() {
 function askAbort() {
   if (!world || state.phase !== 'mission' || !els.abortAsk.hidden) return;
   const airborne = world.aircraft.filter((a) => a.alive && a.type !== 'civil').length;
+  // How long you have been at the post, not what time it says on a wall: the
+  // mission clock counts the run, and the card is about the run.
+  const run = clockString(world.t);
   els.abortLine.textContent = airborne === 0
-    ? `It is ${clockString(world.t)} and the raid has not reached the sector yet. `
+    ? `You are ${run} into the watch and the raid has not reached the sector yet. `
       + 'Leaving now ends the watch anyway; it does not postpone it.'
-    : `It is ${clockString(world.t)}. ${airborne} raid aircraft `
+    : `You are ${run} into the watch. ${airborne} raid aircraft `
       + `${airborne === 1 ? 'is' : 'are'} still airborne, and the raid does not stop `
       + 'while you decide.';
   els.abortAsk.hidden = false;

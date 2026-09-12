@@ -230,11 +230,20 @@ export const DECORATIONS = {
   },
 };
 
-/** Names drawn on for a suggested identity at enlistment. */
-const GIVEN_NAMES = ['Драган', 'Милан', 'Вук', 'Радо', 'Ирина', 'Мила', 'Ясна', 'Зора',
-  'Огнян', 'Тихомир', 'Данко', 'Лада', 'Веся', 'Боян', 'Сава', 'Нада'];
-const FAMILY_NAMES = ['Ковач', 'Мирчев', 'Дулов', 'Ясень', 'Брасов', 'Гарин', 'Ленко',
-  'Тавров', 'Матич', 'Волох', 'Стрельник', 'Кубин', 'Лозан', 'Раду'];
+/**
+ * Names drawn on for a suggested identity at enlistment.
+ *
+ * Written in Latin letters, because the soldier's name is prose: it stands in
+ * letters, in endings and in the commissar's mouth, and Cyrillic belongs on the
+ * plates and the stamps. The surnames are deliberately disjoint from every
+ * place on the map and every officer named in the game — the roller used to
+ * hand out "Sava Voloh" on a watch where Voloh is a subordinate sector
+ * commander, and "Mila Brasov" on the watch about the city of Brasov.
+ */
+const GIVEN_NAMES = ['Dragan', 'Milan', 'Vuk', 'Rado', 'Irina', 'Mila', 'Yasna', 'Zora',
+  'Ognyan', 'Tihomir', 'Danko', 'Lada', 'Vesya', 'Boyan', 'Sava', 'Nada'];
+const FAMILY_NAMES = ['Krushev', 'Danilov', 'Petrin', 'Zhelev', 'Marinov', 'Ostrev',
+  'Bavich', 'Tomin', 'Valchev', 'Sarev', 'Ivkov', 'Ganchev'];
 
 /**
  * The quarters of the Ville.
@@ -261,28 +270,28 @@ export const HOUSEHOLDS = {
   mother: {
     id: 'mother',
     tm: 'МАТЬ, КСЕНИЯ',
-    en: 'Your mother, Ксения',
+    en: 'Your mother, Ksenia',
     district: 'east',
     blurb: 'She writes every fortnight about the weather and the queue at the dispensary, and never about anything else. You understand why.',
   },
   sister: {
     id: 'sister',
     tm: 'СЕСТРА НАТА И ДВОЕ ДЕТЕЙ',
-    en: 'Your sister Ната, and her two children',
+    en: 'Your sister Nata, and her two children',
     district: 'mill',
     blurb: 'The children were born after you enlisted. You have met the younger one twice.',
   },
   grandmother: {
     id: 'grandmother',
     tm: 'БАБУШКА ВЕРА',
-    en: 'Your grandmother Вера',
+    en: 'Your grandmother Vera',
     district: 'high',
     blurb: 'She remembers the last war and refuses to discuss it, which is its own kind of account.',
   },
   brother: {
     id: 'brother',
     tm: 'БРАТ ИЛЬЯ',
-    en: 'Your brother Илья, who failed the medical',
+    en: 'Your brother Ilya, who failed the medical',
     district: 'river',
     blurb: 'He was kept back from service for a heart murmur and has never entirely forgiven the board, or you.',
   },
@@ -291,9 +300,14 @@ export const HOUSEHOLDS = {
 /** Where the state is run from, and where the palace stands. */
 export const CAPITAL = { tm: 'МОСТРОГРАД', en: 'Mostrograd' };
 
+/** The given names that take the feminine ending on the surname. */
+const FEMININE_GIVEN = new Set(['Irina', 'Mila', 'Yasna', 'Zora', 'Lada', 'Vesya', 'Nada']);
+
 export function suggestName(rng = Math.random) {
   const pick = (list) => list[Math.floor(rng() * list.length)];
-  return `${pick(GIVEN_NAMES)} ${pick(FAMILY_NAMES)}`;
+  const given = pick(GIVEN_NAMES);
+  const family = pick(FAMILY_NAMES);
+  return `${given} ${FEMININE_GIVEN.has(given) ? `${family}a` : family}`;
 }
 
 export function householdOf(character) {

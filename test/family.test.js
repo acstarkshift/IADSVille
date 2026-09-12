@@ -108,7 +108,7 @@ describe('the letters themselves', () => {
       .lines('mother', { hit: false, permit: 'standing', watch: 8 }).join(' ');
     assert.notEqual(hit, spared);
     assert.match(hit, /repairs/i);
-    assert.match(spared, /asks nothing|not-asking/i);
+    assert.match(spared, /asks you nothing/i);
   });
 });
 
@@ -245,7 +245,11 @@ describe('the surfaces', () => {
       'the campaign note consults the post first');
 
     campaign.ending = 'obedient';
-    assert.match(familyBriefingNote(campaign), /stopped reading anything/);
+    // Only on the watch after the campaign ended. It used to print on every
+    // briefing once an ending existed, including a replayed First Light.
+    assert.ok(!/stopped reading anything/.test(familyBriefingNote(campaign, 'first-light')),
+      'not on a replayed early watch, where the office is still open');
+    assert.match(familyBriefingNote(campaign, 'presidents-flight'), /stopped reading anything/);
     assert.equal(briefingNote(campaign, { narrativePressure: false }), null,
       'and none of it exists with the pressure off');
   });

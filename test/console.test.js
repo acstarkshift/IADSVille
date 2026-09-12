@@ -208,7 +208,7 @@ describe('leaving the post', () => {
     assert.match(world.outcome.cause, /^YOU LEFT THE POST AT \d+:\d\d\.$/);
     assert.ok(world.outcome.cause.length <= 46,
       `the deck line is set as a headline and must fit like one: "${world.outcome.cause}"`);
-    assert.equal(world.outcome.clock, world.outcome.cause.match(/(\d+:\d\d)/)[1]);
+    assert.equal(world.outcome.watchClock, world.outcome.cause.match(/(\d+:\d\d)/)[1]);
   });
 });
 

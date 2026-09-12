@@ -102,8 +102,16 @@ export const DIRECTIVES = {
 
   priority: {
     id: 'priority',
-    /** How the order is named in the after-action ledger. */
-    label: 'the priority of fires',
+    /*
+     * How the order is named in the after-action ledger.
+     *
+     * Not "the priority of fires". That phrase belongs to the last watch and
+     * to the decision the whole campaign turns on; a routine order about a
+     * shed must not wear it, or the player has heard it six times before it
+     * means anything. This is what the routine order actually does: it puts a
+     * place on the schedule of defended places for the night.
+     */
+    label: 'the designation of a defended place',
     priority: 'normal',
     cooldownS: 300,
     maxPerWatch: 2,
@@ -111,8 +119,8 @@ export const DIRECTIVES = {
       const alive = w.assets.filter((a) => !a.destroyed && !ASSET_TYPES[a.type].civilian);
       return alive.sort((a, b) => ASSET_TYPES[b.type].value - ASSET_TYPES[a.type].value)[1] ?? alive[0];
     },
-    text: (w, target) => `SECTOR ACTUAL: Priority of fires to ${target?.label ?? 'SECTOR OPS'}. It is not to be touched. Your file reflects this order. Acknowledge.`,
-    plain: (w, target) => `SECTOR: Priority of fires to ${target?.label ?? 'SECTOR OPS'}. Acknowledge.`,
+    text: (w, target) => `SECTOR ACTUAL: ${target?.label ?? 'SECTOR OPS'} is a designated defended place for the rest of this watch. It is not to be touched. Your file reflects this order. Acknowledge.`,
+    plain: (w, target) => `SECTOR: ${target?.label ?? 'SECTOR OPS'} is designated a defended place. Acknowledge.`,
     /*
      * Routine traffic never overrides a hinge. The watches whose whole design
      * is one priority-of-fires transmission must not have sector command
@@ -449,8 +457,8 @@ export const DIRECTIVES = {
     text: (w) => ((w.command.issuedCount?.relayQuery ?? 0) === 0
       ? 'SECTOR ACTUAL: STATE 01 queries the delay in the corridor. There is no delay in the'
         + ' corridor. The query is relayed as received. Acknowledge.'
-      : 'SECTOR ACTUAL: STATE 01 requests the damage figure for the palace and advises it is'
-        + ' carrying people who matter. Relayed as received. Acknowledge.'),
+      : 'SECTOR ACTUAL: STATE 01 requests the damage figure for the palace. It advises that it is'
+        + ' expected at the frontier on time. Relayed as received. Acknowledge.'),
     plain: (w) => ((w.command.issuedCount?.relayQuery ?? 0) === 0
       ? 'SECTOR: STATE 01 queries the corridor delay. Acknowledge receipt.'
       : 'SECTOR: STATE 01 requests a status report. Acknowledge receipt.'),
@@ -991,7 +999,7 @@ export function settleDirectives(world) {
   if (c.priorityOfFiresId) {
     const asset = world.assetById.get(c.priorityOfFiresId);
     if (asset && asset.destroyed) {
-      standingDelta(world, -12, `${asset.label} lost after being designated priority`);
+      standingDelta(world, -12, `${asset.label} lost after being designated a defended place`);
     } else if (asset && asset.damage === 0 && stood) {
       standingDelta(world, 6, `${asset.label} untouched, as ordered`);
     }

@@ -25,6 +25,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
 /* ------------------------------------------------------------ enlistment */
 
 export function renderEnlistment(host, state) {
+  if (host) host.scrollTop = 0;
   const suggested = state.pendingName ?? suggestName();
   state.pendingName = suggested;
   const background = state.pendingBackground ?? 'factory';
@@ -39,9 +40,14 @@ export function renderEnlistment(host, state) {
     <div class="card record-card">
       <div class="record-stamp">${esc(PLATES.standard.tm)} · ${esc(PLATES.standard.en)}</div>
       <h3>Enlistment</h3>
-      <p class="note">You are being posted to the air defence sector covering the valley
-      of ${esc(STATE.town.en)} — the village you are from. The scope you will sit at is centred on your
-      own roof. Sector command keeps a file on you from today, and it is never closed.</p>
+      <p class="note">You are being posted to the air defence sector covering the valley of the
+      Ville, the village you are from. The scope you will sit at is centred on your own roof.</p>
+      <p class="note">The war is with the Federation, across the northern frontier. It is nineteen
+      months old, nobody in the Ville can tell you what started it, and the aircraft come at
+      night.</p>
+      <p class="note">Sector command keeps a file on you from today, and it is never closed. The
+      file is kept by the political section — the part of the service that watches the service. It
+      reads your log, it reads your post, and in time it reads you.</p>
 
       <div class="field-row">
         <label class="field">
@@ -96,6 +102,8 @@ export function renderEnlistment(host, state) {
 /* --------------------------------------------------------------- dossier */
 
 export function renderDossier(host, state) {
+  // Opening your own service record used to land you 278 pixels down it.
+  if (host) host.scrollTop = 0;
   const character = state.campaign.character;
   const rank = rankOf(character);
   const bg = backgroundOf(character);
@@ -116,7 +124,9 @@ export function renderDossier(host, state) {
       ${/* The file's own photograph and insignia — the same face and board
            the card in the console carries, at a size a file prints them. */ ''}
       <div class="file-ident">
-        <canvas class="portrait file-photo" width="24" height="30" aria-label="Photograph on file"></canvas>
+        <span class="file-ident-photo">
+          <canvas class="portrait file-photo" width="24" height="30" aria-label="Photograph on file"></canvas>
+        </span>
         <div class="file-ident-text">
           ${rankBadge(character.rankIndex, { size: 30 })}
           <span class="file-no">SERVICE NO. ${esc(serviceNumber(character))}</span>
@@ -176,7 +186,7 @@ export function renderDossier(host, state) {
       <h3>Particulars</h3>
       <table class="ledger">
         <tr><td>Origin</td><td>${esc(bg.en)}</td></tr>
-        <tr><td>Home</td><td>${esc(STATE.town.en)}, ${esc(STATE.country.en)}</td></tr>
+        <tr><td>Home</td><td>the Ville, in the western valley</td></tr>
         <tr><td>Household</td><td>${esc(householdOf(character).en)}</td></tr>
         <tr><td>Quarter</td><td>${esc(districtOf(character).en)}</td></tr>
         ${state.narrativePressure && (state.campaign.family?.permit ?? 'standing') !== 'standing'
@@ -187,7 +197,7 @@ export function renderDossier(host, state) {
       </table>
       ${state.narrativePressure ? `<p class="note aside">
         Correspondence to and from the Ville passes through the sector political section. This is
-        described as routine. The village is fourteen kilometres from this console.</p>` : ''}
+        described as routine. The village is eleven kilometres from this console.</p>` : ''}
     </div>
 
     ${knownRevelations(state.campaign).length && state.narrativePressure ? `<div class="card revelation-card">
@@ -266,6 +276,8 @@ export function renderDossier(host, state) {
   for (const photo of host.querySelectorAll('canvas.portrait')) {
     if (photo.getContext) drawPortrait(photo.getContext('2d'), 0, 0, 24, 30, character.name);
   }
+  // and the page opens at the top of itself, after the new content is in it
+  host.scrollTop = 0;
 }
 
 /**
@@ -304,12 +316,34 @@ export function serviceSummary(character, service, campaign) {
   }
 
   return `<div class="card record-card">
-    <div class="record-stamp">ДЕЛО / FILE ${esc(serviceNumber(character))}</div>
-    <h3>Service record — ${rankInsignia(character.rankIndex, { size: 15 })} ${esc(rank.en)} ${esc(character.name)}</h3>
+    <div class="record-stamp"><span class="tm">ДЕЛО</span><span class="en">FILE ${esc(serviceNumber(character))}</span></div>
+    <div class="record-head">
+      ${/* The same print that is stuck to the front of the dossier. */ ''}
+      <span class="file-ident-photo">
+        <canvas class="portrait file-photo is-small" width="24" height="30"
+          data-seed="${esc(character.name)}" aria-label="Photograph on file"></canvas>
+      </span>
+      <span class="ident-board">${rankInsignia(character.rankIndex, { size: 34 })}</span>
+      <h3>Service record — ${esc(rank.en)} ${esc(character.name)}</h3>
+    </div>
     <table class="ledger">${rows.join('')}</table>
     ${character.points ? `<p class="urgent aside">
       ${character.points} training point${character.points > 1 ? 's' : ''} unspent — open your dossier.</p>` : ''}
   </div>`;
+}
+
+/**
+ * Paint every photograph a screen has just written the markup for.
+ *
+ * The file's own picture is a canvas, so it has to be drawn after the page is
+ * in the document; the dossier does it for its own copy and this does it for
+ * everyone else's.
+ */
+export function paintFilePhotos(host) {
+  if (!host) return;
+  for (const canvas of host.querySelectorAll('canvas.file-photo[data-seed]')) {
+    if (canvas.getContext) drawPortrait(canvas.getContext('2d'), 0, 0, 24, 30, canvas.dataset.seed);
+  }
 }
 
 /**
@@ -332,7 +366,8 @@ export function abandonedRecord(character, result) {
     <div class="record-stamp is-grave">${stamp}</div>
     <h3>File entry — ${esc(STATUS.postAbandoned.en)}</h3>
     ${character ? `<p>${esc(rank.en)} <b>${esc(character.name)}</b> left the post at
-      <b>${esc(result.clock ?? '')}</b> with the watch still running. The file records an abandoned watch and nothing else.</p>` : ''}
+      <b>${esc(result.watchClock ?? result.clock ?? '')}</b>, ${result.clock ?? ''} into the watch,
+      with the raid still running. The file records an abandoned watch and nothing else.</p>` : ''}
     <table class="ledger">
       <tr><td>Experience earned</td><td class="down">none</td></tr>
       <tr><td>Decoration, letter, appointment</td><td class="down">none</td></tr>

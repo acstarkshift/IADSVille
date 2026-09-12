@@ -11,20 +11,36 @@
 
 import { SCENARIOS, isUnlocked, appointmentOf, watchConditions } from '../engine/scenarios.js';
 import { ECHELON_ORDER, ECHELONS } from '../engine/echelon.js';
-import { DIFFICULTY, ROLES, SAM_TYPES, DEFENCE_CLASSES } from '../engine/config.js';
+import { DIFFICULTY, ROLES, SAM_TYPES, DEFENCE_CLASSES, ASSET_TYPES } from '../engine/config.js';
 import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor } from '../engine/command.js';
 import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/character.js';
-import { serviceSummary, abandonedRecord } from './dossier.js';
+import { serviceSummary, abandonedRecord, paintFilePhotos } from './dossier.js';
 import { STATE } from './lexicon.js';
 import { rankInsignia } from './insignia.js';
 import { composeEnding, endingSummary } from '../engine/endings.js';
 import { composeFlightEnding, flightEndingSummary } from '../engine/epilogue.js';
 import { standing as arcStanding } from '../engine/revelations.js';
 import { briefLine } from '../engine/family.js';
+import { drawEndingStill } from './scenes.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+/**
+ * A rubber stamp's face: the service's own name over its English gloss.
+ *
+ * The gloss has been in the lexicon all along and the template printed only
+ * the Cyrillic half, which is the one thing the house rule on the language
+ * does not allow — every Cyrillic string on screen is paired with its English
+ * beside it.
+ */
+const stampFace = (tm, en) => (en
+  ? `<span class="tm">${esc(tm)}</span><span class="en">${esc(en)}</span>`
+  : `<span class="tm">${esc(tm)}</span>`);
+
+/** Every screen opens at the top of itself, however far the last one scrolled. */
+const toTop = (host) => { if (host) host.scrollTop = 0; };
 
 /* ------------------------------------------------------------- title */
 
@@ -77,20 +93,26 @@ export function renderMenu(host, state) {
     <p class="subtitle">${esc(STATE.country.en)} · ${esc(STATE.service.en)} · SECTOR 4-B</p>
 
     <div class="card">
-      <p>A raid is coming for the town you are sitting under. You have radars that can see only
-      while they are radiating, batteries with more targets than rounds, and a command that reads
-      your log afterwards.</p>
-      <p class="note">While a radar is on, the enemy can find it. Knowing when to radiate and when to
-      go silent is the whole job.</p>
+      <p>You are an air defence conscript in the second year of a war with the Federation, across
+      the northern frontier. You sit eleven kilometres from the village you grew up in, and
+      tonight's raid is coming down your valley.</p>
+      <p>Your radars can only see while they are transmitting, and everything that can see you is
+      listening for exactly that. You have more contacts than rounds, and sector command reads
+      your log in the morning.</p>
     </div>
 
     <div class="card record-card">
-      <div class="record-stamp">${esc(tier.label)}</div>
-      <h3>Personnel file${character ? ` — ${rankInsignia(character.rankIndex, { size: 14 })} ${esc(rank.en)} ${esc(character.name)}` : ''}</h3>
+      <div class="record-stamp">${stampFace(tier.label)}</div>
+      <h3>Personnel file</h3>
+      ${character ? `<div class="ident-row">
+        <span class="ident-board">${rankInsignia(character.rankIndex, { size: 40 })}</span>
+        <span class="ident-name"><b>${esc(rank.en)} ${esc(character.name)}</b>
+          <small>${esc(appointment.appointment.en)}</small></span>
+      </div>` : ''}
       <div class="score-grid">
-        <div class="score-cell is-word"><label>RANK</label><b>${character ? rankInsignia(character.rankIndex, { size: 16 }) : ''}${esc(rank?.en ?? '—')}</b></div>
+        <div class="score-cell is-word"><label>RANK</label><b>${esc(rank?.en ?? '—')}</b></div>
         <div class="score-cell is-word"><label>APPOINTMENT</label>
-          <b>${esc(appointment.en)}</b></div>
+          <b>${esc(appointment.appointment.en)}</b></div>
         <div class="score-cell"><label>STANDING</label><b>${Math.round(campaign.standing)}</b></div>
         <div class="score-cell"><label>EXPERIENCE</label><b>${character?.xp ?? 0}</b></div>
         <div class="score-cell"><label>WATCHES</label><b>${flown}</b></div>
@@ -103,22 +125,24 @@ export function renderMenu(host, state) {
       ${campaign.epilogue ? `<p class="verdict grave">
         <b>${esc(flightEndingSummary(campaign.epilogue) ?? '')}</b> — and what happened two days after it.</p>` : ''}
       ${character ? `<p class="note verdict">
-        ${esc(backgroundOf(character).en)}, of the Ville · ${esc(householdOf(character).en)}.
+        ${esc(backgroundOf(character).en)}. Home: the Ville, in the western valley.
+        Household: ${esc(householdOf(character).en.replace(/^Your /, 'your '))}.
         ${character.decorations.length ? `${character.decorations.length} decoration${character.decorations.length > 1 ? 's' : ''} on file.` : ''}
-        ${character.points ? '<b class="urgent"> Training points unspent.</b>' : ''}</p>` : ''}
+        ${character.points ? '<b class="urgent">Training points unspent.</b>' : ''}</p>` : ''}
     </div>
 
     <div class="card">
       <h3>Select a watch</h3>
       <p class="lede">
-        You currently hold <b class="urgent">${esc(appointment.appointment.en)}</b>. ${esc(appointment.blurb)}</p>
+        You hold the appointment of <b class="urgent">${esc(appointment.appointment.en.toLowerCase())}</b>.
+        ${esc(appointment.blurb)}</p>
       ${ECHELON_ORDER.map((echelon) => {
     const watches = SCENARIOS.filter((sc) => sc.echelon === echelon.id);
     if (!watches.length) return '';
     const reached = echelon.order <= appointment.order;
     return `<div class="act ${reached ? '' : 'is-locked'}">
           <div class="act-head">
-            <span class="lg"><b>${esc(echelon.en.toUpperCase())} COMMAND</b></span>
+            <span class="lg"><b>${esc(echelon.heading)}</b></span>
             <span>${reached ? esc(echelon.teaches) : 'Not yet held.'}</span>
           </div>
           <div class="mission-grid">${watches.map(missionCard).join('')}</div>
@@ -172,6 +196,7 @@ export function renderMenu(host, state) {
       ${flown ? '<button class="btn is-danger" id="btn-wipe">DESTROY FILE</button>' : ''}
     </div>
   </div>`;
+  toTop(host);
 }
 
 /* ---------------------------------------------------------- briefing */
@@ -179,7 +204,8 @@ export function renderMenu(host, state) {
 export function renderBriefing(host, state) {
   const mission = state.mission;
   const consequence = consequenceFor(state.campaign, { narrativePressure: state.narrativePressure });
-  const note = briefingNote(state.campaign, { narrativePressure: state.narrativePressure });
+  const note = briefingNote(state.campaign,
+    { narrativePressure: state.narrativePressure, missionId: mission.id });
   const role = ROLES[state.role];
   const battery = state.role !== 'net'
     ? mission.sites.find((s) => s.id === state.batteryId) ?? mission.sites[0]
@@ -193,9 +219,9 @@ export function renderBriefing(host, state) {
     <p class="subtitle">${esc(mission.subtitle)}</p>
     <p class="note conditions">${esc(watchConditions(mission).line)} · ${esc(ECHELONS[mission.echelon]?.appointment?.en ?? mission.echelon ?? '')}</p>
     ${character ? `<div class="card record-card is-tight">
-      <div class="record-stamp">${esc(STATE.serviceShort.tm)}</div>
-      <p>Posting order for <b>${rankInsignia(character.rankIndex, { size: 14 })} ${esc(rank.en)} ${esc(character.name)}</b>.
-      Origin: ${esc(backgroundOf(character).en)}. Home: ${esc(STATE.town.en)}, ${esc(STATE.country.en)}.
+      <div class="record-stamp">${stampFace(STATE.serviceShort.tm, STATE.serviceShort.en)}</div>
+      <p>Posting order for <b>${esc(rank.en)} ${esc(character.name)}</b>.
+      Origin: ${esc(backgroundOf(character).en)}. Home: the Ville, in the western valley.
       ${character.wounded ? '<span class="grave">Returned to duty against medical advice.</span>' : ''}</p>
     </div>` : ''}
 
@@ -206,12 +232,14 @@ export function renderBriefing(host, state) {
     </div>` : ''}
 
     ${state.narrativePressure && arcStanding(state.campaign) ? `<div class="card file-entry">
+      <span class="form-no">SECTOR FILE</span>
       <h3>What you know</h3>
       <p>${esc(arcStanding(state.campaign))}</p>
     </div>` : ''}
 
-    <div class="card">
+    <div class="card is-situation">
       <h3>Situation</h3>
+      ${sectorMap(mission)}
       ${mission.brief.map((line) => `<p>${esc(line)}</p>`).join('')}
       ${state.narrativePressure ? Object.entries(mission.briefIfKnown ?? {})
     .filter(([id]) => (state.campaign.revelations ?? []).includes(id))
@@ -228,10 +256,11 @@ export function renderBriefing(host, state) {
         ${SAM_TYPES[battery.type].minAltM}–${SAM_TYPES[battery.type].maxAltM} m,
         ${SAM_TYPES[battery.type].channels} channels, ${SAM_TYPES[battery.type].readyRounds} rounds on the rails.</p>
         <p class="note quoted">${esc(DEFENCE_CLASSES[SAM_TYPES[battery.type].class].blurb)}</p>` : ''}
-      <p class="note">This watch teaches: ${esc(mission.teaches)}</p>
+      <p class="note"><b>What this watch is for.</b> ${esc(mission.teaches)}</p>
     </div>
 
     <div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : consequence.tier.id === 'satisfactory' ? '' : 'file-entry'}">
+      <span class="form-no">FORM 4471-B</span>
       <h3>${esc(consequence.title)}</h3>
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>
@@ -241,6 +270,143 @@ export function renderBriefing(host, state) {
       <button class="btn" id="btn-back">BACK</button>
     </div>
   </div>`;
+  toTop(host);
+}
+
+/**
+ * The sector, drawn from the scenario's own coordinates.
+ *
+ * Five paragraphs of geometry with no geometry on the page was the biggest
+ * missed picture in the narrative surface: the briefs name a ridge, a gap, two
+ * cities and a distance, and the player was asked to hold all of it in their
+ * head. Everything here is read off the scenario — the batteries at their
+ * actual reach, the defended places where they actually are, each raid axis on
+ * its actual bearing — so the map cannot drift from the watch it describes.
+ */
+function sectorMap(mission) {
+  const assets = mission.assets ?? [];
+  const sites = mission.sites ?? [];
+  if (!assets.length && !sites.length) return '';
+  const W = 480;
+  const H = 300;
+  const pad = 26;
+  const pts = [...assets.map((a) => a.pos), ...sites.map((s) => s.pos)];
+  const reach = (s) => SAM_TYPES[s.type]?.maxRangeKm ?? 0;
+  let minX = Math.min(...pts.map((p) => p.x), ...sites.map((s) => s.pos.x - reach(s)));
+  let maxX = Math.max(...pts.map((p) => p.x), ...sites.map((s) => s.pos.x + reach(s)));
+  let minY = Math.min(...pts.map((p) => p.y), ...sites.map((s) => s.pos.y - reach(s)));
+  let maxY = Math.max(...pts.map((p) => p.y), ...sites.map((s) => s.pos.y + reach(s)));
+  // the frontier is north of everything, and the raid comes over it
+  maxY += 30;
+  const spanX = Math.max(20, maxX - minX);
+  const spanY = Math.max(20, maxY - minY);
+  const k = Math.min((W - pad * 2) / spanX, (H - pad * 2) / spanY);
+  const ox = pad + ((W - pad * 2) - spanX * k) / 2;
+  const oy = pad + ((H - pad * 2) - spanY * k) / 2;
+  const X = (x) => (ox + (x - minX) * k).toFixed(1);
+  const Y = (y) => (H - oy - (y - minY) * k).toFixed(1);
+
+  const home = assets.find((a) => a.type === 'town');
+  const rings = sites.map((s) => {
+    const own = s.id === mission.playerBatteryId;
+    return `<circle class="map-reach ${own ? 'is-own' : ''}" cx="${X(s.pos.x)}" cy="${Y(s.pos.y)}"
+      r="${(reach(s) * k).toFixed(1)}"></circle>`;
+  }).join('');
+  /*
+   * Every name on the map goes through one collision list — the batteries
+   * first, then the places — so that a capital with four buildings and two
+   * batteries inside twenty kilometres does not print six names on top of
+   * each other. A label that will not fit where it belongs steps down a row
+   * at a time until it does.
+   */
+  const taken = [];
+  const settle = (lx, ly, text, middle) => {
+    const half = text.length * 2.7;
+    const x0 = middle ? lx - half : lx;
+    const x1 = middle ? lx + half : lx + half * 2;
+    let y = ly;
+    for (let guard = 0; guard < 8; guard++) {
+      if (!taken.some((t) => Math.abs(t.y - y) < 11 && t.x1 > x0 && t.x0 < x1)) break;
+      y += 11;
+    }
+    taken.push({ x0, x1, y });
+    return Math.min(H - 6, y).toFixed(1);
+  };
+  const batteries = sites.map((s, i) => `<g class="map-site ${s.id === mission.playerBatteryId ? 'is-own' : ''}">
+      <rect x="${X(s.pos.x) - 4}" y="${Y(s.pos.y) - 4}" width="8" height="8"></rect>
+      <text x="${X(s.pos.x)}" y="${settle(Number(X(s.pos.x)), Number(Y(s.pos.y)) + (i % 2 ? 17 : -10), s.name ?? '', true)}">${esc(s.name ?? '')}</text>
+    </g>`).join('');
+  // Names only for the places the brief talks about; marks for everything.
+  const NAMED = new Set(['town', 'city', 'palace', 'hospital', 'camp']);
+  const places = assets.map((a) => {
+    const big = a.type === 'town' || a.type === 'city' || a.type === 'palace';
+    const label = NAMED.has(a.type) || a === home ? (a.label ?? ASSET_TYPES[a.type]?.label ?? '') : '';
+    const lx = Number(X(a.pos.x)) + 8;
+    const ly = label ? settle(lx, Number(Y(a.pos.y)) + 4, label, false) : 0;
+    return `<g class="map-place ${a === home ? 'is-home' : ''}">
+      ${big
+    ? `<circle cx="${X(a.pos.x)}" cy="${Y(a.pos.y)}" r="5"></circle>`
+    : `<rect x="${X(a.pos.x) - 3}" y="${Y(a.pos.y) - 3}" width="6" height="6"></rect>`}
+      ${label ? `<text x="${lx}" y="${ly}">${esc(label)}</text>` : ''}
+    </g>`;
+  }).join('');
+
+  // one arrow per axis, on the bearing the aircraft actually arrive from
+  const axes = [];
+  for (const wave of mission.waves ?? []) {
+    if (!Number.isFinite(wave.bearingDeg)) continue;
+    const near = axes.find((a) => Math.abs(a.bearing - wave.bearingDeg) < 26);
+    if (near) { near.count += wave.count ?? 1; continue; }
+    axes.push({ bearing: wave.bearingDeg, count: wave.count ?? 1, at: wave.atS ?? 0 });
+  }
+  const cx = (Number(X(0)) + W / 2) / 2;
+  const cy = (Number(Y(0)) + H / 2) / 2;
+  const arrows = axes.slice(0, 4).map((a, i) => {
+    const rad = (a.bearing * Math.PI) / 180;
+    const dx = Math.sin(rad);
+    const dy = -Math.cos(rad);
+    const far = 168;
+    const x1 = cx + dx * far;
+    const y1 = cy + dy * far;
+    const x2 = cx + dx * 58;
+    const y2 = cy + dy * 58;
+    return `<g class="map-axis">
+      <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+        marker-end="url(#map-arrow)"></line>
+      <circle cx="${x1.toFixed(1)}" cy="${y1.toFixed(1)}" r="8"></circle>
+      <text x="${x1.toFixed(1)}" y="${(y1 + 3.5).toFixed(1)}">${i + 1}</text>
+    </g>`;
+  }).join('');
+
+  // a scale bar, in the units the briefs use
+  const bar = Math.round(20 * k);
+  return `<figure class="sector-map">
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Sector map for this watch">
+      <defs>
+        <marker id="map-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z"></path>
+        </marker>
+      </defs>
+      <rect class="map-ground" x="0" y="0" width="${W}" height="${H}"></rect>
+      <g class="map-grid">
+        ${[0, 1, 2, 3, 4, 5].map((i) => `<line x1="0" y1="${(i * H) / 5}" x2="${W}" y2="${(i * H) / 5}"></line>`).join('')}
+        ${[0, 1, 2, 3, 4, 5, 6, 7].map((i) => `<line x1="${(i * W) / 8}" y1="0" x2="${(i * W) / 8}" y2="${H}"></line>`).join('')}
+      </g>
+      <g class="map-frontier">
+        <line x1="0" y1="${Y(maxY - 14)}" x2="${W}" y2="${Y(maxY - 14)}"></line>
+        <text x="10" y="${Number(Y(maxY - 14)) - 6}">THE NORTHERN FRONTIER</text>
+      </g>
+      ${rings}${arrows}${places}${batteries}
+      <g class="map-scale">
+        <line x1="14" y1="${H - 14}" x2="${14 + bar}" y2="${H - 14}"></line>
+        <text x="${18 + bar}" y="${H - 11}">20 km</text>
+      </g>
+      <g class="map-north">
+        <line x1="${W - 22}" y1="${H - 40}" x2="${W - 22}" y2="${H - 14}" marker-end="url(#map-arrow)"></line>
+        <text x="${W - 30}" y="${H - 44}">N</text>
+      </g>
+    </svg>
+  </figure>`;
 }
 
 /* ----------------------------------------------------------- debrief */
@@ -266,7 +432,13 @@ function nightSideFor(reason, result) {
   if (/border|encampment|Listonian/i.test(reason)) {
     return fate(asset('camp'), 'The camp at Gorna') ?? 'The camp was not on this watch.';
   }
-  if (/civil/i.test(reason)) {
+  // "civilian area struck" is the town taking casualties, not the corridor:
+  // it has to be read before the civil transit, or every strike on the Ville
+  // reported that an airliner had crossed the sector safely.
+  if (/civilian area/i.test(reason)) {
+    return `${s.civilianCasualties ?? 0} casualties are on the returns.`;
+  }
+  if (/civil transit|civil corridor|civil aircraft|inside the civil/i.test(reason)) {
     return s.civilianAircraftShot
       ? 'A civil aircraft with people aboard was destroyed.'
       : 'The transit crossed the sector and left it.';
@@ -282,7 +454,7 @@ function nightSideFor(reason, result) {
       ? 'The battalion stayed. So did its coverage.'
       : 'The only battalion that reaches Kubin and Lozan moved that night.';
   }
-  if (/priority/i.test(reason)) {
+  if (/priority|designated/i.test(reason)) {
     return `${s.civilianCasualties ?? 0} casualties are on the returns.`;
   }
   return `${s.civilianCasualties ?? 0} casualties are on the returns.`;
@@ -348,11 +520,23 @@ export function renderDebrief(host, state, result, entry) {
    * replays. Only the tellingly signed rows appear — a night where the two
    * agree produces an empty table, and an empty table here is good news.
    */
-  const divergences = result.ledger
+  /*
+   * Grouped by decision, because the same decision charged five times is one
+   * row with a count on it and not five identical rows. A raid that struck the
+   * town in five places used to print "civilian area struck" five times over.
+   */
+  const divergences = [...result.ledger
     .filter((l) => {
       const charged = l.charged ?? l.delta;
-      return Math.abs(charged) >= 2 && /civil|hospital|encampment|freeze|border|priority|state aircraft|movement order|Listonian|relayed/i.test(l.reason);
+      return Math.abs(charged) >= 2 && /civil|hospital|encampment|freeze|border|priority|designated|state aircraft|movement order|Listonian|relayed/i.test(l.reason);
     })
+    .reduce((map, l) => {
+      const charged = l.charged ?? l.delta;
+      const seen = map.get(l.reason);
+      map.set(l.reason, { reason: l.reason, charged: (seen?.charged ?? 0) + charged, times: (seen?.times ?? 0) + 1 });
+      return map;
+    }, new Map())
+    .values()]
     .slice(-8);
 
   /*
@@ -476,15 +660,15 @@ export function renderDebrief(host, state, result, entry) {
     </div>` : ''}
 
     ${divergences.length ? `<div class="card">
-      <h3>THE FILE AND THE NIGHT</h3>
+      <h3>The file and the night</h3>
       <p class="lede">The decisions that moved your standing, each beside what actually came of
       it on the ground. Only the ones where the file and the outcome disagree are listed; an
       empty table means they agreed all night.</p>
       <table class="ledger">
         <tr><th>decision</th><th class="is-figure">the file</th><th>the night</th></tr>
         ${divergences.map((l) => {
-    const charged = l.charged ?? l.delta;
-    return `<tr><td>${esc(l.reason)}</td>
+    const charged = l.charged;
+    return `<tr><td>${esc(l.reason)}${l.times > 1 ? ` <span class="note">&times;${l.times}</span>` : ''}</td>
           <td class="${charged > 0 ? 'up' : 'down'}">${charged > 0 ? '+' : ''}${charged.toFixed(1)}</td>
           <td class="is-prose note">${esc(nightSideFor(l.reason, result))}</td></tr>`;
   }).join('')}
@@ -505,6 +689,7 @@ export function renderDebrief(host, state, result, entry) {
      * heading and its own tier; the file does not get to say both.
      */ ''}
     ${result.abandoned ? '' : `<div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : 'file-entry'}">
+      <span class="form-no">FORM 4471-B</span>
       <h3>${esc(consequence.title)}</h3>
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>`}
@@ -516,8 +701,11 @@ export function renderDebrief(host, state, result, entry) {
     </div>` : ''}
 
     ${entry?.appointment ? `<div class="card file-entry is-good">
-      <h3>ORDER OF APPOINTMENT</h3>
-      <p><b>${esc(entry.appointment.echelon.appointment.en)}</b></p>
+      <span class="form-no">ORDER 12-4</span>
+      <h3>Order of appointment</h3>
+      <p>By order of ${entry.appointment.echelon.id === 'national' ? 'the Ministry of Defence'
+    : 'the Chief of Air Defence'}, you are appointed
+        <b>${esc(entry.appointment.echelon.appointment.en)}</b>.</p>
       ${entry.appointment.gazetted ? `<p>You are gazetted to
         ${esc(entry.appointment.gazetted.en)} on the same order.</p>` : ''}
       ${state.narrativePressure && entry.appointment.note
@@ -526,8 +714,9 @@ export function renderDebrief(host, state, result, entry) {
     </div>` : ''}
 
     ${state.narrativePressure && entry?.revelation ? `<div class="card revelation-card">
-      <h3>${esc(entry.revelation.title)}</h3>
+      <h3>${entry.revelation.tm ? `<span class="tm">${esc(entry.revelation.tm)}</span>` : ''}${esc(entry.revelation.title)}</h3>
       ${entry.revelation.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
+      <span class="doc-stamp">SECTOR FILE</span>
     </div>` : ''}
 
     <div class="actions">
@@ -537,6 +726,8 @@ export function renderDebrief(host, state, result, entry) {
       <button class="btn" id="btn-close-report">CLOSE THE REPORT</button>
     </div>
   </div>`;
+  paintFilePhotos(host);
+  toTop(host);
 }
 
 /**
@@ -547,22 +738,98 @@ export function renderDebrief(host, state, result, entry) {
  * button away, and so is watching the evening again.
  */
 export function renderEndCard(host, state, result) {
-  host.innerHTML = `<div class="screen-inner is-endcard">
-    <h1 class="title is-watch ${result.success ? 'gained' : 'grave'}">${esc(result.headline)}</h1>
-    ${result.cause ? `<p class="subtitle grave">${esc(result.cause)}</p>` : ''}
-    <p class="subtitle">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}${
-  result.abandoned ? ' · not scored' : ` · score ${result.score} · standing ${Math.round(result.standing)}, ${esc(result.tierLabel)}`}</p>
-    <div class="actions">
+  /*
+   * On a watch that closes the campaign the card names the ending rather than
+   * the night's operational result. Twelve watches of arc used to finish on
+   * "SECTOR HELD", which is the headline of every other Tuesday.
+   */
+  const ending = !result.abandoned && result.finale
+    ? composeEnding(result, state.campaign.character,
+      { narrativePressure: state.narrativePressure, family: state.campaign.family })
+    : !result.abandoned && result.epilogue
+      ? composeFlightEnding(result, state.campaign.character,
+        { narrativePressure: state.narrativePressure })
+      : null;
+
+  /*
+   * The cause clause is printed only when it says something the headline has
+   * not. "SECTOR PENETRATED" above "SECTOR PENETRATED — TWO GOT THROUGH" is
+   * one sentence set twice.
+   */
+  const headline = ending ? (ending.subtitle ?? ending.title) : result.headline;
+  const cause = result.cause
+    && !String(result.cause).toUpperCase().startsWith(String(result.headline ?? '').toUpperCase())
+    ? result.cause : null;
+
+  /*
+   * A title card, not another deck of panels: the last shot of the evening
+   * carried through as a dimmed ground, the ending's two titles over one rule,
+   * its first line under them, and the figures as a single row.
+   */
+  const facts = [
+    [state.mission.name, ROLES[result.role].label],
+    ...(result.abandoned
+      ? [['SCORE', 'NOT SCORED']]
+      : [['SCORE', String(result.score)],
+        ['STANDING', `${Math.round(result.standing)} — ${result.tierLabel}`]]),
+  ];
+
+  host.innerHTML = `<div class="screen-inner is-endcard ${ending ? 'is-title-card' : ''}">
+    ${ending ? '<canvas class="endcard-sky" width="320" height="180" aria-hidden="true"></canvas>' : ''}
+    <div class="endcard-block">
+      ${/* The same print that is stuck to the front of the dossier and to the
+           head of the service record, at the end of the file it belongs to. */ ''}
+      ${state.campaign.character ? `<span class="file-ident-photo endcard-photo">
+        <canvas class="portrait file-photo is-small" width="24" height="30"
+          data-seed="${esc(state.campaign.character.name)}" aria-label="Photograph on file"></canvas>
+      </span>` : ''}
+      ${ending && ending.subtitle ? `<p class="endcard-tm">${esc(ending.title)}</p>` : ''}
+      <h1 class="title is-watch ${result.success ? 'gained' : 'grave'}">${esc(headline)}</h1>
+      <hr class="endcard-rule">
+      ${ending ? `<p class="ending-lede">${esc(ending.lines[0] ?? '')}</p>`
+    : cause ? `<p class="subtitle grave">${esc(cause)}</p>` : ''}
+      <div class="endcard-facts">
+        ${facts.map(([label, value]) => `<span><label>${esc(label)}</label><b>${esc(value)}</b></span>`).join('')}
+      </div>
+    </div>
+    <div class="actions is-endcard-actions">
       <button class="btn-primary" id="btn-again">STAND ANOTHER WATCH</button>
-      <button class="btn" id="btn-replay">REPLAY THIS ONE</button>
-      <button class="btn" id="btn-report">THE FULL REPORT</button>
-      <button class="btn" id="btn-scenes">THE EVENING AGAIN</button>
-      ${state.campaign.character ? '<button class="btn" id="btn-dossier-debrief">DOSSIER</button>' : ''}
+      <span class="action-pair">
+        <button class="btn" id="btn-report">THE FULL REPORT</button>
+        <button class="btn" id="btn-scenes">THE EVENING AGAIN</button>
+      </span>
+      <span class="action-pair is-quiet">
+        <button class="btn" id="btn-replay">REPLAY THIS ONE</button>
+        ${state.campaign.character ? '<button class="btn" id="btn-dossier-debrief">DOSSIER</button>' : ''}
+      </span>
     </div>
   </div>`;
+  // The evening's last picture, dimmed, behind the words it belongs to.
+  const sky = host.querySelector('.endcard-sky');
+  if (sky && ending) drawEndingStill(sky, { held: !!result.success });
+  paintFilePhotos(host);
+  toTop(host);
 }
 
 /* ------------------------------------------------------------- help */
+
+/**
+ * A 64 x 32 silhouette for a class of air defence, drawn rather than described:
+ * a long-range battalion on its trailers, a medium battery, a point-defence
+ * section and a gun. Four shapes a player can tell apart at a glance.
+ */
+function classSilhouette(id) {
+  const art = {
+    strategic: '<rect x="4" y="18" width="44" height="7"/><rect x="10" y="8" width="34" height="10" transform="rotate(-16 10 18)"/><circle cx="14" cy="27" r="4"/><circle cx="26" cy="27" r="4"/><circle cx="40" cy="27" r="4"/>',
+    long: '<rect x="8" y="17" width="36" height="7"/><rect x="14" y="9" width="26" height="7" transform="rotate(-20 14 16)"/><circle cx="16" cy="26" r="4"/><circle cx="38" cy="26" r="4"/>',
+    medium: '<rect x="12" y="18" width="28" height="7"/><rect x="18" y="11" width="18" height="6" transform="rotate(-24 18 17)"/><circle cx="18" cy="27" r="4"/><circle cx="34" cy="27" r="4"/>',
+    short: '<rect x="16" y="19" width="22" height="6"/><rect x="22" y="13" width="12" height="5" transform="rotate(-28 22 18)"/><circle cx="21" cy="27" r="3.5"/><circle cx="34" cy="27" r="3.5"/>',
+    gun: '<rect x="16" y="20" width="22" height="5"/><rect x="24" y="10" width="16" height="3" transform="rotate(-34 24 12)"/><circle cx="22" cy="27" r="3.5"/><circle cx="34" cy="27" r="3.5"/>',
+  }[id] ?? '<rect x="14" y="18" width="26" height="7"/><circle cx="20" cy="27" r="4"/><circle cx="34" cy="27" r="4"/>';
+  return `<svg viewBox="0 0 64 32" role="img" aria-hidden="true">${art}<line x1="0" y1="31" x2="64" y2="31"/></svg>`;
+}
+
+
 
 /**
  * The handbook for the console you are actually sitting at.
@@ -630,23 +897,42 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
     </div>`}
     <div class="card">
       <h3>The four classes of air defence</h3>
-      <table class="ledger">
+      ${/*
+       * Four classes, each with its own silhouette and its reach drawn
+       * against the same scale — a table of four numbers told the player
+       * nothing about what the difference between them feels like.
+       */ ''}
+      <div class="classes">
         ${Object.values(DEFENCE_CLASSES).map((c) => {
     const sys = Object.values(SAM_TYPES).find((t) => t.class === c.id);
-    return `<tr><td><b>${esc(c.en)}</b> <span class="stencil note">${esc(c.tm)}</span><br>
-      <span class="note">${esc(c.blurb)}</span></td>
-      <td>${esc(sys.label)}<br><span class="note">${sys.minRangeKm}–${sys.maxRangeKm} km<br>
-      ${sys.minAltM}–${sys.maxAltM} m</span></td></tr>`;
+    const far = Math.max(...Object.values(SAM_TYPES).map((t) => t.maxRangeKm));
+    const x0 = (100 * sys.minRangeKm) / far;
+    const x1 = (100 * sys.maxRangeKm) / far;
+    return `<div class="class-row">
+        <span class="class-art">${classSilhouette(c.id)}</span>
+        <span class="class-text">
+          <b>${esc(c.en)}</b> <span class="stencil note">${esc(c.tm)}</span>
+          <small class="note">${esc(c.blurb)}</small>
+        </span>
+        <span class="class-reach">
+          <b>${esc(sys.label)}</b>
+          <span class="reach-bar"><i style="left:${x0.toFixed(1)}%;width:${(x1 - x0).toFixed(1)}%"></i></span>
+          <small class="note">${sys.minRangeKm}–${sys.maxRangeKm}&nbsp;km · ${sys.minAltM}–${sys.maxAltM}&nbsp;m</small>
+        </span>
+      </div>`;
   }).join('')}
-      </table>
+      </div>
+      <p class="note aside">The bars are drawn against one scale: the longest reach in the
+      service is ${Math.max(...Object.values(SAM_TYPES).map((t) => t.maxRangeKm))}&nbsp;km.</p>
     </div>
 
     <div class="card">
       <h3>What is actually going on</h3>
       <p>A radar only sees a target when its beam sweeps that bearing, and it cannot see through
       the horizon at all — which is why a contact at ninety metres appears close and stays close.</p>
-      <p>A surface-to-air round is guided by the radar that launched it. Shut that radar down and the
-      round in flight goes stupid. Leave it up and the suppression aircraft finds you.</p>
+      <p>A surface-to-air round is guided all the way by the radar that launched it. Switch that
+      radar off while the round is in the air and the round loses its guidance and falls in a
+      field. Leave the radar on and the suppression aircraft works out where you are.</p>
       <p>Sector operations fuses every radar into one picture. Lose it and each set reports for
       itself: the same aircraft grows a track number on every radar that can see it, and nobody
       reconciles them.</p>
@@ -656,4 +942,5 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
     </div>
     <div class="actions"><button class="btn-primary" id="btn-close-help">BACK</button></div>
   </div>`;
+  toTop(host);
 }

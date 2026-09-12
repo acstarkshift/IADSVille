@@ -35,7 +35,7 @@ const goodWatch = (over = {}) => ({
 
 describe('enlistment', () => {
   test('a new soldier starts at the bottom with nothing', () => {
-    const character = createCharacter({ name: 'Мила Стрельник', background: 'border' });
+    const character = createCharacter({ name: 'Mila Ostreva', background: 'border' });
     assert.equal(rankOf(character).id, RANKS[0].id);
     assert.equal(character.xp, 0);
     assert.equal(character.points, 0);
@@ -43,7 +43,7 @@ describe('enlistment', () => {
     assert.deepEqual(character.decorations, []);
     assert.equal(character.wounded, false);
     assert.equal(backgroundOf(character).id, 'border');
-    assert.match(describeChar(character), /Мила Стрельник/);
+    assert.match(describeChar(character), /Mila Ostreva/);
   });
 
   test('a suggested name is always usable', () => {

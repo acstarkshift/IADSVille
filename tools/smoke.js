@@ -277,6 +277,11 @@ async function main() {
         await page.click('#btn-report');
         await wait(300);
         if (!await page.isVisible('#btn-close-report')) failures.push(`${run.mission}/${run.role}: the full report did not open from the end card`);
+        // Every screen opens at the top of itself. The report used to open
+        // wherever the screen before it had been scrolled to, which on a phone
+        // is a thousand pixels into a table.
+        const at = await page.evaluate(() => document.getElementById('screen')?.scrollTop ?? 0);
+        if (at > 0) failures.push(`${run.mission}/${run.role}: the full report opened at scrollTop ${at}`);
         await page.click('#btn-close-report');
         await wait(200);
         if (!await page.isVisible('#btn-again')) failures.push(`${run.mission}/${run.role}: closing the report did not return to the end card`);

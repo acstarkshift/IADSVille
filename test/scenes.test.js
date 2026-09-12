@@ -17,6 +17,11 @@ import { World } from '../src/engine/world.js';
 import { scenarioById } from '../src/engine/scenarios.js';
 import { emptyCampaign, enlist, recordMission } from '../src/engine/campaign.js';
 import { scenesFor } from '../src/ui/scenes.js';
+import { SCENARIOS } from '../src/engine/scenarios.js';
+import { LETTERS } from '../src/engine/family.js';
+import { REVELATIONS } from '../src/engine/revelations.js';
+import { ENDINGS } from '../src/engine/endings.js';
+import { HOUSEHOLDS } from '../src/engine/character.js';
 
 function stood(missionId, { seed = 5, role = 'net', reason = 'raid-spent', campaign = null, seconds = 600 } = {}) {
   const c = campaign ?? enlisted();
@@ -32,7 +37,7 @@ function stood(missionId, { seed = 5, role = 'net', reason = 'raid-spent', campa
 
 function enlisted() {
   const c = emptyCampaign();
-  enlist(c, { name: 'Ясна Ленко', background: 'academy', household: 'mother' });
+  enlist(c, { name: 'Yasna Petrina', background: 'academy', household: 'mother' });
   return c;
 }
 
@@ -89,7 +94,28 @@ describe('which scenes play', () => {
     assert.deepEqual(scenes.map((s) => s.id), ['printout', 'commissar']);
     assert.ok(scenes[0].lines.includes('WATCH ABANDONED'));
     assert.ok(scenes[0].lines.some((l) => /NOT SCORED/.test(l)));
-    assert.match(scenes[1].lines[0], /You left the post/);
+    assert.match(scenes[1].lines[0], /You left the post at \d\d:\d\d, .* into the watch/);
+  });
+
+  test('an ending watch closes on the ending, with the document read before the office', () => {
+    const { state, result, entry } = stood('two-cities', { seconds: 900 });
+    const ids = scenesFor(state, result, entry).map((s) => s.id);
+    assert.equal(ids.at(-1), 'ending', 'the ending is the last thing said');
+    // The folder is on the desk while you wait, not between the office and the
+    // ending, where it answered a question the ending had already closed.
+    if (ids.includes('revelation')) {
+      assert.ok(ids.indexOf('revelation') < ids.indexOf('commissar'));
+    }
+    assert.ok(!ids.includes('appointment'),
+      'a promotion does not interrupt the last watch; the full report carries it');
+  });
+
+  test('the teaching watches spare a learner the read-back', () => {
+    const { state, result, entry } = stood('first-light');
+    result.ledger.push({ t: 100, delta: -6, charged: -6, reason: 'rounds expended outside the freeze, over the district hospital' });
+    const office = scenesFor(state, result, entry).find((s) => s.id === 'commissar');
+    assert.ok(!office.lines.some((l) => /district hospital/.test(l)),
+      'nothing is read back on First Light, Low Riders or Solo Battery');
   });
 });
 
@@ -99,28 +125,41 @@ describe('what is said', () => {
     const tape = scenesFor(state, result, entry)[0];
     assert.equal(tape.kind, 'printout');
     assert.match(tape.lines[0], /^FIRST LIGHT · BATTLE MANAGER$/);
+    // Both figures, both labelled: the hour the watch ended on and the run.
+    assert.match(tape.lines[1], /^WATCH ENDED \d\d:\d\d · \d+ MIN \d+ SEC$/);
+    assert.equal(tape.lines[1].slice(12, 17), result.watchClock);
     assert.ok(tape.lines.includes(result.headline));
     assert.ok(tape.lines.some((l) => l === `SCORE ${result.score}`));
     assert.ok(tape.lines.some((l) => /^AIRCRAFT DESTROYED \d+ · TURNED BACK \d+$/.test(l)));
     assert.ok(tape.lines.some((l) => /^LEAKERS \d+ · ROUNDS EXPENDED \d+$/.test(l)));
     assert.ok(tape.lines.some((l) => /^GROUND LOST: /.test(l)));
+    // The watch's own standing and the standing the file now carries, named.
+    assert.ok(tape.lines.some((l) => /^THIS WATCH -?\d+ — [A-Z ]+$/.test(l)));
+    assert.ok(tape.lines.some((l) => /^FILE CARRIES -?\d+ — [A-Z ]+$/.test(l)));
+    // A dot-matrix head does not double-space; no blank lines on the sheet.
+    assert.ok(tape.lines.every((l) => l.trim().length > 0), 'no blank lines on the tape');
     assert.equal(tape.lines.at(-1), 'END OF TAPE');
     for (const l of tape.lines) assert.equal(l, l.toUpperCase(), `a dot-matrix head prints capitals: "${l}"`);
   });
 
   test('the commissar reads the log back before the file entry, and dismisses you by tier', () => {
-    const { state, result, entry } = stood('first-light');
+    // Not a teaching watch: the political section has nothing to accuse a
+    // learner of on the first three, and says nothing there.
+    const { state, result, entry } = stood('economy-of-force');
     result.ledger.push({ t: 100, delta: -6, charged: -6, reason: 'rounds expended outside the freeze, over the district hospital' });
     result.ledger.push({ t: 200, delta: 4, charged: 4, reason: 'held fire on the encampment as ordered' });
     const office = scenesFor(state, result, entry).find((s) => s.id === 'commissar');
     assert.equal(office.kind, 'office');
     assert.equal(office.speaker, 'THE POLITICAL SECTION');
-    const hospital = office.lines.findIndex((l) => l.startsWith('The log says: rounds expended outside the freeze'));
-    const camp = office.lines.findIndex((l) => l.startsWith('The log says: held fire on the encampment'));
+    // Spoken sentences, not the ledger's own lowercase fragment after a colon.
+    const hospital = office.lines.findIndex((l) => /district hospital/.test(l));
+    const camp = office.lines.findIndex((l) => /border/.test(l) && /in your favour/.test(l));
     assert.ok(hospital >= 0, 'the hospital is read back');
-    assert.match(office.lines[hospital], /The section notes it\.$/);
+    assert.match(office.lines[hospital], /^You put .* over the district hospital/);
     assert.ok(camp >= 0, 'and so is the encampment');
     assert.match(office.lines[camp], /in your favour/);
+    assert.ok(!office.lines.some((l) => l.startsWith('The log says')),
+      'nobody says "The log says:" out loud');
     const supply = office.lines.findIndex((l) => /^SUPPLY:/.test(l));
     assert.ok(hospital < supply && camp < supply, 'the log is read before the file entry');
     assert.ok(['You may go.', 'Dismissed.', 'That will be all. For now.', 'Sign here. And here.', 'You will be told where to report.']
@@ -135,9 +174,10 @@ describe('what is said', () => {
       const { entry, state, result } = stood(id, { campaign, role: id === 'solo-battery' ? 'crew' : 'net' });
       if (entry.appointment) {
         const order = scenesFor(state, result, entry).find((s) => s.id === 'appointment');
-        assert.ok(order, 'the order is read in the office');
-        assert.equal(order.kind, 'office');
-        assert.match(order.lines[0], /you are appointed Sector commander/);
+        assert.ok(order, 'the order is read on its own');
+        assert.match(order.lines[0],
+          /^By order of the Chief of Air Defence, you are appointed Sector commander\.$/);
+        assert.equal(order.kind, 'appointment', 'the promotion gets its own shot');
         return;
       }
     }
@@ -167,5 +207,77 @@ describe('the opening of a watch', () => {
     assert.equal(scenes[4].sound, 'boot', 'the set makes the console\'s boot sound');
     const total = openingTotalS({ mission: { hour: '05:10' } });
     assert.ok(total >= 8 && total <= 14, `the whole opening is a breath under a quarter minute (${total} s)`);
+  });
+});
+
+
+/*
+ * The house rule, as a lint.
+ *
+ * Everything the player reads as prose renders one array entry as one
+ * paragraph, so every entry has to be a finished sentence. The briefs used to
+ * carry three that were one sentence chopped in half mid-clause and set as two
+ * paragraphs — "...for about sixty kilometres, and" / "not one metre further."
+ */
+describe('every paragraph is a finished sentence', () => {
+  const finished = (line, where) => {
+    assert.equal(typeof line, 'string', `${where} is a string`);
+    assert.ok(line.trim().length > 0, `${where} is not empty`);
+    assert.match(line.trim(), /[.!?)'"\u201d]$/, `${where} ends a sentence: "${line.slice(-42)}"`);
+    assert.match(line.trim(), /^[A-Z"'\u201c(]/, `${where} starts a sentence: "${line.slice(0, 42)}"`);
+  };
+
+  test('the briefs, what each watch is for, and the lines a revelation unlocks', () => {
+    for (const sc of SCENARIOS) {
+      sc.brief.forEach((l, i) => finished(l, `${sc.id} brief[${i}]`));
+      finished(sc.teaches, `${sc.id} teaches`);
+      for (const [id, lines] of Object.entries(sc.briefIfKnown ?? {})) {
+        lines.forEach((l, i) => finished(l, `${sc.id} briefIfKnown.${id}[${i}]`));
+      }
+    }
+  });
+
+  test('the letters, in every household branch', () => {
+    for (const letter of LETTERS) {
+      for (const hh of Object.keys(HOUSEHOLDS)) {
+        for (const hit of [true, false]) {
+          letter.lines(hh, { hit, permit: 'standing', watch: 8 })
+            .forEach((l, i) => finished(l, `${letter.id}/${hh}[${i}]`));
+        }
+      }
+    }
+  });
+
+  test('the documents', () => {
+    for (const [id, r] of Object.entries(REVELATIONS)) {
+      r.lines.forEach((l, i) => finished(l, `${id}[${i}]`));
+      if (r.linesFor) {
+        r.linesFor({ stats: { roundsAgainstFreeze: 0, roundsAgainstOrder: 0 } })
+          .forEach((l, i) => finished(l, `${id} obedient[${i}]`));
+      }
+    }
+  });
+
+  test('none of the four banned shapes survives anywhere a player can read', () => {
+    const surfaces = [];
+    for (const sc of SCENARIOS) surfaces.push(...sc.brief, sc.teaches, sc.subtitle);
+    for (const letter of LETTERS) {
+      for (const hh of Object.keys(HOUSEHOLDS)) {
+        for (const hit of [true, false]) surfaces.push(...letter.lines(hh, { hit, permit: 'standing', watch: 8 }));
+      }
+    }
+    for (const r of Object.values(REVELATIONS)) surfaces.push(...r.lines);
+    const text = surfaces.join('\n');
+    for (const banned of [
+      /pick two/i,
+      /you keep|the thing you|you have not been able|the detail you/i,
+      /you knew what you were doing|you have not disputed|which of those/i,
+      /the not-asking/i,
+    ]) {
+      assert.ok(!banned.test(text), `a banned shape is back: ${banned}`);
+    }
+    for (const ending of Object.values(ENDINGS)) {
+      assert.ok(!/pick two/i.test(String(ending.subtitle)), 'no slogans in an ending title');
+    }
   });
 });

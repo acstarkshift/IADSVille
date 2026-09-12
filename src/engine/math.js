@@ -175,3 +175,17 @@ export function clockString(seconds) {
   const s = Math.max(0, Math.floor(seconds));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
+
+/**
+ * What time it is on the wall: the watch's own starting hour plus the run.
+ *
+ * The mission clock counts the run and the paperwork quotes the hour, and
+ * those are two different numbers. Printing the run in the shape of a wall
+ * clock — WATCH ENDED 15:31 on a watch that began at 05:10 — made every
+ * document in the game disagree with the briefing above it.
+ */
+export function wallClockString(startHour, seconds) {
+  const [h, m] = String(startHour ?? '00:00').split(':').map((v) => parseInt(v, 10) || 0);
+  const total = (h * 60 + m + Math.floor(Math.max(0, seconds) / 60)) % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}

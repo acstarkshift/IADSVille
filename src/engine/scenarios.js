@@ -459,11 +459,13 @@ export const SCENARIOS = [
      */
     playerBatteryId: 's_bastion',
     brief: [
-      'Four contacts crossed the border at height, tracking south. They are not trying to hide.',
+      'Four Federation aircraft crossed the northern border at height, tracking south. They are'
+        + ' not trying to hide.',
       'Bring a radar up, sort the picture, and hand each track to a battery that can reach it.',
       'Nothing is shooting back at you tonight. Enjoy that.',
     ],
-    teaches: 'Tracking, assignment, and the fact that a radar has to be radiating to see.',
+    teaches: 'You sort the picture and hand each contact to a battery that can reach it, and you'
+      + ' learn that a radar sees nothing while it is switched off.',
     assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power],
     sites: [SITES.bastion, SITES.lanceWest, SITES.thistleTown],
     radars: [{ ...RADARS.ewrNorth, on: false }],
@@ -603,11 +605,13 @@ export const SCENARIOS = [
      */
     storeMult: 1.7,
     brief: [
-      'Second wave came in at height. This one will not.',
-      'A radar on a thirty-metre mast sees a target at one hundred metres for about sixty kilometres, and',
-      'not one metre further. You will get very little warning. Put the short-range sections where it matters.',
+      'The last lot came in at height. This one will not.',
+      'A radar on a thirty-metre mast sees an aircraft flying at a hundred metres for about sixty'
+        + ' kilometres, and not one metre further.',
+      'You will get very little warning, so put the short-range sections where it matters.',
     ],
-    teaches: 'Radar horizon. Low contacts appear close and stay close.',
+    teaches: 'A radar cannot see through the horizon, so an aircraft flying low appears close and'
+      + ' stays close.',
     /*
      * The valley talks, because this watch had nothing to say for fourteen
      * minutes.
@@ -827,10 +831,12 @@ export const SCENARIOS = [
     directiveContactGraceS: 60,
     brief: [
       'Sector has stripped the area to reinforce the coast. What is left is you.',
-      'You will acquire, you will lock, you will launch, and you will keep the set radiating until the round',
-      'arrives — because the moment you shut down, that round becomes scrap falling on a field.',
+      'You will acquire, you will lock, you will launch, and you will keep the set radiating until'
+        + ' the round arrives. The moment you shut down, that round becomes scrap falling on a'
+        + ' field.',
     ],
-    teaches: 'The full engagement loop from the seat: acquire, lock, launch, guide.',
+    teaches: 'You fight one engagement from the seat, start to finish: acquire the target, lock a'
+      + ' channel onto it, launch, and guide the round in.',
     assets: [GROUND.town, GROUND.c2, GROUND.bridge, GROUND.depot],
     sites: [SITES.lanceEast, SITES.hammer],
     radars: [],
@@ -1051,11 +1057,12 @@ export const SCENARIOS = [
       { atS: 700, text: 'BORDER POSTS REPORT THE LAST OF THEM CROSSING BACK NORTH. NOBODY IS STANDING YOU DOWN.' },
     ],
     brief: [
-      'Suppression aircraft are working the sector. They need roughly twelve seconds of your emissions to',
-      'build a firing solution, and they carry two rounds each.',
-      'Sector command will order you to keep radiating. Sector command is not the one being shot at.',
+      'Suppression aircraft are working the sector. They need about twelve seconds of your emissions'
+        + ' to build a firing solution, and they carry two rounds each.',
+      'Sector command will order you to keep radiating. It is not the one being shot at.',
     ],
-    teaches: 'Emissions control: blink to survive, and pay for it in guidance.',
+    teaches: 'The set has to be dark to keep you alive and lit to let you shoot, and every second'
+      + ' either way is paid for.',
     assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, GROUND.bridge],
     sites: [SITES.bastion, SITES.lanceWest, SITES.lanceEast, SITES.thistleTown],
     radars: [RADARS.ewrNorth, RADARS.gapSouth],
@@ -1210,12 +1217,13 @@ export const SCENARIOS = [
     playerBatteryId: 's_lance_w',
     roundAllowance: 22,
     brief: [
-      'Two standoff jammers are on station beyond your reach. Inside their noise you will see nothing until',
-      'burnthrough, and burnthrough gets better the further out they sit.',
+      'Two standoff jammers are on station beyond your reach. Inside their noise you will see nothing'
+        + ' until burnthrough, and burnthrough gets better the further out they sit.',
       'They are also sending decoys. The decoys are built to look like strike aircraft and they succeed.',
       'You have twenty-two rounds in the allocation. There are more contacts than that.',
     ],
-    teaches: 'Jamming, burnthrough, decoys, and ammunition discipline.',
+    teaches: 'You learn to see through jamming, to tell a decoy from a strike aircraft, and to count'
+      + ' your rounds.',
     /*
      * NO STORE CUT ON THIS WATCH, AND THE MEASUREMENT THAT SETTLED IT.
      *
@@ -1345,7 +1353,7 @@ export const SCENARIOS = [
         + ' this sector is, except the airbase, the power station and sector operations.',
       'You have rounds. You will be told they are not yours to spend.',
     ],
-    teaches: 'What the allocation is actually for.',
+    teaches: 'You find out what the ammunition allocation is actually for.',
     assets: [
       GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, HOSPITAL,
     ],
@@ -1481,7 +1489,7 @@ export const SCENARIOS = [
         + ' on the rails. There is no version of this where you could not have stopped it.',
       'Sector will transmit its position on this. You already know what it is going to be.',
     ],
-    teaches: 'What the schedule of defended places is really a schedule of.',
+    teaches: 'You learn what the schedule of defended places is a schedule of.',
     assets: [
       GROUND.town, GROUND.c2, GROUND.power, GROUND.bridge, CAMP,
     ],
@@ -1614,11 +1622,13 @@ export const SCENARIOS = [
         + ' three that has people you can name in it.',
       'There is also a scheduled civil transit crossing the sector tonight, and the political section'
         + ' has taken an interest in one of its passengers. You will hear about it.',
-      'They know where sector operations is. When it goes, the picture stops being one picture — every set',
-      'reports for itself and nobody reconciles them. Cueing stops. Anything you delegated becomes nobody\'s job.',
+      'They know where sector operations is. When it goes, the picture stops being one picture: every'
+        + ' set reports for itself and nobody reconciles them, cueing stops, and anything you'
+        + ' delegated becomes nobody\'s job.',
       'Finish the watch anyway.',
     ],
-    teaches: 'All of it, without the centre.',
+    teaches: 'You fight the heaviest raid of the war, and then you fight it without the centre that'
+      + ' holds your picture together.',
     assets: [
       GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, GROUND.depot, GROUND.bridge,
     ],
@@ -1791,11 +1801,12 @@ export const SCENARIOS = [
         + ' cannot see, about a raid that has not happened yet.',
       'Two axes are crossing the frontier tonight, on Lozan and on Kubin. There is a third smaller one'
         + ' and it is going down the valley. You know the valley.',
-      'Nothing is forecast against Brasov. Nothing has been forecast against Brasov in eleven months,'
-        + ' which is why it has a commander the political section chose and an order you will not be'
-        + ' asked to review. The forecast is a forecast.',
+      'Nothing is forecast against Brasov and nothing has been for eleven months. Nobody at district'
+        + ' has asked why. Its commander was chosen by the political section, and the standing order'
+        + ' he holds is not one you will be shown.',
     ],
-    teaches: 'That a standing order given to somebody you cannot see is a real weapon, and usually the only one you have.',
+    teaches: 'You learn that an order left with somebody you cannot see is a weapon, and usually the'
+      + ' only one you have.',
     assets: [
       DISTRICT_GROUND.villeTown, DISTRICT_GROUND.villeC2, DISTRICT_GROUND.villeBridge,
       DISTRICT_GROUND.kubinCity, DISTRICT_GROUND.kubinDepot,
@@ -1940,11 +1951,14 @@ export const SCENARIOS = [
         + ' the same air picture the ministry has.',
       'There is a raid coming tonight regardless of what you do about the order.',
     ],
-    teaches: 'What a redeployment order costs, and who it is actually for.',
+    teaches: 'You count what a redeployment order costs, and work out who it is for.',
     briefIfKnown: {
       ledger: ['You have seen the depot returns. You know how much is already sitting in the capital'
         + ' and how little of it has moved since the spring.'],
       border: ['You have read a schedule of defended places before. You know what it is a schedule of.'],
+      passenger: ['The man named on that detention order worked in the customs service at Kubin, and'
+        + ' the investigation against him was about freight. You have started noticing how often'
+        + ' that word turns up.'],
     },
     assets: [
       DISTRICT_GROUND.villeTown, DISTRICT_GROUND.villeC2, DISTRICT_GROUND.villeBridge,
@@ -2105,10 +2119,11 @@ export const SCENARIOS = [
         + ' you will be asked to acknowledge it on the net, in the clear, with the log running.',
       'BASTION sits between the two cities and can reach either. There is no resupply tonight — the'
         + ' depots are committed to the capital, so BASTION has one refill in its own store and every'
-        + ' other battery has a third of one. Eleven aircraft on each axis, and six more for this'
-        + ' post. Every strike aircraft carries two weapons.',
+        + ' other battery has a third of one. Eleven aircraft on each axis and six more for this'
+        + ' post, with a few decoys mixed in among them, and every strike aircraft carries two'
+        + ' weapons.',
     ],
-    teaches: 'That the equipment was never the constraint.',
+    teaches: 'You discover that the equipment was never what you were short of.',
     /**
      * The official line about the depots, read by somebody who has seen the
      * returns, is a different sentence entirely.
@@ -2358,7 +2373,13 @@ export const SCENARIOS = [
     id: 'presidents-flight',
     name: "The President's Flight",
     subtitle: 'STATE 01, out of Demobodedovo, and everything that wants it down.',
-    hour: '06:10',
+    /*
+     * Everything this watch is about happens between 0410 and 0600: STATE 01
+     * lifts at 0410, is lost or clear by 0438, the political section stops
+     * answering at 0500 and the broadcast that never happens was due at 0600.
+     * At 06:10 the player arrived two hours after their own story.
+     */
+    hour: '04:05',
     weather: 'fog',
     tempC: -4,
     echelon: 'national',
@@ -2426,20 +2447,20 @@ export const SCENARIOS = [
         text: 'PASSENGER STEPS WITHDRAWN. THE FREIGHT DOORS WERE SEALED FIRST.' },
     ],
     brief: [
-      'Two days after the last watch. You have been moved to the capital sector, which is what happens'
-        + ' to people whose files say what yours now says.',
+      'This is two days after the last watch. You have been moved to the capital sector, which is'
+        + ' what happens to people whose files say what yours now says.',
       'At 0410 a state aircraft, callsign STATE 01, will lift from Demobodedovo and route south-east for'
         + ' the frontier. The passenger list is not being transmitted. Sector command has ordered the'
         + ' aircraft protected at all cost, and has used those words.',
-      'Two flights of enemy fighters are already airborne to the north. They are not interested in the'
-        + ' palace, the city, or you. They are interested in one aeroplane, and they carry one round'
-        + ' each, off one pass, from twenty kilometres.',
+      'Two flights of enemy fighters are already airborne to the north. The palace, the city and'
+        + ' you are of no interest to them. They want one aeroplane, and they carry one round each,'
+        + ' off one pass, from twenty kilometres.',
       'There is also a strike package coming for the palace and the field, and you have one battalion'
         + ' that can cover the corridor. It cannot cover the corridor and the city at the same time.',
       'STATE 01 will be on your scope, identified, until it is out of national airspace or it is'
         + ' not. Nothing else on this watch matters beside that.',
     ],
-    teaches: 'That the last decision was never about a building either.',
+    teaches: 'The last decision of the war turns out not to be about a building either.',
     briefIfKnown: {
       buyer: ['You know who has been buying what, and through which ministry, and what the aircraft'
         + ' at Demobodedovo has been loading since yesterday afternoon. Nobody has asked you to know it.'],
@@ -2487,7 +2508,7 @@ export const SCENARIOS = [
          */
         id: 'f_corridor', name: 'TAVROV SECTION', tm: 'ТАВРОВСКИЙ УЧАСТОК', en: 'Tavrov section',
         pos: { x: 160, y: -20 }, posture: 'tight',
-        commander: { name: 'CAPT. VOLOH', tm: 'КАПИТАН ВОЛОХ', competence: 0.9, span: 2 },
+        commander: { name: 'MAJ. VOLOH', tm: 'МАЙОР ВОЛОХ', competence: 0.9, span: 2 },
       },
     ],
     openInFormations: ['f_corridor'],

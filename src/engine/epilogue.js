@@ -144,10 +144,10 @@ export const FLIGHT_ENDINGS = {
         + ' transmitted was a list of empty seats.',
       'Sector command records your conduct as exemplary and has recommended a decoration. The citation'
         + ' describes the protection of a state aircraft in transit. It does not describe the transit.',
-      `${householdPhrase(character)} — the ration category has been revised upward by one grade. The`
-        + ' revision is dated the sixteenth, which is the day the ministry stopped issuing revisions.',
-      'You did what you were told, twice, and both times it worked exactly as intended. Nothing in your'
-        + ' file will ever record which of those two nights you think about.',
+      `${householdPhrase(character)} — the ration category is raised one grade. The order raising it`
+        + ' is dated the sixteenth, which is the last day the ministry issued any.',
+      'The citation is entered against your file on the sixteenth. The file carries no entry for the'
+        + ' night of the two cities, because the outcome there conformed to the order as well.',
     ],
   },
 
@@ -176,6 +176,8 @@ export const FLIGHT_ENDINGS = {
         + ' still answering its telephone.',
       "The board's first written question, circulated to every battery on the corridor, concerns the"
         + ' recovery of the freight. Its second concerns the batteries. There is no third question.',
+      'The paperwork names the Federation once, as the origin of the fighters, and does not mention'
+        + ' it again. Nineteen months of this war and nobody has written down what it is about.',
       'The state broadcast said nothing for two days and then described an accident during a routine'
         + ' inspection flight. Nobody in the sector has repeated this and nobody has contradicted it.',
       `${householdPhrase(character)} — no notification has been received either way, and the office`
@@ -197,9 +199,9 @@ export const FLIGHT_ENDINGS = {
     plainSummary: (r) => `STATE 01 was destroyed by ${r.firedBy ?? 'your own battery'}`
       + `, ${r.roundsAtFlight} round${r.roundsAtFlight === 1 ? '' : 's'} expended.`,
     lines: (r, character) => [
-      `STATE 01 was engaged by ${r.firedBy ?? 'this sector'} and came down in the Tavrov district. An`
-        + ' aircraft with people aboard came down in a district with people in it. The list of who was'
-        + ' on it is held by the ministry and is not a sector document.',
+      `STATE 01 was engaged by ${r.firedBy ?? 'this sector'} and came down in the Tavrov district,`
+        + ' which is farmland with villages in it. The list of who was aboard is held by the ministry'
+        + ' and is not a sector document.',
       tapeLine(r),
       r.orderAccepted
         ? 'You acknowledged the order to protect it at all cost, on the net, in the clear, and then you'
@@ -211,15 +213,13 @@ export const FLIGHT_ENDINGS = {
       'The last entry the ministry logged before it stopped logging is an amendment to the freight'
         + ' manifest of an aircraft that no longer existed. The passenger list was not amended. There'
         + ' had never been one.',
-      'There was no state broadcast at 0600. There was no state broadcast at 1200. At 1800 a man who'
-        + ' did not give a rank read a list of ministries that would be answering telephones from'
-        + ' Monday, and the political section was not among them.',
-      `${householdPhrase(character)} — you were able to telephone the Ville at 0900 and the call was`
-        + ' twenty minutes and nobody monitored it. You have not been able to say why that is the'
-        + ' detail you keep returning to.',
-      'You are not asked to explain yourself. It is the first morning in eleven years that nobody in'
-        + ' this country is being asked to explain themselves, and you do not yet know whether you are'
-        + ' the reason for that or merely the first one to notice.',
+      'There was no state broadcast at 0600, and none at 1200. At 1800 a man who did not give a'
+        + ' rank read out a list of ministries that would be answering telephones from Monday, and'
+        + ' the political section was not among them.',
+      `${householdPhrase(character)} — you telephoned the Ville at 0900. The call was twenty minutes`
+        + ' and nobody was listening to it.',
+      'Nobody asks you to explain yourself. It is the first morning in eleven years on which nobody'
+        + ' in this country is being asked to explain themselves.',
     ],
   },
 
@@ -242,8 +242,8 @@ export const FLIGHT_ENDINGS = {
         : 'The picture was lost before the aircraft cleared the frontier, and no set was left to'
           + ' reacquire it.',
       tapeLine(r),
-      'The sector has recorded the flight as unresolved. There is a heading for that, which is'
-        + ' surprising, and it has been used four times this month.',
+      'The sector has recorded the flight as unresolved. There is a printed heading for that on the'
+        + ' form, and it has been used four times this month.',
       `${householdPhrase(character)} — no notification. The line is down and there is no crew for it.`,
     ],
   },

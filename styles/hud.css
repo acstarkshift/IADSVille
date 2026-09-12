@@ -191,10 +191,29 @@ kbd {
 .rank-badge { display: inline-flex; align-items: center; gap: 7px; }
 .rank-badge b { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-bright); }
 h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-right: 4px; }
-.file-ident { display: flex; align-items: center; gap: 12px; padding: 4px 190px 10px 0; }
+.file-ident { display: flex; align-items: flex-start; gap: 18px; padding: 4px 190px 10px 0; }
+/*
+ * The photograph on the file is a PRINT, stuck to a form: a white border, a
+ * grey edge, a drop shadow, one corner clipped by the guillotine and a dry
+ * stamp across it. It was a 48 x 60 canvas with a hairline round it.
+ */
 .file-photo {
-  width: 48px; height: 60px; image-rendering: pixelated; flex: 0 0 auto;
-  border: 1px solid var(--metal-edge); box-shadow: 0 1px 0 rgba(255, 255, 255, .06);
+  width: 96px; height: 120px; image-rendering: pixelated; flex: 0 0 auto;
+  border: 3px solid #f4efe2;
+  outline: 1px solid #8d938a;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, .5);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+}
+.file-ident-photo { position: relative; flex: 0 0 auto; line-height: 0; }
+.file-photo.is-small { width: 48px; height: 60px; border-width: 2px; }
+.record-head .file-ident-photo::after { width: 26px; height: 26px; right: -6px; bottom: 6px; }
+/* the dry stamp, half on the print and half on the form under it */
+.file-ident-photo::after {
+  content: ''; position: absolute; right: -10px; bottom: 12px;
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--hostile) 55%, transparent);
+  box-shadow: inset 0 0 0 3px transparent, inset 0 0 0 4px color-mix(in srgb, var(--hostile) 35%, transparent);
+  transform: rotate(-12deg); opacity: .7; pointer-events: none;
 }
 .file-ident-text { display: flex; flex-direction: column; gap: 5px; }
 .file-no { font-size: 9px; letter-spacing: .12em; color: var(--ink-dim); }
@@ -1452,9 +1471,8 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 .score-cell.is-word b { font-size: 12.5px; }
 .score-cell .sub { display: block; font-size: 9px; color: var(--ink-dim); }
 
-.file-entry { border-left: 3px solid var(--hostile); }
-.file-entry p { color: var(--ink-bright); }
-.file-entry.is-good { border-left-color: var(--good); }
+/* The file entry's own treatment is with the other documents, further down:
+   it is a form, not a panel with a coloured edge. */
 
 /*
  * Subordinate commands — district and national watches only. It is a
@@ -1677,7 +1695,11 @@ table.ledger .down { color: var(--hostile); }
  * bindings into a list of riddles. The keys take their own natural width and
  * never wrap; the description takes what is left.
  */
-.keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 3px 20px; font-size: 11.5px; }
+.keys { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 3px 28px; font-size: 11.5px; }
+/* The key rail: the caps in one column and what they do in the other, so the
+   eye runs down the keys instead of hunting for them inside sentences. */
+.keys div { border-bottom: 1px solid color-mix(in srgb, var(--edge) 45%, transparent); }
+.keys div:last-child { border-bottom: 0; }
 .keys div { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px; padding: 1px 0; }
 .keys b { white-space: nowrap; }
 .keys span { color: var(--ink-dim); }
@@ -1910,18 +1932,24 @@ table.ledger .down { color: var(--hostile); }
  * been applied to the desk rather than to the paper. The offsets now clear the
  * rotation: a 16 px box turned 4° needs about 5 px of headroom, and it has 14.
  */
-.record-stamp.is-grave { transform: rotate(-4.5deg); opacity: .9; }
+.record-stamp.is-grave { transform: rotate(-4.5deg); }
 .record-stamp {
   position: absolute; top: 14px; right: 16px;
-  font-size: 8.5px; letter-spacing: .18em; color: var(--hostile);
-  border: 1.5px solid var(--hostile); border-radius: 2px;
-  padding: 2px 6px; transform: rotate(-3.5deg); opacity: .75;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  font-size: 10px; line-height: 1.3; letter-spacing: .2em; text-align: center;
+  color: color-mix(in srgb, var(--hostile) 70%, #6b5a52);
+  border: 1px solid currentColor; box-shadow: 0 0 0 2px transparent, inset 0 0 0 2px transparent;
+  outline: 1px solid currentColor; outline-offset: 2px;
+  padding: 4px 10px; transform: rotate(-6deg); opacity: .85;
   pointer-events: none;
+  /* the ink breaks up, the way a rubber stamp's does, and the impression is
+     doubled a pixel off itself */
+  mask-image: repeating-linear-gradient(58deg, #000 0 9px, transparent 9px 10px);
+  text-shadow: 1px 1px 0 color-mix(in srgb, var(--hostile) 30%, transparent);
 }
-/* And the heading it shares the line with keeps out from under it — or, on
-   the file's own card, where the score cells come first, the cells do. */
-.record-card h3 { padding-right: 190px; }
-.record-stamp + .score-grid { margin-top: 22px; }
+.record-stamp .tm { display: block; }
+.record-stamp .en { display: block; font-size: 8.5px; opacity: .9; }
+.record-stamp + .score-grid { margin-top: 26px; }
 
 .field-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px; }
 .field { display: flex; flex-direction: column; gap: 3px; flex: 1 1 210px; }
@@ -1935,29 +1963,91 @@ table.ledger .down { color: var(--hostile); }
 .field input:hover, .field select:hover { border-color: var(--accent); }
 
 
-/* The last watch's outcome, set apart from the arithmetic that follows it. */
-.ending-card {
-  border-left: 3px solid var(--hostile);
-  background: color-mix(in srgb, var(--hostile) 6%, var(--bg-panel));
-}
-.ending-card p { line-height: 1.8; margin-bottom: 12px; }
-.ending-card p:first-child { color: var(--ink-bright); }
+/*
+ * The documents.
+ *
+ * A letter, a leaked file, a form and an ending are four different objects and
+ * they were four tinted panels with a coloured left border. Each is built here
+ * as the thing it is — paper with a ground, a rule, a stamp and a type — so a
+ * page of the report reads as a folder rather than as a stack of cards.
+ */
 
-/* Documents the operator was not meant to read. */
-.revelation-card {
-  border-left: 3px solid var(--warn);
-  background: color-mix(in srgb, var(--warn) 5%, var(--bg-panel));
-}
-.revelation-card h3 { color: var(--warn); }
-.revelation-card p { line-height: 1.75; }
-
-/* The post: letters from home, and the paperwork that stands in for them. */
+/* The post: cream paper, a cold ink, ruled lines and a torn top edge. */
 .letter-card {
-  border-left: 3px solid var(--good);
-  background: color-mix(in srgb, var(--good) 4%, var(--bg-panel));
+  position: relative; border: 0; border-radius: 0;
+  padding: 26px 30px 24px;
+  max-width: 780px; color: #2b2f4a;
+  background-color: #efe6cf;
+  background-image: repeating-linear-gradient(180deg,
+    transparent 0 23px, rgba(43, 47, 74, .14) 23px 24px);
+  background-position: 0 11px;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(43, 47, 74, .12);
+  /* the torn edge: a sawtooth cut out of the top of the sheet */
+  mask:
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 0 0 / 14px 7px repeat-x,
+    linear-gradient(#000 0 0) 0 7px / 100% calc(100% - 7px) no-repeat;
 }
-.letter-card h3 { color: var(--ink-bright); }
-.letter-card p { line-height: 1.75; }
+.letter-card h3 {
+  color: #2b2f4a; font-size: 13px; letter-spacing: .1em; font-style: italic;
+  border-bottom: 1px solid rgba(43, 47, 74, .3); padding-bottom: 6px; margin-bottom: 10px;
+}
+.letter-card p { color: #2b2f4a; font-style: italic; line-height: 24px; margin-bottom: 0; }
+.letter-card p + p { margin-top: 24px; }
+.letter-card .note, .letter-card .quoted { color: #55597a; }
+
+/* The file nobody meant you to read: buff stock, a red header, a stamp. */
+.revelation-card {
+  position: relative; border: 0; border-radius: 0;
+  padding: 0 0 22px; overflow: hidden; max-width: 860px;
+  color: #23261f; background: #ded3b8;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(35, 38, 31, .25);
+}
+.revelation-card h3 {
+  margin: 0 0 18px; padding: 9px 26px 8px;
+  background: #9a2b26; color: #f4efe2;
+  font-size: 11.5px; letter-spacing: .26em;
+}
+.revelation-card h3 .tm { opacity: .78; margin-right: .7em; }
+.revelation-card p {
+  color: #23261f; line-height: 1.8; margin: 0 30px 12px; max-width: 74ch;
+}
+.revelation-card .doc-stamp {
+  position: absolute; right: 22px; bottom: 18px;
+  border: 2px double #9a2b26; color: #9a2b26;
+  padding: 5px 12px; font-size: 11px; font-weight: 700; letter-spacing: .24em;
+  transform: rotate(-7deg); opacity: .8; pointer-events: none;
+  mask-image: repeating-linear-gradient(62deg, #000 0 9px, transparent 9px 10px);
+}
+
+/* A file entry: a form, with a rule under its heading and a number on it. */
+.file-entry {
+  position: relative; border: 0; border-left: 0; border-radius: 0;
+  background: #d9dcd4; color: #23261f; max-width: 860px;
+  padding: 14px 22px 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .45), inset 0 0 0 1px rgba(35, 38, 31, .28);
+}
+.file-entry h3 {
+  color: #23261f; border-bottom: 2px solid #23261f; padding-bottom: 5px;
+  margin-bottom: 10px; padding-right: 120px;
+}
+.file-entry p { color: #23261f; }
+.file-entry .note, .file-entry .aside { color: #4a4f48; }
+.file-entry .form-no {
+  position: absolute; right: 20px; top: 14px;
+  font-size: 9px; letter-spacing: .16em; color: #4a4f48;
+}
+.file-entry.is-good h3 { border-bottom-color: #2f5a3a; }
+
+/* The last watch's outcome: a black field with margin, and no card at all. */
+/* The ending is not another panel in the deck: it is set on the black field,
+   centred, with a hand's width of margin and no chrome of any kind. */
+.ending-card {
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+  padding: 10px 40px 24px; margin: 0 auto 22px; max-width: 76ch;
+}
+.is-debrief .subtitle.is-lead, .is-debrief .title.is-outcome, .is-debrief .subtitle.is-tail { text-align: center; }
+.ending-card p { line-height: 1.85; margin: 0 auto 14px; max-width: 66ch; color: var(--ink); }
+.ending-card p:first-child { color: var(--ink-bright); font-size: 15px; }
 
 /* A dark console blanks its panels along with the scope, and the controls
    under them go dead (the input handlers hold the other brace). The topbar
@@ -2056,6 +2146,40 @@ table.ledger .down { color: var(--hostile); }
 }
 .ask-costs b { color: var(--ink); }
 .ask-actions { display: flex; gap: 10px; justify-content: flex-end; }
+/*
+ * The card is a form with the three costs numbered on it and the word the
+ * file will carry stamped beside them; the button that costs you the watch
+ * takes the alarm colour at full strength behind a guarded outline, and the
+ * one that costs nothing goes quiet, because the two used to be the same
+ * weight side by side.
+ */
+.ask-card { position: relative; }
+.ask-costs { counter-reset: cost; list-style: none; padding-left: 0; }
+.ask-costs li { counter-increment: cost; position: relative; padding-left: 26px; }
+.ask-costs li::before {
+  content: counter(cost); position: absolute; left: 0; top: 2px;
+  width: 16px; height: 16px; line-height: 16px; text-align: center;
+  font-size: 9px; color: var(--ink-dim); border: 1px solid var(--edge);
+}
+.ask-stamp {
+  position: absolute; right: 26px; top: 18px;
+  border: 2px double var(--hostile); color: var(--hostile);
+  padding: 4px 10px; font-size: 10px; font-weight: 700; letter-spacing: .24em;
+  transform: rotate(-8deg); opacity: .55; pointer-events: none;
+  mask-image: repeating-linear-gradient(64deg, #000 0 9px, transparent 9px 10px);
+}
+.ask-actions .pb-refuse {
+  background: color-mix(in srgb, var(--hostile) 26%, transparent);
+  border-color: var(--hostile);
+  box-shadow: inset 0 0 0 2px var(--bg-panel), inset 0 0 0 3px color-mix(in srgb, var(--hostile) 70%, transparent);
+  background-image: repeating-linear-gradient(45deg,
+    color-mix(in srgb, var(--hostile) 22%, transparent) 0 7px, transparent 7px 14px);
+}
+.ask-actions .pb-refuse:hover { background-color: color-mix(in srgb, var(--hostile) 38%, transparent); }
+.ask-actions .pb-accept {
+  background: transparent; border-color: color-mix(in srgb, var(--edge) 80%, transparent);
+}
+.ask-actions .pb-accept:hover { border-color: var(--accent); }
 /* The two answers are the same size: a question does not lean on one of them
    by being wider. */
 .ask-actions .pb { flex: 0 0 180px; width: 180px; text-align: center; }
@@ -2079,37 +2203,72 @@ table.ledger .down { color: var(--hostile); }
 /* The scene host: the whole window, black, with the picture centred in it. */
 .scene { position: fixed; inset: 0; z-index: 60; background: #000; overflow: hidden; font-family: var(--font-mono); }
 .scene[hidden] { display: none; }
+/* A wordless beat has no words: the box is hidden, and it has to stay hidden
+   against its own `display: flex`. */
+.scene-text[hidden] { display: none; }
 .scene canvas { position: absolute; image-rendering: pixelated; image-rendering: crisp-edges; }
-/* The words, over the picture. A pixel frame, ordinary type inside it. */
+/*
+ * The words, over the picture. A pixel frame, ordinary type inside it.
+ *
+ * The box is a column: a speaker, a body that SCROLLS, and a row reserved at
+ * the bottom for the prompt. Both of those are repairs. The body used to be
+ * `overflow: hidden` inside a fixed box, so the last line of three scene kinds
+ * — the end of the tape, the last line of every letter, the sentence the whole
+ * campaign resolves onto — was drawn below the bottom edge and could not be
+ * reached by any means; and the prompt used to print on top of whatever was on
+ * the last line.
+ */
 .scene-text {
   position: absolute; box-sizing: border-box; overflow: hidden;
-  padding: calc(4px * var(--scene-scale, 3)) calc(5px * var(--scene-scale, 3));
+  display: flex; flex-direction: column;
+  padding: calc(4px * var(--scene-scale, 3)) calc(5px * var(--scene-scale, 3))
+           calc(7px * var(--scene-scale, 3));
   color: #e9efe4; font-size: calc(4.6px * var(--scene-scale, 3)); line-height: 1.35;
   background: rgba(8, 12, 9, .86);
   box-shadow: 0 0 0 calc(1px * var(--scene-scale, 3)) #cfd8cc, 0 0 0 calc(2px * var(--scene-scale, 3)) #0a0d0a;
 }
-.scene-speaker { display: block; font-size: calc(3.4px * var(--scene-scale, 3)); letter-spacing: .12em; color: #9fb3a0; margin-bottom: calc(2px * var(--scene-scale, 3)); text-transform: uppercase; }
-.scene-body { overflow: hidden; }
+.scene-speaker { display: block; flex: 0 0 auto; font-size: calc(3.4px * var(--scene-scale, 3)); letter-spacing: .12em; color: #9fb3a0; margin-bottom: calc(2px * var(--scene-scale, 3)); text-transform: uppercase; }
+.scene-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+.scene-body::-webkit-scrollbar { width: 0; height: 0; }
 .scene-body p { margin: 0 0 calc(1.5px * var(--scene-scale, 3)); white-space: pre-wrap; }
 .scene-body .cursor { display: inline-block; width: .55em; height: 1em; vertical-align: -.15em; background: currentColor; margin-left: 1px; animation: scene-blink .9s steps(1) infinite; }
 @keyframes scene-blink { 50% { opacity: 0; } }
-.scene-prompt { position: absolute; right: calc(5px * var(--scene-scale, 3)); bottom: calc(3px * var(--scene-scale, 3)); font-size: calc(3.6px * var(--scene-scale, 3)); color: #cfe3d0; animation: scene-blink 1.2s steps(1) infinite; }
+.scene-prompt { position: absolute; right: calc(5px * var(--scene-scale, 3)); bottom: calc(1.5px * var(--scene-scale, 3)); font-size: calc(3.6px * var(--scene-scale, 3)); color: #cfe3d0; animation: scene-blink 1.2s steps(1) infinite; }
 /* The paper: dark ink on the sheet, no frame of its own — the sheet is the frame. */
 .scene[data-kind="printout"] .scene-text, .scene[data-kind="quarters"] .scene-text, .scene[data-kind="folder"] .scene-text {
   background: transparent; box-shadow: none; color: #23261f;
 }
-.scene[data-kind="printout"] .scene-text { font-size: calc(4.2px * var(--scene-scale, 3)); letter-spacing: .04em; }
-.scene[data-kind="printout"] .scene-speaker, .scene[data-kind="quarters"] .scene-speaker, .scene[data-kind="folder"] .scene-speaker { color: #6b7a6a; }
-.scene[data-kind="quarters"] .scene-text { font-style: italic; color: #2b2f4a; }
-.scene[data-kind="printout"] .scene-prompt, .scene[data-kind="quarters"] .scene-prompt, .scene[data-kind="folder"] .scene-prompt { color: #4a5a48; }
+/* The tape is upright and near-black, the letter is a hand in a cold ink, the
+   document is a typed file. Three documents, three hands, one rule. */
+/* The tape's type is locked to the paper: two printed lines to one bar of the
+   continuous stationery, so the words sit ON the sheet instead of floating
+   above a ruling that disagrees with them. */
+.scene[data-kind="printout"] .scene-text { font-size: calc(3.9px * var(--scene-scale, 3)); line-height: calc(4.5px * var(--scene-scale, 3)); letter-spacing: .04em; }
+.scene[data-kind="printout"] .scene-body p { margin-bottom: 0; }
+/* The file and the letter are locked to their own ruling the same way: two
+   lines of type to one rule, so the words sit on the paper. */
+.scene[data-kind="folder"] .scene-text { font-size: calc(4.1px * var(--scene-scale, 3)); line-height: calc(4.5px * var(--scene-scale, 3)); color: #2b2f28; }
+.scene[data-kind="folder"] .scene-body p { margin-bottom: calc(4.5px * var(--scene-scale, 3)); }
+.scene[data-kind="quarters"] .scene-body p { margin-bottom: calc(4.5px * var(--scene-scale, 3)); }
+.scene[data-kind="printout"] .scene-speaker, .scene[data-kind="quarters"] .scene-speaker, .scene[data-kind="folder"] .scene-speaker { color: #6f6552; }
+.scene[data-kind="quarters"] .scene-text { font-style: italic; font-size: calc(4.1px * var(--scene-scale, 3)); line-height: calc(4.5px * var(--scene-scale, 3)); color: #2b2f4a; }
+.scene[data-kind="printout"] .scene-prompt, .scene[data-kind="quarters"] .scene-prompt, .scene[data-kind="folder"] .scene-prompt { color: #6f6552; }
+/* The order of appointment is read across the desk front, in the spoken box —
+   named here so a kind can never fall through to the default by accident. */
+.scene[data-kind="appointment"] .scene-text, .scene[data-kind="office"] .scene-text, .scene[data-kind="ending"] .scene-text { background: rgba(8, 12, 9, .9); }
 /* A phone held upright: the words under the picture, on their own sheet. */
-.scene.is-stacked .scene-text { font-size: 14px; line-height: 1.4; padding: 12px 14px; }
+.scene.is-stacked .scene-text { font-size: 14px; line-height: 1.45; padding: 12px 14px 24px; }
 .scene.is-stacked .scene-speaker { font-size: 10px; margin-bottom: 6px; }
-.scene.is-stacked .scene-prompt { font-size: 11px; right: 14px; bottom: 10px; }
+.scene.is-stacked .scene-prompt { font-size: 11px; right: 14px; bottom: 8px; }
 .scene.is-stacked[data-kind="printout"] .scene-text, .scene.is-stacked[data-kind="quarters"] .scene-text, .scene.is-stacked[data-kind="folder"] .scene-text {
   background: #ebe7d9; box-shadow: 0 0 0 2px #cfd8cc, 0 0 0 4px #0a0d0a;
 }
 .scene.is-stacked[data-kind="printout"] .scene-text { font-size: 13px; }
+.scene.is-stacked[data-kind="folder"] .scene-text, .scene.is-stacked[data-kind="quarters"] .scene-text { line-height: 1.5; }
+.scene.is-stacked[data-kind="folder"] .scene-body p, .scene.is-stacked[data-kind="quarters"] .scene-body p { margin-bottom: 10px; }
+/* On a phone the picture goes to the top of the window, so SKIP cannot sit
+   over it: it goes under the words, where the screen is empty anyway. */
+.scene.is-stacked .scene-skip { top: auto; right: auto; bottom: 16px; left: 14px; }
 .scene-skip {
   position: absolute; top: 14px; right: 16px; z-index: 2; cursor: pointer;
   background: rgba(8, 12, 9, .8); color: #cfe3d0; border: 1px solid #6b7a6a; border-radius: 2px;
@@ -2164,3 +2323,122 @@ table.ledger .down { color: var(--hostile); }
   .ctx-menu { min-width: 0; width: calc(100vw - 16px); }
   .ctx-row { grid-template-columns: 1.2fr 1fr 1fr; }
 }
+
+/*
+ * The card the campaign leaves you sitting on.
+ *
+ * A title card: the last shot of the evening carried through behind it as a
+ * dimmed ground, the ending's Cyrillic title small over its English title
+ * large, one rule under them, the first line of the ending as prose, and the
+ * figures as a single centred row. It used to be the same deck of panels as
+ * every other watch with an operational headline at the top of it.
+ */
+.is-endcard { position: relative; }
+.is-endcard.is-title-card { min-height: 78vh; display: flex; flex-direction: column; justify-content: center; }
+.endcard-sky {
+  position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1;
+  object-fit: cover; image-rendering: pixelated; opacity: .34;
+  filter: saturate(.7);
+  pointer-events: none;
+}
+.is-title-card .endcard-block {
+  position: relative; text-align: center; padding: 56px 60px 34px;
+  /* The pool has to reach nothing INSIDE its own box, or the box itself is
+     what you see: a rectangle of shade across the valley. */
+  background: radial-gradient(54% 54% at 50% 50%, rgba(6, 8, 6, .93), rgba(6, 8, 6, .76) 55%, rgba(6, 8, 6, 0) 100%);
+}
+.endcard-tm {
+  margin: 0 0 6px; font-size: 12px; letter-spacing: .34em; color: var(--ink-dim);
+}
+/* The file's own print, at the end of the file. */
+.endcard-photo { display: inline-block; margin: 0 0 18px; }
+.is-title-card .title { letter-spacing: .2em; }
+.endcard-rule {
+  width: 190px; margin: 14px auto 16px; border: 0; border-top: 1px solid var(--edge);
+}
+.is-endcard .ending-lede {
+  max-width: 62ch; margin: 0 auto 18px;
+  color: var(--ink); font-size: 15px; line-height: 1.62;
+}
+.is-title-card .subtitle.grave { margin: 0 auto 16px; }
+.endcard-facts {
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 28px;
+  margin-top: 4px;
+}
+.endcard-facts span { display: flex; flex-direction: column; gap: 3px; }
+.endcard-facts label { font-size: 9px; letter-spacing: .18em; color: var(--ink-dim); }
+.endcard-facts b { font-size: 15px; color: var(--ink-bright); letter-spacing: .06em; }
+.is-endcard-actions { justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 26px; }
+.action-pair { display: flex; gap: 8px; }
+.action-pair.is-quiet .btn { color: var(--ink-dim); border-color: color-mix(in srgb, var(--edge) 70%, transparent); }
+.action-pair.is-quiet .btn:hover { color: var(--ink); border-color: var(--edge); }
+
+/*
+ * A rank board belongs on its own, not inline in a sentence.
+ *
+ * At twenty-one device pixels a recruit's board is indistinguishable from a
+ * missing-glyph box, and it appeared that way three times in a new player's
+ * first minute. It gets its own cell beside the name instead.
+ */
+.ident-row { display: flex; align-items: center; gap: 14px; margin: 2px 0 12px; }
+.ident-board { display: block; flex: 0 0 auto; line-height: 0; }
+.ident-name { display: flex; flex-direction: column; gap: 3px; }
+.ident-name b { font-size: 15px; color: var(--ink-bright); letter-spacing: .06em; }
+.ident-name small { font-size: 10px; letter-spacing: .14em; color: var(--ink-dim); text-transform: uppercase; }
+
+/*
+ * The briefing's sector map.
+ *
+ * A drawn document, not a chart: a ruled ground, the frontier dashed across
+ * the north, the batteries at their real reach, the defended places where they
+ * really are and each raid axis on its real bearing, numbered to match the
+ * paragraphs beside it.
+ */
+.card.is-situation { display: grid; grid-template-columns: minmax(320px, 480px) 1fr; gap: 22px; align-items: start; }
+.card.is-situation h3 { grid-column: 1 / -1; }
+.card.is-situation p { grid-column: 2; margin-bottom: 10px; }
+.sector-map { grid-column: 1; grid-row: 2 / span 99; margin: 0; }
+.sector-map svg { width: 100%; height: auto; display: block; border: 1px solid var(--edge); }
+.map-ground { fill: color-mix(in srgb, var(--accent) 4%, #0b0f0c); }
+.map-grid line { stroke: color-mix(in srgb, var(--edge) 55%, transparent); stroke-width: .5; }
+.map-frontier line { stroke: var(--hostile); stroke-width: 1.2; stroke-dasharray: 7 5; }
+.map-frontier text { fill: var(--hostile); font: 8px var(--font-mono); letter-spacing: .18em; }
+.map-reach { fill: color-mix(in srgb, var(--good) 5%, transparent); stroke: color-mix(in srgb, var(--good) 45%, transparent); stroke-width: .8; }
+.map-reach.is-own { fill: color-mix(in srgb, var(--accent) 8%, transparent); stroke: var(--accent); stroke-dasharray: 4 3; }
+.map-site rect { fill: var(--good); }
+.map-site.is-own rect { fill: var(--accent); }
+.map-site text { fill: var(--ink-dim); font: 7.5px var(--font-mono); letter-spacing: .1em; text-anchor: middle; }
+.map-site.is-own text { fill: var(--accent); }
+.map-place rect, .map-place circle { fill: none; stroke: var(--ink); stroke-width: 1.2; }
+.map-place text { fill: var(--ink-dim); font: 8px var(--font-mono); letter-spacing: .12em; }
+.map-place.is-home circle { fill: color-mix(in srgb, var(--ink-bright) 35%, transparent); stroke: var(--ink-bright); stroke-width: 2; }
+.map-place.is-home text { fill: var(--ink-bright); font-weight: 700; }
+.map-axis line { stroke: var(--hostile); stroke-width: 1.6; }
+.map-axis circle { fill: #0b0f0c; stroke: var(--hostile); stroke-width: 1; }
+.map-axis text { fill: var(--hostile); font: 9px var(--font-mono); font-weight: 700; text-anchor: middle; }
+.map-axis path, #map-arrow path { fill: var(--hostile); }
+.map-scale line, .map-north line { stroke: var(--ink-dim); stroke-width: 1; }
+.map-scale text, .map-north text { fill: var(--ink-dim); font: 8px var(--font-mono); letter-spacing: .1em; }
+@media (max-width: 900px) {
+  .card.is-situation { grid-template-columns: 1fr; }
+  .card.is-situation p { grid-column: 1; }
+  .sector-map { grid-column: 1; grid-row: auto; }
+}
+
+/* The four classes: a silhouette, the text, and the reach on one scale. */
+.classes { display: flex; flex-direction: column; gap: 2px; }
+.class-row {
+  display: grid; grid-template-columns: 72px minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 16px; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid color-mix(in srgb, var(--edge) 45%, transparent);
+}
+.class-row:last-child { border-bottom: 0; }
+.class-art svg { width: 64px; height: 32px; display: block; }
+.class-art rect, .class-art circle { fill: var(--ink-dim); }
+.class-art line { stroke: var(--edge); stroke-width: 1; }
+.class-text { display: flex; flex-direction: column; gap: 3px; }
+.class-text b { color: var(--ink-bright); letter-spacing: .08em; }
+.class-reach { display: flex; flex-direction: column; gap: 5px; }
+.reach-bar { position: relative; height: 7px; background: var(--bg-raised); border: 1px solid var(--edge); }
+.reach-bar i { position: absolute; top: 0; bottom: 0; background: var(--accent); opacity: .75; }
+@media (max-width: 700px) { .class-row { grid-template-columns: 64px 1fr; } .class-reach { grid-column: 1 / -1; } }

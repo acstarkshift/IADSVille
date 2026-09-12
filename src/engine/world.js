@@ -21,7 +21,7 @@ import {
 } from './config.js';
 import { makeRng } from './rng.js';
 import {
-  dist, len, bearing, polar, wrapDeg, clamp, clamp01, absDeltaDeg, clockString,
+  dist, len, bearing, polar, wrapDeg, clamp, clamp01, absDeltaDeg, clockString, wallClockString,
 } from './math.js';
 import { stepDetection, rememberGhost } from './detection.js';
 import { stepMissiles, inEnvelope, timeToInRangeS } from './weapons.js';
@@ -2601,8 +2601,15 @@ export class World {
       cause: this.failureCause({ reason, success, criticalLost, leakersCounted, abandoned }),
       missionId: this.scenario.id,
       role: this.control.role,
-      /** The mission clock the watch ended on, for the paperwork to quote. */
+      /** The mission clock the watch ended on: how long the watch ran. */
       clock: clockString(this.t),
+      /*
+       * And what time it was when it ended, which is a different number and
+       * the one every document quotes. The tape carries both, labelled.
+       */
+      watchClock: wallClockString(this.scenario.hour, this.t),
+      /** The run in whole minutes, for a sentence that has to say it aloud. */
+      elapsedMin: Math.max(0, Math.round(this.t / 60)),
       reason,
       success,
       /** The post was left before the raid was resolved. Nothing is banked. */
@@ -2676,7 +2683,7 @@ export class World {
        * a one-word widow — body copy set as a title. What the abandonment cost
        * is the file card's business; the deck line's business is the clock.
        */
-      return `YOU LEFT THE POST AT ${clockString(this.t)}.`;
+      return `YOU LEFT THE POST AT ${wallClockString(this.scenario.hour, this.t)}.`;
     }
     if (reason === 'site-lost') {
       return 'YOUR POSITION WAS OVERRUN — THE REST OF THE RAID CROSSED AN EMPTY SQUARE.';

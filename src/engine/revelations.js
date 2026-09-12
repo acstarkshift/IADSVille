@@ -27,15 +27,36 @@ export const REVELATIONS = {
     lines: [
       'The district hospital took four weapons. The sector return lists the building as an'
         + ' undesignated structure and the casualties under a heading that does not require a name.',
-      'Your expenditure for the watch was queried within the hour. The query is a standard form. It'
-        + ' asks you to account for rounds expended outside the freeze, and it has a box for the'
-        + ' number and a box for the reason, and the box for the reason is four lines long.',
+      'Your expenditure for the watch was queried within the hour. The query is a standard form'
+        + ' with a box for the number of rounds spent outside the freeze, and a box for the reason'
+        + ' that is four lines long.',
       'The clerk who brought it up from signals has done this before. He said, not unkindly, that'
         + ' nobody reads the reason, and that you should write "target misidentified" because that'
         + ' one goes through without a second signature.',
-      'He also said — and this is the part you have not stopped thinking about — that the district'
-        + ' allocation was spent before the quarter began. Not spent tonight. Spent before it began.',
+      'He also said, on his way out, that the district allocation had already been spent when the'
+        + ' quarter began.',
     ],
+    /*
+     * The middle of this document is about a query into rounds you spent
+     * outside the freeze, and an operator who obeyed the freeze spent none.
+     * That player used to read two paragraphs about a form they never
+     * received. They get the other true document instead; the last paragraph
+     * is the revelation and fires either way.
+     */
+    linesFor: (result) => {
+      const all = REVELATIONS.freeze.lines;
+      const outside = (result?.stats?.roundsAgainstFreeze ?? 0)
+        + (result?.stats?.roundsAgainstOrder ?? 0);
+      if (outside > 0) return all;
+      return [
+        all[0],
+        'Your expenditure for the watch was queried within the hour and the query was closed the'
+          + ' same evening, because nothing of yours was outside the freeze. The clerk who brought'
+          + ' the returns up from signals said, not unkindly, that the quiet files are the ones'
+          + ' that get read.',
+        all[3],
+      ];
+    },
   },
 
   border: {
@@ -47,14 +68,13 @@ export const REVELATIONS = {
       'The strays were logged as strays. Two rounds, both malfunctioning in the same way, both'
         + ' malfunctioning onto the same grid reference six kilometres beyond a national border,'
         + ' four hours apart.',
-      'You looked the grid reference up. Not in an intelligence product — in the sector target folder,'
-        + ' which is on an open shelf because everything in it is our own territory and there is'
-        + ' nothing in there to protect.',
-      'It is in there. Handwritten, on the inside back cover, under no heading, in a folder that has'
-        + ' no business containing a point in Listonia at all.',
-      'Somebody wrote those coordinates down before the war. The word for what happened over Gorna is'
-        + ' not "stray", and the order you were given about not engaging across the border was not'
-        + ' about a border incident.',
+      'You looked the grid reference up. It is not in an intelligence product. It is in the sector'
+        + ' target folder, which sits on an open shelf because everything in it is our own ground'
+        + ' and there is nothing in there to protect.',
+      'It is written on the inside back cover by hand, under no heading, in a folder that has no'
+        + ' business containing a point in Listonia at all.',
+      'Somebody wrote those coordinates down before the war started. What happened over Gorna was'
+        + ' not a stray, and the order you were given about the border was not about the border.',
     ],
   },
 
@@ -64,16 +84,45 @@ export const REVELATIONS = {
     tm: 'ВЕДОМОСТЬ',
     title: 'THE RETURN',
     lines: [
-      'A depot return crossed your desk during the resupply that did not arrive. It was not addressed'
-        + ' to you; it was in the folder underneath one that was.',
+      'A depot return crossed your desk during the resupply that did not arrive. It was not'
+        + ' addressed to you. It was in the folder underneath one that was.',
       'It shows the sector holding four hundred and twelve rounds across six magazines. You have'
         + ' signed for what is in those magazines every week for a year. There are not four hundred'
-        + ' and twelve rounds in this sector. There are not two hundred.',
+        + ' and twelve rounds in this sector, and there are not two hundred.',
       'The return is not a forgery. It is properly countersigned at three levels, which means the'
-        + ' number was correct when it was written and has been correct ever since, in the only sense'
-        + ' the ministry recognises.',
-      'You put the folder back the way it was. You have thought since about how quickly you did that,'
-        + ' and how little deciding was involved.',
+        + ' number was correct when it was written and has been correct ever since, in the only'
+        + ' sense the ministry recognises.',
+      'You put the folder back the way it was, and you were out of the room before you had decided'
+        + ' to be.',
+    ],
+  },
+
+  /**
+   * The civil transit, paid off.
+   *
+   * Watch eight orders the operator to fire on an airliner because there is a
+   * person aboard subject to a detention order. Until this document that order
+   * was answered by nothing at all — a row in a ledger and a number in a
+   * score. It lands on watch nine because a district commander has the
+   * signals annex on his desk, and because Four Sectors is the watch about
+   * orders given to people you cannot see.
+   */
+  passenger: {
+    id: 'passenger',
+    after: 'four-sectors',
+    tm: 'ОРДЕР НА ЗАДЕРЖАНИЕ',
+    title: 'THE DETENTION ORDER',
+    lines: [
+      'The detention order that was read to you on the net has a file number, and the file number'
+        + ' is printed in the district signals annex, which is circulated to every headquarters'
+        + ' every Monday.',
+      'The name on it is a customs official from Kubin. He is forty-four years old and he is'
+        + ' described in the annex as a departmental employee under investigation for irregularities'
+        + ' in the recording of freight.',
+      'The order is dated three days before the transit was filed. Nobody knew on the Tuesday which'
+        + ' aircraft he would be on.',
+      'The annex lists him under a heading for persons whose departure is not to be permitted. There'
+        + ' are eleven names under that heading and four of them work in freight.',
     ],
   },
 
@@ -83,18 +132,16 @@ export const REVELATIONS = {
     tm: 'ПЕРЕМЕЩЕНИЕ',
     title: 'THE MOVEMENT ORDER',
     lines: [
-      'The order that took your battalion is numbered, and orders in that series are numbered'
-        + ' consecutively, which means the ones on either side of it exist. A movement order is not'
-        + ' an intelligence product. It is freight paperwork, and freight paperwork is filed where'
-        + ' freight is handled, which is a room with no lock on it.',
+      'The order that took your battalion is numbered, and orders in that series run consecutively,'
+        + ' so the ones on either side of it exist. A movement order is freight paperwork, and'
+        + ' freight paperwork is filed where freight is handled, in a room with no lock on it.',
       'Same series, same week: road movement, palace annexe to Demobodedovo, freight class four —'
         + ' household and administrative effects. Eleven vehicles. The escort was found from the'
         + ' capital garrison, which is the garrison your battalion was sent to reinforce.',
-      'The assessed threat to the capital — the stated grounds for taking the battalion — is dated'
-        + ' two days after the freight left.',
-      'You have read the two documents in both orders and the sequence does not change: first the'
-        + ' household effects, then the threat, then the guns. The air defence of this country was'
-        + ' rearranged around a departure schedule, and the departure schedule came first.',
+      'The assessed threat to the capital, which is the stated reason for taking the battalion, is'
+        + ' dated two days after that freight left.',
+      'The household effects went first. The threat was written down two days later. The guns moved'
+        + ' after that.',
     ],
   },
 
@@ -104,19 +151,17 @@ export const REVELATIONS = {
     tm: 'ПЕРЕДАЧА',
     title: 'THE TRANSFER',
     lines: [
-      'The transfer manifests are not secret. They are simply boring, and filed in a room nobody has'
-        + ' a reason to enter, and you had a reason.',
-      'Two hundred and sixty rounds left this sector across eleven months on a schedule of routine'
-        + ' redistributions. Every one of them is signed off by the same office. Every one crossed the'
-        + ' frontier within a week of the redistribution being recorded.',
-      'They were sold. Not diverted, not lost, not misallocated — sold, at a price that is written on'
-        + ' the manifest in a column headed ADMINISTRATIVE RECOVERY, and the sum recovered has been'
-        + ' administratively recovered by an office in Mostrograd that does not appear on the'
-        + " ministry's establishment. Its address does. It is the point of origin on a freight"
-        + ' movement order you have also read.',
-      'This is what the expenditure freeze was for. Not the war. The freeze exists so that the'
-        + ' magazines are never opened and counted while there is still someone to count them in'
-        + ' front of.',
+      'The transfer manifests are not secret. They are boring, and they are filed in a room nobody'
+        + ' has a reason to enter, and you had a reason.',
+      'Two hundred and sixty rounds left this sector across eleven months, on a schedule of routine'
+        + ' redistributions. The same office signed off every one of them, and every one crossed the'
+        + ' frontier within a week of being recorded.',
+      'They were sold. The price is on the manifest, in a column headed ADMINISTRATIVE RECOVERY, and'
+        + ' the money was recovered by an office in Mostrograd that does not appear on the'
+        + " ministry's establishment. Its address does appear: it is the point of origin on a"
+        + ' freight movement order you have also read.',
+      'This is what the expenditure freeze was for. The freeze exists so that the magazines are'
+        + ' never opened and counted while there is still somebody to count them in front of.',
       'The palace you were ordered to hold above your own village was paid for out of the rounds you'
         + ' were not allowed to fire.',
     ],
@@ -146,9 +191,13 @@ export function standing(campaign) {
     return 'You know the household effects left the palace before the threat that justified guarding'
       + ' it was written down.';
   }
+  if (known.includes('passenger')) {
+    return 'You know the detention order was dated before the flight it was used on, and that the'
+      + ' man named on it worked in freight.';
+  }
   if (known.includes('ledger')) {
-    return 'You know the depot returns do not reconcile. You have not worked out what that means yet,'
-      + ' or you have and would rather not have.';
+    return 'You know the depot returns do not reconcile, and you have not worked out what that'
+      + ' means yet.';
   }
   if (known.includes('border')) {
     return 'You know the strays over Gorna were not strays, and that the order about the border was'

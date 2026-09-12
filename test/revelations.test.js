@@ -294,7 +294,7 @@ describe('the revelations', () => {
     const movement = REVELATIONS.movement;
     assert.equal(movement.after, 'reinforce-the-capital',
       'it is learned on the watch that took the battalion');
-    assert.match(movement.lines.join(' '), /dated two days after the freight left/);
+    assert.match(movement.lines.join(' '), /dated two days after that freight left/);
     assert.match(scenarioById('two-cities').briefIfKnown.movement.join(' '), /the address/);
     assert.match(scenarioById('presidents-flight').briefIfKnown.movement.join(' '), /schedule/);
   });

@@ -169,9 +169,12 @@ describe('a shot on your own authority', () => {
     const { createCharacter } = await import('../src/engine/character.js');
     const character = createCharacter({ name: 'Test' });
     const state = { narrativePressure: true, campaign: { character, completed: {}, family: {}, revelations: [] } };
-    const result = { success: true, held: true, missionId: 'solo-battery', stats: { kills: 1, leakers: 0, roundsFired: 2, assetsLost: 0, turnedBack: 0 },
-      ledger: [{ t: 100, delta: -2, charged: -2, reason: 'engaged T-004 on your own authority' }], assets: [], score: 300, standing: 48, tier: { id: 'satisfactory', label: 'SATISFACTORY' }, score: 300 };
+    // Not one of the three teaching watches, where the section says nothing.
+    const result = { success: true, held: true, missionId: 'weasel-hour', stats: { kills: 1, leakers: 0, roundsFired: 2, assetsLost: 0, turnedBack: 0 },
+      ledger: [{ t: 100, delta: -2, charged: -2, reason: 'engaged T-004 on your own authority' }], assets: [], score: 300, standing: 48, tier: 'satisfactory', tierLabel: 'SATISFACTORY' };
     const office = scenesFor(state, result, {}).find((s) => s.id === 'commissar');
-    assert.ok(office.lines.some((l) => /The log says: engaged T-004 on your own authority\. The section notes it\./.test(l)), office.lines.join(' | '));
+    // Said as a sentence, not as the ledger's own fragment after a colon.
+    assert.ok(office.lines.some((l) => /engaged without an order tonight\. You will account for every round of it\.$/.test(l)), office.lines.join(' | '));
+    assert.ok(!office.lines.some((l) => l.startsWith('The log says')), office.lines.join(' | '));
   });
 });

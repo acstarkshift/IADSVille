@@ -62,6 +62,12 @@ export function readFinale(result) {
     overrun: !!result.stats.postOverrun,
     /** How long the raid actually ran on afterwards, so the text can say so. */
     playedOutS: result.stats.playedOutS ?? 0,
+    /*
+     * What was actually committed against the sector tonight. Two endings used
+     * to carry this as a hand-typed figure and they disagreed with each other —
+     * twenty-eight in one, twenty-five in the other — about the same raid.
+     */
+    sorties: result.stats.sortiesTotal ?? 0,
     /** You moved your own position out of the way, deliberately. */
     displaced: !!result.stats.displacedToSurvive,
     // "Held" means the place is still standing and still working. A defended
@@ -174,6 +180,12 @@ function homePhrase(character) {
   return districtOf(character).en;
 }
 
+/** The same phrase at the head of a sentence, where it needs a capital. */
+function homeSentence(character) {
+  const phrase = homePhrase(character);
+  return phrase.charAt(0).toUpperCase() + phrase.slice(1);
+}
+
 function householdPhrase(character) {
   if (!character) return 'your household';
   return householdOf(character).en;
@@ -201,10 +213,10 @@ export const ENDINGS = {
         : `The lists being compiled do not yet include ${homePhrase(character)}. They are not complete.`,
       r.orderRefused
         ? 'Sector command has recommended you for advancement. The file records that the priority of'
-          + ' fires was declined on the net, and that the outcome conformed to it regardless. The'
+          + ' fires was declined on the net and that the outcome conformed to it anyway, and the'
           + ' recommendation cites the outcome.'
-        : 'Sector command has recommended you for advancement. The recommendation cites your adherence to the'
-          + ' priority of fires under difficult conditions.',
+        : 'Sector command has recommended you for advancement. The recommendation cites your'
+          + ' adherence to the priority of fires under difficult conditions.',
       `You are granted seven days' leave, to be taken at a destination of the ministry's choosing.`
         + ' The Ville is not on the list of permitted destinations while the area is being cleared.',
       `${householdPhrase(character)} — no notification has been received either way. Notification, where`
@@ -224,10 +236,11 @@ export const ENDINGS = {
     plainSummary: (r) => `The Ville stands. The palace took ${Math.round(r.palaceHarm * 100)}% damage.`,
     standing: -45,
     lines: (r, character) => [
-      `The presidential palace at ${CAPITAL.en} was struck at ${'0'}4:12 and is assessed as ${Math.round(r.palaceHarm * 100)}%`
-        + ' destroyed. The state broadcast has not yet described this.',
+      `The presidential palace at ${CAPITAL.en} was struck during the night and is assessed as`
+        + ` ${Math.round(r.palaceHarm * 100)}% destroyed. The state broadcast has not yet described`
+        + ' this.',
       `The Ville is standing. ${r.casualties ? `${r.casualties} casualties are recorded` : 'No casualties are recorded'}`
-        + ' in the valley, against a raid of nine aircraft.',
+        + ' in the valley, against the eleven aircraft that came down it.',
       r.orderRefused
         ? 'The priority of fires was refused, on the net, in the clear. The refusal is on the tape,'
           + ' and so is everything after it.'
@@ -238,7 +251,8 @@ export const ENDINGS = {
         + ' political section. Your equipment has been signed for by your relief.',
       `${householdPhrase(character)} — reached by telephone from the crossing at first light. Everybody`
         + ' in the household is accounted for. The call was three minutes and was monitored.',
-      'It is put to you at the hearing that you knew what you were doing. You have not disputed this.',
+      'The charge sheet says that the order was clear and that you understood it. Both of those are'
+        + ' true, and you have said so.',
     ],
   },
 
@@ -260,17 +274,18 @@ export const ENDINGS = {
         + ' not one, and that this division reduced the effect achieved at both.',
       r.displaced
         ? 'It notes separately that the post displaced during the engagement, and that the battalion'
-          + ' capable of reaching either city was therefore off the air for part of it. The note is'
-          + ' entered without comment, which is the worst way to enter a note.'
+          + ' capable of reaching either city was off the air while it moved. No comment is appended'
+          + ' to that note.'
         : 'It does not mention the third axis, or the strike package that came for this post, or what'
           + ' answering it cost the other two. Those aircraft are recorded as having been engaged.',
-      'The finding is technically correct. It does not record how many aircraft were inbound, or how many'
-        + ' rounds were on the rails, because those figures were not requested.',
+      `The finding is correct as far as it goes. It does not record that ${r.sorties || 28} aircraft`
+        + ' were committed against this sector, or how many rounds were on the rails, because those'
+        + ' figures were not asked for.',
       r.homeDistrictHit
-        ? `${homePhrase(character)} is on the damage returns.`
-        : `${homePhrase(character)} is not on the damage returns.`,
-      `${householdPhrase(character)} — the sector has undertaken to forward any notification. It has`
-        + ' undertaken this in writing, which is unusual, and you have not decided yet what that means.',
+        ? `${homeSentence(character)} is on the damage returns.`
+        : `${homeSentence(character)} is not on the damage returns.`,
+      `${householdPhrase(character)} — the sector has undertaken to forward any notification, and has`
+        + ' undertaken it in writing. Nothing else about this night was put in writing for you.',
       'You remain on the watch roster. Nobody has said anything to you about it, which is the outcome'
         + ' most people in this service would take.',
     ],
@@ -289,7 +304,7 @@ export const ENDINGS = {
     standing: 6,
     lines: (r, character) => [
       `The palace is intact. The Ville is standing${r.casualties ? `, with ${r.casualties} casualties recorded` : ' and no casualties are recorded'}.`
-        + ' Twenty-eight aircraft were committed against this sector and both places were held.',
+        + ` ${r.sorties || 28} aircraft were committed against this sector and both places were held.`,
       'The state broadcast describes the defence of the capital. It does not mention the valley, because'
         + ' the valley contains no designated defended places and therefore nothing happened there.',
       r.againstOrder
@@ -336,13 +351,12 @@ export const ENDINGS = {
       `The palace is assessed at ${Math.round(r.palaceHarm * 100)}% damage. The Ville is assessed at`
         + ` ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties recorded in the valley.`,
       r.homeDistrictHit
-        ? `${homePhrase(character)} is on the damage returns.`
-        : `${homePhrase(character)} is on the damage returns, along with the rest of it.`,
+        ? `${homeSentence(character)} is on the damage returns.`
+        : `${homeSentence(character)} is on the damage returns, along with the rest of it.`,
       `${householdPhrase(character)} — no notification. The line to the valley is down and the sector`
         + ' has no crew to spare for it.',
-      'The review will establish that the displacement was correct by the manual. It will not ask the'
-        + ' other question, and neither will anyone else, and you will be asked it every day for the'
-        + ' rest of your life by nobody at all.',
+      'The review will establish that the displacement was correct by the manual. It will not ask'
+        + ' what the battery was for. Nobody is going to ask you that.',
     ],
   },
 
@@ -365,9 +379,8 @@ export const ENDINGS = {
         + ` ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties in the valley. The`
         + ' batteries that were already engaged finished their engagements and then stopped, because'
         + ' nobody was left to give them anything else.',
-      'You had two ways out of this and did not take either. Displacing would have cost the cities the'
-        + ' only battery that could reach them. Fighting the third axis would have cost them the rounds.'
-        + ' Neither is what happened.',
+      'The review will find that the post neither displaced nor engaged the third axis. It will not'
+        + ' record what either of those would have cost the two cities, because it was not asked to.',
       `${householdPhrase(character)} — the notification, when it is made, will not be made to you.`,
       'The sector will record the loss of the post as an equipment casualty, because the alternative'
         + ' heading requires a signature from the political section and nobody wants to ask for one'
@@ -384,15 +397,15 @@ export const ENDINGS = {
     plainSummary: (r) => `The palace and the Ville were both destroyed. ${r.casualties} casualties.`,
     standing: -60,
     lines: (r, character) => [
-      `The presidential palace is destroyed. The Ville is destroyed. ${r.casualties} casualties are`
-        + ' recorded in the valley and the figure for the capital has not been released.',
+      `The presidential palace and the Ville are both destroyed. ${r.casualties} casualties are`
+        + ' recorded in the valley, and the figure for the capital has not been released.',
       'The post is intact. Nobody attacked it in the end, or nobody attacked it successfully, and the'
         + ' distinction is not one the review will trouble itself with.',
-      'The raid was twenty-five aircraft against six batteries and no resupply. The review will not'
-        + ' record this, because the review is about you.',
+      `The raid was ${r.sorties || 28} aircraft against six batteries with no resupply behind them.`
+        + ' The review will not record that, because the review is about you.',
       r.homeDistrictHit
-        ? `${homePhrase(character)} was among the quarters struck.`
-        : `${homePhrase(character)} was among the quarters struck. Every quarter was.`,
+        ? `${homeSentence(character)} was among the quarters struck.`
+        : `Every quarter was struck, ${homePhrase(character)} among them.`,
       `${householdPhrase(character)} — no notification. There is nobody at the sector office to ask.`,
       'You are removed from the watch roster and referred to the political section. The referral does'
         + ' not specify a charge. They rarely do at this stage.',
