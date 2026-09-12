@@ -562,6 +562,9 @@ export function fireEngagement(world, site, engagement) {
     .filter((m) => m.trackId === track.id && m.siteId === site.id && m.alive)
     .map((m) => m.id);
   engagement.state = 'guiding';
+  // A shot the cabin took on its own — no cue, and no order that freed it —
+  // is the operator's decision, and the net and the section answer it.
+  world.registerOwnAuthority?.(site, engagement, track, launched);
   return launched;
 }
 

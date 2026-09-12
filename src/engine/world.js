@@ -227,6 +227,13 @@ export class World {
       roundsAcrossBorder: 0,
       /** Rounds fired inside a civil corridor you acknowledged. */
       roundsInCorridor: 0,
+      /**
+       * Shots the cabin took on its own authority — no cue from the net, under
+       * a standing order of TIGHT (`registerOwnAuthority`). Engagements, and
+       * the rounds they cost.
+       */
+      ownAuthorityEngagements: 0,
+      roundsOnOwnAuthority: 0,
     };
 
     this.control = {
@@ -996,6 +1003,24 @@ export class World {
 
   standingDelta(amount, reason) { standingDelta(this, amount, reason); }
 
+  /**
+   * Say something a little later. The political section does not answer on
+   * the same tick as the net; it takes a moment, and that moment is the
+   * difference between a reaction and a reflex.
+   */
+  sayLater(delayS, fn) {
+    this._lateLines = this._lateLines ?? [];
+    this._lateLines.push({ atS: this.t + delayS, fn });
+  }
+
+  flushLateLines() {
+    if (!this._lateLines?.length) return;
+    const due = this._lateLines.filter((l) => l.atS <= this.t);
+    if (!due.length) return;
+    this._lateLines = this._lateLines.filter((l) => l.atS > this.t);
+    for (const line of due) line.fn();
+  }
+
   hostileTrackCount() {
     let n = 0;
     for (const track of this.tracks.values()) {
@@ -1052,6 +1077,20 @@ export class World {
       this.stats.civilianAircraftShot++;
       this.log('alert', `${aircraft.name} DESTROYED — CIVIL AIRCRAFT`, { severity: 'high' });
       addEffect(this, { kind: 'flash', magnitude: 1, durationS: 1.2 });
+      // Brought down by a round the cabin fired on its own authority: the
+      // decision is read back to the operator, by name, a few seconds later.
+      if (missile?.ownAuthority) {
+        const shooter = this.siteById.get(missile.siteId);
+        this.standingDelta(COMMAND.standing.ownAuthorityFriendlyDown,
+          `${aircraft.name} destroyed on your own authority`);
+        if (shooter) {
+          this.sayLater(5, () => this.log('alert', this.narrativePressure
+            ? `POLITICAL SECTION: ${shooter.name} HAS DESTROYED A FRIENDLY AIRCRAFT WITHOUT ORDERS. `
+              + 'THE OPERATOR IS RELIEVED AT THE END OF THE WATCH.'
+            : `FRIENDLY AIRCRAFT DESTROYED BY AN UNORDERED ROUND FROM ${shooter.name}.`,
+          { severity: 'high', siteId: shooter.id }));
+        }
+      }
     } else {
       this.stats.kills++;
       if (aircraft.type === 'decoy') this.stats.decoysEngaged++;
@@ -1298,6 +1337,73 @@ export class World {
   warnTargetOfLaunch(target, credible = true) {
     target.threatenedAtS = this.t;
     if (credible) target.crediblyThreatenedAtS = this.t;
+  }
+
+  /**
+   * A shot the cabin took on its own authority.
+   *
+   * The player asked for the seat to be able to lock and engage without a
+   * cue, "drawing anger from up echelon and the political commissar". So it
+   * can — anything the battery can physically take — and this is the anger.
+   * An engagement is on the operator's own authority when it was made from
+   * the cabin (`manual`), the net did not call the target to them (`cued`),
+   * and the standing order in force for their formation is not WEAPONS FREE:
+   * a crew freed by order is on its own authority BY ORDER, and the crew's
+   * own switch is not an order. The net objects once, on the radio, at the
+   * first round; what it costs depends on what was fired at — a firm
+   * hostile, an unidentified contact, a friendly one — and the political
+   * section speaks a few seconds later when it was more than a hostile. A
+   * friendly aircraft actually brought down by such a round is charged again
+   * when it falls (`killAircraft`). Every round is stamped, so the fall can
+   * be read back to the decision; the charge is per engagement.
+   */
+  registerOwnAuthority(site, engagement, track, launched) {
+    if (!site || !engagement || !track || launched <= 0) return;
+    if (site.id !== this.control.crewedBatteryId) return;
+    if (!engagement.manual || engagement.cued) return;
+    const formation = this.formationById.get(site.formationId);
+    const freedByOrder = formation?.posture === 'free';
+    for (const id of engagement.missileIds ?? []) {
+      const missile = this.missiles.find((m) => m.id === id);
+      if (missile) missile.ownAuthority = !freedByOrder;
+    }
+    if (freedByOrder) { engagement.ownAuthority = 'by order'; return; }
+    this.stats.roundsOnOwnAuthority += launched;
+    if (engagement.ownAuthority === true) return;
+    engagement.ownAuthority = true;
+    this.stats.ownAuthorityEngagements += 1;
+    const n = this.stats.ownAuthorityEngagements;
+    const tn = track.tn;
+    const voice = this.netVoice(site.formationId) ?? this.netCallsign ?? 'CONTROL';
+    const kind = track.hostility === 'hostile' ? 'hostile'
+      : track.hostility === 'friendly' ? 'friendly' : 'unknown';
+    const tariff = COMMAND.standing;
+    const meta = { urgent: true, siteId: site.id, trackId: track.id };
+    if (kind === 'hostile') {
+      this.standingDelta(tariff.ownAuthorityHostile, `engaged ${tn} on your own authority`);
+      this.comms(voice, n === 1
+        ? `${site.name}, WHO CLEARED THAT SHOT? YOU HAVE NO ORDER ON ${tn}.`
+        : `${site.name}, YOU ARE FIRING WITHOUT AN ORDER AGAIN. ${tn} IS NOTED.`, meta);
+      if (n === 3) {
+        this.sayLater(8, () => this.log('warn', this.narrativePressure
+          ? `POLITICAL SECTION: ${site.name} HAS FIRED WITHOUT ORDERS THREE TIMES THIS WATCH. `
+            + 'THE OPERATOR WILL ACCOUNT FOR EACH.'
+          : `THIRD UNORDERED ENGAGEMENT AT ${site.name} NOTED.`, { severity: 'high', siteId: site.id }));
+      }
+    } else if (kind === 'unknown') {
+      this.standingDelta(tariff.ownAuthorityUnknown, `fired on ${tn}, unidentified, on your own authority`);
+      this.comms(voice, `${site.name}, ${tn} IS NOT IDENTIFIED AND YOU HAVE NO ORDER ON IT. CEASE AND REPORT.`, meta);
+      this.sayLater(8, () => this.log('warn', this.narrativePressure
+        ? `POLITICAL SECTION: THE EXPENDITURE AT ${site.name} AGAINST AN UNIDENTIFIED CONTACT WAS NOT `
+          + 'ORDERED. IT IS REFERRED.'
+        : `UNORDERED EXPENDITURE AT ${site.name} AGAINST AN UNIDENTIFIED CONTACT.`, { severity: 'high', siteId: site.id }));
+    } else {
+      this.standingDelta(tariff.ownAuthorityFriendly, `fired on ${tn}, a friendly contact, on your own authority`);
+      this.comms(voice, `${site.name}, CEASE FIRE. CEASE FIRE. ${tn} IS FRIENDLY AND YOU HAVE NO ORDER.`, meta);
+      this.sayLater(6, () => this.log('alert', this.narrativePressure
+        ? `POLITICAL SECTION: ${site.name} HAS ENGAGED A FRIENDLY CONTACT WITHOUT ORDERS. THE FILE IS OPEN.`
+        : `UNORDERED ENGAGEMENT OF A FRIENDLY CONTACT AT ${site.name}.`, { severity: 'high', siteId: site.id }));
+    }
   }
 
   /**
@@ -1841,6 +1947,7 @@ export class World {
     if (this.phase !== 'running') return;
     this.dt = dt;
     this.t += dt;
+    this.flushLateLines();
 
     this.spawnDue();
     this.plots = stepDetection(this, dt);

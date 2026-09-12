@@ -439,7 +439,9 @@ export function renderDebrief(host, state, result, entry) {
         ${result.battery.alive ? 'still in action' : 'lost'},
         ${result.battery.roundsRemaining} rounds on the rails,
         ${result.battery.crewLosses} crew casualties,
-        ${Math.round(result.battery.exposure * 100)}% emissions exposure.</p>` : ''}
+        ${Math.round(result.battery.exposure * 100)}% emissions exposure.${s.ownAuthorityEngagements
+    ? ` <span class="grave">${s.ownAuthorityEngagements} engagement${s.ownAuthorityEngagements === 1 ? '' : 's'} on your own authority, ${s.roundsOnOwnAuthority} round${s.roundsOnOwnAuthority === 1 ? '' : 's'}; the net has it in writing.</span>`
+    : ''}</p>` : ''}
     </div>
 
     ${/* The arithmetic pairs with the ground: two tables of a similar height,

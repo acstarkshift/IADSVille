@@ -1379,6 +1379,9 @@ export function channelStatus(world, site) {
       free: false,
       trackId: engagement.trackId,
       tn: track?.tn ?? engagement.trackId,
+      /** Taken without a cue under an order of TIGHT: the operator's own call. */
+      ownCall: !!engagement.manual && !engagement.cued && engagement.ownAuthority !== 'by order'
+        && world.formationById?.get(site.formationId)?.posture !== 'free',
       /*
        * The four words a channel can be in, in the crew's language rather
        * than the engine's: the crew is bringing the set round (REACTING), the

@@ -1025,6 +1025,20 @@ export const COMMAND = {
     perCriticalAssetLost: -22,
     /** Per civilian-area hit. */
     perCivilianHit: -6,
+    /**
+     * A shot the operator took in the cabin without a cue from the net, while
+     * the standing order was TIGHT — on their own authority. The net objects
+     * to the act and the political section to the outcome, so what it costs
+     * depends on what was fired at: a firm hostile is an initiative the state
+     * notes; an unidentified contact is a gamble it does not forgive; a
+     * friendly one is a file. Under WEAPONS FREE by order none of this
+     * applies, because free means exactly that.
+     */
+    ownAuthorityHostile: -2,
+    ownAuthorityUnknown: -5,
+    ownAuthorityFriendly: -10,
+    /** And a friendly aircraft actually brought down by such a round. */
+    ownAuthorityFriendlyDown: -10,
     directiveObeyed: 4,
     directiveRefused: -9,
     directiveIgnored: -12,

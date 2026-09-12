@@ -338,8 +338,23 @@ fills whichever seat you are not sitting in.
 | Seat | You run | The feel |
 |---|---|---|
 | **Battle Manager** | The fused sector picture. Identify contacts, assign them to batteries, set weapons states, manage emissions across every radar you own. | Wide and cerebral. You will spend the whole watch deciding what to ignore. |
-| **SAM Operator** | One battery. Your own radar's coverage, cues over the net, and the acquire → lock → launch → guide loop by hand. | Tight and personal. The rounds come at *you*. |
+| **SAM Operator** | One battery. Your own radar's coverage, cues over the net — or your own call, which the net answers — and the acquire → lock → launch → guide loop by hand. | Tight and personal. The rounds come at *you*. |
 | **Commander** | Both — run the picture, and take a console yourself when a shot matters. | Delegate, then grab the one that counts. |
+
+**On your own authority.** The cabin can lock anything its battery can
+physically take, cue or no cue. The net calls targets to you by name — a caret
+on the row says which — and a contact it did not call is yours to take, under
+one condition the console prints before you press LOCK — "NOT CUED — ON YOUR
+OWN AUTHORITY": a shot at it is yours to answer for. The net answers the first round on the radio ("WHO CLEARED THAT
+SHOT? YOU HAVE NO ORDER ON T-004."), the file is charged by what you fired at —
+two points for a firm hostile, five for a contact nobody had identified, ten for
+a friendly one, and ten more if the friendly one comes down — and the political
+section speaks a few seconds later when it was more than a hostile, and again
+at the third unordered engagement of a watch. The debrief counts them, the
+commissar reads them back in the evening. None of it applies to a cue, and none
+of it applies to a crew whose formation was put on WEAPONS FREE by order,
+because free means exactly that; your own switch on the console is not an
+order, and the net knows the difference.
 
 The air picture down the left is not one list. It is a set of shootlists:
 everything nobody is on, at the top, under a heading that turns red while any of

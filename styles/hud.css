@@ -403,6 +403,8 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 .track-row.is-engaged .asgn { color: var(--good); }
 /* A target the net called to you, as against one you picked yourself. */
 .track-row .asgn .cued { color: var(--accent); font-style: normal; margin-right: 2px; }
+.track-row .asgn .own-call { color: var(--warn); font-style: normal; font-size: 8px; letter-spacing: .08em; margin-right: 3px; vertical-align: 1px; }
+.chan.is-own { box-shadow: inset 2px 0 0 var(--warn); }
 .track-row .pips { color: var(--hostile); font-style: normal; }
 /* "no contacts" is a sentence, not a row of columns: it had been landing in
    the five-em TYPE cell and being clipped in half. */

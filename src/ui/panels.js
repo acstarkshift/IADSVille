@@ -645,6 +645,11 @@ export function renderTrackList(world, ui, els) {
       ? world.siteById.get(ownerId)?.engagements.find((e) => e.trackId === track.id)
       : null;
     const cued = !!ownEngagement?.cued;
+    // And the opposite: a contact you took yourself, with no cue, under an
+    // order of TIGHT — the net will have something to say about that one.
+    const ownCall = !!ownEngagement && ownEngagement.manual && !ownEngagement.cued
+      && ownerId === world.control.crewedBatteryId
+      && world.formationById.get(world.siteById.get(ownerId)?.formationId)?.posture !== 'free';
 
     const classes = [
       'track-row',
@@ -663,7 +668,7 @@ export function renderTrackList(world, ui, els) {
       <span>${String(brg).padStart(3, '0')}</span>
       <span>${rng}</span>
       <span>${alt}</span>
-      <span class="asgn">${engaged ? '◆' : ''}${cued ? '<i class="cued" title="Called to you by the net — you did not pick this one">▸</i>' : ''}${esc(assigned)} <em class="pips">${pips}</em></span>
+      <span class="asgn">${engaged ? '◆' : ''}${cued ? '<i class="cued" title="Called to you by the net — you did not pick this one">▸</i>' : ''}${ownCall ? '<i class="own-call" title="Your own call — the net did not call this one to you, and it is on your authority">OWN</i>' : ''}${esc(assigned)} <em class="pips">${pips}</em></span>
     </li>`;
   };
 
@@ -1522,9 +1527,9 @@ function channelRow(entry, focusedTrackId) {
       : entry.timerS > 0 ? `${entry.timerS.toFixed(1)}s` : '',
   ].filter(Boolean).join(' · ');
   const focused = entry.trackId === focusedTrackId;
-  return `<button class="chan is-live ${focused ? 'is-focus' : ''}
+  return `<button class="chan is-live ${focused ? 'is-focus' : ''} ${entry.ownCall ? 'is-own' : ''}
       ${entry.state === 'GUIDING' ? 'is-guiding' : ''}" data-track="${esc(entry.trackId)}"
-      title="Channel ${entry.channel} — ${esc(entry.tn)}, ${esc(entry.state.toLowerCase())}. Press to bring it up on the readouts.">
+      title="Channel ${entry.channel} — ${esc(entry.tn)}, ${esc(entry.state.toLowerCase())}${entry.ownCall ? ', on your own authority' : ''}. Press to bring it up on the readouts.">
     ${/*
    * The foregrounded channel is MARKED, not reprinted.
    *
@@ -1609,6 +1614,11 @@ export function renderCrewConsole(world, ui, els) {
    */
   const own = track ? site.engagements.find((e) => e.trackId === track.id) : null;
   const unfit = track && site.alive && !own ? cannotEngageReason(world, site, track) : null;
+  // Is a shot at this contact the operator's own call? No cue on it — held or
+  // not — and the formation's standing order is not WEAPONS FREE.
+  const orderFree = world.formationById.get(site.formationId)?.posture === 'free';
+  const ownCall = !!track && site.alive && !orderFree
+    && (own ? own.manual && !own.cued : !track.assignedTo?.includes(site.id));
 
   /*
    * The anti-radiation watch, per antenna.
@@ -1657,6 +1667,17 @@ export function renderCrewConsole(world, ui, els) {
         ? { text: `${guidanceSet.label} DESTROYED — CANNOT GUIDE A MISSILE`, mood: 'is-bad' }
         : unfit
           ? { text: `CANNOT LOCK ${track.tn} — ${refusalText(unfit)}`, mood: 'is-warn' }
+          /*
+           * A contact the net did not call to you, under an order of TIGHT,
+           * is yours to take — and a shot at it is on your own authority,
+           * which the net answers and the file records. Said before the lock,
+           * so the operator chooses it rather than discovers it.
+           */
+          : ownCall
+            // Short enough for the slot (see NO TARGET below): forty characters.
+            ? { text: own?.ownAuthority === true
+              ? `${track.tn} ON YOUR OWN AUTHORITY — NET TOLD`
+              : `${track.tn} NOT CUED — ON YOUR OWN AUTHORITY`, mood: 'is-warn' }
           /*
            * A casualty is news, and it belongs on the line the card keeps for
            * news. It had a readout row of its own reading CREW CLOSED UP for

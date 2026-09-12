@@ -168,7 +168,7 @@ function commissarLines(result, consequence, pressure) {
   if (pressure) {
     const reactions = (result.ledger ?? [])
       .filter((l) => Math.abs(l.charged ?? l.delta ?? 0) >= 2
-        && /civil|hospital|encampment|freeze|border|priority|state aircraft|movement order|Listonian|relayed|standing order|restriction/i.test(l.reason ?? ''))
+        && /civil|hospital|encampment|freeze|border|priority|state aircraft|movement order|Listonian|relayed|standing order|restriction|own authority/i.test(l.reason ?? ''))
       .slice(-4)
       .map((l) => {
         const charged = l.charged ?? l.delta;
