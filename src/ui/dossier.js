@@ -10,7 +10,10 @@
 import {
   RANKS, BACKGROUNDS, SKILLS, DECORATIONS, HOUSEHOLDS,
   rankOf, backgroundOf, householdOf, districtOf, nextRank, canLearn, suggestName,
+  serviceNumber, rankIndexOf,
 } from '../engine/character.js';
+import { rankInsignia, rankBadge } from './insignia.js';
+import { drawPortrait } from './portrait.js';
 import { knownRevelations } from '../engine/revelations.js';
 import { tierFor } from '../engine/command.js';
 import { STATE, PLATES, STATUS } from './lexicon.js';
@@ -18,13 +21,6 @@ import { letterById } from '../engine/family.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-
-/** Stamps and file numbers, so a card looks issued rather than generated. */
-function fileNumber(character) {
-  let h = 7;
-  for (const ch of character.name) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
-  return `${String(h % 9000 + 1000)}-${String(character.watches % 90 + 10)}-Б`;
-}
 
 /* ------------------------------------------------------------ enlistment */
 
@@ -114,10 +110,19 @@ export function renderDossier(host, state) {
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title is-file">${esc(rank.en)} ${esc(character.name)}</h1>
     <p class="subtitle">${esc(STATE.service.en)} · ${esc(STATE.country.en)}
-      · FILE NO. ${esc(fileNumber(character))}</p>
+      · FILE NO. ${esc(serviceNumber(character))}</p>
 
     <div class="card record-card">
       <div class="record-stamp">${esc(tier.label)}</div>
+      ${/* The file's own photograph and insignia — the same face and board
+           the card in the console carries, at a size a file prints them. */ ''}
+      <div class="file-ident">
+        <canvas class="portrait file-photo" width="24" height="30" aria-label="Photograph on file"></canvas>
+        <div class="file-ident-text">
+          ${rankBadge(character.rankIndex, { size: 30 })}
+          <span class="file-no">SERVICE NO. ${esc(serviceNumber(character))}</span>
+        </div>
+      </div>
       <div class="score-grid">
         <div class="score-cell is-word"><label>RANK</label>
           <b>${esc(rank.en)}</b></div>
@@ -259,6 +264,9 @@ export function renderDossier(host, state) {
       <button class="btn-primary" id="dossier-back">BACK</button>
     </div>
   </div>`;
+  for (const photo of host.querySelectorAll('canvas.portrait')) {
+    if (photo.getContext) drawPortrait(photo.getContext('2d'), 0, 0, 24, 30, character.name);
+  }
 }
 
 /**
@@ -272,7 +280,7 @@ export function serviceSummary(character, service, campaign) {
 
   rows.push(`<tr><td>Experience earned</td><td class="up">+${service.gained}</td></tr>`);
   if (service.promotion) {
-    rows.push(`<tr><td><b>Promoted</b></td><td class="up">${esc(service.promotion.en)}</td></tr>`);
+    rows.push(`<tr><td><b>Promoted</b></td><td class="up">${rankInsignia(rankIndexOf(service.promotion.id), { size: 16 })} ${esc(service.promotion.en)}</td></tr>`);
     rows.push('<tr><td>Training point</td><td class="up">+1</td></tr>');
   }
   if (service.demotion) {
@@ -297,8 +305,8 @@ export function serviceSummary(character, service, campaign) {
   }
 
   return `<div class="card record-card">
-    <div class="record-stamp">ДЕЛО / FILE ${esc(fileNumber(character))}</div>
-    <h3>Service record — ${esc(rank.en)} ${esc(character.name)}</h3>
+    <div class="record-stamp">ДЕЛО / FILE ${esc(serviceNumber(character))}</div>
+    <h3>Service record — ${rankInsignia(character.rankIndex, { size: 15 })} ${esc(rank.en)} ${esc(character.name)}</h3>
     <table class="ledger">${rows.join('')}</table>
     ${character.points ? `<p class="urgent aside">
       ${character.points} training point${character.points > 1 ? 's' : ''} unspent — open your dossier.</p>` : ''}
@@ -319,7 +327,7 @@ export function serviceSummary(character, service, campaign) {
 export function abandonedRecord(character, result) {
   const rank = character ? rankOf(character) : null;
   const stamp = character
-    ? `ДЕЛО / FILE ${esc(fileNumber(character))}`
+    ? `ДЕЛО / FILE ${esc(serviceNumber(character))}`
     : `${esc(STATUS.postAbandoned.tm)} · ${esc(STATUS.postAbandoned.en)}`;
   return `<div class="card record-card is-abandoned">
     <div class="record-stamp is-grave">${stamp}</div>

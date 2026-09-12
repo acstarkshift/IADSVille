@@ -337,6 +337,18 @@ export function backgroundOf(character) {
   return BACKGROUNDS[character.background] ?? BACKGROUNDS.factory;
 }
 
+/**
+ * The number the service knows you by: printed on the identity card, stamped
+ * on the file. It is the name's and not the watch's — a card is issued once —
+ * and the suffix is the district letter, one of the few pieces of the file's
+ * lettering that stays in Cyrillic.
+ */
+export function serviceNumber(character) {
+  let h = 7;
+  for (const ch of character?.name ?? '') h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
+  return `${String(h % 9000 + 1000)}-${String((h >> 4) % 90 + 10)}-Б`;
+}
+
 /** The next rank and what it is still waiting on, or null at the top. */
 export function nextRank(character, standing) {
   const next = RANKS[character.rankIndex + 1];

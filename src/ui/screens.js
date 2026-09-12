@@ -18,6 +18,7 @@ import { THEMES } from './themes.js';
 import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/character.js';
 import { serviceSummary, abandonedRecord } from './dossier.js';
 import { STATE } from './lexicon.js';
+import { rankInsignia } from './insignia.js';
 import { composeEnding, endingSummary } from '../engine/endings.js';
 import { composeFlightEnding, flightEndingSummary } from '../engine/epilogue.js';
 import { standing as arcStanding } from '../engine/revelations.js';
@@ -87,9 +88,9 @@ export function renderMenu(host, state) {
 
     <div class="card record-card">
       <div class="record-stamp">${esc(tier.label)}</div>
-      <h3>Personnel file${character ? ` — ${esc(rank.en)} ${esc(character.name)}` : ''}</h3>
+      <h3>Personnel file${character ? ` — ${rankInsignia(character.rankIndex, { size: 14 })} ${esc(rank.en)} ${esc(character.name)}` : ''}</h3>
       <div class="score-grid">
-        <div class="score-cell is-word"><label>RANK</label><b>${esc(rank?.en ?? '—')}</b></div>
+        <div class="score-cell is-word"><label>RANK</label><b>${character ? rankInsignia(character.rankIndex, { size: 16 }) : ''}${esc(rank?.en ?? '—')}</b></div>
         <div class="score-cell is-word"><label>APPOINTMENT</label>
           <b>${esc(appointment.en)}</b></div>
         <div class="score-cell"><label>STANDING</label><b>${Math.round(campaign.standing)}</b></div>
@@ -198,7 +199,7 @@ export function renderBriefing(host, state) {
     <p class="subtitle">${esc(mission.subtitle)}</p>
     ${character ? `<div class="card record-card is-tight">
       <div class="record-stamp">${esc(STATE.serviceShort.tm)}</div>
-      <p>Posting order for <b>${esc(rank.en)} ${esc(character.name)}</b>.
+      <p>Posting order for <b>${rankInsignia(character.rankIndex, { size: 14 })} ${esc(rank.en)} ${esc(character.name)}</b>.
       Origin: ${esc(backgroundOf(character).en)}. Home: ${esc(STATE.town.en)}, ${esc(STATE.country.en)}.
       ${character.wounded ? '<span class="grave">Returned to duty against medical advice.</span>' : ''}</p>
     </div>` : ''}

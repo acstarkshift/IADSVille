@@ -87,10 +87,16 @@ kbd {
   .topbar .readout label { display: none; }
   #unit-plate { font-size: 7px; padding: 2px 4px; }
 }
-/* Below 1180 the readouts themselves start to go, youngest first, rather than
-   anything on the bar abbreviating itself into a code. */
-@media (max-width: 1180px) {
+/* Below 1400 the readouts themselves start to go, youngest first, rather than
+   anything on the bar abbreviating itself into a code: the standing figure
+   is the first to go, because at 1280 the card reader was drawn across the
+   master lamps for want of its ninety pixels, and the standing is on the
+   file and the debrief besides. The rack's caps give up a little padding
+   too. Measured at 1280: the reader now starts thirty pixels clear of the
+   last lamp. */
+@media (max-width: 1400px) {
   .topbar .readout.standing { display: none; }
+  .topbar .rack .pb { padding: 0 18px 0 8px; }
 }
 
 .badge {
@@ -101,70 +107,97 @@ kbd {
 }
 
 /*
- * The service identity card, standing out of its slot.
+ * The card reader, and the identity card standing out of it.
  *
- * This was two clipped plates, then one flat rectangle with a coloured left
- * edge and two lines of "Cyrillic word · English word" — the last bilingual
- * clutter in the strip the player reads every second of every watch, and not
- * the thing that was asked for. What it is now is an object: a card issued to
- * a soldier, with his rank insignia printed on it, pushed into a machined slot
- * in the console and left standing proud of the panel at an angle, the way a
- * card left in a slot does. The slot is cut into the paint — a dark recess
- * with a lit lower lip — and the card leans out of it towards the operator.
- *
- * The rotation is on the card only; the slot keeps its own rectangle, so the
- * bar's grid never sees the tilt and nothing beside it moves.
+ * The player's reference was a photograph: a white smart card pushed halfway
+ * into a black desktop reader with a row of status lamps on top. So this is a
+ * reader — the top of the box seen from a little above, a trapezoid with the
+ * lamps and an emblem on it, and the front face with the slot mouth cut into
+ * it — and a card, white plastic on every theme because it is an object and
+ * not a display, standing out of the slot and leaning toward the operator far
+ * enough to read as a card and not so far that its print cannot be read. The
+ * reader sets the bar's row height; the tilt is on the card alone, so nothing
+ * beside it moves.
  */
-.id-slot {
-  position: relative;
-  display: inline-flex; align-items: center;
-  /* The leading edge of a card standing out of a slot is nearer the eye, so
-     it projects wider than its layout box — twenty-odd pixels at this angle,
-     which is how it came to be drawn over the ARM lamp's countdown at 1280.
-     The recess is cut deeper on that side to hold it. */
-  padding: 4px 9px 5px 30px;
-  border: 1px solid var(--metal-edge); border-radius: 2px;
-  background: linear-gradient(180deg, rgba(0, 0, 0, .55), rgba(0, 0, 0, .22));
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 255, 255, .07);
+.reader { position: relative; width: 210px; height: 66px; flex: 0 0 auto; }
+.reader-top {
+  position: absolute; left: 0; right: 0; top: 0; height: 16px;
+  background: linear-gradient(180deg, #343434 0%, #222 55%, #191919 100%);
+  clip-path: polygon(7% 0, 93% 0, 100% 100%, 0 100%);
+}
+.reader-top::before {
+  content: ''; position: absolute; left: 12%; right: 12%; top: 3px; bottom: 2px;
+  border: 1px solid rgba(255, 255, 255, .07); border-radius: 2px;
+}
+.reader-emblem {
+  position: absolute; left: 50%; top: 3px; width: 11px; height: 11px; margin-left: -5.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #4a4a4a, #0d0d0d 75%);
+  box-shadow: inset 0 0 0 1px #050505, 0 0 0 1px #3a3a3a;
+}
+.reader-emblem::after {
+  content: ''; position: absolute; left: 3px; top: 5px; width: 5px; height: 1.5px;
+  background: #2e2e2e; transform: rotate(-20deg);
+}
+.reader-leds { position: absolute; right: 24px; top: 5px; display: flex; gap: 6px; }
+.led { width: 5px; height: 5px; border-radius: 50%; background: #262626; box-shadow: inset 0 0 1px 1px #000; }
+.led.is-blue.is-lit { background: #5a92ff; box-shadow: 0 0 5px 1px rgba(90, 146, 255, .9); }
+.led.is-green.is-lit { background: #45e874; box-shadow: 0 0 5px 1px rgba(69, 232, 116, .9); }
+.led.is-amber.is-lit { background: #ffb43c; box-shadow: 0 0 5px 1px rgba(255, 180, 60, .9); }
+.reader-front {
+  position: absolute; left: 0; right: 0; top: 16px; height: 12px; z-index: 2;
+  background: linear-gradient(180deg, #262626, #0e0e0e); border-radius: 0 0 4px 4px;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+.reader-slot {
+  position: absolute; left: 36px; right: 36px; top: 4px; height: 4px; background: #000;
+  border-radius: 1px; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 1), 0 1px 0 rgba(255, 255, 255, .12);
 }
 .idcard {
-  display: flex; align-items: center; gap: 8px;
-  padding: 4px 10px 4px 7px;
-  border: 1px solid var(--metal-edge); border-radius: 2px;
-  /* Card stock, not painted steel: a paler, flatter board with a printed
-     tint band down its leading edge. */
-  background:
-    linear-gradient(97deg, color-mix(in srgb, var(--accent) 22%, var(--metal-hi)) 0 5px,
-      var(--metal-hi) 5px, var(--metal-lo) 100%);
-  white-space: nowrap;
-  /*
-   * Standing out of the slot, towards the reader. The card is hinged at its
-   * right-hand edge — the end still in the slot — so the left end swings out
-   * and catches the light while the right end darkens into the recess.
-   */
-  transform: perspective(300px) rotateY(-17deg) rotate(-1.4deg) translateX(-2px);
-  transform-origin: 100% 50%;
-  box-shadow:
-    -5px 3px 9px rgba(0, 0, 0, .6),
-    inset -14px 0 16px -12px rgba(0, 0, 0, .75),
-    inset 2px 0 0 rgba(255, 255, 255, .2),
-    inset 0 1px 0 rgba(255, 255, 255, .18),
-    inset 0 -1px 0 rgba(0, 0, 0, .32);
+  position: absolute; left: 40px; top: 22px; width: 130px; height: 54px; z-index: 1;
+  transform-origin: 50% 0; transform: perspective(300px) rotateX(34deg) rotate(-1.2deg);
+  background: linear-gradient(120deg, #fbfaf6 0%, #f2f0e9 45%, #e7e4db 100%);
+  color: #17191c; border-radius: 4px; overflow: hidden;
+  font-family: var(--font-mono); text-shadow: none;
+  box-shadow: 0 8px 12px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(0, 0, 0, .12), inset 0 -10px 14px rgba(0, 0, 0, .07);
 }
-.id-insignia { display: flex; align-items: center; flex: 0 0 auto; }
-.id-insignia svg { display: block; }
-.id-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.id-line { display: flex; align-items: baseline; gap: 6px; }
-.id-line .id-name {
-  font-size: 11.5px; letter-spacing: .05em; color: var(--engrave); font-weight: 700;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+.idcard[hidden] { display: none; }
+/* The laminate: one sheen across the face. */
+.idcard::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, .5) 47%, rgba(255, 255, 255, 0) 60%);
 }
-/* The appointment, printed the way a card prints one: small, spaced, and in
-   one language. */
-.id-line.is-post {
-  font-size: 7.5px; letter-spacing: .11em; color: var(--engrave-dim);
-  text-transform: uppercase;
+.idc-seal { position: absolute; left: 34px; top: 8px; width: 40px; height: 40px; border-radius: 50%; border: 2px double rgba(40, 60, 120, .16); }
+.idc-seal::after { content: ''; position: absolute; inset: 8px; border-radius: 50%; border: 1px solid rgba(40, 60, 120, .16); }
+.idc-band {
+  position: absolute; left: 0; right: 0; top: 0; height: 13px; background: #2a3a6a; color: #fff;
+  font-size: 5px; letter-spacing: .1em; display: flex; align-items: flex-end; gap: 4px; padding: 0 5px 2px;
+  white-space: nowrap; overflow: hidden;
 }
+.idc-emblem { width: 6px; height: 6px; border-radius: 50%; border: 1px solid #fff; box-sizing: border-box; margin-bottom: 1px; flex: 0 0 auto; }
+.idc-name { position: absolute; left: 6px; top: 15px; font-size: 8.5px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
+.idc-fields { position: absolute; left: 6px; top: 26px; display: flex; flex-direction: column; gap: 1.5px; }
+.idc-f { display: flex; flex-direction: column; line-height: 1; }
+.idc-f label { font-size: 4.5px; color: #7a7d84; letter-spacing: .06em; }
+.idc-f b { font-size: 6.5px; font-weight: 700; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+.idc-f b .rank-board { width: 7px; height: 10px; }
+.idc-no { position: absolute; left: 6px; bottom: 3px; font-size: 5px; color: #4a4d55; letter-spacing: .06em; white-space: nowrap; }
+.idc-photo {
+  position: absolute; right: 6px; top: 16px; width: 26px; height: 32px;
+  image-rendering: pixelated; border: 1px solid rgba(0, 0, 0, .25); background: #888;
+}
+/* A rank's board, wherever the rank is written on the paperwork. */
+.rank-board { display: inline-block; vertical-align: middle; }
+.rank-badge { display: inline-flex; align-items: center; gap: 7px; }
+.rank-badge b { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-bright); }
+h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-right: 4px; }
+.file-ident { display: flex; align-items: center; gap: 12px; padding: 4px 190px 10px 0; }
+.file-photo {
+  width: 48px; height: 60px; image-rendering: pixelated; flex: 0 0 auto;
+  border: 1px solid var(--metal-edge); box-shadow: 0 1px 0 rgba(255, 255, 255, .06);
+}
+.file-ident-text { display: flex; flex-direction: column; gap: 5px; }
+.file-no { font-size: 9px; letter-spacing: .12em; color: var(--ink-dim); }
 
 /*
  * The rack: one cap, six times.

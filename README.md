@@ -852,6 +852,21 @@ earlier console was that it was littered with it, and it was: the lesson card
 carried a stencil line under every instruction, the score cells were labelled
 twice, and a rank was never once written alone.
 
+Who is sitting at the console is a card in a reader. The player's reference for
+it was a photograph of a white smart card pushed halfway into a black desktop
+reader with a row of status lamps along its top, and that is what sits in the
+console's top strip: a reader whose lamps are instruments — power, the card
+read, and an amber one that lights while a directive from the net is waiting
+for an answer — and the card standing out of its slot toward the operator,
+white plastic on every theme because it is an object and not a display. On it,
+surname first, is the holder's name; a photograph drawn from that name, so the
+same operator always has the same face; the rank with its insignia; the
+appointment; and the service number. The insignia are one family drawn for
+all sixteen ranks — brass bars across an olive board for the enlisted, a
+stripe and stars for the commissioned, a braided board with large stars for
+the generals — and the same board is printed wherever a rank is written down:
+the roster, the posting order, the file and the debrief.
+
 A set has one name. The tutorial says "find WIDE EYE", the radio says "WIDE
 EYE reports ready", and the card at the top of the rack says WIDE EYE, with
 П-31 «ШИРОКИЙ ГЛАЗ» · P-31 WIDE EYE on the plate under it — the same head the

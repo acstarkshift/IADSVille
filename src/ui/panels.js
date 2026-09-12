@@ -20,8 +20,10 @@ import {
   STATE, CONTROLS, POSTURE_CYCLE, STATUS, EQUIPMENT, PLATES, legend, keycap, pair,
   nomenclatureFor,
 } from './lexicon.js';
-import { rankOf } from '../engine/character.js';
+import { rankOf, serviceNumber } from '../engine/character.js';
 import { consoleCaps } from '../engine/scenarios.js';
+import { rankInsignia } from './insignia.js';
+import { drawPortrait } from './portrait.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -419,102 +421,66 @@ export function renderTopbar(world, ui, els) {
         : 'Lights when a radar or battery of yours is destroyed' }),
   ].join(''));
 
-  /*
-   * Who is sitting here: the issued identity card, in its slot.
-   *
-   * It began as two clipped plates, became one flat rectangle with a coloured
-   * left edge, and in both shapes it printed a Cyrillic word ahead of every
-   * English one — "стрелец · recruit", "командир дивизиона BATTALION
-   * COMMANDER" — which is the littering the player asked to have scaled back,
-   * in the one strip he reads every second of every watch.
-   *
-   * What it is now is a card: rank insignia printed on the left, the name in
-   * the size a name is printed in, rank and appointment under it in one
-   * English line, sitting at an oblique angle in a slot in the console (see
-   * .id-slot in hud.css). The Cyrillic that belongs to a person — the
-   * operator's own name — stays, because it is his name.
-   */
-  if (els.operatorPlate && world.character
-    && els.operatorPlate.dataset.name !== world.character.name) {
-    els.operatorPlate.dataset.name = world.character.name;
-    els.operatorPlate.innerHTML = `<span class="id-name">${esc(world.character.name)}</span>`;
-  }
-  if (els.rankInsignia && world.character
-    && els.rankInsignia.dataset.rank !== String(world.character.rankIndex)) {
-    els.rankInsignia.dataset.rank = String(world.character.rankIndex);
-    const rank = rankOf(world.character);
-    els.rankInsignia.innerHTML = rankInsignia(world.character.rankIndex);
-    els.rankInsignia.title = rank.en;
-  }
-  const post = world.character
-    ? `${rankOf(world.character).en} · ${world.echelon.appointment.en}`
-    : world.echelon.appointment.en;
-  if (els.echelonPlate && els.echelonPlate.dataset.post !== post) {
-    els.echelonPlate.dataset.post = post;
-    els.echelonPlate.textContent = post;
-    els.echelonPlate.title = `${world.echelon.tm} · ${world.echelon.en}`;
-  }
+  renderIdCard(world, els);
 }
 
 /**
- * The rank insignia printed on the identity card, drawn rather than named.
+ * The face of the identity card in the console's reader, as markup.
  *
- * Sixteen ranks, one shoulder board, and a rule the player can read off the
- * card without a table: bars across the board are enlisted service, a stripe
- * down it is a commission, and stars are seniority within the commission.
- *
- *   0–5  recruit to master sergeant — that many transverse bars
- *   6     warrant officer — one longitudinal stripe, no stars
- *   7–10  junior lieutenant to captain — one stripe, one to four small stars
- *   11–13 major to colonel — two stripes, one to three small stars
- *   14–15 general officer — a bare board and one or two large stars
- *
- * Inline SVG in the console's own engraving colours, so it themes with
- * everything else and costs nothing to load.
+ * The player's reference for this was a photograph: a white smart card pushed
+ * halfway into a black desktop reader, the holder's name in bold capitals as
+ * SURNAME, GIVEN NAME along one edge, a photograph filling the right third,
+ * and small grey labels over bold values. So: the name that way round, a
+ * photograph drawn from the name, the rank with its board, the appointment,
+ * and the service number, on white — the card is an object and keeps its own
+ * colours on every theme. The service's stencil is on the band across the
+ * top; everything the operator reads to know who they are is English.
  */
-export function rankInsignia(rankIndex = 0) {
-  const i = Math.max(0, Math.min(15, Math.round(rankIndex)));
-  const parts = [];
-  const star = (cx, cy, r) => {
-    const pts = [];
-    for (let k = 0; k < 10; k++) {
-      const rad = k % 2 ? r * 0.44 : r;
-      const a = (Math.PI / 5) * k - Math.PI / 2;
-      pts.push(`${(cx + rad * Math.cos(a)).toFixed(2)},${(cy + rad * Math.sin(a)).toFixed(2)}`);
+export function idCardHtml(character, echelon) {
+  const rank = rankOf(character);
+  const [given, ...rest] = String(character.name ?? '').trim().split(/\s+/);
+  const shown = rest.length ? `${rest.join(' ')}, ${given}` : given;
+  return `
+    <span class="idc-seal" aria-hidden="true"></span>
+    <span class="idc-band"><span class="idc-emblem"></span><span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.service.en)} · IDENTITY</span></span>
+    <span class="idc-name">${esc(shown.toUpperCase())}</span>
+    <span class="idc-fields">
+      <span class="idc-f"><label>RANK</label><b>${rankInsignia(character.rankIndex, { size: 10 })}${esc(rank.en.toUpperCase())}</b></span>
+      <span class="idc-f"><label>APPOINTMENT</label><b>${esc(echelon.appointment.en.toUpperCase())}</b></span>
+    </span>
+    <span class="idc-no">SERVICE NO. ${esc(serviceNumber(character))}</span>
+    <canvas class="idc-photo" width="24" height="30" aria-hidden="true"></canvas>`;
+}
+
+/**
+ * The reader, and the card in it.
+ *
+ * The card is rebuilt only when who is sitting here changes — a name, a
+ * promotion, a new appointment — and its photograph is drawn once, then. The
+ * reader's lamps are instruments, refreshed every frame: power while the
+ * console is up, the card lamp while a card is in the slot, and the amber
+ * lamp while a directive from the net is waiting for an answer.
+ */
+export function renderIdCard(world, els) {
+  const card = els.idCard;
+  const character = world.character;
+  if (card) {
+    const key = character ? `${character.name}|${character.rankIndex}|${world.echelon.id}` : '';
+    if (card.dataset.key !== key) {
+      card.dataset.key = key;
+      card.hidden = !character;
+      if (character) {
+        card.innerHTML = idCardHtml(character, world.echelon);
+        const photo = card.querySelector('canvas');
+        if (photo?.getContext) drawPortrait(photo.getContext('2d'), 0, 0, 24, 30, character.name);
+        card.title = `${rankOf(character).en} ${character.name} · ${world.echelon.appointment.en}`
+          + ` · service no. ${serviceNumber(character)}`;
+      }
     }
-    return `<polygon points="${pts.join(' ')}" fill="var(--engrave)"/>`;
-  };
-  if (i <= 5) {
-    for (let k = 0; k < i; k++) {
-      parts.push(`<rect x="3.5" y="${7 + k * 4.4}" width="15" height="2.2" fill="var(--engrave)"/>`);
-    }
-  } else {
-    const stripes = i === 6 ? 1 : i <= 10 ? 1 : i <= 13 ? 2 : 0;
-    for (let k = 0; k < stripes; k++) {
-      parts.push(`<rect x="${stripes === 1 ? 9.9 : 7.4 + k * 5}" y="4" width="2.2" height="24"
-        fill="var(--engrave)" opacity=".85"/>`);
-    }
-    const small = i >= 7 && i <= 10 ? i - 6 : i >= 11 && i <= 13 ? i - 10 : 0;
-    for (let k = 0; k < small; k++) parts.push(star(11, 24.5 - k * 6.2, 2.7));
-    if (i >= 14) for (let k = 0; k < i - 13; k++) parts.push(star(11, 20 - k * 9, 4.6));
   }
-  /*
-   * The board itself is woven, not painted: a recruit's board carries no bars
-   * at all, and a bare rectangle at 16×23 reads as a missing graphic rather
-   * than as the beginning of a career. The lay of the braid is drawn under
-   * whatever the rank puts on top of it, so the object exists at rank zero.
-   */
-  const braid = Array.from({ length: 11 },
-    (_, k) => `<line x1="2" y1="${3.5 + k * 2.6}" x2="20" y2="${1.2 + k * 2.6}"
-      stroke="var(--engrave-dim)" stroke-width=".55" opacity=".28"/>`).join('');
-  return `<svg viewBox="0 0 22 32" width="17" height="25" aria-hidden="true">
-    <rect x="1" y="1" width="20" height="30" rx="3" fill="var(--plate)" stroke="var(--metal-edge)"/>
-    <clipPath id="rk-board"><rect x="1.6" y="1.6" width="18.8" height="28.8" rx="2.6"/></clipPath>
-    <g clip-path="url(#rk-board)">${braid}</g>
-    <rect x="2.5" y="2.5" width="17" height="27" rx="2" fill="none"
-      stroke="var(--engrave-dim)" stroke-width=".7" opacity=".55"/>
-    ${parts.join('')}
-  </svg>`;
+  els.ledPower?.classList.toggle('is-lit', true);
+  els.ledCard?.classList.toggle('is-lit', !!character);
+  els.ledNet?.classList.toggle('is-lit', !!world.command?.pending);
 }
 
 /* --------------------------------------------------------- flight strip */

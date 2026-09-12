@@ -26,26 +26,30 @@
       <span class="lamps" id="master-lamps"></span>
     </div>
     <!--
-      The service identity card, in its slot.
+      The card reader, and the operator's identity card standing out of it.
 
-      This was a flat rectangle with a coloured left edge carrying two lines of
-      "Cyrillic word · English word" — the last bilingual clutter in the top
-      strip, and not the thing that was asked for. It is a card now: an issued
-      ID with the operator's rank insignia printed on it, sitting at an oblique
-      angle in a slot machined into the console, as though it has been pushed
-      in and is standing proud of the panel towards the operator. The rank is
-      English; the insignia carries the rest. See rankInsignia() in panels.js.
+      The player's reference for this was a photograph: a white smart card
+      pushed halfway into a black desktop reader with a row of status lamps
+      on top. That is what this is — a reader mounted in the console's top
+      strip, its lamps live (power, card read, a directive waiting), and the
+      card leaning out of the slot toward the operator with the holder's
+      name, photograph, rank and insignia, appointment and service number on
+      it. Filled by renderIdCard() in panels.js.
     -->
     <div class="topbar-group">
-      <span class="id-slot">
-        <span class="idcard">
-          <span class="id-insignia" id="rank-insignia"></span>
-          <span class="id-body">
-            <span class="id-line" id="operator-plate"></span>
-            <span class="id-line is-post" id="echelon-plate"></span>
+      <div class="reader" id="card-reader">
+        <span class="reader-top">
+          <span class="reader-emblem"></span>
+          <span class="reader-leds">
+            <i class="led is-blue" id="led-power" title="Power"></i>
+            <i class="led is-green" id="led-card" title="Card read"></i>
+            <i class="led is-amber" id="led-net" title="Lit while a directive from the net is waiting for your answer"></i>
+            <i class="led"></i>
           </span>
         </span>
-      </span>
+        <span class="reader-front"><span class="reader-slot"></span></span>
+        <span class="idcard" id="idcard" hidden></span>
+      </div>
       <button class="pb" id="view-toggle" hidden title="Switch seat (V)"></button>
       <span class="readout standing" title="Your standing with sector command">
         <label data-legend="STATUS.standing" data-gloss-only></label><b id="standing">50</b>
