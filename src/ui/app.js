@@ -894,8 +894,15 @@ function describeEntity(hit) {
     const kindName = t.classification === 'unknown'
       ? 'unidentified contact' : (AIR_TYPES[t.classification]?.name?.toLowerCase() ?? t.classification);
     const dest = t.predictedAssetId ? world.assetById.get(t.predictedAssetId) : null;
+    const holders = t.assignedTo.map((id) => world.siteById.get(id)?.name).filter(Boolean);
+    const held = holders.length
+      ? t.engagedBy.length
+        ? ` ${holders.join(' and ')} ${holders.length > 1 ? 'have' : 'has'} a round in the air on it (solid brackets).`
+        : ` ${holders.join(' and ')} ${holders.length > 1 ? 'have' : 'has'} it (dashed brackets).`
+      : '';
     return `${t.tn} — ${t.hostility} ${kindName}`
-      + (dest ? `, looks to be heading for ${dest.label}` : ', heading nowhere in particular yet');
+      + (dest ? `, looks to be heading for ${dest.label}` : ', heading nowhere in particular yet')
+      + (held ? `.${held}` : '');
   }
   if (hit.kind === 'site') {
     const s = world.siteById.get(hit.id);

@@ -668,7 +668,7 @@ export function renderTrackList(world, ui, els) {
       <span>${String(brg).padStart(3, '0')}</span>
       <span>${rng}</span>
       <span>${alt}</span>
-      <span class="asgn">${engaged ? '◆' : ''}${cued ? '<i class="cued" title="Called to you by the net — you did not pick this one">▸</i>' : ''}${ownCall ? '<i class="own-call" title="Your own call — the net did not call this one to you, and it is on your authority">OWN</i>' : ''}${esc(assigned)} <em class="pips">${pips}</em></span>
+      <span class="asgn">${engaged ? '◆' : track.assignedTo.length ? '◇' : ''}${cued ? '<i class="cued" title="Called to you by the net — you did not pick this one">▸</i>' : ''}${ownCall ? '<i class="own-call" title="Your own call — the net did not call this one to you, and it is on your authority">OWN</i>' : ''}${esc(assigned)} <em class="pips">${pips}</em></span>
     </li>`;
   };
 

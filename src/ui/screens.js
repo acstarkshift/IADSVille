@@ -650,6 +650,9 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
       <p>Sector operations fuses every radar into one picture. Lose it and each set reports for
       itself: the same aircraft grows a track number on every radar that can see it, and nobody
       reconciles them.</p>
+      <p>A contact in dashed brackets is one a battery has been given, with the battery's name under
+      it; solid brackets mean that battery has a round in the air on it. A contact with no
+      brackets is nobody's. In the shootlist the same states are ◇ and ◆.</p>
     </div>
     <div class="actions"><button class="btn-primary" id="btn-close-help">BACK</button></div>
   </div>`;

@@ -906,6 +906,9 @@ export class CrewConsole {
         ctx.save();
         ctx.strokeStyle = engagement.state === 'guiding' ? p.warn : p.inkBright;
         ctx.lineWidth = 1.6 * d;
+        // Dashed until a round is away, solid while one is guiding — the
+        // same shape the tube uses, so the state is not carried by colour alone.
+        if (engagement.state !== 'guiding') ctx.setLineDash([2 * d, 2 * d]);
         for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
           ctx.beginPath();
           ctx.moveTo(s.x + sx * b, s.y + sy * b - sy * 3.5 * d);
@@ -926,8 +929,15 @@ export class CrewConsole {
       }
       ctx.restore();
 
+      // Another battery's contact is tagged with that battery, so the crew
+      // can see the net has it covered without a channel of their own on it.
+      const other = !engagement && !track.cueOnly
+        ? track.assignedTo.filter((id) => id !== site.id)
+          .map((id) => world.siteById.get(id)?.name?.split(' ')[0]).filter(Boolean)[0] ?? null
+        : null;
       const tag = track.cueOnly ? `${track.tn} CUE`
-        : engagement ? `${track.tn} · CH${channelIndex + 1}` : track.tn;
+        : engagement ? `${track.tn} · CH${channelIndex + 1}`
+          : other ? `${track.tn} · ${other}` : track.tn;
       /*
        * The symbol's whole extent, brackets and selection ring included. The
        * label used to be allowed to sit on the contact's own acquisition

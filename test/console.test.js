@@ -484,3 +484,45 @@ describe('the horizon on the range-height chart', () => {
     }
   });
 });
+
+describe('whose a contact is, as a shape', () => {
+  /*
+   * The player asked for the assigned-target symbology to change. A contact
+   * nobody holds has no brackets; a battery's claim puts dashed brackets and
+   * the battery's name on it; a round in the air makes the brackets solid.
+   * Pinned on the engine's own state, without a canvas.
+   */
+  test('none, then dashed with the holder, then solid with a round in the air', async () => {
+    const { assignmentShape } = await import('../src/ui/scope.js');
+    const w = watch('first-light');
+    for (const r of w.radars) w.setRadar(r.id, true);
+    for (const s of w.sites) w.setWeaponsState(s.id, 'tight');
+    let track = null;
+    for (let i = 0; i < 1200 && !track; i++) {
+      w.step(0.1);
+      track = [...w.tracks.values()].find((t) => t.hostility === 'hostile') ?? null;
+    }
+    assert.ok(track, 'a hostile appeared');
+    assert.deepEqual(assignmentShape(w, track), { bracket: 'none', holders: [], tag: null });
+    const bastion = w.sites.find((s) => s.name === 'BASTION');
+    assert.ok(w.assign(track.id, bastion.id), 'the handover is accepted');
+    const claimed = assignmentShape(w, track);
+    assert.equal(claimed.bracket, 'dashed');
+    assert.deepEqual(claimed.holders, ['BASTION']);
+    assert.equal(claimed.tag, '→ BASTION');
+    // A round in the air: the engagement's own missiles, or any battery's.
+    track.engagedBy.push('m-test');
+    const engaged = assignmentShape(w, track);
+    assert.equal(engaged.bracket, 'solid');
+    assert.equal(engaged.tag, '▲ BASTION');
+    track.engagedBy.pop();
+    // Two batteries on one contact: the first is named, the rest counted.
+    const lance = w.sites.find((s) => s.name === 'LANCE WEST');
+    track.assignedTo.push(lance.id);
+    assert.equal(assignmentShape(w, track).tag, '→ BASTION +1');
+    track.assignedTo.pop();
+    // Released: nothing on it again, cleanly.
+    assert.ok(w.unassign(track.id, bastion.id));
+    assert.equal(assignmentShape(w, track).bracket, 'none');
+  });
+});

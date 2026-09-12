@@ -855,6 +855,19 @@ toggle switches whose lever position *is* the state, domed indicator lamps,
 legend-cap pushbuttons, a screwed bezel around the tube, riveted data plates
 carrying a type and a works number, and a high-voltage placard nobody reads.
 
+**Whose a contact is, as a shape.** A contact nobody holds is a plain symbol.
+Once a battery has been given it, it wears dashed corner brackets and the
+battery's name under its label ("→ BASTION"); once that battery has a round in
+the air the brackets go solid and the name takes a missile mark ("▲ BASTION").
+The tether to the battery stays, but a faint dashed line across a crowded plot
+was the whole of the old marking and the player could not tell an assigned
+contact from a loose one at a glance. The cabin's own glass uses the same
+shapes on its channels — dashed until the round is away, solid while it is
+guiding — and tags another battery's contact with that battery; the shootlist
+carries ◇ for assigned and ◆ for a round in the air; hovering a contact says
+who has it in words. Everything reverts the moment the claim is released. A
+test holds the shape to the engine's state.
+
 **One phosphor.** The glass is the same green on every watch. There used to be
 an amber set, and then a flat blue-grey tactical panel on the district and
 national watches, and the player said what a palette swap says: "one phosphor

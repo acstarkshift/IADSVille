@@ -933,16 +933,49 @@ export class Scope {
         ctx.setLineDash([]);
       }
 
+      /*
+       * Whose it is, as a shape.
+       *
+       * A contact a battery holds wears the corner brackets every fire-control
+       * display puts on a designated target — dashed while the battery has
+       * only claimed it, solid once a round is in the air — and the label
+       * names the battery. The tether to the battery stays, but a faint dashed
+       * line across a crowded plot was the whole of the old marking, and the
+       * player could not tell an assigned contact from a loose one at a
+       * glance, which is the one thing the net seat exists to see.
+       */
+      const shape = assignmentShape(world, track);
+      if (shape.bracket !== 'none') {
+        const b = size * 2.1;
+        const arm = size * 0.9;
+        ctx.save();
+        ctx.strokeStyle = shape.bracket === 'solid' ? p.good : p.accent;
+        ctx.lineWidth = (shape.bracket === 'solid' ? 1.8 : 1.3) * this.dpr;
+        if (shape.bracket === 'dashed') ctx.setLineDash([2 * this.dpr, 2 * this.dpr]);
+        for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+          ctx.beginPath();
+          ctx.moveTo(s.x + sx * b, s.y + sy * b - sy * arm);
+          ctx.lineTo(s.x + sx * b, s.y + sy * b);
+          ctx.lineTo(s.x + sx * b - sx * arm, s.y + sy * b);
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
       // Label block: track number, then altitude in hundreds of metres and
-      // whatever the system is willing to say about what it is.
+      // whatever the system is willing to say about what it is, then the
+      // battery that has it.
       const alt = Math.round(track.altM / 100);
       const label = track.classification !== 'unknown'
         ? AIR_TYPES[track.classification]?.label ?? ''
         : trackProfile(track);
       this.queueLabel({
-        lines: [track.tn, `${String(alt).padStart(3, '0')} ${label}`],
+        lines: [track.tn, `${String(alt).padStart(3, '0')} ${label}`,
+          ...(shape.tag ? [shape.tag] : [])],
         x: s.x, y: s.y,
-        colours: [selected ? p.inkBright : colour, p.inkDim],
+        colours: [selected ? p.inkBright : colour, p.inkDim,
+          shape.bracket === 'solid' ? p.good : p.accent],
         colour,
         // Contacts always outrank scenery; the selected one and the aircraft the
         // watch exists to protect outrank everything.
@@ -961,7 +994,7 @@ export class Scope {
         ctx.beginPath();
         ctx.moveTo(s.x, s.y);
         ctx.lineTo(sp.x, sp.y);
-        ctx.strokeStyle = withAlpha(track.engagedBy.length ? p.good : p.accent, 0.3);
+        ctx.strokeStyle = withAlpha(track.engagedBy.length ? p.good : p.accent, 0.45);
         ctx.lineWidth = 1 * this.dpr;
         ctx.setLineDash([2 * this.dpr, 5 * this.dpr]);
         ctx.stroke();
@@ -1174,6 +1207,27 @@ function drawStandardSymbol(ctx, s, size, track) {
 }
 
 /** Add an alpha channel to a hex or rgb colour string from the theme. */
+/**
+ * A contact's assignment, as the glass draws it.
+ *
+ * `bracket` is 'none' for a contact nobody holds, 'dashed' once a battery
+ * has claimed it, 'solid' once that battery has a round in the air; `tag` is
+ * the holder's name for the label block — the first word of it, with a
+ * count when more than one battery is on the same contact. Pure, so a test
+ * can hold the shape to the engine's state without a canvas.
+ */
+export function assignmentShape(world, track) {
+  const holders = (track.assignedTo ?? [])
+    .map((id) => world.siteById.get(id)?.name?.split(' ')[0])
+    .filter(Boolean);
+  const engaged = (track.engagedBy?.length ?? 0) > 0;
+  const bracket = engaged ? 'solid' : holders.length ? 'dashed' : 'none';
+  const tag = holders.length
+    ? `${engaged ? '▲ ' : '→ '}${holders[0]}${holders.length > 1 ? ` +${holders.length - 1}` : ''}`
+    : null;
+  return { bracket, holders, tag };
+}
+
 export function withAlpha(colour, alpha) {
   const c = colour.trim();
   if (c.startsWith('#')) {
