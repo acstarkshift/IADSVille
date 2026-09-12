@@ -149,12 +149,17 @@ export class ContextMenu {
      * too small for it (a phone). Measure, then move.
      */
     const pad = 8;
-    const w = this.host.offsetWidth;
-    const h = this.host.offsetHeight;
     const glass = this.bounds?.() ?? null;
-    const box = glass && glass.width >= w + pad * 2 && glass.height >= h + pad * 2
+    const w = this.host.offsetWidth;
+    const onGlass = !!glass && glass.width >= w + pad * 2;
+    const box = onGlass
       ? { x: glass.left, y: glass.top, w: glass.width, h: glass.height }
       : { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight };
+    // A district watch lists eight or nine batteries, which is taller than
+    // the tube: the menu is capped to the glass and scrolls inside it rather
+    // than hanging past the bottom edge.
+    this.host.style.maxHeight = `${Math.max(120, box.h - pad * 2)}px`;
+    const h = this.host.offsetHeight;
     const left = Math.max(box.x + pad, Math.min(x, box.x + box.w - w - pad));
     const top = Math.max(box.y + pad, Math.min(y, box.y + box.h - h - pad));
     this.host.style.left = `${left}px`;

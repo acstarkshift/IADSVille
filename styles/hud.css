@@ -2130,6 +2130,7 @@ table.ledger .down { color: var(--hostile); }
 .ctx-menu {
   position: fixed; z-index: var(--z-command);
   min-width: 460px; max-width: min(600px, calc(100vw - 16px));
+  overflow-y: auto; overscroll-behavior: contain;
   padding: 6px; font-size: 11px;
   background: var(--bg-panel); border: 1px solid var(--edge);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, .6), 0 18px 46px rgba(0, 0, 0, .62);
