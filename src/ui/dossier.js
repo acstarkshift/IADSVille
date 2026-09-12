@@ -58,8 +58,8 @@ export function renderEnlistment(host, state) {
 
     <div class="card">
       <h3>Who is still there</h3>
-      <p class="note">The Ville is on every scope in this campaign, and it is where the
-      people below live. That is not a coincidence and it does not become one.</p>
+      <p class="note">The Ville is on every scope in this campaign, and the people below live
+      there. Every raid you fight is a raid on their street.</p>
       <div class="choice-row" id="household-row">
         ${Object.values(HOUSEHOLDS).map((h) => `<button class="choice ${h.id === household ? 'is-active' : ''}"
           data-household="${h.id}">
@@ -88,9 +88,8 @@ export function renderEnlistment(host, state) {
         title="Take the suggested name and the clerk's defaults, and get to the console">
         SIGN WHERE INDICATED</button>
     </div>
-    <p class="note aside">The particulars can be read at
-    leisure in the dossier. The clerk has seen people stand at this counter for ten minutes; he has
-    also seen the schedule.</p>
+    <p class="note aside">The particulars can be read at leisure in the dossier afterwards.
+    Take as long as you like here; the clerk will wait.</p>
   </div>`;
 }
 
@@ -137,7 +136,7 @@ export function renderDossier(host, state) {
         <div class="crew-row is-plain"><span>Toward ${esc(next.rank.en)}</span>
           <b>${next.xpShort ? `${next.xpShort} experience` : 'experience met'}${next.standingShort ? `, standing ${next.rank.standing}` : ''}</b></div>
         <div class="meter"><i style="width:${progress}%"></i></div>
-      </div>` : '<p class="verdict gained">At the top of the ladder they will let you reach.</p>'}
+      </div>` : '<p class="verdict gained">The highest rank this appointment allows.</p>'}
       ${character.wounded ? `<p class="grave aside">
         You were pulled out of a position that was overrun. Everything takes you longer until the
         next watch is behind you.</p>` : ''}
@@ -333,8 +332,7 @@ export function abandonedRecord(character, result) {
     <div class="record-stamp is-grave">${stamp}</div>
     <h3>File entry — ${esc(STATUS.postAbandoned.en)}</h3>
     ${character ? `<p>${esc(rank.en)} <b>${esc(character.name)}</b> left the post at
-      <b>${esc(result.clock ?? '')}</b> with the watch still running. The entry stands in the file
-      under that heading and under no other.</p>` : ''}
+      <b>${esc(result.clock ?? '')}</b> with the watch still running. The file records an abandoned watch and nothing else.</p>` : ''}
     <table class="ledger">
       <tr><td>Experience earned</td><td class="down">none</td></tr>
       <tr><td>Decoration, letter, appointment</td><td class="down">none</td></tr>

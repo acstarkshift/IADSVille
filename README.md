@@ -178,8 +178,9 @@ kilometres and the first hospital-bound track still a hundred and five seconds
 from existing. The campaign's central decision was being answered before there
 was anything on the board to weigh, and a player pressed Y and felt nothing.
 
-Then the evening shows you two numbers that have agreed all campaign and now do
-not (means over eight seeded watches, competently fought — reproduce them with
+Then the evening shows two numbers side by side — the standing and the score —
+which have moved together all campaign and here move apart (means over eight
+seeded watches, competently fought — reproduce them with
 `node tools/measure-moral.mjs`; the hospital package comes in on the deck, down
 the Kubin road, and obedience loses the building on four nights of eight while
 a deliberate defence saves it on all eight):

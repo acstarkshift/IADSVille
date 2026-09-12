@@ -482,8 +482,9 @@ export function renderDebrief(host, state, result, entry) {
 
     ${divergences.length ? `<div class="card">
       <h3>THE FILE AND THE NIGHT</h3>
-      <p class="lede">What each decision did to your file, beside
-      what the night actually was. When these two columns agree, this table is empty.</p>
+      <p class="lede">The decisions that moved your standing, each beside what actually came of
+      it on the ground. Only the ones where the file and the outcome disagree are listed; an
+      empty table means they agreed all night.</p>
       <table class="ledger">
         <tr><th>decision</th><th class="is-figure">the file</th><th>the night</th></tr>
         ${divergences.map((l) => {
@@ -493,8 +494,10 @@ export function renderDebrief(host, state, result, entry) {
           <td class="is-prose note">${esc(nightSideFor(l.reason, result))}</td></tr>`;
   }).join('')}
       </table>
-      <p class="aside">The night itself is the score above: ${result.score}.
-      The file does not read the score, and the score does not read the file.</p>
+      <p class="aside">The score above, ${result.score}, is what actually happened tonight:
+      aircraft down, ground held, people alive. Your standing is what sector command wrote in
+      your file about it. The two are kept apart on purpose: a decision that saved the hospital
+      can lower your standing, and one that lost it can raise it.</p>
     </div>` : ''}
 
     ${/*

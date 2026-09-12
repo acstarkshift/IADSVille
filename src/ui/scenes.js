@@ -160,7 +160,7 @@ function commissarLines(result, consequence, pressure) {
   if (result.abandoned) {
     return [
       `You left the post${result.clock ? ` at ${result.clock}` : ''}, with the watch still running. The log was signed for you.`,
-      'The file records it under that heading and under no other. Nothing else is recorded, because nothing else was done.',
+      'The file records an abandoned watch and nothing else, because nothing else was done.',
       'That is all.',
     ];
   }
