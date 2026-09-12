@@ -1082,7 +1082,13 @@ function wireCanvasInput() {
 
 function assignSelected(siteId, trackArg) {
   const trackId = trackArg ?? ui.selectedTrackId;
-  if (!trackId) return;
+  if (!trackId) {
+    // Shift+1 with nothing selected used to do nothing at all, which on the
+    // first watch read as a key that does not work.
+    world?.logThrottled?.('assignNothing', 10, 'warn',
+      'NOTHING SELECTED — CLICK A CONTACT FIRST, THEN HAND IT OVER.');
+    return;
+  }
   const site = world.siteById.get(siteId);
   const existing = site?.engagements.find((en) => en.trackId === trackId);
   if (existing) {

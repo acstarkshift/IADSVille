@@ -557,6 +557,9 @@ function shootlistState(world, site) {
   if (site.reloadRemainingS > 0) {
     return { text: `LOADING ${Math.ceil(site.reloadRemainingS)}s`, cls: 'is-busy' };
   }
+  // Bare rails with a store behind them are a wait; bare rails with nothing
+  // in store are the end of this battery's night, and the heading says which.
+  if (site.magazine <= 0) return { text: 'DRY — NO ROUNDS LEFT', cls: 'is-down' };
   return { text: 'RAILS EMPTY', cls: 'is-down' };
 }
 

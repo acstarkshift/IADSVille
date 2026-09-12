@@ -301,8 +301,9 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
  */
 .track-head, .track-row {
   display: grid;
-  grid-template-columns: 3.7em 5.6em 2.6em 3.2em 3.6em 1fr;
-  gap: 4px; padding: 2px 8px;
+  /* Wide enough for the heads to be words: TRACK, TYPE, BRG°, RANGE, HEIGHT, BATTERY. */
+  grid-template-columns: 3.7em 5.6em 2.8em 3.4em 4.4em 1fr;
+  gap: 3px; padding: 2px 8px;
   border-left: 3px solid transparent;
   /* 15 + 4 + 1 = the 20px pitch the empty board is ruled at. */
   font-size: 11px; line-height: 15px; font-variant-numeric: tabular-nums;
@@ -403,6 +404,7 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 .track-row.is-engaged .asgn { color: var(--good); }
 /* A target the net called to you, as against one you picked yourself. */
 .track-row .asgn .cued { color: var(--accent); font-style: normal; margin-right: 2px; }
+.unit-type.store.is-empty, .unit-type.store.is-empty b { color: var(--hostile); }
 .track-row .asgn .own-call { color: var(--warn); font-style: normal; font-size: 8px; letter-spacing: .08em; margin-right: 3px; vertical-align: 1px; }
 .chan.is-own { box-shadow: inset 2px 0 0 var(--warn); }
 .track-row .pips { color: var(--hostile); font-style: normal; }
@@ -1841,6 +1843,13 @@ table.ledger .down { color: var(--hostile); }
   }
   .ab-caps .pb .lg i { font-size: 7.5px; }
   .ab-caps .pb-rail { padding: 5px 4px; margin-top: 0; }
+  /* On the rail a dead launch cap goes grey like every other dead cap: at
+     thumb size the safed red read as live, and a thumb pressed it. */
+  .ab-caps .pb-fire:disabled {
+    background: var(--metal-lo); border-color: var(--metal-edge);
+    filter: grayscale(.85) brightness(.72); opacity: .72;
+  }
+  .ab-caps .pb-fire:disabled .lg b, .ab-caps .pb-fire:disabled .lg i { color: var(--engrave-dim); }
   /* The seat cap is as wide as its two words and no wider, so the four
      verbs that share the rest of the rail do not each lose a fifth. */
   .ab-caps .pb-seat { flex: 0 0 auto; padding: 5px 9px; }
