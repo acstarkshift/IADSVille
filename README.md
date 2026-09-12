@@ -330,7 +330,12 @@ it is hostile — that section *is* the job — and beneath it one list per batt
 each headed with whether that battery can take another one (rounds ready,
 loading, displacing, empty) and closed off by a line naming the batteries with
 nothing to do. A contact two batteries are both on appears under both. From the
-cabin you see your own board and nothing else, which is all you would have.
+cabin you see your own board and nothing else, which is all you would have. The
+glass under your own picture, though, carries the same ground the sector scope
+does — the places you are defending by name, the town, the river, the roads, the
+ridge you cannot see over, your own battery named at the middle — and the place
+the standing order is about is ringed on it exactly as the sector scope rings
+it, so the seat always knows where it is and what it is standing in front of.
 
 Which seats are available is decided by the appointment you hold. A battalion or
 sector commander may sit anywhere. A district commander may not: there is no

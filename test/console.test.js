@@ -20,7 +20,8 @@ import { SPEED_BY_KEY, digitPressed } from '../src/ui/keymap.js';
 import {
   CONTROLS, POSTURE_CYCLE, EQUIPMENT, legend, keycap, nomenclatureFor, callsignOf,
 } from '../src/ui/lexicon.js';
-import { RADAR_TYPES } from '../src/engine/config.js';
+import { RADAR_TYPES, SAM_TYPES } from '../src/engine/config.js';
+import { planGeography } from '../src/ui/console.js';
 import { seatPicture } from '../src/ui/panels.js';
 import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, radarNamesIn } from '../src/ui/tutorial.js';
 
@@ -366,5 +367,67 @@ describe('the rail steps this seat’s list', () => {
     }
     // And the net still sees everything, in the same order the sector sorts it.
     assert.ok(seatPicture(world, { view: 'net' }).length >= mine.length);
+  });
+});
+
+describe('the cabin knows where it is', () => {
+  /*
+   * The player: "When you're in SAM operator mode you're instructed to protect
+   * something, your PPI doesn't show where any of that stuff is. You have no
+   * idea where you are or what you're defending." The plan view is drawn from
+   * `planGeography`, so what it answers here is what the operator sees.
+   */
+  const cabin = (id, opts = {}) => {
+    const w = new World(scenarioById(id), { role: 'crew', seed: 5, ...opts });
+    const site = w.siteById.get(w.control.crewedBatteryId);
+    return { w, site, ground: planGeography(w, site, SAM_TYPES[site.type].maxRangeKm * 1.35) };
+  };
+
+  test('the places this battery defends are on its glass, by name, with the river', () => {
+    const { site, ground } = cabin('solo-battery');
+    assert.equal(site.name, 'LANCE EAST');
+    const labels = ground.assets.map((a) => a.label);
+    assert.ok(labels.includes('THE VILLE'), `the town is on the glass: ${labels}`);
+    assert.ok(labels.includes('BRIDGE'), `the bridge is on the glass: ${labels}`);
+    for (const a of ground.assets) {
+      assert.ok(a.rangeKm <= SAM_TYPES[site.type].maxRangeKm * 1.35, `${a.label} inside the display`);
+      assert.equal(a.designated, false);
+      assert.equal(a.destroyed, false);
+    }
+    assert.ok(ground.rivers.some((r) => r.name === 'River Mordava'), 'the Mordava runs through the picture');
+  });
+
+  test('the place the order names is ringed on the cabin as on the command scope', () => {
+    const { w, site, ground: before } = cabin('solo-battery');
+    assert.equal(before.designatedId, null);
+    w.command.constraints.priorityOfFiresId = 'a_bridge';
+    w.command.constraints.priorityDesignatedAtS = w.t;
+    const after = planGeography(w, site, SAM_TYPES[site.type].maxRangeKm * 1.35);
+    assert.equal(after.designatedId, 'a_bridge');
+    assert.deepEqual(after.assets.filter((a) => a.designated).map((a) => a.id), ['a_bridge']);
+  });
+
+  test('a place that is gone is still on the glass, crossed out', () => {
+    const { w, site } = cabin('solo-battery');
+    const depot = w.assetById.get('a_depot');
+    depot.destroyed = true;
+    depot.damage = 10 ** 6;
+    const ground = planGeography(w, site, SAM_TYPES[site.type].maxRangeKm * 1.35);
+    const drawn = ground.assets.find((a) => a.id === 'a_depot');
+    assert.ok(drawn, 'the depot stays on the picture');
+    assert.equal(drawn.destroyed, true);
+    assert.equal(drawn.hurt, 1);
+  });
+
+  test('a town beyond the display is not lettered onto it', () => {
+    const { site, ground } = cabin('solo-battery');
+    for (const town of ground.towns) {
+      assert.ok(Math.hypot(town.pos.x - site.pos.x, town.pos.y - site.pos.y)
+        <= SAM_TYPES[site.type].maxRangeKm * 1.35, `${town.name} is inside the display`);
+    }
+    // The long-range battalion sees the capital from its own cabin.
+    const capital = cabin('two-cities', { role: 'both' });
+    assert.ok(capital.ground.towns.some((t) => t.name === 'Mostrograd'),
+      `a 120 km display reaches the capital: ${capital.ground.towns.map((t) => t.name)}`);
   });
 });

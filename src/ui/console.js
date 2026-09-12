@@ -16,12 +16,43 @@ import { THEMES, readPalette, hostilityColour } from './themes.js';
 import { SAM_TYPES, AIR_TYPES, ASSET_TYPES } from '../engine/config.js';
 import { bearing, dist, headingVec, len, clamp01 } from '../engine/math.js';
 import { inEnvelope, timeToInRangeS, computeSamPk } from '../engine/weapons.js';
+import { MAP } from '../engine/geography.js';
 import { withAlpha } from './scope.js';
 
 const TAU = Math.PI * 2;
 const FONT = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 /** Share of the canvas height given to the plan view; the rest is the height finder. */
 const PLAN_SHARE = 0.62;
+
+/**
+ * The ground the plan view is drawn over, and the places on it, as data.
+ *
+ * Kept apart from the drawing so a test can ask the cabin what it shows
+ * without a canvas: which defended places are inside the display, which of
+ * them the current order is about, and which towns and rivers are in reach.
+ * The picture is drawn from this and nothing else, so what the test sees is
+ * what the operator sees.
+ */
+export function planGeography(world, site, rangeKm) {
+  const inReach = (pos) => dist(site.pos, pos) <= rangeKm;
+  const designatedId = world.command?.constraints?.priorityOfFiresId ?? null;
+  return {
+    designatedId,
+    assets: (world.assets ?? []).filter((a) => inReach(a.pos)).map((a) => ({
+      id: a.id,
+      label: a.label ?? ASSET_TYPES[a.type]?.label ?? a.type,
+      pos: a.pos,
+      rangeKm: dist(site.pos, a.pos),
+      destroyed: !!a.destroyed,
+      designated: a.id === designatedId,
+      hurt: clamp01((a.damage ?? 0) / (ASSET_TYPES[a.type]?.hp ?? 1)),
+    })),
+    towns: MAP.settlements.filter((t) => inReach(t.pos))
+      .map((t) => ({ name: t.en, pos: t.pos, capital: !!t.capital })),
+    rivers: MAP.rivers.filter((r) => r.points.some(inReach))
+      .map((r) => ({ name: r.en, points: r.points.filter(inReach) })),
+  };
+}
 
 export class CrewConsole {
   constructor(canvas) {
@@ -181,7 +212,7 @@ export class CrewConsole {
    * uses the first and accepts the overlap rather than dropping the label,
    * because a missing track number is worse than a tight one.
    */
-  place(text, x, y, colour, { size = 8.5, radius = 6, prefer = 'NE', weight = '' } = {}) {
+  place(text, x, y, colour, { size = 8.5, radius = 6, prefer = 'NE', weight = '', optional = false } = {}) {
     const { ctx } = this;
     const d = this.dpr;
     ctx.font = `${weight ? `${weight} ` : ''}${size * d}px ${FONT}`;
@@ -235,6 +266,10 @@ export class CrewConsole {
       }
       if (placed) break;
     }
+    // A place name is not worth a clash. Geography gives way to anything
+    // flying: if every corner near a town is taken, the town goes unnamed
+    // this frame rather than printing through a track number.
+    if (!placed && optional) return null;
     // And inside the glass. A label that ran off the right-hand edge lost its
     // altitude figure to the frame; clamped, it keeps its leader line back to
     // the mark, which is what the leader is for.
@@ -312,6 +347,97 @@ export class CrewConsole {
       }));
   }
 
+  /**
+   * The country under the picture, from the cabin.
+   *
+   * The seat had no geography whatever: a circle of range rings with the
+   * operator at the middle of it and no way to tell which side of the glass
+   * the town was on, in a game whose whole subject is which places you cover.
+   * This is the command scope's underlay — the ridges, the lake, the rivers,
+   * the roads, the frontier and the border — drawn about the battery instead
+   * of about the Ville, dim on purpose, and clipped to the round of the tube.
+   * If it ever competes with a contact it is wrong.
+   */
+  drawGround(world, site, radius) {
+    const { ctx } = this;
+    const p = this.palette;
+    const d = this.dpr;
+    const centre = this.toScreen(site, site.pos);
+    const path = (points, close = false) => {
+      ctx.beginPath();
+      points.forEach((point, i) => {
+        const q = this.toScreen(site, point);
+        if (i === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y);
+      });
+      if (close) ctx.closePath();
+    };
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(centre.x, centre.y, radius, 0, TAU);
+    ctx.clip();
+
+    for (const range of MAP.highGround) {
+      path(range.points, true);
+      ctx.fillStyle = withAlpha(p.inkDim, 0.08);
+      ctx.fill();
+      ctx.strokeStyle = withAlpha(p.inkDim, 0.24);
+      ctx.lineWidth = 1 * d;
+      ctx.stroke();
+    }
+    for (const lake of MAP.lakes) {
+      path(lake.points, true);
+      ctx.fillStyle = withAlpha(p.friendly, 0.09);
+      ctx.fill();
+      ctx.strokeStyle = withAlpha(p.friendly, 0.24);
+      ctx.stroke();
+    }
+
+    // "No leakers past the river line." The line is marked here the way the
+    // command scope marks it — red, flashing for ten seconds, then held — so
+    // an order about the river reads the same from either seat.
+    const riverAtS = world.command?.constraints?.riverLineAtS ?? null;
+    const sinceRiver = riverAtS === null ? Infinity : world.t - riverAtS;
+    const riverMarked = Number.isFinite(sinceRiver);
+    const riverFlashing = sinceRiver < 10 && Math.floor(sinceRiver * 2) % 2 === 0;
+    for (const river of MAP.rivers) {
+      path(river.points);
+      ctx.strokeStyle = riverMarked
+        ? withAlpha(p.hostile, riverFlashing ? 0.85 : 0.45)
+        : withAlpha(p.friendly, 0.28);
+      ctx.lineWidth = (riverMarked ? (riverFlashing ? 2.4 : 1.8) : 1.3) * d;
+      ctx.stroke();
+    }
+
+    ctx.setLineDash([6 * d, 5 * d]);
+    for (const road of MAP.roads) {
+      path(road.points);
+      ctx.strokeStyle = withAlpha(p.inkDim, 0.32);
+      ctx.lineWidth = 1.1 * d;
+      ctx.stroke();
+    }
+    path(MAP.frontier);
+    ctx.setLineDash([10 * d, 4 * d, 2 * d, 4 * d]);
+    ctx.strokeStyle = withAlpha(p.hostile, 0.32);
+    ctx.lineWidth = 1.5 * d;
+    ctx.stroke();
+    path(MAP.border);
+    ctx.strokeStyle = withAlpha(p.unknown, 0.3);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // A town is a dot on the ground; its name is lettered with everything
+    // else at the end of the frame, and gives way to anything flying.
+    for (const town of MAP.settlements) {
+      const q = this.toScreen(site, town.pos);
+      ctx.fillStyle = withAlpha(p.inkDim, town.capital ? 0.6 : 0.4);
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, (town.capital ? 3 : 2) * d, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   drawPlan(world, site, type, ui) {
     const { ctx } = this;
     const p = this.palette;
@@ -325,6 +451,9 @@ export class CrewConsole {
     ctx.beginPath();
     ctx.rect(0, 0, this.w, this.planH);
     ctx.clip();
+
+    // The country first, under everything, inside the round of the tube.
+    this.drawGround(world, site, reachOnDisplay - 11 * d);
 
     // Range rings. The numerals used to be stacked in one column on the 000°
     // radial — which on the first watch is precisely where the raid comes
@@ -404,26 +533,53 @@ export class CrewConsole {
     ctx.stroke();
 
     /*
-     * Where you are and what you are standing in front of.
+     * What you are standing in front of.
      *
-     * The seat had no geography whatever: a circle of rings with the operator
-     * at the middle of it and no way to tell which side of the display the
-     * town was on, in a game whose whole subject is which places you cover.
      * The things this battery is defending are drawn at their true positions
-     * with their names, dimmer than the traffic, because they do not move.
+     * with their names, dimmer than the traffic, because they do not move —
+     * and in the same states the command scope draws them: the place the
+     * current order names is ringed and flashes for its first ten seconds,
+     * a place that has been hit carries a damage bar, and a place that is
+     * gone is crossed out rather than quietly dropped from the glass.
      */
-    for (const asset of world.assets ?? []) {
-      if (asset.destroyed) continue;
-      const rangeKm = dist(site.pos, asset.pos);
-      if (rangeKm > this.rangeKm) continue;
+    const ground = planGeography(world, site, this.rangeKm);
+    const designatedAtS = world.command?.constraints?.priorityDesignatedAtS ?? null;
+    const sinceDesignation = designatedAtS === null ? Infinity : world.t - designatedAtS;
+    const flashing = sinceDesignation < 10 && Math.floor(sinceDesignation * 2) % 2 === 0;
+    for (const asset of ground.assets) {
       const s = this.toScreen(site, asset.pos);
+      const colour = asset.destroyed || asset.designated ? p.hostile : p.friendly;
       ctx.save();
-      ctx.globalAlpha = 0.65;
-      ctx.strokeStyle = p.friendly;
-      ctx.lineWidth = 1.2 * d;
-      ctx.beginPath();
-      ctx.rect(s.x - 3 * d, s.y - 3 * d, 6 * d, 6 * d);
-      ctx.stroke();
+      ctx.globalAlpha = asset.destroyed || asset.designated ? 0.9 : 0.65;
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = (asset.designated ? 1.8 : 1.2) * d;
+      if (asset.designated && !asset.destroyed) {
+        // The ring the command scope puts around the place the order names,
+        // breathing while the order is new and then held for the watch.
+        ctx.save();
+        ctx.globalAlpha = flashing ? 0.95 : 0.55;
+        ctx.setLineDash([3 * d, 3 * d]);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, (flashing ? 15 : 11) * d, 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (asset.destroyed) {
+        ctx.beginPath();
+        ctx.moveTo(s.x - 4 * d, s.y - 4 * d); ctx.lineTo(s.x + 4 * d, s.y + 4 * d);
+        ctx.moveTo(s.x + 4 * d, s.y - 4 * d); ctx.lineTo(s.x - 4 * d, s.y + 4 * d);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = withAlpha(colour, asset.designated ? 0.3 : 0.12);
+        ctx.beginPath();
+        ctx.rect(s.x - 3 * d, s.y - 3 * d, 6 * d, 6 * d);
+        ctx.fill();
+        ctx.stroke();
+        if (asset.hurt > 0) {
+          ctx.fillStyle = p.warn;
+          ctx.fillRect(s.x - 3 * d, s.y + 5 * d, 6 * d * asset.hurt, 2 * d);
+        }
+      }
       ctx.restore();
     }
 
@@ -449,6 +605,11 @@ export class CrewConsole {
       ctx.strokeStyle = withAlpha(p.accent, 0.7);
       ctx.lineWidth = 1.5 * d;
       ctx.stroke();
+    } else if (radar?.state === 'warming') {
+      // A set that is coming up is not a set that is off, and the line that
+      // said it was made the switch look as if it had not taken.
+      this.stamp('RADAR WARMING UP — THE PICTURE COMES WITH IT', 10 * d, this.planH - 10 * d,
+        withAlpha(p.warn, 0.9), { size: 12 });
     } else {
       // Plain words: "SET DARK — NOTHING IS BEING PAINTED" told a new player
       // nothing about what to do, and nothing about what "painted" meant.
@@ -590,14 +751,17 @@ export class CrewConsole {
     this.reserve(0, 0, 120 * d, 64 * d);
     this.reserve(this.w - 120 * d, 0, 120 * d, 64 * d);
     this.reserve(centre.x - 9 * d, centre.y - 9 * d, 18 * d, 18 * d);
-    want(site.name, centre.x, centre.y, p.friendly, { prefer: 'SW', radius: 8, size: 9 });
-    for (const asset of world.assets ?? []) {
-      if (asset.destroyed) continue;
-      if (dist(site.pos, asset.pos) > this.rangeKm) continue;
+    // Your own battery, by name, at the middle of its own picture.
+    want(`${site.name} · YOU`, centre.x, centre.y, p.friendly,
+      { prefer: 'SW', radius: 8, size: 9, weight: 'bold' });
+    for (const asset of ground.assets) {
       const s = this.toScreen(site, asset.pos);
-      this.reserve(s.x - 5 * d, s.y - 5 * d, 10 * d, 10 * d);
-      want(asset.label ?? ASSET_TYPES[asset.type]?.label ?? asset.type,
-        s.x, s.y, withAlpha(p.friendly, 0.8), { prefer: 'SE', radius: 6, size: 8 });
+      const extent = (asset.designated ? 16 : 5) * d;
+      this.reserve(s.x - extent, s.y - extent, extent * 2, extent * 2);
+      want(asset.designated ? `${asset.label} · PRIORITY` : asset.label, s.x, s.y,
+        asset.destroyed || asset.designated ? p.hostile : withAlpha(p.friendly, 0.8),
+        { prefer: 'SE', radius: asset.designated ? 17 : 6, size: 8,
+          weight: asset.designated ? 'bold' : '' });
     }
 
     for (const track of this.localTracks(world)) {
@@ -780,6 +944,21 @@ export class CrewConsole {
         ctx.stroke();
       }
       this.reserve(s.x - 6 * d, s.y - 6 * d, 12 * d, 12 * d);
+    }
+
+    // Place names last, and only where nothing else wants the room. The
+    // ground gives way to anything flying; a town that cannot find a clear
+    // corner goes unnamed this frame rather than printing through a contact.
+    for (const town of ground.towns) {
+      const s = this.toScreen(site, town.pos);
+      want(town.name, s.x, s.y, withAlpha(p.inkDim, town.capital ? 0.85 : 0.65),
+        { prefer: 'E', radius: 5, size: 8, optional: true });
+    }
+    for (const river of ground.rivers) {
+      const mid = river.points[Math.floor(river.points.length / 2)];
+      const s = this.toScreen(site, mid);
+      want(river.name, s.x, s.y, withAlpha(p.friendly, 0.55),
+        { prefer: 'S', radius: 4, size: 7.5, optional: true });
     }
 
     // The picture is finished; now the lettering, over it and out of its way.
