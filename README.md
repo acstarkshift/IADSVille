@@ -178,7 +178,7 @@ kilometres and the first hospital-bound track still a hundred and five seconds
 from existing. The campaign's central decision was being answered before there
 was anything on the board to weigh, and a player pressed Y and felt nothing.
 
-Then the debrief shows you two numbers that have agreed all campaign and now do
+Then the evening shows you two numbers that have agreed all campaign and now do
 not (means over eight seeded watches, competently fought — reproduce them with
 `node tools/measure-moral.mjs`; the hospital package comes in on the deck, down
 the Kubin road, and obedience loses the building on four nights of eight while
@@ -312,6 +312,23 @@ told to save, while you are standing in the valley.
 
 By the last watch, "the depots are committed to the capital" is a sentence you
 can no longer hear the way it is meant — and you are the one who signs it.
+
+## The evening
+
+A watch does not end on a page of tables. It ends the way an evening does:
+the tape comes out of the printer into your own hands and types the night as
+figures, a line at a time; you are stood in front of the political section,
+whose commissar reads the log back to you — the hospital, the encampment, the
+priority you refused — before the file entry and a dismissal that depends on
+the tier; an order of appointment is read when there is one; a watch that has
+taught you something puts the folder on the desk; and the letter from home,
+when one comes, is read in quarters with the snow going past the window. The
+last watches end on the valley at first light, or under a red sky. Every
+scene is drawn — there is not an image file in the game — at 320 by 180 and
+scaled in whole pixels, with the words laid over the picture as type, and a
+key or a tap finishes a line and moves to the next; SKIP goes straight to the
+card at the end, where STAND ANOTHER WATCH sits beside THE FULL REPORT, which
+is the old page of tables, kept for anyone who wants the arithmetic.
 
 ## Two seats
 

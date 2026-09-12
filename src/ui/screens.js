@@ -534,6 +534,30 @@ export function renderDebrief(host, state, result, entry) {
       <button class="btn-primary" id="btn-again">STAND ANOTHER WATCH</button>
       <button class="btn" id="btn-replay">REPLAY THIS ONE</button>
       ${state.campaign.character ? '<button class="btn" id="btn-dossier-debrief">DOSSIER</button>' : ''}
+      <button class="btn" id="btn-close-report">CLOSE THE REPORT</button>
+    </div>
+  </div>`;
+}
+
+/**
+ * The card the evening ends on.
+ *
+ * The scenes have said what happened; this is one line of it and the ways
+ * out. The full report — the page of tables the debrief used to be — is one
+ * button away, and so is watching the evening again.
+ */
+export function renderEndCard(host, state, result) {
+  host.innerHTML = `<div class="screen-inner is-endcard">
+    <h1 class="title is-watch ${result.success ? 'gained' : 'grave'}">${esc(result.headline)}</h1>
+    ${result.cause ? `<p class="subtitle grave">${esc(result.cause)}</p>` : ''}
+    <p class="subtitle">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}${
+  result.abandoned ? ' · not scored' : ` · score ${result.score} · standing ${Math.round(result.standing)}, ${esc(result.tierLabel)}`}</p>
+    <div class="actions">
+      <button class="btn-primary" id="btn-again">STAND ANOTHER WATCH</button>
+      <button class="btn" id="btn-replay">REPLAY THIS ONE</button>
+      <button class="btn" id="btn-report">THE FULL REPORT</button>
+      <button class="btn" id="btn-scenes">THE EVENING AGAIN</button>
+      ${state.campaign.character ? '<button class="btn" id="btn-dossier-debrief">DOSSIER</button>' : ''}
     </div>
   </div>`;
 }

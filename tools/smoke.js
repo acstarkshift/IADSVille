@@ -179,6 +179,40 @@ async function main() {
       };
     });
 
+    /*
+     * The evening after the watch: leave the post on the first run, and the
+     * scenes must play — the printout, the section — and end on the card
+     * with the full report behind its button. Driven by the keyboard, one
+     * key per line, the way a player would get through them.
+     */
+    if (run === RUNS[0]) {
+      await page.click('#btn-abort');
+      await page.click('#abort-confirm');
+      await page.waitForSelector('#scene:not([hidden])', { timeout: 10000 })
+        .catch(() => failures.push(`${run.mission}/${run.role}: the scenes did not start after leaving the post`));
+      const seen = new Set();
+      for (let i = 0; i < 80; i++) {
+        const kind = await page.evaluate(() => document.getElementById('scene')?.dataset.kind ?? '');
+        if (kind) seen.add(kind);
+        if (await page.isVisible('#btn-report')) break;
+        await page.keyboard.press('Enter');
+        await wait(120);
+      }
+      if (!seen.has('printout') || !seen.has('office')) {
+        failures.push(`${run.mission}/${run.role}: the evening skipped a scene (saw ${[...seen].join(', ') || 'nothing'})`);
+      }
+      if (!await page.isVisible('#btn-report')) {
+        failures.push(`${run.mission}/${run.role}: the scenes never reached the end card`);
+      } else {
+        await page.click('#btn-report');
+        await wait(300);
+        if (!await page.isVisible('#btn-close-report')) failures.push(`${run.mission}/${run.role}: the full report did not open from the end card`);
+        await page.click('#btn-close-report');
+        await wait(200);
+        if (!await page.isVisible('#btn-again')) failures.push(`${run.mission}/${run.role}: closing the report did not return to the end card`);
+      }
+    }
+
     if (!state.operator) failures.push(`${run.mission}/${run.role}: no service record reached the simulation`);
     if (state.tracks > 0 && state.headings < 1) {
       failures.push(`${run.mission}/${run.role}: the air picture rendered no shootlist headings`);

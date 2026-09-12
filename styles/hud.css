@@ -2054,3 +2054,55 @@ table.ledger .down { color: var(--hostile); }
 /* The one thing a browser with scripting off is shown. It is outside the
    console entirely, so it names the tokens it needs rather than inheriting. */
 .noscript { color: var(--ink); padding: 2rem; font: 14px var(--font-mono); }
+
+/*
+ * The scenes between watches.
+ *
+ * The player: "The little displays and summaries between watches is cluttered
+ * and overwhelming. It should be replaced with slick, 16-bit style animated
+ * cut scenes." The host covers the window in black with the picture centred
+ * in it at a whole-pixel scale; the words sit over the picture as ordinary
+ * type in a pixel frame, or straight on the paper when the scene is a sheet
+ * in the operator's hands. --scene-scale is the picture's scale, so every
+ * measurement here is in scene pixels.
+ */
+/* The scene host: the whole window, black, with the picture centred in it. */
+.scene { position: fixed; inset: 0; z-index: 60; background: #000; overflow: hidden; font-family: var(--font-mono); }
+.scene[hidden] { display: none; }
+.scene canvas { position: absolute; image-rendering: pixelated; image-rendering: crisp-edges; }
+/* The words, over the picture. A pixel frame, ordinary type inside it. */
+.scene-text {
+  position: absolute; box-sizing: border-box; overflow: hidden;
+  padding: calc(4px * var(--scene-scale, 3)) calc(5px * var(--scene-scale, 3));
+  color: #e9efe4; font-size: calc(4.6px * var(--scene-scale, 3)); line-height: 1.35;
+  background: rgba(8, 12, 9, .86);
+  box-shadow: 0 0 0 calc(1px * var(--scene-scale, 3)) #cfd8cc, 0 0 0 calc(2px * var(--scene-scale, 3)) #0a0d0a;
+}
+.scene-speaker { display: block; font-size: calc(3.4px * var(--scene-scale, 3)); letter-spacing: .12em; color: #9fb3a0; margin-bottom: calc(2px * var(--scene-scale, 3)); text-transform: uppercase; }
+.scene-body { overflow: hidden; }
+.scene-body p { margin: 0 0 calc(1.5px * var(--scene-scale, 3)); white-space: pre-wrap; }
+.scene-body .cursor { display: inline-block; width: .55em; height: 1em; vertical-align: -.15em; background: currentColor; margin-left: 1px; animation: scene-blink .9s steps(1) infinite; }
+@keyframes scene-blink { 50% { opacity: 0; } }
+.scene-prompt { position: absolute; right: calc(5px * var(--scene-scale, 3)); bottom: calc(3px * var(--scene-scale, 3)); font-size: calc(3.6px * var(--scene-scale, 3)); color: #cfe3d0; animation: scene-blink 1.2s steps(1) infinite; }
+/* The paper: dark ink on the sheet, no frame of its own — the sheet is the frame. */
+.scene[data-kind="printout"] .scene-text, .scene[data-kind="quarters"] .scene-text, .scene[data-kind="folder"] .scene-text {
+  background: transparent; box-shadow: none; color: #23261f;
+}
+.scene[data-kind="printout"] .scene-text { font-size: calc(4.2px * var(--scene-scale, 3)); letter-spacing: .04em; }
+.scene[data-kind="printout"] .scene-speaker, .scene[data-kind="quarters"] .scene-speaker, .scene[data-kind="folder"] .scene-speaker { color: #6b7a6a; }
+.scene[data-kind="quarters"] .scene-text { font-style: italic; color: #2b2f4a; }
+.scene[data-kind="printout"] .scene-prompt, .scene[data-kind="quarters"] .scene-prompt, .scene[data-kind="folder"] .scene-prompt { color: #4a5a48; }
+/* A phone held upright: the words under the picture, on their own sheet. */
+.scene.is-stacked .scene-text { font-size: 14px; line-height: 1.4; padding: 12px 14px; }
+.scene.is-stacked .scene-speaker { font-size: 10px; margin-bottom: 6px; }
+.scene.is-stacked .scene-prompt { font-size: 11px; right: 14px; bottom: 10px; }
+.scene.is-stacked[data-kind="printout"] .scene-text, .scene.is-stacked[data-kind="quarters"] .scene-text, .scene.is-stacked[data-kind="folder"] .scene-text {
+  background: #ebe7d9; box-shadow: 0 0 0 2px #cfd8cc, 0 0 0 4px #0a0d0a;
+}
+.scene.is-stacked[data-kind="printout"] .scene-text { font-size: 13px; }
+.scene-skip {
+  position: absolute; top: 14px; right: 16px; z-index: 2; cursor: pointer;
+  background: rgba(8, 12, 9, .8); color: #cfe3d0; border: 1px solid #6b7a6a; border-radius: 2px;
+  font: 700 11px var(--font-mono); letter-spacing: .12em; padding: 6px 10px;
+}
+.scene-skip:hover, .scene-skip:focus-visible { border-color: #cfe3d0; outline: none; }

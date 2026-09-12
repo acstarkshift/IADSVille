@@ -32,7 +32,8 @@ import {
 import { CONTROLS, POSTURE_CYCLE, legend } from './lexicon.js';
 import { SPEED_BY_KEY, digitPressed } from './keymap.js';
 import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS } from './tutorial.js';
-import { renderMenu, renderBriefing, renderDebrief, renderControls } from './screens.js';
+import { renderMenu, renderBriefing, renderDebrief, renderEndCard, renderControls } from './screens.js';
+import { scenesFor, ScenePlayer } from './scenes.js';
 import { renderEnlistment, renderDossier } from './dossier.js';
 import { learnSkill } from '../engine/character.js';
 
@@ -158,6 +159,7 @@ function cacheEls() {
     actionBar: id('action-bar'),
     scopeSide: id('scope-side'),
     abortAsk: id('abort-ask'),
+    scene: id('scene'),
     abortLine: id('abort-line'),
     abortConfirm: id('abort-confirm'),
     abortCancel: id('abort-cancel'),
@@ -449,17 +451,44 @@ function endMission() {
   const entry = recordMission(state.campaign, result);
   saveCampaign(store, state.campaign);
   audio.stopArmWarning();
+  playScenes(result, entry);
+}
+
+/**
+ * The evening: the scenes between watches, then the card they end on.
+ *
+ * The player asked for the summaries between watches to go — "cluttered and
+ * overwhelming" — in favour of scenes: the printout in the operator's hands,
+ * the political section, the letter from home. So a finished watch plays its
+ * scenes first, and the page of tables the debrief used to be is behind one
+ * button on the card at the end.
+ */
+let scenePlayer = null;
+function playScenes(result, entry) {
+  scenePlayer ??= new ScenePlayer(els.scene, { audio });
+  state.phase = 'scenes';
+  els.shell.hidden = true;
+  els.screen.hidden = true;
+  scenePlayer.play(scenesFor(state, result, entry), {
+    character: state.campaign.character,
+    onDone: () => endCard(result, entry),
+  });
+}
+
+function endCard(result, entry) {
   state.phase = 'debrief';
   els.shell.hidden = true;
   els.screen.hidden = false;
-  renderDebrief(els.screen, state, result, entry);
+  renderEndCard(els.screen, state, result);
   els.screen.querySelector('#btn-again').onclick = showMenu;
   els.screen.querySelector('#btn-replay').onclick = () => { showBriefing(); };
+  els.screen.querySelector('#btn-report').onclick = () => endMissionScreen(result, entry);
+  els.screen.querySelector('#btn-scenes').onclick = () => playScenes(result, entry);
   const dossier = els.screen.querySelector('#btn-dossier-debrief');
-  if (dossier) dossier.onclick = () => showDossier(() => endMissionScreen(result, entry));
+  if (dossier) dossier.onclick = () => showDossier(() => endCard(result, entry));
 }
 
-/** Re-show a debrief after a detour through the dossier. */
+/** The full report: the page of tables, behind its one button. */
 function endMissionScreen(result, entry) {
   state.phase = 'debrief';
   els.shell.hidden = true;
@@ -467,6 +496,7 @@ function endMissionScreen(result, entry) {
   renderDebrief(els.screen, state, result, entry);
   els.screen.querySelector('#btn-again').onclick = showMenu;
   els.screen.querySelector('#btn-replay').onclick = () => { showBriefing(); };
+  els.screen.querySelector('#btn-close-report').onclick = () => endCard(result, entry);
   const dossier = els.screen.querySelector('#btn-dossier-debrief');
   if (dossier) dossier.onclick = () => showDossier(() => endMissionScreen(result, entry));
 }

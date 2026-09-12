@@ -202,6 +202,22 @@
 
 <div id="screen" class="screen"></div>
 
+<!--
+  The scenes between watches: the printout in the operator's hands, the
+  political section's office, the folder, the letter from home, the ending.
+  A canvas 320 by 180 scaled in whole pixels, with the words laid over it as
+  text. See src/ui/scenes.js.
+-->
+<div class="scene" id="scene" hidden data-kind="">
+  <canvas aria-hidden="true"></canvas>
+  <div class="scene-text" role="log" aria-live="polite">
+    <span class="scene-speaker"></span>
+    <div class="scene-body"></div>
+    <span class="scene-prompt" aria-hidden="true"></span>
+  </div>
+  <button class="scene-skip" type="button" title="Skip to the end of the evening (Esc)">SKIP ▸▸</button>
+</div>
+
 <script type="module" src="src/ui/app.js"></script>
 <noscript>
   <p class="noscript">IADSVille needs JavaScript to run the simulation.</p>
