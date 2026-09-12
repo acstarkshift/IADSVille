@@ -9,12 +9,11 @@
  * register that stays in good taste.
  */
 
-import { SCENARIOS, isUnlocked, appointmentOf } from '../engine/scenarios.js';
-import { ECHELON_ORDER } from '../engine/echelon.js';
+import { SCENARIOS, isUnlocked, appointmentOf, watchConditions } from '../engine/scenarios.js';
+import { ECHELON_ORDER, ECHELONS } from '../engine/echelon.js';
 import { DIFFICULTY, ROLES, SAM_TYPES, DEFENCE_CLASSES } from '../engine/config.js';
 import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor } from '../engine/command.js';
-import { THEMES } from './themes.js';
 import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/character.js';
 import { serviceSummary, abandonedRecord } from './dossier.js';
 import { STATE } from './lexicon.js';
@@ -67,7 +66,6 @@ export function renderMenu(host, state) {
         <b>${esc(sc.name)}</b>
         <small>${esc(sc.subtitle)}</small>
         <div class="flags">
-          <span class="pill">${esc(THEMES[sc.theme].label)}</span>
           ${sc.roles.length === 1 ? `<span class="pill tight">${esc(ROLES[sc.roles[0]].label)} ONLY</span>` : ''}
           ${done ? `<span class="pill free">BEST ${done.score}</span>` : ''}
         </div>
@@ -164,10 +162,6 @@ export function renderMenu(host, state) {
       </div>
       <div class="toggle-row">
         <label><input type="checkbox" id="opt-audio" ${state.audio ? 'checked' : ''}> Sound</label>
-        <label><input type="checkbox" id="opt-theme-lock" ${state.themeOverride ? 'checked' : ''}> Force theme:</label>
-        <select id="theme-pick" class="btn" ${state.themeOverride ? '' : 'disabled'}>
-          ${Object.values(THEMES).map((t) => `<option value="${t.id}" ${state.themeOverride === t.id ? 'selected' : ''}>${esc(t.label)}</option>`).join('')}
-        </select>
       </div>
     </div>
 
@@ -197,6 +191,7 @@ export function renderBriefing(host, state) {
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title is-watch">${esc(mission.name)}</h1>
     <p class="subtitle">${esc(mission.subtitle)}</p>
+    <p class="note conditions">${esc(watchConditions(mission).line)} · ${esc(ECHELONS[mission.echelon]?.appointment?.en ?? mission.echelon ?? '')}</p>
     ${character ? `<div class="card record-card is-tight">
       <div class="record-stamp">${esc(STATE.serviceShort.tm)}</div>
       <p>Posting order for <b>${rankInsignia(character.rankIndex, { size: 14 })} ${esc(rank.en)} ${esc(character.name)}</b>.

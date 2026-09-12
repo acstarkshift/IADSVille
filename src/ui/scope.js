@@ -12,6 +12,7 @@
  */
 
 import { THEMES, readPalette, hostilityColour } from './themes.js';
+import { watchConditions } from '../engine/scenarios.js';
 import { MAP } from '../engine/geography.js';
 import { SAM_TYPES, ASSET_TYPES, AIR_TYPES } from '../engine/config.js';
 import { bearing, headingVec, len, clamp01 } from '../engine/math.js';
@@ -1107,12 +1108,15 @@ export class Scope {
     ctx.font = `${10 * this.dpr}px ${FONT}`;
     ctx.fillStyle = p.inkDim;
     ctx.fillText(`RANGE ${Math.round(this.rangeKm)} KM`, 10 * this.dpr, 16 * this.dpr);
+    // The hour and the weather, under the range: the watch's own time of
+    // night, which is one of the things that tells this watch from the last.
+    ctx.fillText(watchConditions(world.scenario, world.t).line, 10 * this.dpr, 30 * this.dpr);
     if (!world.fusionOnline) {
       ctx.fillStyle = p.hostile;
       // What it means for the person looking at the tube, not the name of
       // the mode: every radar is now reporting on its own, and the same
       // aircraft can wear a different track number on each of them.
-      ctx.fillText('SECTOR LINK DOWN — EACH RADAR REPORTS ON ITS OWN', 10 * this.dpr, 30 * this.dpr);
+      ctx.fillText('SECTOR LINK DOWN — EACH RADAR REPORTS ON ITS OWN', 10 * this.dpr, 44 * this.dpr);
     }
     ctx.restore();
   }

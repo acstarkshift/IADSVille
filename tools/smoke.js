@@ -5,7 +5,7 @@
  * This drives the real thing in a real browser — loads the page, takes a watch
  * in each seat, plays it at four times speed, and fails on any console error or
  * on a mission that never produces a track. It is the check that would catch a
- * broken import, a renderer that throws on the first frame, or a theme that
+ * broken import, a renderer that throws on the first frame, or a watch that
  * fails to apply.
  *
  * Run with: node tools/smoke.js   (expects playwright available; CI installs it)
@@ -33,19 +33,19 @@ const ORIGIN = `http://127.0.0.1:${PORT}/`;
  * itself: if the appointment logic breaks, these runs stop finding their button.
  */
 const RUNS = [
-  { mission: 'first-light', role: 'net', theme: 'crt-green', background: 'factory' },
-  { mission: 'solo-battery', role: 'crew', theme: 'crt-green', background: 'border' },
-  { mission: 'weasel-hour', role: 'net', theme: 'crt-green', background: 'academy' },
-  { mission: 'economy-of-force', role: 'net', theme: 'crt-green', background: 'factory' },
-  { mission: 'across-the-line', role: 'net', theme: 'crt-green', background: 'border' },
-  { mission: 'ville-under-fire', role: 'both', theme: 'ops-modern', background: 'penal' },
-  { mission: 'four-sectors', role: 'net', theme: 'ops-modern', background: 'academy' },
-  { mission: 'reinforce-the-capital', role: 'net', theme: 'ops-modern', background: 'factory' },
-  { mission: 'two-cities', role: 'net', theme: 'ops-modern', background: 'border' },
+  { mission: 'first-light', role: 'net', background: 'factory' },
+  { mission: 'solo-battery', role: 'crew', background: 'border' },
+  { mission: 'weasel-hour', role: 'net', background: 'academy' },
+  { mission: 'economy-of-force', role: 'net', background: 'factory' },
+  { mission: 'across-the-line', role: 'net', background: 'border' },
+  { mission: 'ville-under-fire', role: 'both', background: 'penal' },
+  { mission: 'four-sectors', role: 'net', background: 'academy' },
+  { mission: 'reinforce-the-capital', role: 'net', background: 'factory' },
+  { mission: 'two-cities', role: 'net', background: 'border' },
   // The epilogue needs both gates open: the appointment, and a palace that was
   // still standing at the end of the last watch.
   {
-    mission: 'presidents-flight', role: 'net', theme: 'ops-modern', background: 'academy',
+    mission: 'presidents-flight', role: 'net', background: 'academy',
     campaignEnding: 'obedient',
   },
 ];
@@ -142,9 +142,21 @@ async function main() {
     });
     await page.click('[data-speed="4"]');
 
-    const theme = await page.evaluate(() => document.body.dataset.theme);
-    if (theme !== run.theme) {
-      failures.push(`${run.mission}: expected theme ${run.theme}, got ${theme}`);
+    /*
+     * One phosphor, and the watch told from the last by other means: the
+     * chassis wears the echelon's issue and the hour's light, stamped on
+     * <body> for the stylesheet, and the glass prints the hour and the
+     * weather. All three must be there, and the display must be the one
+     * display there is.
+     */
+    const { theme, hour, echelon } = await page.evaluate(() => ({
+      theme: document.body.dataset.theme, hour: document.body.dataset.hour, echelon: document.body.dataset.echelon,
+    }));
+    if (theme !== 'crt-green') {
+      failures.push(`${run.mission}: expected the one display, got theme ${theme}`);
+    }
+    if (!['night', 'dawn', 'day', 'dusk'].includes(hour) || !echelon) {
+      failures.push(`${run.mission}: the chassis is not stamped with the hour and the echelon (${hour}, ${echelon})`);
     }
 
     let detected = false;
@@ -185,6 +197,7 @@ async function main() {
       const rows = [...document.querySelectorAll('#track-list > li')];
       return {
         t: Math.round(w.t), tracks: w.tracks.size, events: w.events.length, phase: w.phase,
+        hour: document.body.dataset.hour ?? null,
         // The operator's record has to reach the simulation, or the whole RPG
         // layer is cosmetic.
         operator: w.character?.name ?? null,
@@ -245,7 +258,7 @@ async function main() {
     if (errors.length) failures.push(`${run.mission}/${run.role}: ${errors.slice(0, 3).join(' | ')}`);
 
     console.log(`${failures.length ? '·' : '✓'} ${run.mission}/${run.role} `
-      + `(${run.theme}, ${run.background}) — ${state.t}s simulated, ${state.tracks} tracks, `
+      + `(${state.hour ?? '?'}, ${run.background}) — ${state.t}s simulated, ${state.tracks} tracks, `
       + `${state.events} events, operator ${state.operator}`);
     await page.close();
   }

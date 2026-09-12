@@ -13,6 +13,7 @@
  */
 
 import { THEMES, readPalette, hostilityColour } from './themes.js';
+import { watchConditions } from '../engine/scenarios.js';
 import { SAM_TYPES, AIR_TYPES, ASSET_TYPES } from '../engine/config.js';
 import { bearing, dist, headingVec, len, clamp01,
   horizonFloorM, radarHorizonKm,
@@ -749,6 +750,8 @@ export class CrewConsole {
       `${type.label} · ${site.readyRounds} ON RAILS · ${site.magazine} IN STORE`,
       radar?.state === 'radiating' ? 'RADIATING' : radar?.state === 'warming' ? 'WARMING' : 'SILENT',
       `RANGE SCALE ${Math.round(this.rangeKm)} km`,
+      // The hour and the weather: the cabin's window, in one line.
+      watchConditions(world.scenario, world.t).line,
     ];
     const blockR = focus ? [
       `${focus.tn}  ${String(focus.hostility).toUpperCase()}`,

@@ -1202,7 +1202,6 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
   content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
   background: radial-gradient(120% 90% at 22% 8%, rgba(255,255,255,.055), transparent 55%);
 }
-[data-theme="ops-modern"] .tube::after { background: none; }
 /* The bezel's own control strip: range selector, plates, and a caution placard. */
 .scope-side {
   display: flex; flex-direction: column; align-items: center; gap: 6px;

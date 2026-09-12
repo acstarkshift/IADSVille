@@ -1,24 +1,19 @@
 /**
- * Console themes.
+ * The console's one display.
  *
  * Colour lives in CSS (styles/theme.css) and is read back out of the custom
- * properties so there is exactly one source of truth for the palette. What lives
- * here is *behaviour*: whether the display holds a phosphor image between
- * frames, whether it wears scanlines, and which symbol set it draws.
+ * properties so there is exactly one source of truth for the palette. What
+ * lives here is *behaviour*: the phosphor's afterglow, the scanlines, the
+ * sweep's tail, the symbol set.
  *
- * There is ONE phosphor. There used to be two — an amber set on four of the
- * twelve watches — on the reasoning that a different tube would make a watch
- * feel like a different night, and it did not: it made four watches look like a
- * reskin of the other eight, which is the opposite of the thing it was for. A
- * watch is distinguished by the hardware of its echelon, its hour, its weather,
- * its map and the order pinned to its board, never by a palette swap.
- *
- * What survives beside the green set is not a second phosphor. It is a
- * different KIND of display: the flat tactical panel the national echelon
- * works on, which has no phosphor at all, holds no image between frames, wears
- * no scanlines and draws standard symbology rather than blips. Sitting down at
- * one is meant to feel like sitting down at a different decade's equipment,
- * which is what having been promoted out of a cathode-ray cabin feels like.
+ * There is ONE phosphor, and one display. There used to be two — an amber set,
+ * then a flat blue-grey tactical panel on the five district and national
+ * watches — and the player said what a palette swap says: "one phosphor
+ * colour, levels visually distinct by other means." So the panel went the way
+ * of the amber. A watch is distinguished by the hardware of its echelon, its
+ * hour, its weather and its map (`watchConditions` in scenarios.js, the
+ * `data-echelon` and `data-hour` attributes in theme.css), never by the colour
+ * of the glass.
  */
 
 export const THEMES = {
@@ -42,21 +37,7 @@ export const THEMES = {
     vignette: 0.55,
     curvature: true,
   },
-  'ops-modern': {
-    id: 'ops-modern',
-    label: 'TACTICAL DISPLAY',
-    blurb: 'Flat panel, standard symbology, no persistence. Everything is exactly as current as it is.',
-    afterglow: 0,
-    scanlines: false,
-    glowPx: 0,
-    sweepTailDeg: 30,
-    symbology: 'standard',
-    vignette: 0.2,
-    curvature: false,
-  },
 };
-
-export const THEME_IDS = Object.keys(THEMES);
 
 /** Put a theme on the document. CSS does the rest of the chrome. */
 export function applyTheme(themeId) {

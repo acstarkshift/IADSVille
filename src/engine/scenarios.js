@@ -284,12 +284,62 @@ const civilTransit = (atS) => ({
   waypoints: [{ x: 60, y: 25 }, { x: 175, y: -140 }],
 });
 
+/**
+ * The weather a watch is stood in, as the console prints it.
+ *
+ * The player: "one phosphor colour, levels visually distinct by other means."
+ * The other means are these — the hour, the weather, the echelon's hardware
+ * and the map — declared on every watch and read by the console: the glass
+ * prints the local time and the conditions, and the chassis takes the hour's
+ * light and the echelon's issue. English only, because this is the operator's
+ * own reading of the window, not a plate.
+ */
+export const WEATHER = {
+  clear: 'CLEAR',
+  overcast: 'OVERCAST',
+  snow: 'SNOW',
+  rain: 'RAIN',
+  fog: 'FOG',
+};
+
+/** Which part of the day a clock reading falls in: the light on the chassis. */
+export function hourClass(hhmm) {
+  const h = Number(String(hhmm ?? '00:00').split(':')[0]);
+  if (h >= 5 && h < 8) return 'dawn';
+  if (h >= 8 && h < 17) return 'day';
+  if (h >= 17 && h < 20) return 'dusk';
+  return 'night';
+}
+
+/** The local clock `seconds` into a watch that began at the scenario's hour. */
+export function localClock(scenario, seconds = 0) {
+  const [h, m] = String(scenario?.hour ?? '00:00').split(':').map(Number);
+  const total = ((h * 60 + m) * 60 + Math.max(0, Math.floor(seconds))) % 86400;
+  return `${String(Math.floor(total / 3600)).padStart(2, '0')}:${String(Math.floor(total / 60) % 60).padStart(2, '0')}`;
+}
+
+/** The hour, the light and the weather of a watch, `seconds` in. */
+export function watchConditions(scenario, seconds = 0) {
+  const temp = scenario?.tempC;
+  return {
+    clock: localClock(scenario, seconds),
+    light: hourClass(localClock(scenario, seconds)),
+    weather: WEATHER[scenario?.weather] ?? WEATHER.clear,
+    tempC: temp ?? null,
+    /** One line for the glass: "05:12 · CLEAR · −3 °C". */
+    line: `${localClock(scenario, seconds)} · ${WEATHER[scenario?.weather] ?? WEATHER.clear}`
+      + (typeof temp === 'number' ? ` · ${temp < 0 ? '−' : ''}${Math.abs(temp)} °C` : ''),
+  };
+}
+
 export const SCENARIOS = [
   {
     id: 'first-light',
     name: 'First Light',
     subtitle: 'Four contacts, high and unhurried. Learn the scope.',
-    theme: 'crt-green',
+    hour: '05:10',
+    weather: 'clear',
+    tempC: -3,
     echelon: 'battalion',
     roles: ['net', 'crew', 'both'],
     seed: 'first-light-01',
@@ -448,7 +498,9 @@ export const SCENARIOS = [
     id: 'low-riders',
     name: 'Low Riders',
     subtitle: 'They have read the same horizon tables you have.',
-    theme: 'crt-green',
+    hour: '02:15',
+    weather: 'overcast',
+    tempC: -1,
     echelon: 'battalion',
     roles: ['net', 'crew', 'both'],
     seed: 'low-riders-04',
@@ -704,7 +756,9 @@ export const SCENARIOS = [
     id: 'solo-battery',
     name: 'Solo Battery',
     subtitle: 'One battery, one crew, one radar. Yours.',
-    theme: 'crt-green',
+    hour: '23:40',
+    weather: 'rain',
+    tempC: 4,
     echelon: 'battalion',
     roles: ['crew'],
     seed: 'solo-battery-09',
@@ -907,7 +961,9 @@ export const SCENARIOS = [
     id: 'weasel-hour',
     name: 'Weasel Hour',
     subtitle: 'Something out there is listening for you.',
-    theme: 'crt-green',
+    hour: '05:25',
+    weather: 'fog',
+    tempC: -2,
     echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'weasel-hour-02',
@@ -1109,7 +1165,9 @@ export const SCENARIOS = [
     id: 'white-noise',
     name: 'White Noise',
     subtitle: 'Half of what you can see is not there.',
-    theme: 'crt-green',
+    hour: '01:05',
+    weather: 'clear',
+    tempC: -8,
     echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'white-noise-07',
@@ -1250,7 +1308,9 @@ export const SCENARIOS = [
     id: 'economy-of-force',
     name: 'Economy of Force',
     subtitle: 'There are rounds on the rails. You have been told what they are for.',
-    theme: 'crt-green',
+    hour: '14:20',
+    weather: 'snow',
+    tempC: -5,
     echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'economy-08',
@@ -1379,7 +1439,9 @@ export const SCENARIOS = [
     id: 'across-the-line',
     name: 'Across the Line',
     subtitle: 'A round has gone wrong, and it is going to come down somewhere that is not our concern.',
-    theme: 'crt-green',
+    hour: '17:45',
+    weather: 'overcast',
+    tempC: 1,
     echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'across-11',
@@ -1505,7 +1567,9 @@ export const SCENARIOS = [
     id: 'ville-under-fire',
     name: 'Ville Under Fire',
     subtitle: 'Everything at once, and then the lights go out.',
-    theme: 'ops-modern',
+    hour: '03:30',
+    weather: 'snow',
+    tempC: -9,
     echelon: 'sector',
     roles: ['net', 'crew', 'both'],
     seed: 'ville-under-fire-11',
@@ -1661,7 +1725,9 @@ export const SCENARIOS = [
     id: 'four-sectors',
     name: 'Four Sectors',
     subtitle: 'You have been promoted. You can now see everything and reach almost none of it.',
-    theme: 'ops-modern',
+    hour: '11:50',
+    weather: 'clear',
+    tempC: 6,
     echelon: 'region',
     roles: ['net'],
     seed: 'four-sectors-01',
@@ -1816,7 +1882,9 @@ export const SCENARIOS = [
     id: 'reinforce-the-capital',
     name: 'Reinforce the Capital',
     subtitle: 'An order to send away the only thing that reaches two of your sectors.',
-    theme: 'ops-modern',
+    hour: '19:05',
+    weather: 'rain',
+    tempC: 3,
     echelon: 'region',
     roles: ['net'],
     seed: 'reinforce-01',
@@ -1950,7 +2018,9 @@ export const SCENARIOS = [
     id: 'two-cities',
     name: 'The Two Cities',
     subtitle: 'Two raids, one sector, and an order about which one matters.',
-    theme: 'ops-modern',
+    hour: '22:50',
+    weather: 'clear',
+    tempC: -11,
     echelon: 'national',
     roles: ['net', 'both'],
     seed: 'two-cities-final',
@@ -2288,7 +2358,9 @@ export const SCENARIOS = [
     id: 'presidents-flight',
     name: "The President's Flight",
     subtitle: 'STATE 01, out of Demobodedovo, and everything that wants it down.',
-    theme: 'ops-modern',
+    hour: '06:10',
+    weather: 'fog',
+    tempC: -4,
     echelon: 'national',
     roles: ['net', 'both'],
     seed: 'presidents-flight-01',

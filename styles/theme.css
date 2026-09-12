@@ -90,52 +90,6 @@
   --z-screen: 50;
 }
 
-/*
- * There is one phosphor, and it is the green set above.
- *
- * An amber block used to sit here and four of the twelve watches were fought
- * on it. It made those four look like a reskin of the other eight rather than
- * like a different night, which is the opposite of what it was for; watches
- * are told apart by the echelon's hardware, the hour, the weather, the map and
- * the order on the board. The set below is not a second phosphor: it is the
- * flat tactical panel the national echelon works on, with no persistence, no
- * scanlines and no bloom — a different kind of display, not a different colour
- * of the same one.
- */
-[data-theme="ops-modern"] {
-  --bg: #0b0e13;
-  --bg-panel: #121721;
-  --bg-raised: #19202c;
-  --grid: #1e2836;
-  --edge: #2c3947;
-  --ink: #cfd9e6;
-  --ink-bright: #ffffff;
-  --ink-dim: #6b7789;
-  --accent: #4da3ff;
-  --hostile: #ff4d4d;
-  --friendly: #4da3ff;
-  --unknown: #ffc83d;
-  --warn: #ffa53d;
-  --good: #56d97b;
-  --shadow: 0 1px 3px rgba(0, 0, 0, .5);
-  --glow: none;
-  --radius: 4px;
-  --scanline-alpha: 0;
-
-  /* Modern equipment: anodised grey, machined rather than painted. */
-  --metal: #39414d;
-  --metal-hi: #48515f;
-  --metal-lo: #272e38;
-  --metal-edge: #151a21;
-  --engrave: #e8eef6;
-  --engrave-dim: #a6b2c2;
-  --plate: #232a34;
-  --lamp-off: #2d3540;
-  --screw: #626d7d;
-  --tube-face: #000000;
-  --well: #10151d;
-  --paper: #0c1017;
-}
 
 /* Everything the player is being shot at with gets the same alarm treatment,
    and the same red: --alarm-rgb, shared with the tube's edge breath. */
@@ -158,3 +112,36 @@
   40%, 100% { opacity: 1; }
 }
 @keyframes blink { 50% { opacity: .25; } }
+
+/*
+ * One phosphor, four issues of hardware, four hours of the day.
+ *
+ * The glass is the same green everywhere. What tells a watch from the last one
+ * is the chassis: each echelon's console is a different issue of equipment —
+ * painted olive steel at the battalion, grey-green at the sector, the blue-grey
+ * of a district command post, anodised grey at national command — and the
+ * hour of the watch puts its light on that metal: nothing at night, a cold
+ * blue-white at dawn, a flat daylight, a warm dusk. The phosphor tokens are
+ * not touched by either. `data-echelon` and `data-hour` are stamped on <body>
+ * when a watch starts (app.js) and cleared on the menu.
+ */
+body[data-echelon="battalion"] { --metal-base: #6e7568; --metal-hi-base: #878e7f; --metal-lo-base: #4c5248; --plate-base: #3a4034; --screw-base: #9aa290; }
+body[data-echelon="sector"]    { --metal-base: #6b7573; --metal-hi-base: #858f8c; --metal-lo-base: #4a5352; --plate-base: #363f3e; --screw-base: #98a19f; }
+body[data-echelon="region"]    { --metal-base: #5f6b78; --metal-hi-base: #78859a; --metal-lo-base: #414a55; --plate-base: #2f3741; --screw-base: #8d99a8; }
+body[data-echelon="national"]  { --metal-base: #39414d; --metal-hi-base: #48515f; --metal-lo-base: #272e38; --plate-base: #232a34; --screw-base: #626d7d; }
+body[data-hour="night"] { --hour-light: #0a0f1a; --hour-mix: 0%; }
+body[data-hour="dawn"]  { --hour-light: #9fb4cc; --hour-mix: 16%; }
+body[data-hour="day"]   { --hour-light: #e8e4d8; --hour-mix: 26%; }
+body[data-hour="dusk"]  { --hour-light: #d08a5a; --hour-mix: 18%; }
+@supports (color: color-mix(in srgb, red, blue)) {
+  body[data-echelon] {
+    --metal: color-mix(in srgb, var(--metal-base), var(--hour-light, #0a0f1a) var(--hour-mix, 0%));
+    --metal-hi: color-mix(in srgb, var(--metal-hi-base), var(--hour-light, #0a0f1a) var(--hour-mix, 0%));
+    --metal-lo: color-mix(in srgb, var(--metal-lo-base), var(--hour-light, #0a0f1a) var(--hour-mix, 0%));
+    --plate: color-mix(in srgb, var(--plate-base), var(--hour-light, #0a0f1a) var(--hour-mix, 0%));
+    --screw: color-mix(in srgb, var(--screw-base), var(--hour-light, #0a0f1a) var(--hour-mix, 0%));
+  }
+}
+@supports not (color: color-mix(in srgb, red, blue)) {
+  body[data-echelon] { --metal: var(--metal-base); --metal-hi: var(--metal-hi-base); --metal-lo: var(--metal-lo-base); --plate: var(--plate-base); --screw: var(--screw-base); }
+}

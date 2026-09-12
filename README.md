@@ -855,6 +855,21 @@ toggle switches whose lever position *is* the state, domed indicator lamps,
 legend-cap pushbuttons, a screwed bezel around the tube, riveted data plates
 carrying a type and a works number, and a high-voltage placard nobody reads.
 
+**One phosphor.** The glass is the same green on every watch. There used to be
+an amber set, and then a flat blue-grey tactical panel on the district and
+national watches, and the player said what a palette swap says: "one phosphor
+colour, levels visually distinct by other means." So a watch is told from the
+last one by what would actually differ: every watch declares its hour, its
+weather and the temperature, the glass prints them under the range — "05:12 ·
+CLEAR · −3 °C" on the tube, the same line on the cabin's plan view, and on the
+posting order — and the chassis around the glass wears the echelon's issue of
+hardware and the hour's light. Painted olive steel at the battalion, grey-green
+at the sector, the blue-grey of a district command post, anodised grey at
+national command; nothing on the metal at night, a cold blue-white at dawn, a
+flat daylight on an afternoon watch, a warm dusk on an evening one. The
+phosphor is never touched by either. A test holds every watch to declaring the
+three, spread over the day, and holds the display to being one.
+
 The plates carry the Cyrillic; nothing else does. A nomenclature plate, the
 works plate, a placard, a rubber stamp and the operator's own identity card are
 objects with a foundry's lettering on them, and they are what make the panel

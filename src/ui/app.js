@@ -9,7 +9,7 @@
  */
 
 import { World } from '../engine/world.js';
-import { SCENARIOS, scenarioById, rosterFor, consoleCaps } from '../engine/scenarios.js';
+import { SCENARIOS, scenarioById, rosterFor, consoleCaps, watchConditions } from '../engine/scenarios.js';
 import { SIM, SAM_TYPES, DEFENCE_CLASSES, ASSET_TYPES } from '../engine/config.js';
 import {
   loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign,
@@ -51,7 +51,6 @@ const state = {
   difficulty: 'veteran',
   narrativePressure: true,
   audio: true,
-  themeOverride: null,
   campaign: emptyCampaign(),
   speed: 1,
 };
@@ -113,7 +112,6 @@ function saveSettings() {
       difficulty: state.difficulty,
       narrativePressure: state.narrativePressure,
       audio: state.audio,
-      themeOverride: state.themeOverride,
       role: state.role,
       missionId: state.missionId,
     }));
@@ -243,7 +241,7 @@ function showScreen(render) {
  */
 function showEnlistment() {
   state.phase = 'enlist';
-  applyTheme(state.themeOverride ?? 'crt-green');
+  applyTheme('crt-green');
   showScreen(renderEnlistment);
   const host = els.screen;
   const nameInput = host.querySelector('#enlist-name');
@@ -303,8 +301,13 @@ function showDossier(back) {
 function showMenu() {
   if (!state.campaign.character) { showEnlistment(); return; }
   state.phase = 'menu';
-  applyTheme(state.themeOverride ?? state.mission.theme);
-  scope.setTheme(state.themeOverride ?? state.mission.theme);
+  applyTheme('crt-green');
+  scope.setTheme('crt-green');
+  // The chassis takes the echelon's issue and the hour's light only at a
+  // console; the menu is paper.
+  delete document.body.dataset.echelon;
+  delete document.body.dataset.hour;
+  delete document.body.dataset.weather;
   showScreen(renderMenu);
   wireMenu();
 }
@@ -336,13 +339,6 @@ function wireMenu() {
   host.querySelector('#opt-audio').onchange = (e) => {
     state.audio = e.target.checked; audio.setEnabled(state.audio); saveSettings();
   };
-  host.querySelector('#opt-theme-lock').onchange = (e) => {
-    state.themeOverride = e.target.checked ? (host.querySelector('#theme-pick').value ?? 'crt-green') : null;
-    saveSettings(); showMenu();
-  };
-  host.querySelector('#theme-pick').onchange = (e) => {
-    state.themeOverride = e.target.value; saveSettings(); showMenu();
-  };
 
   host.querySelector('#btn-brief').onclick = () => { audio.resume(); showBriefing(); };
   host.querySelector('#btn-keys').onclick = () => showHelp(showMenu);
@@ -362,7 +358,7 @@ function wireMenu() {
 
 function showBriefing() {
   state.phase = 'brief';
-  applyTheme(state.themeOverride ?? state.mission.theme);
+  applyTheme('crt-green');
   showScreen(renderBriefing);
   els.screen.querySelector('#btn-start').onclick = startMission;
   els.screen.querySelector('#btn-back').onclick = showMenu;
@@ -383,10 +379,17 @@ function showHelp(back) {
 /* -------------------------------------------------------------- mission */
 
 function startMission() {
-  const themeId = state.themeOverride ?? state.mission.theme;
-  applyTheme(themeId);
-  scope.setTheme(themeId);
-  crew.setTheme(themeId);
+  applyTheme('crt-green');
+  scope.setTheme('crt-green');
+  crew.setTheme('crt-green');
+  /*
+   * One phosphor; the watch is told from the last by other means. The chassis
+   * wears the echelon's issue of hardware and the hour's light (theme.css
+   * reads these off <body>), and the glass prints the hour and the weather.
+   */
+  document.body.dataset.echelon = state.mission.echelon ?? 'battalion';
+  document.body.dataset.hour = watchConditions(state.mission).light;
+  document.body.dataset.weather = state.mission.weather ?? 'clear';
 
   world = new World(state.mission, {
     role: state.role,
