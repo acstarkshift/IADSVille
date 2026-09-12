@@ -435,3 +435,26 @@ test('the kinematic profile is readable before identification resolves', () => {
   assert.equal(trackProfile({ altM: 100, vel: { x: 0, y: 0.3 } }), 'LOW/FAST');
   assert.equal(trackProfile({ altM: 9000, vel: { x: 0, y: 0.1 } }), 'HIGH/SLOW');
 });
+
+describe('the horizon is a fade, and the chart says so', () => {
+  /*
+   * The player: "range/altitude scope's radar horizon looks wrong — verify
+   * curve/limit." Verified: the horizon caps the set's effective range, which
+   * makes it the range at which a low contact paints on half the scans; the
+   * return fades past it rather than stopping. These pin the figures the
+   * README quotes, so the chart's title and the model cannot drift apart.
+   */
+  test('at the horizon a low contact paints on half its scans, and fades beyond', () => {
+    const r = radar({ rangeKm: 300, heightM: 26 });
+    const t = target({ altM: 130, rcs: 5 });
+    const eff = effectiveRangeKm(r, t);
+    const horizon = 4.12 * (Math.sqrt(26) + Math.sqrt(130));
+    assert.ok(Math.abs(eff - horizon) < 1e-9, `the horizon caps the range, ${eff} vs ${horizon}`);
+    const pd = (k) => detectionProbability(eff, eff * k, 8000);   // up high: no clutter term
+    assert.ok(Math.abs(pd(1) - 0.5) < 1e-9, 'one half at the horizon');
+    assert.ok(Math.abs(pd(1.1) - 0.406) < 0.01, `two fifths at a tenth beyond, got ${pd(1.1)}`);
+    assert.ok(Math.abs(pd(1.5) - 0.165) < 0.01, `a sixth at half again, got ${pd(1.5)}`);
+    assert.ok(Math.abs(pd(1.75) - 0.096) < 0.01, `one in ten at three quarters beyond, got ${pd(1.75)}`);
+    assert.ok(pd(2.5) > 0, 'and it never stops dead');
+  });
+});

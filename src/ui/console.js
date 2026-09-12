@@ -14,7 +14,9 @@
 
 import { THEMES, readPalette, hostilityColour } from './themes.js';
 import { SAM_TYPES, AIR_TYPES, ASSET_TYPES } from '../engine/config.js';
-import { bearing, dist, headingVec, len, clamp01 } from '../engine/math.js';
+import { bearing, dist, headingVec, len, clamp01,
+  horizonFloorM, radarHorizonKm,
+} from '../engine/math.js';
 import { inEnvelope, timeToInRangeS, computeSamPk } from '../engine/weapons.js';
 import { MAP } from '../engine/geography.js';
 import { withAlpha } from './scope.js';
@@ -33,6 +35,30 @@ const PLAN_SHARE = 0.62;
  * The picture is drawn from this and nothing else, so what the test sees is
  * what the operator sees.
  */
+/**
+ * The radar horizon as the range-height chart draws it.
+ *
+ * The same formula detection uses (`radarHorizonKm`), inverted: at a range
+ * of `km` the lowest altitude the set can see is `horizonFloorM(heightM,
+ * km)` — zero out to the ground horizon and a parabola beyond it. `marks`
+ * are the ranges at which the floor crosses round altitudes — 100, 300,
+ * 1,000 and 3,000 metres — inside the chart: the figures a low approach is
+ * planned around. Pure, so a test can hold the chart to the formula.
+ */
+export function horizonCurve(radarHeightM, maxRangeKm, maxAltM) {
+  const groundKm = radarHorizonKm(radarHeightM, 0);
+  const curve = [];
+  for (let km = 0; km <= maxRangeKm; km += 1) {
+    const altM = horizonFloorM(radarHeightM, km);
+    curve.push([km, Math.min(altM, maxAltM)]);
+    if (altM > maxAltM) break;
+  }
+  const marks = [100, 300, 1000, 3000]
+    .map((altM) => ({ altM, km: radarHorizonKm(radarHeightM, altM) }))
+    .filter((mark) => mark.km <= maxRangeKm && mark.altM <= maxAltM);
+  return { groundKm, curve, marks };
+}
+
 export function planGeography(world, site, rangeKm) {
   const inReach = (pos) => dist(site.pos, pos) <= rangeKm;
   const designatedId = world.command?.constraints?.priorityOfFiresId ?? null;
@@ -1039,7 +1065,11 @@ export class CrewConsole {
     ctx.lineTo(this.w, top + 0.5);
     ctx.stroke();
 
-    this.stamp('RANGE AND HEIGHT — THE RADAR CANNOT SEE BELOW THE HORIZON LINE',
+    // What the line means in this model: not a wall but the range at which
+    // a contact paints on half of the set's scans — the picture fades below
+    // it, and a contact can still be there. The old title said the set could
+    // not see below the line, and contacts sat below it all night.
+    this.stamp('RANGE AND HEIGHT — BELOW THE HORIZON LINE A CONTACT PAINTS ON FEWER THAN HALF ITS SCANS',
       pad.l, top + 11 * d, p.inkDim, { size: 9 });
 
     // Axes.
@@ -1103,18 +1133,14 @@ export class CrewConsole {
     ry(Math.min(type.maxAltM, maxAltM)) + (ceilingOnScale ? -5 * d : 11 * d),
     withAlpha(p.accent, 0.75), { size: 8, align: 'center' });
 
-    // The horizon: below this line, the radar is looking at the ground. The
-    // ground itself is hatched, so "under the curve" reads as terrain rather
-    // than as empty plot.
+    // The horizon: below this line the return fades — a contact there paints
+    // on fewer than half the set's scans, and further down on one in ten. The
+    // band under the curve is hatched so it reads as the earth getting in
+    // the way rather than as empty plot. The line is the detection model's
+    // own formula, inverted (`horizonCurve`), for this set's own mast.
     if (radar) {
-      const curve = [];
-      for (let km = 0; km <= maxRangeKm; km += 1) {
-        // Invert the horizon formula for the lowest visible altitude at this range.
-        const root = km / 4.12 - Math.sqrt(radar.heightM);
-        const altM = root <= 0 ? 0 : root * root;
-        curve.push([rx(km), ry(Math.min(altM, maxAltM))]);
-        if (altM > maxAltM) break;
-      }
+      const horizon = horizonCurve(radar.heightM, maxRangeKm, maxAltM);
+      const curve = horizon.curve.map(([km, altM]) => [rx(km), ry(altM)]);
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(curve[0][0], top + pad.t + plotH);
@@ -1150,10 +1176,40 @@ export class CrewConsole {
        * names the line where the line is, and the explanation is one line up,
        * in the gutter above the plot, where there is nothing to collide with.
        */
-      const last = curve[curve.length - 1];
-      this.stamp('HORIZON',
-        Math.min(last[0], this.w - pad.r) - 4 * d, last[1] - 6 * d,
-        withAlpha(p.hostile, 0.85), { size: 8.5, align: 'right' });
+      /*
+       * And the line is read as figures. On a chart whose height is the
+       * weapon's ceiling the horizon hugs the floor — a hundred metres at
+       * fifty-six kilometres is under one per cent of a fifteen-kilometre
+       * axis — and a line that hugs the floor looks like an axis, or like a
+       * mistake. So the tag names the mast it was computed for, and where the
+       * line crosses a round altitude the crossing is ticked and printed:
+       * "100 m · 56 km" is the fact a low approach is planned around, and it
+       * is the same number the handbook's formula gives.
+       */
+      const tagX = Math.min(rx(horizon.groundKm), this.w - pad.r - 70 * d);
+      this.stamp(`HORIZON · ANTENNA ${Math.round(radar.heightM)} m`,
+        Math.max(tagX, pad.l + 44 * d), ry(0) - 6 * d,
+        withAlpha(p.hostile, 0.85), { size: 8.5, align: 'center' });
+      this.reserve(Math.max(tagX, pad.l + 44 * d) - 60 * d, ry(0) - 16 * d, 120 * d, 12 * d);
+      for (const mark of horizon.marks) {
+        const x = rx(mark.km);
+        const y = ry(mark.altM);
+        if (x < Math.max(tagX, pad.l + 44 * d) + 70 * d) continue;   // not through the tag
+        ctx.strokeStyle = withAlpha(p.hostile, 0.85);
+        ctx.lineWidth = 1;
+        // The tick reaches up past where a contact on the floor puts its own
+        // label, so the figure and the track number do not fight for the
+        // same twelve pixels at the rim.
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y - 20 * d);
+        ctx.stroke();
+        const nearRim = x > this.w - pad.r - 40 * d;
+        this.stamp(`${mark.altM.toLocaleString('en-US')} m · ${Math.round(mark.km)} km`,
+          nearRim ? x + 2 * d : x, y - 22 * d, withAlpha(p.hostile, 0.85),
+          { size: 8, align: nearRim ? 'right' : 'center' });
+        this.reserve(x - (nearRim ? 64 : 32) * d, y - 32 * d, 66 * d, 12 * d);
+      }
     }
 
     /*
@@ -1168,7 +1224,6 @@ export class CrewConsole {
     this.reserve(0, top, this.w, 15 * d);
     this.reserve(0, top, pad.l - 2 * d, height);
     this.reserve(0, top + pad.t + plotH + 2 * d, this.w, height);
-    this.reserve(this.w - pad.r - 60 * d, ry(0) - 14 * d, 60 * d, 12 * d);
 
     // As on the plan view: collect, draw every mark, then letter over them.
     const labels = [];

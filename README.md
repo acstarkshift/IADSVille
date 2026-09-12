@@ -440,9 +440,28 @@ orders about an actual line. `M` toggles it.
   quoted range is the range it sees a standard strike aircraft at, so the plate
   and the tube agree: the coverage ring drawn on the scope is where contacts
   actually appear. The horizon is why a cruise missile at ninety metres is not
-  seen until sixty kilometres however big the set is — the four-hundred-kilometre
-  early-warning radar and the two-hundred-kilometre battalion set both hold it at
-  sixty, and that is about two minutes.
+  worked until about sixty kilometres however big the set is — the
+  four-hundred-kilometre early-warning radar and the two-hundred-kilometre
+  battalion set both hold it there, and that is about two minutes. Held there,
+  not blind beyond it: in this model the horizon is the range at which a low
+  contact paints on half of a set's scans, and the return fades past it — two
+  fifths at a tenth beyond, a sixth at half again, one scan in ten at three
+  quarters beyond — rather than stopping dead, so a low contact is glimpsed
+  before it is held. Measured on Low Riders, the battalion's 26 m mast had a
+  striker at 130 m on its board at 93 km, twenty-five past the 68 km horizon.
+  A wall there instead of a fade was measured too: Across the Line goes from
+  eighty-one per cent held to none, Economy of Force from sixty-nine to
+  forty-four, and every cut short of the fade's own tail moves the district
+  and national watches by a night either way. The fade is what the campaign
+  was tuned on, and it stays until that is decided on purpose.
+
+  The cabin's range-and-height chart draws that same formula inverted for its
+  own mast — the ground out to 4.12 √h km, then (r / 4.12 − √h)² — tagged with
+  the antenna height, titled with what the line means, and prints where the
+  line crosses a hundred and three hundred metres ("100 m · 62 km" on the
+  battalion's chart), because on a chart whose height is the weapon's ceiling
+  the horizon hugs the floor and a line that hugs the floor looks like a
+  mistake. A test holds the chart to the formula and the fade to its figures.
 - **Track fusion is a service, not a fact.** Plots from every radar correlate into
   one numbered track per aircraft — in the sector operations centre. Destroy that
   building and each radar reports for itself: one aircraft grows a track number on

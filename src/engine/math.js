@@ -108,6 +108,17 @@ export function radarHorizonKm(radarHeightM, targetHeightM) {
 }
 
 /**
+ * The same horizon the other way round: at a range of `rangeKm`, the lowest
+ * altitude a set on a mast of `radarHeightM` can see. Zero out to the ground
+ * horizon (4.12 √h km), then the parabola (r / 4.12 − √h)². The range-height
+ * chart in the cabin draws this, so the chart and detection cannot disagree.
+ */
+export function horizonFloorM(radarHeightM, rangeKm) {
+  const root = rangeKm / 4.12 - Math.sqrt(Math.max(0, radarHeightM));
+  return root <= 0 ? 0 : root * root;
+}
+
+/**
  * Time until a constant-speed interceptor launched from `origin` meets a target
  * flying a constant course. Returns null when the target cannot be caught
  * (outrunning the missile, or opening faster than it closes).

@@ -433,3 +433,54 @@ describe('the cabin knows where it is', () => {
       `a 120 km display reaches the capital: ${capital.ground.towns.map((t) => t.name)}`);
   });
 });
+
+describe('the horizon on the range-height chart', () => {
+  /*
+   * The player: "range/altitude scope's radar horizon looks wrong — verify
+   * curve/limit." The chart draws the detection model's own horizon formula,
+   * inverted, for the set's own mast; these hold the two to each other and
+   * pin the figures the chart prints.
+   */
+  test('the floor the chart draws is the horizon formula inverted', async () => {
+    const { radarHorizonKm, horizonFloorM } = await import('../src/engine/math.js');
+    for (const h of [5, 7, 13, 18, 26, 32]) {
+      const ground = radarHorizonKm(h, 0);
+      assert.equal(horizonFloorM(h, ground * 0.5), 0, 'the ground out to the ground horizon');
+      assert.equal(horizonFloorM(h, ground), 0);
+      for (const km of [ground + 5, 60, 140, 224]) {
+        const floor = horizonFloorM(h, km);
+        assert.ok(Math.abs(radarHorizonKm(h, floor) - km) < 1e-9,
+          `a target at the floor is exactly at the horizon (${h} m mast, ${km} km)`);
+      }
+    }
+  });
+
+  test('the figures on the battalion\'s and the section\'s charts', async () => {
+    const { horizonFloorM } = await import('../src/engine/math.js');
+    const { horizonCurve } = await import('../src/ui/console.js');
+    // The battalion's search set on its 26 m mast, over the 140 km chart.
+    const bastion = horizonCurve(26, 140, 25000);
+    assert.ok(Math.abs(bastion.groundKm - 21.0) < 0.05, `ground horizon ${bastion.groundKm}`);
+    assert.equal(bastion.curve[0][1], 0);
+    assert.equal(bastion.curve[21][1], 0, 'still the ground at 21 km');
+    assert.ok(Math.abs(bastion.curve[60][1] - horizonFloorM(26, 60)) < 1e-9);
+    assert.ok(Math.abs(horizonFloorM(26, 60) - 89) < 1, `89 m at 60 km, got ${horizonFloorM(26, 60)}`);
+    assert.ok(Math.abs(horizonFloorM(26, 140) - 834) < 1, `834 m at 140 km, got ${horizonFloorM(26, 140)}`);
+    assert.deepEqual(bastion.marks.map((m) => [m.altM, Math.round(m.km)]), [[100, 62], [300, 92]],
+      'a hundred metres by sixty-two kilometres, three hundred by ninety-two; a thousand is off the chart');
+    // A medium section's set on a 13 m mast, over its 57 km chart.
+    const lance = horizonCurve(13, 57, 16000);
+    assert.ok(Math.abs(lance.groundKm - 14.9) < 0.05);
+    assert.ok(Math.abs(horizonFloorM(13, 57) - 104) < 1, `104 m at the rim, got ${horizonFloorM(13, 57)}`);
+    assert.deepEqual(lance.marks.map((m) => [m.altM, Math.round(m.km)]), [[100, 56]]);
+    // Nothing on a point-defence chart: its ring ends long before the horizon matters.
+    assert.deepEqual(horizonCurve(5, 21, 7000).marks, []);
+  });
+
+  test('every set the chart can be sat at has a mast the formula reads', () => {
+    for (const [id, type] of Object.entries(SAM_TYPES)) {
+      const radar = type.radar ?? RADAR_TYPES[type.radarType];
+      assert.ok(radar && radar.heightM > 0, `${id} carries an antenna height`);
+    }
+  });
+});
