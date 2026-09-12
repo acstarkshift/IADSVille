@@ -1389,7 +1389,10 @@ export function channelStatus(world, site) {
        */
       // WAITING, not HOLDING: it is waiting for the target to come into
       // range, and the launch cap says WAITING FOR RANGE in the same words.
-      state: engagement.holding && engagement.state === 'ready' ? 'WAITING'
+      // `waiting` is the engine's word for a ready channel whose target is
+      // still short of the ring; `holding` for one inside it, letting the
+      // shot get better. The crew's word for both is the same.
+      state: (engagement.holding || engagement.waiting) && engagement.state === 'ready' ? 'WAITING'
         : { reacting: 'REACTING', ready: 'READY', guiding: 'GUIDING' }[engagement.state] ?? 'IDLE',
       roundsUp: engagement.missileIds?.length ?? 0,
       /** Seconds of crew reaction still to run before the channel is ready. */
@@ -1487,8 +1490,8 @@ export function engagementStatus(world, site, track) {
     fc,
     timeToRangeS: Number.isFinite(toRange) ? toRange : null,
     state: engagement?.state ?? 'idle',
-    /** Deliberately waiting for the target to close before releasing. */
-    holding: !!engagement?.holding && engagement?.state === 'ready',
+    /** Waiting for the target to close — to the ring, or to a better shot inside it. */
+    holding: !!(engagement?.holding || engagement?.waiting) && engagement?.state === 'ready',
     reactionRemainingS: engagement?.state === 'reacting' ? Math.max(0, engagement.timerS) : 0,
     roundsUp: engagement?.missileIds.length ?? 0,
     roundEtaS,

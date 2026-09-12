@@ -467,14 +467,19 @@ export const SCENARIOS = [
      * own file said it could.
      *
      * On the honest count, sixteen seeds a seat, competent play concedes a
-     * median of two: at an allowance of two the net holds 56 per cent, at
-     * three 81, at four 94. Three is the top of the difficulty band, which is
-     * where the second watch of the teaching act belongs, and it is the number
-     * that makes act one the easiest act rather than the hardest. The raid,
-     * the store and the five axes are untouched; what changed is that the
-     * number in this line now means what it says.
+     * median of two: at an allowance of two the net held 56 per cent, at
+     * three 81, at four 94, and three was the top of the difficulty band.
+     *
+     * TWO, since a handover the battery accepted stopped being dropped in
+     * silence (`waitForRange` in doctrine.js). Fifteen of these aircraft are
+     * under BASTION's horizon and arrive already close, so this is the watch
+     * where an early handover was most often released at ready plus six with
+     * nobody told; with those kept, the same sixteen seeds at an allowance
+     * of three held 94 per cent — above the band — and at two hold 75, which
+     * is where the second watch of the teaching act belongs. The raid, the
+     * store and the five axes are untouched.
      */
-    leakerTolerance: 3,
+    leakerTolerance: 2,
     /*
      * Eighty-five seconds before sector command starts testing you, for the
      * same reason the teaching watch waits ninety-five. The first contact on
@@ -1574,7 +1579,12 @@ export const SCENARIOS = [
       { atS: 60, type: 'jammer', count: 2, bearingDeg: 10, spreadDeg: 60, spacingS: 25, distanceKm: 168, scalable: false },
       { atS: 130, type: 'decoy', count: 5, bearingDeg: 0, spreadDeg: 44, spacingS: 12, altM: 5000,
         distanceKm: 132 },
-      { atS: 165, type: 'striker', count: 5, bearingDeg: 345, spreadDeg: 30, spacingS: 18, altM: 6200,
+      // Six, not five: once a handover the battery accepted stopped being
+      // dropped in silence (`waitForRange` in doctrine.js), competent play
+      // held this watch on fifteen of sixteen seeds, above the band and
+      // above act one's hardest. One more aircraft against the centre puts
+      // it back at 75.
+      { atS: 165, type: 'striker', count: 6, bearingDeg: 345, spreadDeg: 30, spacingS: 18, altM: 6200,
         distanceKm: 132, targetAssetId: 'a_c2' },
       civilTransit(210),
       /*
@@ -1898,7 +1908,12 @@ export const SCENARIOS = [
       // deck wave and the cruise stream are sized against FIVE battalions:
       // the local sections can parry them with the long-range battalion's
       // reach behind them, and visibly cannot once the ministry has it.
-      { atS: 105, type: 'striker', count: 5, bearingDeg: 296, spreadDeg: 26, spacingS: 18, altM: 6000,
+      // Four at height, not five. Kept handovers pin a long-range channel on
+      // a far target for as long as the claim horizon allows, and on this
+      // watch that cost competent play a night of sixteen (69 to 63) — under
+      // the escort watch that follows it, which the staircase forbids. One
+      // fewer in the first package puts it back at 69.
+      { atS: 105, type: 'striker', count: 4, bearingDeg: 296, spreadDeg: 26, spacingS: 18, altM: 6000,
         distanceKm: 145, targetAssetId: 'a_kubin' },
       { atS: 190, type: 'striker', count: 5, bearingDeg: 305, spreadDeg: 22, spacingS: 20, altM: 180,
         distanceKm: 145, targetAssetId: 'a_kubin_depot' },

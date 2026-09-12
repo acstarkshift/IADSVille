@@ -277,6 +277,18 @@ function newTrack(world, plot, truth) {
     tn: `T-${String(tn).padStart(3, '0')}`,
     pos: { ...plot.pos },
     vel: { x: 0, y: 0 },
+    /**
+     * How many plot pairs the velocity has been blended from. The filter
+     * starts from zero and learns at 0.45 a look, so a velocity with one look
+     * on it is under half of what was measured and one with four is over
+     * ninety per cent; anything that walks the track forward to answer "when
+     * does it get here" has to know which of those it is reading. Measured
+     * on First Light with three sets painting one contact: the speed on the
+     * track stood at a quarter of the aircraft's for seventy seconds, because
+     * the two-second baseline below was rarely met between plots that came a
+     * breath apart. The count is the honest thing; the filter is not touched.
+     */
+    velLooks: 0,
     altM: plot.altM,
     quality: DETECTION.qualityGain,
     firstSeenS: world.t,
@@ -332,6 +344,7 @@ export function rememberGhost(world, track) {
     tn: track.tn,
     pos: { ...track.pos },
     vel: { ...track.vel },
+    velLooks: track.velLooks ?? 0,
     altM: track.altM,
     droppedAtS: world.t,
     sources: [...track.sources],
@@ -391,6 +404,8 @@ function reacquire(world, plot, fused) {
     tn: best.tn,
     pos: { ...plot.pos },
     vel: { ...best.vel },
+    // The ghost's velocity comes back with the looks that built it.
+    velLooks: best.velLooks ?? 0,
     altM: plot.altM,
     quality: DETECTION.qualityGain,
     firstSeenS: world.t,
@@ -528,6 +543,7 @@ export function correlatePlots(world, plots) {
         x: best.vel.x + (capped.x - best.vel.x) * 0.45,
         y: best.vel.y + (capped.y - best.vel.y) * 0.45,
       };
+      best.velLooks = (best.velLooks ?? 0) + 1;
       /*
        * How long this track has been flying the same way.
        *

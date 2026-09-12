@@ -340,14 +340,10 @@ export function cannotEngageReason(world, site, track) {
   if (toRange === Infinity) return 'will never be in reach';
   // A target the battery could only reach in minutes is not an assignment,
   // it is a bookmark — the crew would sit on the claim while nearer
-  // batteries watched "their" track sail past. The horizon scales with the
-  // battery's reach: a point-defence section plans forty-five seconds ahead,
-  // a long-range battalion is EXPECTED to set up an intercept a minute and a
-  // half out, and refusing it that was measured to erase most of what
-  // keeping a battalion is worth. NaN is a course not yet established, and
-  // that one the crew will take on faith.
-  const claimHorizonS = 45 + type.maxRangeKm * 0.4;
-  if (Number.isFinite(toRange) && toRange > claimHorizonS) {
+  // batteries watched "their" track sail past. NaN is a course not yet
+  // established, and that one the crew will take on faith.
+  const horizonS = claimHorizonS(site);
+  if (Number.isFinite(toRange) && toRange > horizonS) {
     return `out of reach for ${Math.round(toRange)}s`;
   }
   /*
@@ -363,11 +359,30 @@ export function cannotEngageReason(world, site, track) {
    */
   if (Number.isNaN(toRange) && !inEnvelope(site, track.pos, track.altM).ok) {
     const gapKm = dist(site.pos, track.pos) - type.maxRangeKm;
-    if (gapKm > claimHorizonS * DETECTION.maxTargetSpeedKmS) {
+    if (gapKm > horizonS * DETECTION.maxTargetSpeedKmS) {
       return `out of reach at ${Math.round(dist(site.pos, track.pos))}km`;
     }
   }
   return null;
+}
+
+/**
+ * How far ahead a battery may claim a contact: seconds to its ring.
+ *
+ * The horizon scales with the battery's reach: a point-defence section plans
+ * forty-five seconds ahead, a long-range battalion is EXPECTED to set up an
+ * intercept a minute and a half out, and refusing it that was measured to
+ * erase most of what keeping a battalion is worth.
+ *
+ * One function, because three places have to agree on it: the refusal the
+ * operator reads ("out of reach for 120s"), the officer's chooser, and the
+ * engagement itself once it is ready and the target is still short of the
+ * ring. The third used to carry its own flat minute, so a claim the refusal
+ * had accepted at ninety seconds was released by the step at ready plus six —
+ * without a word, because the step believed the refusal had already spoken.
+ */
+export function claimHorizonS(site) {
+  return 45 + SAM_TYPES[site.type].maxRangeKm * 0.4;
 }
 
 /**
@@ -397,7 +412,7 @@ export function engagementValue(world, site, track) {
    * AI and the player's hint are supposed to be reading one picture.
    */
   if (Number.isNaN(rawTimeToRange) && !env.ok) {
-    const horizonS = 45 + type.maxRangeKm * 0.4;
+    const horizonS = claimHorizonS(site);
     if (dist(site.pos, track.pos) - type.maxRangeKm > horizonS * DETECTION.maxTargetSpeedKmS) {
       return null;
     }

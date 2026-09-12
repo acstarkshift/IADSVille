@@ -14,9 +14,10 @@ import { scenarioById, SCENARIOS } from '../src/engine/scenarios.js';
 import { SAM_TYPES, AIR_TYPES, DETECTION, ENGAGEMENT } from '../src/engine/config.js';
 import {
   beginEngagement, fireEngagement, armTimeToImpact, startReload, railLoadS, canStartLoading,
+  stepEngagements,
 } from '../src/engine/doctrine.js';
 import { loseCentralControl, consoleDark } from '../src/engine/damage.js';
-import { cannotEngageReason } from '../src/engine/threat.js';
+import { cannotEngageReason, claimHorizonS } from '../src/engine/threat.js';
 import { timeToInRangeS } from '../src/engine/weapons.js';
 import { dist } from '../src/engine/math.js';
 
@@ -616,7 +617,11 @@ describe('the quiet net gives advice, not the opposite of it', () => {
    * battery". This drives the real method at a real world state.
    */
 
-  /** Pick the same worst track / best battery pair the lull report picks. */
+  /**
+   * Pick the same worst track / best battery pair the lull report picks: the
+   * worst firm hostile NOBODY is on. A contact a battery already holds is
+   * not work for the operator, and the net reports it as held, by name.
+   */
   function lullPair(world) {
     const mine = world.sites.filter((s) => s.alive
       && (s.id === world.control.crewedBatteryId || world.commandable(s.id)));
@@ -624,6 +629,7 @@ describe('the quiet net gives advice, not the opposite of it', () => {
     for (const track of world.tracks.values()) {
       if (track.destroyed || track.hostility !== 'hostile') continue;
       if (track.quality < DETECTION.firmQuality) continue;
+      if (track.assignedTo.length || track.engagedBy.length) continue;
       if (!worst || track.threat > worst.threat) worst = track;
     }
     if (!worst) return null;
@@ -646,6 +652,12 @@ describe('the quiet net gives advice, not the opposite of it', () => {
 
   test('a legal, unordered shot is handed over, never reported as NOTHING', () => {
     const world = readyWorld('first-light');
+    // The lull is reported to a person on the net, and an unordered shot
+    // exists only where nobody else orders one: with an officer driving the
+    // assignments, or the crews on WEAPONS FREE claiming what enters their
+    // rings, every firm hostile is somebody's within seconds.
+    world.control.netIsHuman = true;
+    for (const site of world.sites) world.setWeaponsState(site.id, 'tight');
     let pair = null;
     // Run until the watch itself produces the state the line is about: a firm
     // hostile already inside a commandable battery's ring with nothing wrong.
@@ -691,6 +703,8 @@ describe('the quiet net gives advice, not the opposite of it', () => {
 
   test('a battery that genuinely cannot shoot still says why', () => {
     const world = readyWorld('first-light');
+    world.control.netIsHuman = true;
+    for (const site of world.sites) world.setWeaponsState(site.id, 'tight');
     let pair = null;
     for (let i = 0; i < 12000 && world.phase === 'running'; i++) {
       world.step(0.1);
@@ -707,6 +721,36 @@ describe('the quiet net gives advice, not the opposite of it', () => {
     const said = saidBy(world, () => world.reportTheLull());
     assert.match(said, /NO ROUNDS ON THE RAILS/, said);
     assert.ok(!/NOTHING/.test(said), said);
+  });
+
+  /*
+   * Measured on First Light before this rule: the net said "T-001 IS INSIDE
+   * BASTION'S RING AND NOBODY IS ON IT" while BASTION had a round in the air
+   * on T-001, to the operator who had just handed it over. A contact somebody
+   * is on is reported as theirs, and the net says whose.
+   */
+  test('a contact a battery is already on is reported as theirs, never as nobody’s', () => {
+    const world = readyWorld('first-light');
+    let held = null;
+    for (let i = 0; i < 12000 && world.phase === 'running'; i++) {
+      world.step(0.1);
+      held = [...world.tracks.values()].find((t) => t.hostility === 'hostile'
+        && t.quality >= DETECTION.firmQuality && (t.assignedTo.length || t.engagedBy.length));
+      if (held) break;
+    }
+    assert.ok(held, 'a battery took a contact');
+    // Leave the held contact as the only thing on the board, so the net has
+    // nothing else to talk about.
+    for (const [id, t] of [...world.tracks]) if (t !== held) world.tracks.delete(id);
+    world.events = [];
+    world._lastActionAtS = 0;
+    world._lullTrackAtS = {};
+    world._lullLast = null;
+    const said = saidBy(world, () => world.reportTheLull());
+    const holder = world.siteById.get(held.assignedTo[0] ?? held.engagedBy[0]);
+    assert.match(said, new RegExp(`\\b${holder.name}\\b`), said);
+    assert.match(said, /IS ON |IS BEING WORKED BY/, said);
+    assert.ok(!/NOBODY IS ON IT/.test(said), said);
   });
 });
 
@@ -807,5 +851,163 @@ describe('a refusal is said once, not two hundred and eleven times', () => {
     assert.equal(lines.length, 2, 'a refusal from a different battery is different news');
     assert.ok(lines.some((e) => e.text.includes(a.name)));
     assert.ok(lines.some((e) => e.text.includes(b.name)));
+  });
+});
+
+/*
+ * A handover the battery accepted is kept, or it is answered.
+ *
+ * The lesson tells the player to hand the first contact over the moment its
+ * row appears, and promises that WAITING FOR RANGE means the battery is
+ * aiming, not refusing. Measured before this block existed, on First Light:
+ * that handover was answered ROGER, ENGAGING at 23 s, went ready at 39 s with
+ * the target eight kilometres short of the ring and closing at a quarter of a
+ * kilometre a second, and was released as out of reach at 44 s without a line
+ * — the tracker's velocity had one look on it and read a quarter of the
+ * truth, the step walked the track forward on that and called the target four
+ * minutes away, and the release was silent because the code believed the
+ * refusal at assignment time had already spoken. The target came inside the
+ * ring at 57 s with nobody on it.
+ */
+describe('a handover the battery accepted is kept, or it is answered', () => {
+  /** A track the tracker would publish, standing in for one it has not yet built. */
+  function claim(world, site, { rangeKm, closingKmS, velLooks, tn, origin = 'assigned' }) {
+    const truth = [...world.aircraftById.values()].find((a) => a.alive);
+    assert.ok(truth, 'an aircraft to stand behind the track');
+    const track = {
+      id: `trk-${tn}`, tn, pos: { x: site.pos.x + rangeKm, y: site.pos.y },
+      vel: { x: -closingKmS, y: 0 }, velLooks, altM: 6000, quality: 1,
+      hostility: 'hostile', classification: 'striker', assignedTo: [], engagedBy: [],
+      threat: 50, sources: [], firstSeenS: world.t, lastUpdateS: world.t, truthId: truth.id,
+    };
+    world.tracks.set(track.id, track);
+    const engagement = beginEngagement(world, site, track, { origin });
+    assert.ok(engagement, `${site.name} takes ${tn}`);
+    // The reaction sequence is not what is under test: the channel is ready.
+    engagement.state = 'ready';
+    engagement.timerS = 0;
+    engagement.readyAtS = world.t;
+    return { track, engagement };
+  }
+
+  /** Advance the engagements alone, moving a track by hand the way plots would. */
+  function watch(world, site, seconds, move) {
+    for (let i = 0; i < Math.round(seconds / 0.1); i++) {
+      world.t += 0.1;
+      move?.(0.1);
+      stepEngagements(world, 0.1);
+    }
+  }
+
+  test('the lesson’s early handover on First Light is kept, said, and fired', () => {
+    const w = new World(scenarioById('first-light'), { role: 'net', seed: 'early-1' });
+    for (const r of w.radars) w.setRadar(r.id, true);
+    const site = w.sites[0];
+    let engagement = null;
+    let orderedAtS = null;
+    let released = false;
+    while (w.t < 400 && w.phase === 'running' && w.stats.roundsFired === 0) {
+      w.step(0.1);
+      if (!engagement) {
+        const first = [...w.tracks.values()][0];
+        if (!first) continue;
+        engagement = w.assign(first.id, site.id);
+        orderedAtS = w.t;
+        assert.ok(engagement, 'the first contact is taken on the order, as the lesson says it will be');
+      } else if (!site.engagements.includes(engagement)) {
+        released = true;
+        break;
+      }
+    }
+    assert.ok(engagement, 'a contact appeared');
+    assert.ok(!released, 'the claim was never released');
+    assert.ok(w.stats.roundsFired > 0, `${site.name} fired on it`);
+    assert.ok(w.t - orderedAtS < 120,
+      `and inside two minutes of the order, not ${Math.round(w.t - orderedAtS)} s`);
+    const lines = w.events.map((e) => e.text);
+    assert.ok(lines.some((l) => /WAITING FOR RANGE ON T-001, \d+ KM SHORT OF OUR RING/.test(l)),
+      'the crew said what it was waiting for');
+    assert.ok(!lines.some((l) => /BREAK OFF T-001/.test(l)), 'and never broke off');
+    assert.ok(!lines.some((l) => /T-001 IS INSIDE .* NOBODY IS ON IT/.test(l)),
+      'so the sector never had to say nobody was on it');
+    // The tracker counts the looks behind its velocity, and the count is real.
+    const track = w.tracks.get(engagement.trackId);
+    assert.ok(Number.isInteger(track.velLooks) && track.velLooks >= 1,
+      `the track carries its look count (${track.velLooks})`);
+  });
+
+  test('the refusal, the officer and the step read one horizon', () => {
+    const w = readyWorld('first-light');
+    run(w, 30);
+    const site = w.sites[0];
+    const horizon = claimHorizonS(site);
+    assert.equal(horizon, 45 + SAM_TYPES[site.type].maxRangeKm * 0.4);
+    const reach = SAM_TYPES[site.type].maxRangeKm;
+    const settled = (eta) => ({
+      id: `h${eta}`, tn: `T-${eta}`, pos: { x: site.pos.x + reach + 0.25 * eta, y: site.pos.y },
+      vel: { x: -0.25, y: 0 }, velLooks: 9, altM: 6000, quality: 1, hostility: 'hostile',
+      classification: 'striker', assignedTo: [], engagedBy: [], threat: 50, sources: [],
+    });
+    assert.equal(cannotEngageReason(w, site, settled(horizon - 6)), null,
+      'inside the horizon the refusal accepts');
+    assert.match(cannotEngageReason(w, site, settled(horizon + 6)) ?? '', /^out of reach for/,
+      'outside it, it refuses, in words');
+  });
+
+  test('a settled course inside the horizon is kept; one beyond it is answered', () => {
+    const w = new World(scenarioById('first-light'), { role: 'net', seed: 'settled-1' });
+    for (const r of w.radars) w.setRadar(r.id, true);
+    run(w, 30);
+    const site = w.sites[0];
+    const reach = SAM_TYPES[site.type].maxRangeKm;
+    const horizon = claimHorizonS(site);
+
+    const near = claim(w, site, { rangeKm: reach + 0.25 * (horizon - 10), closingKmS: 0.25, velLooks: 9, tn: 'T-901' });
+    const far = claim(w, site, { rangeKm: reach + 0.25 * (horizon + 60), closingKmS: 0.25, velLooks: 9, tn: 'T-902' });
+    const theirs = claim(w, site, { rangeKm: reach + 0.25 * (horizon + 60), closingKmS: 0.25, velLooks: 9, tn: 'T-903', origin: 'formation' });
+    watch(w, site, 20, (dt) => {
+      for (const { track } of [near, far, theirs]) track.pos.x -= 0.25 * dt;
+    });
+    assert.ok(site.engagements.includes(near.engagement), 'the claim inside the horizon stands');
+    assert.ok(near.engagement.waiting, 'and is waiting for range');
+    assert.ok(!site.engagements.includes(far.engagement), 'the one beyond it is released');
+    assert.ok(!site.engagements.includes(theirs.engagement), 'the officer’s too');
+    const lines = w.events.map((e) => e.text);
+    assert.ok(lines.some((l) => /BREAK OFF T-902 \(out of reach — it is \d+ seconds from our ring\)/.test(l)),
+      'a person’s order is broken off out loud, with the reason');
+    assert.ok(lines.some((l) => /^BASTION: BREAKING OFF T-902\. IT IS \d+ SECONDS FROM OUR RING\.$/.test(l)),
+      'and the crew answers on the net the way it answered ROGER');
+    assert.ok(!lines.some((l) => /T-903/.test(l) && /BREAK/.test(l)),
+      'an officer’s own housekeeping stays off the ticker');
+  });
+
+  test('a velocity with one look on it is not evidence; the range is', () => {
+    const w = new World(scenarioById('first-light'), { role: 'net', seed: 'young-1' });
+    for (const r of w.radars) w.setRadar(r.id, true);
+    run(w, 30);
+    const site = w.sites[0];
+    const reach = SAM_TYPES[site.type].maxRangeKm;
+
+    // A contact 8 km short of the ring closing at 250 m/s, whose track says
+    // 60 m/s from a single look — First Light's own numbers.
+    const coming = claim(w, site, { rangeKm: reach + 8, closingKmS: 0.06, velLooks: 1, tn: 'T-911' });
+    // And one the same distance out that is skirting the ring, tangentially.
+    const skirting = claim(w, site, { rangeKm: reach + 8, closingKmS: 0.06, velLooks: 1, tn: 'T-912' });
+    let insideAtS = null;
+    watch(w, site, 40, (dt) => {
+      coming.track.pos.x -= 0.25 * dt;
+      skirting.track.pos.y += 0.25 * dt;
+      if (insideAtS === null && dist(site.pos, coming.track.pos) <= reach) insideAtS = w.t;
+    });
+    assert.ok(site.engagements.includes(coming.engagement),
+      'the closing contact is still claimed after it has come inside');
+    assert.ok(insideAtS !== null && !coming.engagement.waiting,
+      'and the wait ended when it crossed the ring');
+    assert.ok(!site.engagements.includes(skirting.engagement),
+      'the one whose range never fell is released');
+    const lines = w.events.map((e) => e.text);
+    assert.ok(lines.some((l) => /BREAK OFF T-912 \(out of reach — it is not closing on us\)/.test(l)),
+      'with the reason the crew can see on its own scope');
+    assert.ok(!lines.some((l) => /BREAK OFF T-911/.test(l)));
   });
 });

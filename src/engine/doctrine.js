@@ -19,7 +19,7 @@ import {
   dist, len, clamp, clamp01, closureRate, bearing, absDeltaDeg, wrapDeg, turnToward,
 } from './math.js';
 import { inEnvelope, launchSalvo, timeToInRangeS } from './weapons.js';
-import { engagementValue, sortedTracks } from './threat.js';
+import { claimHorizonS, engagementValue, sortedTracks } from './threat.js';
 
 /** Seconds a searching battery radiates, and the quiet gap between sweeps. */
 const SEARCH_DWELL_S = 18;
@@ -112,13 +112,7 @@ export function beginEngagement(world, site, track,
    * seconds; your own commands, and every battalion/sector watch, log all of
    * them.
    */
-  const wide = world.echelon?.id === 'region' || world.echelon?.id === 'national';
-  // `site.formationId`, not `site.formation` — the latter is never set on a
-  // site anywhere in the engine, so this whole throttle was keyed on
-  // `undefined`: every subordinate formation shared one bucket, and the
-  // six-second spacing meant to apply per formation applied across all of
-  // them at once. Found while tracing why the cabin never heard its cues.
-  const subordinate = wide && site.formationId && !(world.isDirect?.(site.formationId) ?? true);
+  const subordinate = subordinateVoice(world, site);
   world._fmnEngageLogAtS = world._fmnEngageLogAtS ?? {};
   const lastLogged = world._fmnEngageLogAtS[site.formationId] ?? -99;
   /*
@@ -175,12 +169,48 @@ export function endEngagement(world, site, engagement, reason) {
   site.engagements = site.engagements.filter((e) => e !== engagement);
   const track = world.tracks.get(engagement.trackId);
   if (track) track.assignedTo = track.assignedTo.filter((id) => id !== site.id);
-  // An out-of-reach release is housekeeping, not an event: the claim ended
-  // because the geometry did. It stays out of the ticker; the operator's
-  // answer arrives as the refusal at assignment time instead.
-  if (reason && reason !== 'complete' && reason !== 'out of reach') {
-    world.log('info', `${site.name} — BREAK OFF ${track?.tn ?? ''} (${reason})`, { siteId: site.id });
+  /*
+   * An out-of-reach release of an officer's own claim, or a free crew's, is
+   * housekeeping, not an event: the claim ended because the geometry did,
+   * the officer re-looks the track next cycle, and the ticker has no use for
+   * it. A release of an order a PERSON gave is not housekeeping. The order
+   * was answered ROGER, ENGAGING; a crew that then simply stops is a crew
+   * whose ROGER meant nothing, and the operator learns it only when the
+   * sector says NOBODY IS ON IT about the contact they handed over. So it is
+   * logged, with the reason in the words the crew would use, and answered on
+   * the net the way the ROGER was.
+   */
+  const forReach = /^out of reach/.test(reason ?? '');
+  const ordered = engagement.origin === 'assigned' && reason !== 'out of reach';
+  if (reason && reason !== 'complete' && (!forReach || ordered)) {
+    world.log('info', `${site.name} — BREAK OFF ${track?.tn ?? ''} (${reason})`,
+      { siteId: site.id, trackId: engagement.trackId });
+    if (forReach && ordered && track && world.control?.netIsHuman && world.comms) {
+      world.comms(site.name,
+        `BREAKING OFF ${track.tn}. ${reason.replace(/^out of reach — /, '').toUpperCase()}.`,
+        { siteId: site.id, trackId: track.id });
+    }
   }
+}
+
+/**
+ * Does this battery's traffic go on the ticker at all?
+ *
+ * At district and national scale, most of what happens is other people's
+ * fights, and a ticker averaging a line every two seconds trains the reader
+ * to stop reading — which the endgame then punishes. A subordinate formation
+ * outside your direct hand narrates sparingly; your own commands, and every
+ * battalion and sector watch, log everything. One rule, read by the ENGAGING
+ * line and the WAITING FOR RANGE line alike.
+ */
+function subordinateVoice(world, site) {
+  const wide = world.echelon?.id === 'region' || world.echelon?.id === 'national';
+  // `site.formationId`, not `site.formation` — the latter is never set on a
+  // site anywhere in the engine, so this whole throttle was once keyed on
+  // `undefined`: every subordinate formation shared one bucket, and the
+  // six-second spacing meant to apply per formation applied across all of
+  // them at once. Found while tracing why the cabin never heard its cues.
+  return !!(wide && site.formationId && !(world.isDirect?.(site.formationId) ?? true));
 }
 
 /**
@@ -263,6 +293,12 @@ export function stepEngagements(world, dt) {
       if (engagement.state === 'ready') {
         const env = inEnvelope(site, track.pos, track.altM);
         const firm = track.quality >= DETECTION.firmQuality;
+        // Inside the ring the wait for range is over, whatever happens next:
+        // a launch, a hold for a better shot, or the operator's LAUNCH cap.
+        if (env.ok) {
+          engagement.waiting = false;
+          engagement.unreachableS = 0;
+        }
         if (!engagement.manual && env.ok && firm && site.weaponsState !== 'hold') {
           /*
            * An assigned engagement waits for a shot worth taking: a closing
@@ -356,29 +392,12 @@ export function stepEngagements(world, dt) {
               siteId: site.id, trackId: track.id,
             });
           }
-        } else {
-          /*
-           * Give up on a target once it is persistently unreachable — and
-           * read "unreachable" honestly. The old test counted only a hard
-           * Infinity, so a track skirting the envelope at a tangent, or one
-           * whose velocity solution kept flickering to NaN, pinned this
-           * channel indefinitely: measured on the climax watch, a C2-bound
-           * striker sat assigned to a battery it would never enter, unshot
-           * and claiming the track, while batteries with full racks had no
-           * right to it and the jamming quietly ate the picture. A settling
-           * solution still gets its grace; a receding target, or a shot more
-           * than a minute away, does not.
-           */
-          const eta = timeToInRangeS(site, track);
-          const settling = Number.isNaN(eta) && world.t - engagement.startedS < 8;
-          const hopeless = eta === Infinity || eta > 60
-            || (Number.isNaN(eta) && !settling)
-            || closureRate(track.pos, track.vel, site.pos) < -0.002;
-          engagement.unreachableS = hopeless ? (engagement.unreachableS ?? 0) + dt : 0;
-          if (engagement.unreachableS > 6) {
-            endEngagement(world, site, engagement, 'out of reach');
-          }
+        } else if (!env.ok) {
+          waitForRange(world, site, engagement, track, env, dt);
         }
+        // Inside the ring and not firing — a manual engagement waiting for
+        // the operator's LAUNCH, a claim not yet firm, a battery on hold —
+        // nothing is out of reach, and nothing here times out.
       }
 
       if (engagement.state === 'guiding') {
@@ -420,6 +439,110 @@ export function stepEngagements(world, dt) {
         }
       }
     }
+  }
+}
+
+/**
+ * A ready engagement whose target is still short of the ring waits for it.
+ *
+ * This is the promise the lesson makes — "the battery fires when the shot is
+ * good; WAITING FOR RANGE means it is aiming, not refusing" — and it is what
+ * the engine did not keep. Hand the first contact on First Light to BASTION
+ * the moment its row appears, as the lesson says to: 128 km out against a
+ * reach of 120, no course yet, so the refusal takes it on faith, and the
+ * crew answers ROGER, ENGAGING. Sixteen seconds later the channel is ready,
+ * the target is 8 km short and closing at a quarter of a kilometre a second,
+ * and the tracker's velocity has had ONE look — 0.06 km/s, a quarter of the
+ * truth (`velLooks`). Walked forward on that, the target is 268 s from the
+ * ring; the old rule called anything over sixty hopeless, six seconds of
+ * hopeless released the claim as 'out of reach', and that release was silent
+ * because the code believed the refusal had already spoken. The target came
+ * inside the ring thirteen seconds after that, with nobody on it, and the
+ * sector said so at the operator every minute for the rest of the watch.
+ *
+ * So: the channel waits, and says once what it is waiting for, quoting the
+ * range — the one figure the tracker measures directly — and not an eta. It
+ * is released only on evidence, and what counts as evidence depends on what
+ * the tracker can be believed about:
+ *
+ *   - Once the velocity has `DETECTION.velSettledLooks` looks on it, the
+ *     walk-forward is trusted: a course that never enters the ring, enters
+ *     it later than the battery's claim horizon (the same `claimHorizonS`
+ *     the refusal and the officer's chooser use — the step no longer keeps
+ *     a flat minute of its own), a course that has gone to nothing, or a
+ *     closure that says the target is turning away. These are the cases
+ *     measured on the climax watch, where a C2-bound striker sat claimed by
+ *     a battery it would never enter while the batteries that could reach it
+ *     had no right to it.
+ *   - Before that, the range itself. Over `ENGAGEMENT.rangeTrendS` seconds
+ *     since the wait began, a target whose range to the mount has not fallen
+ *     is not coming, and one falling so slowly that the ring is further off
+ *     than the horizon is a bookmark. A young track's positions are honest
+ *     where its velocity is not.
+ *
+ * Six seconds of hopeless releases the claim, as before, and the reason
+ * travels with the release: it is printed and answered (`endEngagement`).
+ *
+ * All of that is for an order a person gave — `origin: 'assigned'`, which is
+ * the net's handover and the cabin's LOCK, and the net's cue to the cabin.
+ * An officer's own claim (`'formation'`) and a free crew's snap claim
+ * (`'free'`) keep the rule they had: a flat minute on the walk-forward, six
+ * seconds of grace, and a silent release. Not because it is a better rule —
+ * it is the same misreading of a young track — but because the officer
+ * re-looks the board every cycle and loses nothing by it, nobody was
+ * promised anything, and the campaign's whole curve was measured with that
+ * churn in it. Measured, giving the officer this rule as well moved 139 of
+ * the harness's 168 cells, several by three hundred points either way, and
+ * broke the act-by-act staircase; that is a retuning, not a repair.
+ */
+function waitForRange(world, site, engagement, track, env, dt) {
+  const type = SAM_TYPES[site.type];
+  const ordered = engagement.origin === 'assigned';
+  if (!ordered) {
+    const eta = timeToInRangeS(site, track);
+    const settling = Number.isNaN(eta) && world.t - engagement.startedS < 8;
+    const hopeless = eta === Infinity || eta > 60
+      || (Number.isNaN(eta) && !settling)
+      || closureRate(track.pos, track.vel, site.pos) < -0.002;
+    engagement.unreachableS = hopeless ? (engagement.unreachableS ?? 0) + dt : 0;
+    if (engagement.unreachableS > 6) endEngagement(world, site, engagement, 'out of reach');
+    return;
+  }
+  if (!engagement.waiting) {
+    engagement.waiting = true;
+    engagement.waitAtS = world.t;
+    engagement.rangeAtWaitKm = env.rangeKm;
+    engagement.unreachableS = 0;
+    if (!subordinateVoice(world, site)) {
+      const shortKm = Math.max(1, Math.round(env.rangeKm - type.maxRangeKm));
+      world.log('info',
+        `${site.name} — WAITING FOR RANGE ON ${track.tn}, ${shortKm} KM SHORT OF OUR RING`,
+        { siteId: site.id, trackId: track.id });
+    }
+  }
+  const horizon = claimHorizonS(site);
+  let why = null;
+  if ((track.velLooks ?? 0) >= DETECTION.velSettledLooks) {
+    const eta = timeToInRangeS(site, track);
+    const settling = Number.isNaN(eta) && world.t - engagement.startedS < 8;
+    if (closureRate(track.pos, track.vel, site.pos) < -0.002) why = 'it is turning away';
+    else if (eta === Infinity) why = 'it will not come inside our ring on this course';
+    else if (Number.isNaN(eta) && !settling) why = 'we have no course on it';
+    else if (eta > horizon) why = `it is ${Math.round(eta)} seconds from our ring`;
+  } else {
+    const waitedS = world.t - engagement.waitAtS;
+    if (waitedS >= ENGAGEMENT.rangeTrendS) {
+      const closingKmS = (engagement.rangeAtWaitKm - env.rangeKm) / waitedS;
+      const gapKm = env.rangeKm - type.maxRangeKm;
+      if (closingKmS <= 0.002) why = 'it is not closing on us';
+      else if (gapKm / closingKmS > horizon) {
+        why = `it is ${Math.round(gapKm / closingKmS)} seconds from our ring`;
+      }
+    }
+  }
+  engagement.unreachableS = why ? (engagement.unreachableS ?? 0) + dt : 0;
+  if (engagement.unreachableS > 6) {
+    endEngagement(world, site, engagement, `out of reach — ${why}`);
   }
 }
 
@@ -595,10 +718,10 @@ function runFormationCommander(world, formation, dt) {
       // honour yet, and usually breaks off when the geometry moves. The
       // track is re-looked every think cycle; nothing is lost by waiting
       // until a battery can actually take it. Same horizon the assignment
-      // refusal uses (cannotEngageReason): forty-five seconds plus what the
-      // battery's reach entitles it to plan ahead — a flat bar here was
+      // refusal uses — `claimHorizonS`, forty-five seconds plus what the
+      // battery's reach entitles it to plan ahead; a flat bar here was
       // measured to erase the district battalion's forward coverage.
-      if (evaluation.timeToRangeS > 45 + SAM_TYPES[site.type].maxRangeKm * 0.4) continue;
+      if (evaluation.timeToRangeS > claimHorizonS(site)) continue;
       if (evaluation.value > bestValue) {
         bestValue = evaluation.value;
         best = { site, manual };

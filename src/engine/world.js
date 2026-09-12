@@ -2029,12 +2029,28 @@ export class World {
 
     const mine = this.sites.filter((s) => s.alive
       && (s.id === this.control.crewedBatteryId || this.commandable(s.id)));
+    /*
+     * The contact worth talking about is the worst one NOBODY is on. A
+     * contact some battery already holds is not work for the operator, and
+     * the sentences below — REACHES IT IN, NOBODY IS ON IT, GIVE IT TO THEM —
+     * are all written for one that is not held: measured on First Light, the
+     * net said "T-001 IS INSIDE BASTION'S RING AND NOBODY IS ON IT" while
+     * BASTION had a round in the air on T-001, to the operator who had just
+     * handed it over. Only when every firm hostile is held does the net
+     * report the held one, and then it says who has it.
+     */
     let worst = null;
+    let worstHeld = null;
     for (const track of this.tracks.values()) {
       if (track.destroyed || track.hostility !== 'hostile') continue;
       if (track.quality < DETECTION.firmQuality) continue;
+      if (track.assignedTo.length || track.engagedBy.length) {
+        if (!worstHeld || track.threat > worstHeld.threat) worstHeld = track;
+        continue;
+      }
       if (!worst || track.threat > worst.threat) worst = track;
     }
+    if (!worst && worstHeld) worst = worstHeld;
 
     // Never the same sentence twice running, whichever list it comes from.
     const say = (variants) => {
@@ -2069,6 +2085,17 @@ export class World {
           'STILL THE ONE CONTACT. THE REST OF THE SQUARE IS CLEAN.',
           `NO CHANGE ON ${worst.tn}. FRONTIER POSTS HAVE NOTHING BEHIND IT.`,
         ]);
+      } else if (worst.assignedTo.length || worst.engagedBy.length) {
+        // Every contact on the board is somebody's. Say whose, and that
+        // there is nothing else — not that nobody is on it.
+        const holders = [...new Set([...worst.assignedTo, ...worst.engagedBy])]
+          .map((id) => this.siteById.get(id)?.name).filter(Boolean);
+        const who = holders.length ? holders.join(' AND ') : 'A BATTERY';
+        text = say([
+          `${who} ${holders.length > 1 ? 'ARE' : 'IS'} ON ${worst.tn}. NOTHING ELSE IS UP.`,
+          `${worst.tn} IS BEING WORKED BY ${who}. THE REST OF THE SQUARE IS CLEAN.`,
+        ]);
+        this._lullTrackAtS[worst.id] = this.t;
       } else if (!bestSite) {
         text = say([
           `HOLDING ${worst.tn}, ${km} KM OUT. NOTHING OF OURS REACHES IT ON THAT COURSE.`,

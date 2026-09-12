@@ -1663,18 +1663,18 @@ A few decisions worth knowing about if you read the source:
 
   | Watch | nothing | novice | competent | expert |
   |---|--:|--:|--:|--:|
-  | First Light | 0-75% | 100% | 100% | 100% |
-  | Low Riders | 0% | 0-88% | 75-81% | 88-100% |
-  | Solo Battery | 0% | 44% | 81% | 88% |
-  | Weasel Hour | 0% | 6-69% | 75-88% | 81% |
-  | White Noise | 0% | 6-69% | 81-94% | 75-88% |
-  | Economy of Force | 0% | 31-88% | 81-88% | 63-75% |
-  | Across the Line | 0-6% | 31-69% | 69-81% | 56-81% |
-  | Ville Under Fire | 0-13% | 0-56% | 81% | 75-81% |
-  | Four Sectors | 0% | 31% | 69% | 88% |
-  | Reinforce the Capital | 0% | 56% | 69% | 94% |
-  | The Two Cities | 0% | 0-6% | 63-81% | 56-63% |
-  | The President's Flight | 6-38% | 38-44% | 63-75% | 69-88% |
+  | First Light | 0% | 100% | 100% | 100% |
+  | Low Riders | 0% | 0-63% | 56-88% | 44-81% |
+  | Solo Battery | 0% | 75% | 81% | 88% |
+  | Weasel Hour | 0% | 6-75% | 75-81% | 56-94% |
+  | White Noise | 0% | 6-81% | 81-88% | 75-88% |
+  | Economy of Force | 0% | 31-88% | 69-81% | 63-75% |
+  | Across the Line | 0-6% | 31-69% | 69-81% | 69-81% |
+  | Ville Under Fire | 0-19% | 0-75% | 63-75% | 75-94% |
+  | Four Sectors | 0% | 31% | 75% | 94% |
+  | Reinforce the Capital | 6% | 100% | 69% | 94% |
+  | The Two Cities | 0% | 0-25% | 69-88% | 56-69% |
+  | The President's Flight | 6-38% | 31-38% | 56-75% | 63-81% |
 
   (Ranges are across the seats each watch offers; Solo Battery has only the
   cabin, and the last two only the net and both seats.)
@@ -1684,26 +1684,53 @@ A few decisions worth knowing about if you read the source:
 
   | Act | Watches | Competent HELD | Act mean |
   |---|---|--:|--:|
-  | I — battalion | First Light \| Low Riders \| Solo Battery | 100%\* \| 81% \| 81% | **87.5%** |
-  | II — sector | Weasel Hour \| White Noise \| Economy of Force \| Across the Line \| Ville Under Fire | 75% \| 81% \| 81% \| 75% \| 81% | **78.6%** |
-  | III — district | Four Sectors \| Reinforce the Capital | 69% \| 69% | **68.8%** |
-  | IV — national | The Two Cities \| The President's Flight | 63% \| 75% | **69%** |
+  | I — battalion | First Light \| Low Riders \| Solo Battery | 100%\* \| 75% \| 81% | **78.1%** |
+  | II — sector | Weasel Hour \| White Noise \| Economy of Force \| Across the Line \| Ville Under Fire | 81% \| 81% \| 69% \| 81% \| 75% | **77.5%** |
+  | III — district | Four Sectors \| Reinforce the Capital | 75% \| 69% | **71.9%** |
+  | IV — national | The Two Cities \| The President's Flight | 69% \| 75% | **71.9%** |
 
   \* the documented teaching exception, below.
 
   The rule is that no watch may be easier than the hardest watch of the act
-  before it, and each act clears it: act one's hardest holds 81 and act two's
-  easiest holds 81; act two's hardest holds 75 and act three's easiest holds
-  69; act three's hardest holds 69 and act four's easiest holds 63. The act
-  means fall monotonically with it. One watch sits a rung above the act before
-  it — the sealed escort at 75 against act three's hardest 69, six points on a
-  sixteen-seed sample, inside the one-night slack the test allows and recorded
+  before it, and each act clears it: act one's hardest holds 75 and act two's
+  easiest holds 69; act two's hardest holds 69 and act three's easiest holds
+  69; act three's hardest holds 69 and act four's easiest holds 69. The act
+  means fall, or hold, act to act. Five watches sit a rung above the hardest
+  watch of the act before them — Weasel Hour, White Noise and Across the Line
+  at 81 against act one's 75, Four Sectors at 75 against act two's 69, and the
+  sealed escort at 75 against act three's 69 — six points on a sixteen-seed
+  sample, inside the one-night slack the test allows; the escort is recorded
   with its own six-row ladder in the exceptions above, because the alternative
-  arrangement of that raid puts it thirteen points higher still. It was not a staircase before this was measured: act two used
+  arrangement of that raid puts it thirteen points higher still.
+
+  These are the figures since a handover a battery accepted stopped being
+  dropped in silence (the early-handover repair, in `waitForRange` in
+  doctrine.js). Kept handovers moved seven of the twelve watches by one or two
+  nights of sixteen — Low Riders and Ville Under Fire up to 94, above the band,
+  Economy of Force and Reinforce the Capital down a night or two — so three
+  watches were retuned on the same seeds to put the staircase back: Low
+  Riders' allowance from three to two, one more striker against the centre on
+  Ville Under Fire, one fewer in the first package on Reinforce the Capital. It was not a staircase before this was measured: act two used
   to hold 100 / 88 / 100 / 100 / 88 against act one's 100 / 63 / 88, so the
   second act of four was the easiest thing in the game and three of its watches
   could not be lost by a competent player on any seat, while act four held 75
   and 75 against act three's 63.
+
+  The other seats moved with the repair too, and the table above records them
+  as measured rather than as hoped. A kept handover now holds a channel on its
+  target for the claim horizon (forty-five seconds plus four tenths of a second
+  a kilometre of the battery's reach), and the scripted expert, which hands
+  contacts over early and often, pays for that where the careful player does
+  not: Low Riders' both-seat expert fell from 88 to 44 and its crew seat from
+  75 to 56 at competent, Weasel Hour's crew-seat expert from 81 to 56. On
+  Reinforce the Capital the novice policy holds every night at 100 against the
+  competent policy's 69, because taking one striker out of the first package
+  leaves the novice — who gives that package no order and lets the formations
+  work it — under the allowance of six every time, while the competent policy's
+  early handovers pin the long-range channels and leak more late. None of
+  these is on a watch's primary seat, and none was chased: the staircase is
+  the claim the test pins, and a balance pass over the secondary seats is a
+  separate piece of work.
 
   **Sixteen seeds and not eight, and the reason is arithmetic rather than
   taste.** At eight a held rate can only be a multiple of twelve and a half,
@@ -1757,7 +1784,7 @@ A few decisions worth knowing about if you read the source:
   number it reports is the truth about the watch: the teaching watch is where
   skill is acquired, not where it pays.
 
-  **Low Riders forgives three leakers, and every one of them is real.** Counted
+  **Low Riders forgives two leakers, and every one of them is real.** Counted
   out of the built world: twenty-eight aircraft in seven packages on five axes,
   fifteen of them under BASTION's hundred-and-twenty-metre floor — the file and
   this document had both been saying nineteen on four axes since the watch was
@@ -1767,8 +1794,14 @@ A few decisions worth knowing about if you read the source:
   package is four of them at fifty metres rather than six, because six arriving
   together on the one axis the battalion cannot see under is the single largest
   source of arrivals on the watch and nothing was counting them. On the honest
-  count at sixteen seeds it holds 56% at an allowance of two, 81% at three and
-  94% at four; three is the top of the band and the top of the campaign.
+  count at sixteen seeds it held 56% at an allowance of two, 81% at three and
+  94% at four, and three was the top of the band. Then a handover a battery
+  had accepted stopped being dropped in silence, and on this watch — fifteen
+  aircraft under the horizon, arriving already close, the one where an early
+  handover was most often released at ready plus six with nobody told — the
+  same sixteen seeds at an allowance of three held 94%, above the band. At two
+  they hold 75%, which is where the second watch of the teaching act belongs;
+  the raid, the store and the five axes are untouched.
 
   It is also nine minutes shorter at the back and two aircraft heavier at the
   front, for two separate measured reasons. The two low packages spawn at a

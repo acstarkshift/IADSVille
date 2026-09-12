@@ -645,6 +645,15 @@ export const DETECTION = {
   courseSteadyDeg: 25,
   courseSettleS: 10,
   /**
+   * How many looks the velocity needs before its SPEED is believed — a
+   * different question from whether its course is steady. The filter starts
+   * at zero and closes 45% of the gap a look: one look is 45% of the measured
+   * speed, two 70%, three 83%, four 91%. Below this, a time-to-range walked
+   * forward on the track is biased long by up to double, and doctrine reads
+   * the range itself instead (`stepEngagements`). See `velLooks` on the track.
+   */
+  velSettledLooks: 4,
+  /**
    * And once there is a course, a different answer has to be the better one
    * for this long before it takes the field. Straight hysteresis: the
    * incumbent already gets a margin of geometry in `predictedTarget`, and
@@ -690,6 +699,18 @@ export const ENGAGEMENT = {
    * quietly turned every assigned long-range shot back into an edge launch.
    */
   holdFireMaxS: 45,
+  /**
+   * How long a ready engagement watches the RANGE to a target still short of
+   * the ring before it will call the target hopeless on the range alone. This
+   * is the evidence doctrine reads while the tracker's velocity has too few
+   * looks on it to be believed (`DETECTION.velSettledLooks`): the positions
+   * jitter by a kilometre or so, and over fifteen seconds a striker closing
+   * at a quarter of a kilometre a second has moved four, which is a trend
+   * and not noise. Shorter, and a real handover is released on a wobble;
+   * longer, and a claim on a target skirting the ring pins the channel for
+   * the difference.
+   */
+  rangeTrendS: 15,
   /**
    * Pk multiplier for a round LAUNCHED at the very edge of the envelope,
    * independent of where it intercepts. A maximum-range shot arrives with no
