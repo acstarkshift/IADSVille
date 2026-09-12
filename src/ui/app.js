@@ -1148,6 +1148,8 @@ function openContactMenu(trackId, x, y) {
       assignSelected(siteId, pickedTrackId);
       ui.lastPanelAt = 0;
     },
+    // Kept on the glass: the tube's rectangle, whichever seat is showing.
+    bounds: () => els.canvas.getBoundingClientRect(),
   });
   ui.selectedTrackId = trackId;
   ui.lastPanelAt = 0;

@@ -93,9 +93,11 @@ export class ContextMenu {
    * `host` is the menu's element (see index.html); `onPick(siteId, trackId,
    * already)` is called when a live row is chosen.
    */
-  constructor(host, { onPick }) {
+  constructor(host, { onPick, bounds = null }) {
     this.host = host;
     this.onPick = onPick;
+    /** Where the menu is kept: a function returning the tube's rectangle. */
+    this.bounds = bounds;
     this.trackId = null;
     this.onKey = (e) => this.key(e);
     this.onOutside = (e) => { if (!this.host.contains(e.target)) this.close(); };
@@ -139,12 +141,22 @@ export class ContextMenu {
   }).join('')}
       ${rows.length ? '' : '<p class="ctx-empty">No batteries on this net.</p>'}`;
     this.host.hidden = false;
-    // Inside the window: measure, then move.
+    /*
+     * Inside the tube. The menu is about what is on the glass, and a panel
+     * that hangs off the edge of the glass over the battery cards reads as
+     * a bug — the player said so. It is kept inside the scope's own
+     * rectangle when it fits there, and inside the window when the glass is
+     * too small for it (a phone). Measure, then move.
+     */
     const pad = 8;
     const w = this.host.offsetWidth;
     const h = this.host.offsetHeight;
-    const left = Math.max(pad, Math.min(x, window.innerWidth - w - pad));
-    const top = Math.max(pad, Math.min(y, window.innerHeight - h - pad));
+    const glass = this.bounds?.() ?? null;
+    const box = glass && glass.width >= w + pad * 2 && glass.height >= h + pad * 2
+      ? { x: glass.left, y: glass.top, w: glass.width, h: glass.height }
+      : { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight };
+    const left = Math.max(box.x + pad, Math.min(x, box.x + box.w - w - pad));
+    const top = Math.max(box.y + pad, Math.min(y, box.y + box.h - h - pad));
     this.host.style.left = `${left}px`;
     this.host.style.top = `${top}px`;
     window.addEventListener('keydown', this.onKey, true);

@@ -208,6 +208,14 @@ async function main() {
           live: m?.querySelectorAll('.ctx-row.is-live').length ?? 0, why: m?.querySelectorAll('.ctx-why').length ?? 0 };
       });
       if (!menu.open || menu.rows === 0) failures.push(`${run.mission}/${run.role}: right-click on a contact opened no menu`);
+      // And it stays on the glass: nothing of it past the tube's edges.
+      const fit = await page.evaluate(() => {
+        const m = document.getElementById('context-menu').getBoundingClientRect();
+        const g = document.getElementById('scope').getBoundingClientRect();
+        return { inside: m.left >= g.left - 1 && m.top >= g.top - 1 && m.right <= g.right + 1 && m.bottom <= g.bottom + 1,
+          m: [Math.round(m.left), Math.round(m.top), Math.round(m.right), Math.round(m.bottom)], g: [Math.round(g.left), Math.round(g.top), Math.round(g.right), Math.round(g.bottom)] };
+      });
+      if (!fit.inside) failures.push(`${run.mission}/${run.role}: the contact menu hangs off the tube (menu ${fit.m}, tube ${fit.g})`);
       if (menu.rows && menu.live === 0 && menu.why === 0) failures.push(`${run.mission}/${run.role}: the menu offers nothing and explains nothing`);
       await page.keyboard.press('Escape');
       await wait(100);
