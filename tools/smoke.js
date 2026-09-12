@@ -133,7 +133,37 @@ async function main() {
     await page.click(`[data-role="${run.role}"]`);
     await page.click('#btn-brief');
     await page.click('#btn-start');
+    /*
+     * The watch opens first person — the walk to the console, the chair, a
+     * breath, the card, the boot — and the clock must not run under it. The
+     * first run watches the beats go by on their own and checks the clock;
+     * every run then skips to the console the way a player in a hurry does.
+     */
+    await page.waitForSelector('#scene:not([hidden])', { timeout: 5000 })
+      .catch(() => failures.push(`${run.mission}/${run.role}: the watch did not open with the scenes`));
+    if (run === RUNS[0]) {
+      const beats = new Set();
+      for (let i = 0; i < 30; i++) {
+        const o = await page.evaluate(() => ({
+          kind: document.getElementById('scene')?.hidden ? '' : document.getElementById('scene')?.dataset.kind,
+          t: window.__world?.t ?? null, phase: window.__state?.phase,
+        }));
+        if (!o.kind) break;
+        beats.add(o.kind);
+        if (o.t !== 0 || o.phase !== 'opening') failures.push(`${run.mission}/${run.role}: the clock ran under the opening (t=${o.t}, phase ${o.phase})`);
+        await wait(400);
+      }
+      for (const beat of ['approach', 'sit', 'breath', 'card', 'boot']) {
+        if (!beats.has(beat)) failures.push(`${run.mission}/${run.role}: the opening skipped its ${beat}`);
+      }
+    }
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => document.getElementById('scene')?.hidden, null, { timeout: 5000 })
+      .catch(() => failures.push(`${run.mission}/${run.role}: Escape did not end the opening`));
     await page.waitForTimeout(300);
+    if (await page.evaluate(() => window.__state?.phase) !== 'mission') {
+      failures.push(`${run.mission}/${run.role}: the watch did not begin after the opening`);
+    }
 
     // A player would bring the sector up before expecting to see anything.
     await page.evaluate(() => {
@@ -385,6 +415,13 @@ async function touchRun(browser) {
         await tap(`[data-role="${run.role}"]`, { scroll: true });
         await tap('#btn-brief', { scroll: true });
         await tap('#btn-start', { scroll: true });
+        // The opening, skipped by a tap on its SKIP cap, as a thumb would.
+        await page.waitForSelector('#scene:not([hidden])', { timeout: 5000 })
+          .catch(() => failures.push(`${label}: the watch did not open with the scenes`));
+        const skip = await tap('.scene-skip');
+        if (skip !== 'ready') failures.push(`${label}: the opening's SKIP cap ${skip}`);
+        await page.waitForFunction(() => document.getElementById('scene')?.hidden, null, { timeout: 5000 })
+          .catch(() => failures.push(`${label}: SKIP did not end the opening`));
         await page.waitForSelector('#scope');
         await wait(400);
 

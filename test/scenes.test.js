@@ -144,3 +144,28 @@ describe('what is said', () => {
     assert.fail('the battalion act should have ended in an appointment');
   });
 });
+
+describe('the opening of a watch', () => {
+  /*
+   * The player: "Each watch should begin with a first person view of the
+   * operator sitting down at the console, taking a deep breath and inserting
+   * the ID card whereupon the system boots and the watch begins." Five
+   * wordless beats in that order, each with a length so it goes on by itself,
+   * the boot carrying the console's own sound; the clock is held by the app
+   * (the smoke checks it in the browser).
+   */
+  test('five beats, in the order the player described, each timed and wordless', async () => {
+    const { openingScenes, openingTotalS } = await import('../src/ui/scenes.js');
+    const scenes = openingScenes({ mission: { hour: '05:10' } });
+    assert.deepEqual(scenes.map((s) => s.id), ['approach', 'sit', 'breath', 'card', 'boot']);
+    for (const s of scenes) {
+      assert.equal(s.silent, true, `${s.id} has no words`);
+      assert.ok(s.durationS > 0.5 && s.durationS < 5, `${s.id} runs its own length`);
+      assert.equal(s.lines, undefined);
+    }
+    assert.equal(scenes[0].hour, '05:10', 'the walk in carries the watch\'s own hour');
+    assert.equal(scenes[4].sound, 'boot', 'the set makes the console\'s boot sound');
+    const total = openingTotalS({ mission: { hour: '05:10' } });
+    assert.ok(total >= 8 && total <= 14, `the whole opening is a breath under a quarter minute (${total} s)`);
+  });
+});

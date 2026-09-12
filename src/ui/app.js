@@ -33,7 +33,7 @@ import { CONTROLS, POSTURE_CYCLE, legend } from './lexicon.js';
 import { SPEED_BY_KEY, digitPressed } from './keymap.js';
 import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS } from './tutorial.js';
 import { renderMenu, renderBriefing, renderDebrief, renderEndCard, renderControls } from './screens.js';
-import { scenesFor, ScenePlayer } from './scenes.js';
+import { scenesFor, openingScenes, ScenePlayer } from './scenes.js';
 import { ContextMenu } from './contextmenu.js';
 import { renderEnlistment, renderDossier } from './dossier.js';
 import { learnSkill } from '../engine/character.js';
@@ -430,7 +430,14 @@ function startMission() {
   clearPanelCache(els);
   els.screen.hidden = true;
   els.shell.hidden = false;
-  state.phase = 'mission';
+  /*
+   * The watch opens first person: the walk to the console, sitting, one
+   * breath, the card into the reader, the set booting. The world exists from
+   * here — the console under the scenes is the real one — but the phase is
+   * 'opening' until the boot ends, and the frame loop steps nothing outside
+   * 'mission', so the clock does not run until the operator is in the chair.
+   */
+  state.phase = 'opening';
   // Handy for debugging and for the headless smoke tests; harmless in play.
   window.__world = world;
   window.__state = state;
@@ -447,8 +454,22 @@ function startMission() {
   scope.centre = { ...world.centre };
   scope.clearPaint();
   audio.resume();
-  audio.boot();
   updateLegend();
+  playOpening();
+}
+
+/** The five beats before the first live frame; Escape or SKIP goes straight to it. */
+function playOpening() {
+  scenePlayer ??= new ScenePlayer(els.scene, { audio });
+  scenePlayer.play(openingScenes(state), {
+    character: state.campaign.character,
+    onDone: () => {
+      if (state.phase !== 'opening') return;
+      state.phase = 'mission';
+      accumulator = 0;
+      lastFrame = performance.now();
+    },
+  });
 }
 
 function endMission() {

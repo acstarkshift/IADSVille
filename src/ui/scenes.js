@@ -116,6 +116,35 @@ export function scenesFor(state, result, entry) {
 }
 
 /**
+ * The opening of every watch, first person.
+ *
+ * The player: "Each watch should begin with a first person view of the
+ * operator sitting down at the console, taking a deep breath and inserting
+ * the ID card whereupon the system boots and the watch begins." Five beats,
+ * no words: the walk up to the console in the dark, sitting, one breath, the
+ * card into the reader with its lamps coming up blue then green, and the set
+ * booting — the tube warming from a dot to a picture — which ends on the
+ * first live frame. Each beat runs its length and goes on by itself; a key
+ * or a tap goes on early, Escape or SKIP goes straight to the console. The
+ * clock does not run until the boot ends (app.js holds the phase).
+ */
+export function openingScenes(state) {
+  const hour = state?.mission?.hour ?? '00:00';
+  return [
+    { id: 'approach', kind: 'approach', silent: true, durationS: 2.2, hour },
+    { id: 'sit', kind: 'sit', silent: true, durationS: 1.6 },
+    { id: 'breath', kind: 'breath', silent: true, durationS: 2.0 },
+    { id: 'card', kind: 'card', silent: true, durationS: 2.6 },
+    { id: 'boot', kind: 'boot', silent: true, durationS: 2.6, sound: 'boot' },
+  ];
+}
+
+/** How long the opening runs if nobody touches anything. */
+export function openingTotalS(state) {
+  return openingScenes(state).reduce((n, sc) => n + sc.durationS, 0);
+}
+
+/**
  * What the tape prints. A dot-matrix printer prints what it is given, in
  * capitals, one line at a time, so this is the night as figures — the same
  * figures the full report carries — and nothing else.
@@ -257,7 +286,7 @@ export class ScenePlayer {
   /** Start the sequence. `character` is the operator, for the hands and the face. */
   play(scenes, { onDone = null, character = null } = {}) {
     this.stop();
-    this.scenes = scenes.filter((s) => s && s.lines?.length);
+    this.scenes = scenes.filter((s) => s && (s.lines?.length || s.silent));
     this.character = character;
     this.onDone = onDone;
     if (!this.scenes.length) { onDone?.(); return; }
@@ -293,6 +322,8 @@ export class ScenePlayer {
   advance() {
     const scene = this.scene;
     if (!scene) return;
+    // A wordless beat has nothing to finish typing: a key goes on.
+    if (scene.silent) { this.next(); return; }
     const text = scene.lines[this.line] ?? '';
     if (this.typed < text.length) { this.typed = text.length; this.renderText(); return; }
     // The printout and the letter stay on the page: lines accumulate; the
@@ -326,7 +357,9 @@ export class ScenePlayer {
     const scene = this.scene;
     this.sceneStartedAt = performance.now();
     this.host.dataset.kind = scene.kind;
+    if (this.textBox) this.textBox.hidden = !!scene.silent;
     if (this.speakerEl) this.speakerEl.textContent = scene.speaker ?? '';
+    if (scene.sound === 'boot') this.audio?.boot?.();
     this.renderText();
     this.layout();
   }
@@ -385,7 +418,7 @@ export class ScenePlayer {
   /** The words on the page so far — every finished line, and the one being typed. */
   renderText() {
     const scene = this.scene;
-    if (!scene || !this.bodyEl) return;
+    if (!scene || !this.bodyEl || scene.silent) return;
     const keeps = scene.kind === 'printout' || scene.kind === 'quarters' || scene.kind === 'folder';
     const shown = keeps ? scene.lines.slice(0, this.line) : [];
     const current = (scene.lines[this.line] ?? '').slice(0, this.typed);
@@ -404,9 +437,15 @@ export class ScenePlayer {
     if (!this.playing) return;
     const scene = this.scene;
     const t = (now - this.sceneStartedAt) / 1000;
+    // A wordless beat runs its length and goes on by itself.
+    if (scene.silent && scene.durationS && t >= scene.durationS) {
+      this.next();
+      if (this.playing) this.raf = requestAnimationFrame((n) => this.frame(n));
+      return;
+    }
     // The typing.
-    const text = scene.lines[this.line] ?? '';
-    if (this.typed < text.length) {
+    const text = scene.lines?.[this.line] ?? '';
+    if (!scene.silent && this.typed < text.length) {
       const rate = TYPE_RATE[scene.kind] ?? TYPE_RATE.default;
       const dt = this.lastTick ? (now - this.lastTick) / 1000 : 0;
       const want = Math.min(text.length, this.typed + Math.max(1, Math.round(rate * dt)));
@@ -437,6 +476,11 @@ export class ScenePlayer {
       case 'folder': drawFolder(ctx, t, this.character); break;
       case 'quarters': drawQuarters(ctx, t, this.character); break;
       case 'ending': drawEnding(ctx, t, { held: scene.held }); break;
+      case 'approach': drawApproach(ctx, t, scene); break;
+      case 'sit': drawSit(ctx, t, this.character); break;
+      case 'breath': drawBreath(ctx, t, this.character); break;
+      case 'card': drawCard(ctx, t, this.character); break;
+      case 'boot': drawBoot(ctx, t, scene, this.character); break;
       default: ctx.fillStyle = '#000'; ctx.fillRect(0, 0, SCENE_W, SCENE_H);
     }
     ctx.restore();
@@ -516,32 +560,173 @@ function sheet(ctx, x, y, w, h, { cream = false } = {}) {
 }
 
 /** The room the console is in, seen from the seat, with the tube glowing. */
-function consoleRoom(ctx, t) {
+/**
+ * The console room. `live` draws the tube with its rings and sweep and the
+ * lamps lit; before the boot it is a dark glass on a dark panel, and `tube`
+ * (0..1) is how far the set has come up.
+ */
+function consoleRoom(ctx, t, { live = true, tube = 1, lamps = 1 } = {}) {
   px(ctx, 0, 0, SCENE_W, SCENE_H, '#0a0d0a');
   // The panel across the top, the tube in the middle of it.
   px(ctx, 0, 0, SCENE_W, 70, '#2a2e27');
   px(ctx, 0, 66, SCENE_W, 4, '#1a1d18');
   px(ctx, 96, 6, 128, 56, '#0c0c0c');
-  px(ctx, 100, 10, 120, 48, '#04140c');
-  // Range rings and the sweep.
-  ctx.strokeStyle = 'rgba(64,255,158,.25)';
-  ctx.lineWidth = 1;
-  for (const r of [8, 16, 24]) { ctx.beginPath(); ctx.arc(160, 34, r, 0, Math.PI * 2); ctx.stroke(); }
-  const a = (t * 1.6) % (Math.PI * 2);
-  ctx.strokeStyle = 'rgba(64,255,158,.9)';
-  ctx.beginPath(); ctx.moveTo(160, 34); ctx.lineTo(160 + Math.cos(a) * 24, 34 + Math.sin(a) * 24); ctx.stroke();
-  // Lamps and switches either side.
+  px(ctx, 100, 10, 120, 48, live ? '#04140c' : '#050706');
+  if (live && tube > 0) {
+    // Range rings and the sweep, arriving in order as the set comes up.
+    ctx.strokeStyle = `rgba(64,255,158,${0.25 * Math.min(1, tube * 1.5)})`;
+    ctx.lineWidth = 1;
+    const rings = [8, 16, 24].slice(0, Math.ceil(tube * 3));
+    for (const r of rings) { ctx.beginPath(); ctx.arc(160, 34, r, 0, Math.PI * 2); ctx.stroke(); }
+    if (tube >= 0.6) {
+      const a = (t * 1.6) % (Math.PI * 2);
+      ctx.strokeStyle = 'rgba(64,255,158,.9)';
+      ctx.beginPath(); ctx.moveTo(160, 34); ctx.lineTo(160 + Math.cos(a) * 24, 34 + Math.sin(a) * 24); ctx.stroke();
+    }
+  }
+  // Lamps and switches either side; the lamps come up with the set.
   for (let i = 0; i < 4; i++) {
-    px(ctx, 20 + i * 14, 16, 6, 6, i === 1 ? '#ffb43c' : i === 0 ? '#45e874' : '#3a3f36');
-    px(ctx, 244 + i * 14, 16, 6, 6, i === 2 ? '#45e874' : '#3a3f36');
+    const on = lamps >= (i + 1) / 4;
+    px(ctx, 20 + i * 14, 16, 6, 6, on && i === 1 ? '#ffb43c' : on && i === 0 ? '#45e874' : '#3a3f36');
+    px(ctx, 244 + i * 14, 16, 6, 6, on && i === 2 ? '#45e874' : '#3a3f36');
   }
   for (let i = 0; i < 5; i++) { px(ctx, 22 + i * 12, 36, 4, 12, '#6e7568'); px(ctx, 22 + i * 12, 36 + (i % 2) * 6, 4, 6, '#d9dcd4'); }
   for (let i = 0; i < 5; i++) { px(ctx, 244 + i * 12, 36, 4, 12, '#6e7568'); px(ctx, 244 + i * 12, 36 + ((i + 1) % 2) * 6, 4, 6, '#d9dcd4'); }
   // The desk edge, and the glow of the tube on it.
   px(ctx, 0, 70, SCENE_W, 110, '#141712');
   px(ctx, 0, 70, SCENE_W, 8, '#1e2119');
-  ctx.fillStyle = 'rgba(64,255,158,.06)';
-  ctx.fillRect(80, 78, 160, 100);
+  if (live) {
+    ctx.fillStyle = `rgba(64,255,158,${0.06 * tube})`;
+    ctx.fillRect(80, 78, 160, 100);
+  }
+}
+
+/* ------------------------------------------------------------------ the opening */
+
+/** The card reader on the panel's left, with its three lamps. */
+function cardReader(ctx, { power = false, card = false, net = false } = {}) {
+  px(ctx, 24, 50, 44, 12, '#111311');
+  px(ctx, 26, 52, 40, 8, '#1c1f1b');
+  px(ctx, 30, 55, 32, 2, '#050605');           // the slot mouth
+  px(ctx, 27, 53, 3, 3, power ? '#5aa9ff' : '#2a2f36');
+  px(ctx, 32, 53, 3, 3, card ? '#45e874' : '#2a3a2f');
+  px(ctx, 37, 53, 3, 3, net ? '#ffb43c' : '#3a3428');
+}
+
+/** The operator's card, white plastic with the photograph and a band. */
+function idCard(ctx, x, y) {
+  px(ctx, x, y, 18, 12, '#e8e6df');
+  px(ctx, x, y, 18, 2, '#8a1f1a');
+  px(ctx, x + 2, y + 4, 5, 6, '#c9a27f');
+  px(ctx, x + 9, y + 5, 7, 1, '#3b3f38');
+  px(ctx, x + 9, y + 7, 6, 1, '#3b3f38');
+  px(ctx, x + 9, y + 9, 4, 1, '#3b3f38');
+}
+
+/** A hand from the bottom of the frame, holding something at (x, y). */
+function reachingHand(ctx, skin, x, y) {
+  const [light, dark] = skin;
+  px(ctx, x - 6, y + 8, 22, 60, light);
+  px(ctx, x - 6, y + 8, 4, 60, dark);
+  px(ctx, x - 2, y + 2, 6, 10, light);          // the thumb on the card
+  px(ctx, x + 12, y + 4, 6, 8, light);          // a finger over its edge
+}
+
+const skinOf = (character) => (character ? portraitFeatures(character.name).skin : ['#e9c4a0', '#cda07a']);
+
+/** Walking up to the console in the dark: the panel grows as you come to it. */
+function drawApproach(ctx, t, scene) {
+  const p = Math.min(1, t / 2.2);
+  const k = 0.72 + 0.28 * (1 - Math.pow(1 - p, 2));
+  px(ctx, 0, 0, SCENE_W, SCENE_H, '#000');
+  ctx.save();
+  ctx.translate(SCENE_W / 2, SCENE_H * 0.55);
+  ctx.scale(k, k);
+  ctx.translate(-SCENE_W / 2, -SCENE_H * 0.55);
+  consoleRoom(ctx, t, { live: false, lamps: 0 });
+  cardReader(ctx, {});
+  // The room around it: a doorway's light behind you, on the floor.
+  ctx.fillStyle = 'rgba(120,130,110,.05)';
+  ctx.fillRect(0, 150, SCENE_W, 30);
+  ctx.restore();
+  // The hour on the wall clock, dim, so the watch's own night is set.
+  ctx.fillStyle = 'rgba(200,210,190,.35)';
+  ctx.font = '7px monospace';
+  ctx.fillText(scene.hour ?? '', 288, 8);
+  // Darkness at the edges that lifts as you arrive.
+  ctx.fillStyle = `rgba(0,0,0,${0.55 * (1 - p)})`;
+  ctx.fillRect(0, 0, SCENE_W, SCENE_H);
+}
+
+/** Sitting: the view drops into the chair and the hands come to the desk. */
+function drawSit(ctx, t, character) {
+  const p = Math.min(1, t / 1.6);
+  const ease = 1 - Math.pow(1 - p, 3);
+  px(ctx, 0, 0, SCENE_W, SCENE_H, '#000');
+  ctx.save();
+  ctx.translate(0, -22 * (1 - ease));
+  consoleRoom(ctx, t, { live: false, lamps: 0 });
+  cardReader(ctx, {});
+  ctx.restore();
+  // The hands rise to the desk edge as you settle.
+  hands(ctx, skinOf(character), 150 + (1 - ease) * 50);
+}
+
+/** One breath: the frame settles, dims a little, and comes back. */
+function drawBreath(ctx, t, character) {
+  const p = Math.min(1, t / 2.0);
+  const breath = Math.sin(p * Math.PI);          // in, then out
+  px(ctx, 0, 0, SCENE_W, SCENE_H, '#000');
+  ctx.save();
+  ctx.translate(0, Math.round(-1.5 * breath));
+  consoleRoom(ctx, t, { live: false, lamps: 0 });
+  cardReader(ctx, {});
+  ctx.restore();
+  hands(ctx, skinOf(character), 150);
+  ctx.fillStyle = `rgba(0,0,0,${0.22 * breath})`;
+  ctx.fillRect(0, 0, SCENE_W, SCENE_H);
+}
+
+/** The card into the reader: blue when the reader sees it, green when it is seated. */
+function drawCard(ctx, t, character) {
+  const p = Math.min(1, t / 1.6);                // the travel takes 1.6 s of the 2.6
+  const ease = 1 - Math.pow(1 - p, 2);
+  px(ctx, 0, 0, SCENE_W, SCENE_H, '#000');
+  consoleRoom(ctx, t, { live: false, lamps: 0 });
+  const seated = p >= 1;
+  const halfway = p >= 0.55;
+  // The card comes up from the lower left into the slot; once it is in, the
+  // reader is drawn over its top so it sits half out, as it does on the console.
+  const x = 36 + (1 - ease) * 30;
+  const y = 44 + (1 - ease) * 100;
+  const skin = skinOf(character);
+  if (!seated) reachingHand(ctx, skin, x, y);
+  idCard(ctx, x, y);
+  cardReader(ctx, { power: halfway, card: seated });
+  if (seated) {
+    // The hand withdraws to the desk over the next half second.
+    hands(ctx, skin, 150 + 20 * Math.max(0, 1 - (t - 1.6) / 0.6));
+  }
+}
+
+/** The set boots: a dot, then the rings, then the sweep and the lamps. */
+function drawBoot(ctx, t, scene, character) {
+  const p = Math.min(1, t / 2.6);
+  px(ctx, 0, 0, SCENE_W, SCENE_H, '#000');
+  consoleRoom(ctx, t, { live: p > 0.25, tube: Math.max(0, (p - 0.25) / 0.6), lamps: Math.max(0, (p - 0.1) / 0.8) });
+  cardReader(ctx, { power: true, card: true, net: p > 0.9 });
+  if (p <= 0.3) {
+    // The dot in the middle of the glass, growing.
+    const r = 1 + p * 8;
+    ctx.fillStyle = `rgba(120,255,190,${0.6 + p})`;
+    ctx.beginPath(); ctx.arc(160, 34, r, 0, Math.PI * 2); ctx.fill();
+  }
+  hands(ctx, skinOf(character), 150);
+  if (p > 0.85) {
+    ctx.fillStyle = 'rgba(199,255,228,.9)';
+    ctx.font = '7px monospace';
+    ctx.fillText('READY', 148, 60);
+  }
 }
 
 function drawPrintout(ctx, t, character) {

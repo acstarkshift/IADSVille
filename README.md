@@ -331,6 +331,18 @@ key or a tap finishes a line and moves to the next; SKIP goes straight to the
 card at the end, where STAND ANOTHER WATCH sits beside THE FULL REPORT, which
 is the old page of tables, kept for anyone who wants the arithmetic.
 
+**And the beginning.** Every watch opens first person, in the same drawn
+style: the walk up to the console in the dark, with the watch's own hour on
+the wall; the chair, as the view drops and your hands come to the desk; one
+breath; your card into the reader — its lamps come up blue when the reader
+sees it and green when it is seated — and the set booting, a dot on the glass
+growing into rings and a sweep while the lamps come up in order, which ends on
+the first live frame. Nobody speaks. Each beat runs its length and goes on by
+itself, a key or a tap goes on early, and Escape or SKIP goes straight to the
+console. The clock does not run until the boot ends: the console under the
+scenes is the real one, but the watch's phase is held until the operator is
+in the chair, and the smoke checks it.
+
 ## Two seats
 
 Both are the same simulation. What changes is which half of it you drive; the AI
