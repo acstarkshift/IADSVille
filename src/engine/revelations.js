@@ -23,6 +23,8 @@ export const REVELATIONS = {
     id: 'freeze',
     after: 'economy-of-force',
     tm: 'НАРЯД',
+    /** Its own reference, on the corner of the sheet. */
+    ref: 'ALLOC 219',
     title: 'THE ALLOCATION',
     lines: [
       /*
@@ -81,6 +83,8 @@ export const REVELATIONS = {
     id: 'border',
     after: 'across-the-line',
     tm: 'КООРДИНАТЫ',
+    /** Its own reference, on the corner of the sheet. */
+    ref: 'ANNEX 7-C',
     title: 'THE GRID REFERENCE',
     lines: [
       'The strays were logged as strays. Two rounds, both malfunctioning in the same way, both'
@@ -101,6 +105,8 @@ export const REVELATIONS = {
     id: 'ledger',
     after: 'ville-under-fire',
     tm: 'ВЕДОМОСТЬ',
+    /** Its own reference, on the corner of the sheet. */
+    ref: 'RETURN 88',
     title: 'THE RETURN',
     lines: [
       'A depot return crossed your desk during the resupply that did not arrive. It was not'
@@ -130,6 +136,8 @@ export const REVELATIONS = {
     id: 'passenger',
     after: 'four-sectors',
     tm: 'ОРДЕР НА ЗАДЕРЖАНИЕ',
+    /** Its own reference, on the corner of the sheet. */
+    ref: 'ORDER 512',
     title: 'THE DETENTION ORDER',
     lines: [
       'The detention order that was read to you on the net has a file number, and the file number'
@@ -149,6 +157,8 @@ export const REVELATIONS = {
     id: 'movement',
     after: 'reinforce-the-capital',
     tm: 'ПЕРЕМЕЩЕНИЕ',
+    /** Its own reference, on the corner of the sheet. */
+    ref: 'MOVE 61-4',
     title: 'THE MOVEMENT ORDER',
     lines: [
       'The order that took your battalion is numbered, and orders in that series run consecutively,'
@@ -167,6 +177,8 @@ export const REVELATIONS = {
     id: 'buyer',
     after: 'two-cities',
     tm: 'ПЕРЕДАЧА',
+    /** Its own reference, on the corner of the sheet. */
+    ref: 'TRANS 719',
     title: 'THE TRANSFER',
     lines: [
       'The transfer manifests are not secret. They are boring, and they are filed in a room nobody'

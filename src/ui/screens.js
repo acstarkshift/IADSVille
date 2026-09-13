@@ -328,8 +328,9 @@ export function renderBriefing(host, state) {
       <p>Your standing is the number the file keeps on you. It runs from nothing to a hundred and
       begins at ${Math.round(state.campaign.standing)}. At seventy-eight and above a file is
       commended; below fifteen it is referred to the political section.</p>
-      <p>The other figure the tape prints is leakers: aircraft that got past you and struck what
-      they were sent for. Every watch has an allowance, and the allowance is small.</p>
+      <p>The other figure the tape prints is how many aircraft got through — the ones that passed
+      you and struck what they were sent for. Every watch has an allowance for them, and the
+      allowance is small.</p>
     </div>` : `<div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : consequence.tier.id === 'satisfactory' ? '' : 'file-entry'}">
       <span class="form-no">FORM 4471-B</span>
       <h3>${esc(consequence.title)}</h3>
@@ -650,7 +651,10 @@ export function renderDebrief(host, state, result, entry) {
     `<div class="score-cell ${mood}"><label>${esc(label)}</label><b>${esc(value)}</b></div>`;
 
   /*
-   * The leaker count, in the two currencies this debrief closes on.
+   * The count of aircraft that got through, in the two currencies this debrief
+   * closes on. (The stat is still `leakers` in the engine, which is what the
+   * service calls them; no screen says that word any more, because the game
+   * says "got through" in every register a player reads.)
    *
    * `stats.leakers` is every weapon that arrived somewhere. The verdict is
    * read against the count the FILE recognises — arrivals at a place tonight's
@@ -840,13 +844,13 @@ export function renderDebrief(host, state, result, entry) {
              number on screens the player reads minutes apart. */ ''}
         ${cell('AIRCRAFT DESTROYED', s.kills)}
         ${cell('TURNED BACK', s.turnedBack, !result.abandoned && s.turnedBack ? 'is-good' : '')}
-        ${cell('LEAKERS', leakerCell, result.abandoned ? '' : s.leakers ? 'is-bad' : 'is-good')}
+        ${cell('GOT THROUGH', leakerCell, result.abandoned ? '' : s.leakers ? 'is-bad' : 'is-good')}
         ${cell('ROUNDS', `${s.roundsFired}`)}
         ${cell('ASSETS LOST', s.assetsLost, result.abandoned ? '' : s.assetsLost ? 'is-bad' : 'is-good')}
       </div>
       ${result.abandoned ? `<p class="note score-withheld">Nothing on this line was
         earned or lost: the watch was not stood.</p>`
-    : `<p class="note">A leaker is an aircraft that got past you and struck what it was sent for.${unrecognised > 0
+    : `<p class="note">An aircraft that got through is one that passed you and struck what it was sent for.${unrecognised > 0
       ? ' The uncounted ones arrived at a place tonight\'s orders had struck off the list.' : ''}</p>`}
     </div>
 
@@ -876,12 +880,22 @@ export function renderDebrief(host, state, result, entry) {
           </td></tr>${struck ? `<tr class="is-gloss"><td colspan="2" class="is-prose">${esc(quarter.en.charAt(0).toUpperCase() + quarter.en.slice(1))}, where your people live, is on the returns.</td></tr>` : ''}`;
   }).join('')}
       </table>
+      ${/*
+       * The battery, in sentences.
+       *
+       * It used to end "0% emissions exposure" — a third name for a figure the
+       * console calls ELINT EXPOSURE and the seat explains in a tooltip, printed
+       * as a bare percentage with no unit a reader can decode, at the foot of a
+       * document written in plain English everywhere else. One name for the
+       * thing, and the plain words for it the first time it is printed here.
+       */ ''}
       ${result.battery ? `<p class="aside">
         Your battery: <b>${esc(result.battery.name)}</b> —
-        ${result.battery.alive ? 'still in action' : 'lost'},
-        ${result.battery.roundsRemaining} rounds on the rails,
-        ${result.battery.crewLosses} crew casualties,
-        ${Math.round(result.battery.exposure * 100)}% emissions exposure.${s.ownAuthorityEngagements
+        ${result.battery.alive ? 'still in action' : 'lost'}, with
+        ${result.battery.roundsRemaining} rounds on the rails and
+        ${result.battery.crewLosses || 'no'} crew ${result.battery.crewLosses === 1 ? 'casualty' : 'casualties'}.
+        Its radar finished the watch at ${Math.round(result.battery.exposure * 100)}% ELINT
+        exposure, which is how well the enemy had it located from its own transmissions.${s.ownAuthorityEngagements
     ? ` <span class="grave">${s.ownAuthorityEngagements} engagement${s.ownAuthorityEngagements === 1 ? '' : 's'} on your own authority, ${s.roundsOnOwnAuthority} round${s.roundsOnOwnAuthority === 1 ? '' : 's'}; the net has it in writing.</span>`
     : ''}</p>` : ''}
     </div>
@@ -896,7 +910,7 @@ export function renderDebrief(host, state, result, entry) {
       ['Ground preserved', b.assets],
       ['Aircraft destroyed', b.kills],
       ['Sorties turned back', b.turnedBack],
-      ['Leakers', b.leakers],
+      ['Aircraft that got through', b.leakers],
       ['Rounds expended', b.rounds],
       ['Equipment lost', b.equipment],
       ['Civilian harm', b.civilian],
@@ -921,7 +935,17 @@ export function renderDebrief(host, state, result, entry) {
       <table class="ledger">${ledger}</table>
       ${anyAtFloor ? `<p class="aside">* Charged in full and collected in part: your standing was
         already at its lowest, so there was nothing left for the file to take.</p>` : ''}
-      <p class="aside">Standing: ${Math.round(result.standing)} — ${esc(result.tierLabel)}</p>
+      ${/*
+       * Which of the two figures this is.
+       *
+       * "Standing: 3 — REFERRED" sat six lines above "FILE ENTRY — UNDER
+       * REVIEW" with nothing on the sheet saying that one was tonight and one
+       * was the record — two tier words disagreeing on the same page, on the
+       * screen a confused player opens to find out. The tape labels them
+       * STANDING THIS WATCH and STANDING IN THE FILE; so does the report.
+       */ ''}
+      <p class="aside">Standing this watch: ${Math.round(result.standing)} —
+        ${esc(result.tierLabel)}. This is what tonight was worth, on its own.</p>
     </div>` : ''}
 
     ${divergences.length ? `<div class="card">
@@ -957,6 +981,8 @@ export function renderDebrief(host, state, result, entry) {
     ${result.abandoned ? '' : `<div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : 'file-entry'}">
       <span class="form-no">FORM 4471-B</span>
       <h3>${esc(consequence.title)}</h3>
+      <p class="aside">Standing in the file: ${Math.round(state.campaign.standing)}. This is what
+        your file has come to, and it is the figure that travels with you.</p>
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>`}
 
@@ -1063,13 +1089,24 @@ export function renderEndCard(host, state, result) {
     ['SEAT', ROLES[result.role].label],
   ];
 
-  host.innerHTML = `<div class="screen-inner is-endcard ${ending ? 'is-title-card' : ''}">
-    ${ending ? '<canvas class="endcard-sky" width="320" height="180" aria-hidden="true"></canvas>' : ''}
+  /*
+   * EVERY watch ends on a title card.
+   *
+   * The reader judge counted the cost of the exception: "eleven watches out of
+   * twelve end on a bare left-aligned text block on flat black ... the finale's
+   * end card has the valley behind it and looks like a game; the ordinary one
+   * looks like a terminal." So the valley goes behind all twelve of them —
+   * held or lost by whether the sector held, which is the sector at the hour
+   * the watch ended — and the block is centred over it either way.
+   */
+  host.innerHTML = `<div class="screen-inner is-endcard is-title-card">
+    <canvas class="endcard-sky" width="320" height="180" aria-hidden="true"></canvas>
     <div class="endcard-block">
       ${/* The same print that is stuck to the front of the dossier and to the
-           head of the service record, at the end of the file it belongs to. */ ''}
+           head of the service record, at the end of the file it belongs to —
+           at the size it is read at there, not at a third of it. */ ''}
       ${state.campaign.character ? `<span class="file-ident-photo endcard-photo">
-        <canvas class="portrait file-photo is-small" width="24" height="30"
+        <canvas class="portrait file-photo" width="24" height="30"
           data-seed="${esc(state.campaign.character.name)}" aria-label="Photograph on file"></canvas>
       </span>` : ''}
       ${ending && ending.subtitle ? `<p class="endcard-tm">${esc(ending.title)}</p>` : ''}
@@ -1105,7 +1142,7 @@ export function renderEndCard(host, state, result) {
   </div>`;
   // The evening's last picture, dimmed, behind the words it belongs to.
   const sky = host.querySelector('.endcard-sky');
-  if (sky && ending) drawEndingStill(sky, { held: !!result.success });
+  if (sky) drawEndingStill(sky, { held: !result.abandoned && !!result.success });
   paintFilePhotos(host);
   toTop(host);
 }

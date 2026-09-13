@@ -497,6 +497,8 @@ export function emptyFamily() {
     withheld: [],
     /** The residence-permit thread: 'standing' | 'review' | 'closed'. */
     permit: 'standing',
+    /** The watch the review opened on, so the office can say so once. */
+    permitOpenedAt: null,
     permitClosedAt: null,
     /** Consecutive clean watches, for the release and permit machinery. */
     goodStreak: 0,
@@ -582,6 +584,7 @@ export function recordFamily(campaign, result, tierId) {
   family.goodStreak = good ? (family.goodStreak ?? 0) + 1 : 0;
   if (tierId === 'condemned' && family.permit === 'standing') {
     family.permit = 'review';
+    family.permitOpenedAt = watch;
   } else if (family.permit === 'review' && family.goodStreak >= 2) {
     family.permit = 'closed';
     family.permitClosedAt = watch;

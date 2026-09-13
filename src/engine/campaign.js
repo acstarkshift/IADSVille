@@ -219,10 +219,6 @@ export function recordMission(campaign, result) {
     ? { ...learned, lines: learned.linesFor ? learned.linesFor(result) : learned.lines }
     : null;
 
-  // And the post arrives with the file entry — or is announced as not arriving,
-  // which in this service is also a delivery.
-  const letter = recordFamily(campaign, result, tier.id);
-
   const previous = campaign.completed[result.missionId];
   if (!previous || result.score > previous.score) {
     campaign.completed[result.missionId] = { score: result.score, tier: tier.id, role: result.role };
@@ -231,7 +227,18 @@ export function recordMission(campaign, result) {
   // And the promotion, which is decided by the watches you have stood rather
   // than by how any of them went — this service does not have enough officers
   // to be selective, and says so by never mentioning it.
+  /*
+   * It is settled BEFORE the post is written, because one of the six letters
+   * addresses the player by rank instead of by name, and it arrives on Four
+   * Sectors — the evening the order gazettes them to Major. The post used to be
+   * written first, so on the one night the paper in the scene before it changed
+   * the rank, the letter two scenes later opened "To Recruit Tomina,".
+   */
   const appointment = appointTo(campaign);
+
+  // And the post arrives with the file entry — or is announced as not arriving,
+  // which in this service is also a delivery.
+  const letter = recordFamily(campaign, result, tier.id);
 
   return { ...entry, service, revelation, appointment, letter };
 }
@@ -354,18 +361,97 @@ export function consequenceFor(campaign, { narrativePressure = true } = {}) {
    * aloud. Now he says the entry, then one thing the entry costs you this
    * month, and he only mentions the allocation on a night it actually moved.
    */
+  /*
+   * The allocation is mentioned on a night it actually moved.
+   *
+   * It used to be mentioned on every condemned night as well, because a
+   * condemned file is never allowed to reload — so "You will not be reloading.
+   * Whatever is on the rails at the start of the next watch is what you have
+   * for it." was said word for word on three consecutive bad evenings. Nothing
+   * had moved on the second and the third; the supply was as suspended as it
+   * had been the night before, and a man does not tell you the same standing
+   * fact three times.
+   */
   const previous = campaign.history?.[campaign.history.length - 2]?.tier ?? null;
-  const supplyMoved = previous === null || previous !== tier.id || !tactical.reloadsAllowed;
+  const supplyMoved = previous === null || previous !== tier.id;
   const spokenLines = [
-    lines[0],
+    spokenEntry(tier.id, campaign) ?? lines[0],
     monthlyLine(tier.id, campaign),
     markLine,
     supplyMoved ? supplySpoken(tactical) : null,
   ].filter(Boolean);
 
+  /*
+   * And the same entry a third time, for a paper nobody reads aloud.
+   *
+   * On the night the post is struck the section does not hold a meeting: it
+   * signs a finding and sends it. The form's own lines are already in the
+   * right register for that — passive, filed, nothing in the first person —
+   * except the supply line, which is a label and a colon and belongs on the
+   * tape rather than in a paragraph of a signed document.
+   */
+  const writtenLines = [
+    ...lines.filter((l) => !/^[A-Z]+:/.test(l)),
+    supplyWritten(tactical),
+  ];
+
   return {
-    tier, modifiers: tactical, title: `FILE ENTRY — ${tier.label}`, lines, spokenLines,
+    tier,
+    modifiers: tactical,
+    title: `FILE ENTRY — ${tier.label}`,
+    lines,
+    spokenLines,
+    writtenLines,
   };
+}
+
+/**
+ * The file entry's opening sentence, in his mouth, three ways per tier.
+ *
+ * The printed form keeps one fixed wording, because that is what a form is.
+ * The man reading it out does not: a record that sat at noted for four watches
+ * heard "Your conduct of the engagement has been noted for review. The review
+ * is routine." four evenings running, immediately after the night line that
+ * was written to vary. Taken in turn by the number of watches in the file, so
+ * the same file on the same watch always hears the same sentence.
+ */
+const SPOKEN_ENTRY = {
+  commended: [
+    'Sector command records your conduct as exemplary. Your file is amended accordingly.',
+    'Sector command has entered tonight as exemplary conduct. The entry is signed, and it is not'
+      + ' provisional.',
+    'Your conduct tonight is recorded as exemplary. Sector command wrote the entry and I'
+      + ' countersigned it.',
+  ],
+  satisfactory: [
+    'Sector command has recorded the engagement. No comment is appended.',
+    'Sector command has entered the engagement in your file. Nothing is appended to it.',
+    'The engagement is recorded. Sector command had no comment to add and did not add one.',
+  ],
+  noted: [
+    'Your conduct of the engagement has been noted for review. The review is routine.',
+    'Your conduct of the engagement is noted for review. I opened it this evening, and it will run'
+      + ' its course.',
+    'Sector command has noted your conduct of the engagement. The review that follows a note is'
+      + ' done by this office.',
+  ],
+  flagged: [
+    'A discrepancy has been identified between your reported conduct and the sector log.',
+    'A discrepancy stands between your reported conduct and the sector log. I identified it'
+      + ' myself.',
+    'Sector command has identified a discrepancy between what you reported and what the log'
+      + ' holds.',
+  ],
+  condemned: [
+    'You are referred to the sector political section.',
+    'You are referred to this office by name. The referral is written and it is signed.',
+    'Sector command has referred you to the political section. The referral came to this desk.',
+  ],
+};
+function spokenEntry(tierId, campaign) {
+  const list = SPOKEN_ENTRY[tierId];
+  if (!list?.length) return null;
+  return list[Math.max(0, (campaign.history?.length ?? 1) - 1) % list.length];
 }
 
 /**
@@ -415,17 +501,41 @@ const MONTHLY = {
 };
 
 /**
- * And the one thing that outranks the rotation: while the residence permit is
- * open, that is what he raises, because it is the thing that matters.
+ * And while the residence permit is open, that is what he raises, because it is
+ * the thing that matters.
+ *
+ * It used to raise it by returning one fixed sentence, which outranked the
+ * rotation instead of joining it: a file sitting at condemned heard "Your
+ * family's residence permit in the Ville is listed as under review. You will
+ * be informed of the outcome." word for word on every evening the permit was
+ * open, which is the one thread in the game that must not sound recorded. The
+ * permit now has four sentences of its own and takes them in turn exactly as
+ * MONTHLY does — the first says the thing has opened, and the rest are what an
+ * open review looks like from the inside of the office holding it.
  */
+const PERMIT_REVIEW = [
+  "Your family's residence permit in the Ville is listed as under review from tonight. You will be"
+    + ' informed of the outcome.',
+  'The review of your family\'s permit sits with the district housing office. It is one of forty'
+    + ' they are holding this quarter.',
+  'Nothing has been written to your household about the permit. The regulation does not require'
+    + ' it.',
+  'The permit file came back to this office this week with nothing added to it. It goes in the'
+    + ' drawer with your tape.',
+];
 function monthlyLine(tierId, campaign) {
+  const watch = campaign.history?.length ?? 1;
   if (tierId === 'condemned' && (campaign.family?.permit ?? 'standing') === 'review') {
-    return "Your family's residence permit in the Ville is listed as under review. You will be"
-      + ' informed of the outcome.';
+    // Counted from the evening the review opened, so the sentence that says it
+    // has opened is the one said on the evening it opens. A record saved before
+    // the office kept that date rotates from the watch count instead.
+    const opened = campaign.family?.permitOpenedAt;
+    const since = Number.isFinite(opened) ? Math.max(0, watch - opened) : Math.max(0, watch - 1);
+    return PERMIT_REVIEW[since % PERMIT_REVIEW.length];
   }
   const list = MONTHLY[tierId];
   if (!list?.length) return null;
-  return list[Math.max(0, (campaign.history?.length ?? 1) - 1) % list.length];
+  return list[Math.max(0, watch - 1) % list.length];
 }
 
 function supplyLine(tactical) {
@@ -447,6 +557,17 @@ function supplySpoken(tactical) {
       + ' you sign for it.';
   }
   return 'Your allocation of rounds is unchanged.';
+}
+
+/** And the same fact on a paper that nobody stands up to read. */
+function supplyWritten(tactical) {
+  if (!tactical.reloadsAllowed) {
+    return 'No reloads are authorised for this position. The next watch is fought with what is on'
+      + ' the rails at the start of it.';
+  }
+  if (tactical.roundsMult > 1) return 'The allocation of rounds for this position is increased.';
+  if (tactical.roundsMult < 1) return 'The allocation of rounds for this position is reduced.';
+  return 'The allocation of rounds for this position is unchanged.';
 }
 
 /** A quiet line before the shooting starts, coloured by how the last one went. */

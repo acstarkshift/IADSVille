@@ -187,6 +187,13 @@ export function appointmentNote(echelon) {
       + ' a notice about the water.',
     region: 'Four sectors answer to you. You will not meet three of the four commanders during'
       + ' this war.',
-    national: 'The order is two lines long and does not say who held the appointment before you.',
+    /*
+     * What the order DOES say. It used to say what it left out — "does not say
+     * who held the appointment before you" — one line after the caveat above
+     * it, which on the worst night says the order does not mention the
+     * position. Two consecutive sentences whose only job is an omission.
+     */
+    national: 'The order is two lines long, dated this morning, and copied to eleven addresses.'
+      + ' Yours is the last of them.',
   }[echelon.id] ?? null;
 }

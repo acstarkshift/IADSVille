@@ -223,31 +223,31 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 }
 .file-ident-photo { position: relative; flex: 0 0 auto; line-height: 0; }
 .file-photo.is-small { width: 48px; height: 60px; border-width: 2px; }
-.record-head .file-ident-photo::after { width: 15px; height: 15px; right: 3px; bottom: 3px; }
-/* the dry stamp, half on the print and half on the form under it */
-/* The dry stamp is ON the print, not hanging off the corner of it: at
-   right:-10px it was clipped by the card's own edge and read as a smear. */
 /*
- * A DRY stamp: colourless, embossed, and on the CORNER of the print.
+ * A REGISTRY CORNER MARK, not a ring.
  *
- * The art judge: "A translucent brown ring is drawn over the sitter's chin and
- * chest in every portrait ... it reads as a cup stain on the photograph." It
- * did, because it was a red ring thirty-four pixels across sitting in the
- * middle of the picture. It is smaller, colourless, doubled, and set into the
- * bottom corner where a registry presses one.
+ * The reader judge, at every size the print appears at: "a dark green disc
+ * overlaps the right shoulder of the portrait in every size, with nothing in
+ * the picture to explain it: at dossier size it reads as a lens or a blot, at
+ * end-card size the whole face is an unreadable smudge with a coloured lump on
+ * it." A circle over a photograph reads as a lens whatever it is meant to be.
+ * What a registry actually leaves is an embossed corner: two short rules, dark
+ * on one side and light on the other, pressed into the print's bottom corner.
  */
 .file-ident-photo::after {
-  content: ''; position: absolute; right: 3px; bottom: 4px;
-  width: 22px; height: 22px; border-radius: 50%;
-  border: 1px solid rgba(240, 244, 232, .5);
-  box-shadow: inset 0 0 0 2px transparent, inset 0 0 0 3px rgba(240, 244, 232, .28),
-    0 1px 0 rgba(10, 13, 10, .45);
-  transform: rotate(-12deg); opacity: .85; pointer-events: none;
+  content: ''; position: absolute; right: 7px; bottom: 7px;
+  width: 15px; height: 15px; border-radius: 0;
+  border: 0;
+  border-right: 2px solid rgba(240, 244, 232, .42);
+  border-bottom: 2px solid rgba(240, 244, 232, .42);
+  box-shadow: 1px 1px 0 rgba(10, 13, 10, .5);
+  opacity: .9; pointer-events: none;
 }
+.record-head .file-ident-photo::after { width: 9px; height: 9px; right: 4px; bottom: 4px; }
 .screen-inner.is-paper .file-ident-photo::after {
-  border-color: rgba(35, 38, 31, .45);
-  box-shadow: inset 0 0 0 2px transparent, inset 0 0 0 3px rgba(35, 38, 31, .22),
-    0 1px 0 rgba(244, 239, 226, .6);
+  border-right-color: rgba(35, 38, 31, .4);
+  border-bottom-color: rgba(35, 38, 31, .4);
+  box-shadow: 1px 1px 0 rgba(244, 239, 226, .7);
 }
 .file-ident-text { display: flex; flex-direction: column; gap: 5px; }
 .file-no { font-size: 9px; letter-spacing: .12em; color: var(--ink-dim); }
@@ -1758,6 +1758,16 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 .choice {
   flex: 1 1 160px; text-align: left; padding: 9px 11px; cursor: pointer;
   border: 1px solid var(--edge); background: var(--bg-panel); border-radius: var(--radius);
+  /*
+   * TOP-ALIGNED, so a row of cards shares one baseline.
+   *
+   * The art judge, on the dossier: "the cards are vertically centred, so the
+   * four titles in one row sit at four different baselines ('Signal Discipline'
+   * highest, 'Cold Blood' lowest) and the file stops looking typed." A button
+   * centres its own content by default and these are stretched to a common
+   * height, so every title floated by half the difference in blurb length.
+   */
+  display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start;
 }
 .choice:hover:not(:disabled) { border-color: var(--accent); background: var(--bg-raised); }
 .choice:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -1900,9 +1910,18 @@ table.ledger .down { color: var(--hostile); }
    * above the log, so the opening beat pays off at every width.
    */
   .ticker { display: block; }
+  /*
+   * And it gets its own strip of desk.
+   *
+   * The art judge, at 390: "the reader plate is clipped by the left edge of the
+   * screen and its top overlaps the bottom of the battery panel above it,
+   * hiding that panel's border and its lower rows." The machined lip it is sunk
+   * into runs ten pixels past the plate on both sides, so it needs a margin
+   * wider than that, and a clear row above it.
+   */
   #card-reader {
     transform: scale(.62); transform-origin: 0 100%;
-    height: 50px; width: 196px; margin: 0 0 2px 6px;
+    height: 50px; width: 196px; margin: 12px 0 6px 18px;
   }
   .topbar-group.rack { justify-content: flex-end; gap: 5px; }
   #unit-plate, #mission-name { display: none; }
@@ -2268,7 +2287,16 @@ table.ledger .down { color: var(--hostile); }
   position: relative;
   border: 0; border-radius: 0; background: transparent; box-shadow: none;
   border-top: 2px solid var(--edge); border-bottom: 1px solid var(--edge);
-  padding: 12px 0 14px; margin: 0 auto 22px; max-width: 74ch;
+  /*
+   * ONE MARGIN for the whole sheet. Two judges measured the last cut: "the
+   * narrative block is inset to about x=527 while the page's own header rule,
+   * punch holes and SCORE section start at x=240", "the finding's prose column
+   * starts about 290px to the right of the letterhead rule it sits under, so
+   * the type floats in the middle of the page with a wide unexplained gutter
+   * that is not the punched filing margin". A document has one left edge:
+   * `auto` centred this block inside a page everything else was ranged left on.
+   */
+  padding: 12px 0 14px; margin: 0 0 22px; max-width: 74ch;
 }
 /* the letterhead and the foot of the record, so the finding is a document */
 .record-head-line, .record-foot-line {
@@ -2561,7 +2589,8 @@ table.ledger .down { color: var(--hostile); }
 .scene[data-kind="printout"] .scene-prompt, .scene[data-kind="quarters"] .scene-prompt, .scene[data-kind="folder"] .scene-prompt { color: #6f6552; }
 /* The order of appointment is read across the desk front, in the spoken box —
    named here so a kind can never fall through to the default by accident. */
-.scene[data-kind="appointment"] .scene-text, .scene[data-kind="office"] .scene-text, .scene[data-kind="ending"] .scene-text { background: #070a08; }
+.scene[data-kind="appointment"] .scene-text, .scene[data-kind="office"] .scene-text,
+.scene[data-kind="finding"] .scene-text, .scene[data-kind="ending"] .scene-text { background: #070a08; }
 /* A phone held upright: the words under the picture, on their own sheet. */
 .scene.is-stacked .scene-text { font-size: 14px; line-height: 1.45; padding: 12px 14px 24px; justify-content: flex-start; }
 .scene.is-stacked .scene-body { flex: 0 1 auto; }

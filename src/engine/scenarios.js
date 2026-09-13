@@ -831,9 +831,8 @@ export const SCENARIOS = [
     directiveContactGraceS: 60,
     brief: [
       'Sector has stripped the area to reinforce the coast. What is left is you.',
-      'You will acquire, you will lock, you will launch, and you will keep the set radiating until'
-        + ' the round arrives. The moment you shut down, that round becomes scrap falling on a'
-        + ' field.',
+      'Acquire it, lock a channel onto it and launch. Then keep the set radiating until the round'
+        + ' arrives, because the moment you shut down that round becomes scrap falling on a field.',
     ],
     teaches: 'You fight one engagement from the seat, start to finish: acquire the target, lock a'
       + ' channel onto it, launch, and guide the round in.',
@@ -2463,7 +2462,7 @@ export const SCENARIOS = [
       'There is also a strike package coming for the palace and the field, and you have one battalion'
         + ' that can cover the corridor. It cannot cover the corridor and the city at the same time.',
       'STATE 01 will be on your scope, identified, until it is out of national airspace or it is'
-        + ' not. Nothing else on this watch matters beside that.',
+        + ' not. Nothing else on this watch matters besides that.',
     ],
     teaches: 'You find out that the last order of the war is about one man rather than any'
       + ' place on the map.',

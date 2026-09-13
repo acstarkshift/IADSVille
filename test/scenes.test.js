@@ -166,7 +166,15 @@ describe('what is said', () => {
     assert.ok(tape.lines.includes(result.headline));
     assert.ok(tape.lines.some((l) => l === `SCORE ${result.score}`));
     assert.ok(tape.lines.some((l) => /^AIRCRAFT DESTROYED \d+ · TURNED BACK \d+$/.test(l)));
-    assert.ok(tape.lines.some((l) => /^LEAKERS \d+ · ROUNDS EXPENDED \d+$/.test(l)));
+    /*
+     * And the third figure about aircraft is in the same words as the first
+     * two. It used to print LEAKERS, which is service jargon on a tape that
+     * spells out everything else — one line under a headline that had already
+     * said it in English. The word is gone from every screen; the debrief
+     * tiles say GOT THROUGH as well, and no surface a player reads uses it.
+     */
+    assert.ok(tape.lines.some((l) => /^GOT THROUGH \d+ · ROUNDS EXPENDED \d+$/.test(l)));
+    assert.ok(!tape.lines.some((l) => /LEAKER/i.test(l)), 'the tape does not print jargon');
     assert.ok(tape.lines.some((l) => /^GROUND LOST: /.test(l)));
     // The watch's own standing and the standing the file now carries, named.
     // Both are named STANDING: a bare 3 and a bare 49 are not figures a new
@@ -292,11 +300,38 @@ describe('what is said', () => {
     result.reason = 'site-lost';
     const office = scenesFor(state, result, entry).find((s) => s.id === 'commissar');
     assert.equal(office.written, true, 'the picture is told it is a document');
+    /*
+     * And it is its own kind of scene, because the office drawer puts a man
+     * across the desk with the file open in both hands — under a first line
+     * that says the finding is sent rather than read. Same room, nobody in it.
+     */
+    assert.equal(office.kind, 'finding',
+      'the finding is drawn as a finding, not as an interview');
     assert.match(office.speaker, /FINDING/, `the plate says what it is: "${office.speaker}"`);
     assert.match(office.lines[0], /sent to you rather than read to you/);
     assert.equal(office.lines.at(-1), 'You will be told where to report.');
     assert.ok(!office.lines.some((l) => /^Dismissed\.$|^You may go\.$/.test(l)),
       'nobody is dismissed from a room they were never in');
+    /*
+     * And it is written throughout. It used to borrow the desk's own clauses —
+     * the file entry as he reads it out, the household roll he looked up this
+     * afternoon, the standings reconciled at you — so the register broke in the
+     * middle of the one beat whose whole point is that nobody is talking.
+     */
+    for (const line of office.lines.slice(1)) {
+      assert.ok(!/\bI (have|had|looked|opened|am|would|will|countersigned)\b|, to me,/.test(line),
+        `a signed finding does not speak in the first person: "${line}"`);
+    }
+    // And on a night the household's own quarter is on the returns, the roll is
+    // consulted the way a document consults one, not the way a man mentions it.
+    const hit = { ...result, stats: { ...result.stats, homeDistrictHit: true } };
+    const written = scenesFor(state, hit, entry).find((s) => s.id === 'commissar');
+    assert.ok(written.lines.some((l) => /roll was consulted before this finding was written/.test(l)),
+      `the roll is consulted the way a document says it: ${JSON.stringify(written.lines)}`);
+    for (const line of written.lines.slice(1)) {
+      assert.ok(!/\bI (have|had|looked|opened|am|would|will|countersigned)\b|, to me,/.test(line),
+        `a signed finding does not speak in the first person: "${line}"`);
+    }
   });
 
   /*

@@ -344,12 +344,18 @@ loss return, the aircraft that got through, a watch with no rounds on it at all
 each of them, then the file entry and one thing it costs you this month, a line
 about where your household is registered, and a dismissal that costs you
 something. He names the place he is talking about the way a man says it aloud,
-and nothing he says is a fixed sentence: the opening, the monthly consequence
-and the line before the dismissal each have three or four of their own, taken
-in turn by the watch and by the night's own figures, so two similar nights
-running never open the same way. On the one night the post itself is struck
-there is no interview at all, because nobody was in the chair for the end of
-it: what arrives instead is the section's finding, written and signed and sent.
+and nothing he says is a fixed sentence: the opening, the file entry, the
+monthly consequence, the line about the residence roll and the line before the
+dismissal each have three or four of their own, taken in turn by the watch and
+by the night's own figures, so two similar nights running never open the same
+way and never close the same way either. He mentions your allocation on a night
+it actually moved, and not otherwise. On the one night the post itself is struck
+there is no interview at all, because nobody was in the chair for the end of it:
+what arrives instead is the section's finding, written and signed and sent. That
+evening is drawn as what it is — the same office, the same lamp still burning,
+the file closed and squared on the blotter, and the chair behind it empty — and
+the finding says where you are, which is the district clearing station at Kubin,
+so the letter that reaches you later that night is stamped as redirected there.
 An order of appointment is read when there is one, on its own, over the order
 and a new shoulder board on a desk; a watch that has taught you something puts
 the folder on the desk; and the letter from home, when one comes, is read in
@@ -365,7 +371,14 @@ scaled in whole pixels, with the words laid over the picture as type, and a
 key or a tap finishes a line and moves to the next; SKIP goes straight to the
 card at the end, which carries what happens next rather than the sentence you
 have just read, and where STAND ANOTHER WATCH sits beside THE FULL REPORT, the
-old page of tables, kept for anyone who wants the arithmetic.
+old page of tables, kept for anyone who wants the arithmetic. That page names
+both of its standings — what tonight was worth on its own, and what the file has
+come to — because they are two different numbers with two different tier words
+against them, and it used to print them six lines apart without saying which was
+which. Its ledger rows are sentences with the places in them said the way the
+office says them, and no screen in the game prints the word leaker any more: the
+tape counts the aircraft that got through, and so does everything downstream of
+it.
 
 **And the beginning.** Every watch opens first person, in the same drawn
 style: the walk up to the console in the dark, with the watch's own hour on
