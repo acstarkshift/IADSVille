@@ -86,8 +86,15 @@ export function rankInsignia(rankIndex = 0, { size = 25, title = '' } = {}) {
     <rect x="1" y="1" width="20" height="30" rx="3" fill="${CLOTH}" stroke="${EDGE}"/>
     <clipPath id="${id}"><rect x="1.6" y="1.6" width="18.8" height="28.8" rx="2.6"/></clipPath>
     <g clip-path="url(#${id})">${weave}</g>
-    ${officer || general ? `<rect x="2.2" y="2.2" width="17.6" height="27.6" rx="2.2" fill="none" stroke="${PIPING}" stroke-width=".9" opacity="${general ? '.0' : '.9'}"/>` : ''}
-    ${general ? `<rect x="2.2" y="2.2" width="17.6" height="27.6" rx="2.2" fill="none" stroke="${BRASS}" stroke-width="1"/>` : ''}
+    ${/* Every board is a board: red piping inside the edge and a brass button
+          at the head of it, whatever is or is not on the cloth. A recruit's
+          used to be a bare olive rectangle, which at 21 x 30 device pixels is
+          indistinguishable from a missing glyph — and it is the first thing a
+          new player sees beside their own name. */ ''}
+    <rect x="2.2" y="2.2" width="17.6" height="27.6" rx="2.2" fill="none" stroke="${general ? BRASS : PIPING}" stroke-width="${general ? 1 : 0.9}"/>
+    <path d="M2.6 3.4 L2.6 28 " stroke="${BRASS_HI}" stroke-width=".5" opacity=".35"/>
+    <circle cx="11" cy="5.6" r="2" fill="${BRASS}" stroke="${EDGE}" stroke-width=".35"/>
+    <circle cx="10.4" cy="5" r=".7" fill="${BRASS_HI}"/>
     ${parts.join('')}
   </svg>`;
 }

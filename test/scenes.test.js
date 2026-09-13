@@ -65,9 +65,16 @@ describe('which scenes play', () => {
     assert.equal(letter.kind, 'quarters');
     assert.ok(scenes.indexOf(letter) > scenes.findIndex((s) => s.id === 'commissar'));
     assert.match(letter.speaker, /LETTER FROM THE VILLE/);
-    // The disposition is stencilled on the plate, not read out as a sentence.
-    assert.match(letter.speaker, / · (?:DELIVERED UNOPENED|OPENED AND RESEALED|HELD, THEN RELEASED)$/,
-      `the plate says how it arrived: "${letter.speaker}"`);
+    /*
+     * The disposition is SHOWN, on the section's own slip clipped to the
+     * sheet, and it is shown exactly once: the plate above the paper used to
+     * stencil OPENED AND RESEALED and the slip then said the envelope had been
+     * opened and resealed, which is one fact printed twice on one screen.
+     */
+    assert.equal(letter.speaker, 'A LETTER FROM THE VILLE',
+      `the plate is the letter's own title and nothing else: "${letter.speaker}"`);
+    assert.match(letter.slip, /opened and resealed|not opened first|not the original seal/,
+      `the slip says how it arrived: "${letter.slip}"`);
     assert.ok(!letter.lines.some((l) => /envelope has been opened|It was not opened first/.test(l)),
       'and the section\'s docket is a slip, not a line of the letter');
     assert.ok(letter.slip, 'the slip exists for a letter somebody opened');
@@ -198,7 +205,7 @@ describe('what is said', () => {
       `nothing in his mouth is a label and a colon: "${office.lines.find((l) => /^[A-Z]+:/.test(l))}"`);
     assert.ok(office.lines.some((l) => /allocation of rounds/i.test(l)),
       'the supply line from the file entry is said as a sentence');
-    assert.ok(['You may go.', 'Dismissed.', 'That will be all. For now.', 'Sign here. And here.', 'You will be told where to report.']
+    assert.ok(['You may go.', 'Dismissed.', 'That will be all.', 'Sign here. And here.', 'You will be told where to report.']
       .includes(office.lines.at(-1)), `a dismissal closes the scene: "${office.lines.at(-1)}"`);
     // And the dismissal has something behind it: the line before it costs you
     // something or withholds something.
@@ -223,7 +230,7 @@ describe('what is said', () => {
       state.campaign.standing = standing;
       result.tier = tier;
       return scenesFor(state, result, entry).find((s) => s.id === 'commissar').lines
-        .some((l) => /what your next allocation of rounds is set against/.test(l));
+        .some((l) => /the file is what the district reads/.test(l));
     };
     assert.equal(said(60, 'satisfactory'), false, 'the file and the watch agree');
     assert.equal(said(60, 'noted'), false, 'one step apart is not worth a sentence');
@@ -255,8 +262,10 @@ describe('what is said', () => {
       if (entry.appointment) {
         const order = scenesFor(state, result, entry).find((s) => s.id === 'appointment');
         assert.ok(order, 'the order is read on its own');
+        // One spelling for the job, here and on the briefing, the roster and
+        // the personnel file: Sector Commander, capitalised as a title.
         assert.match(order.lines[0],
-          /^By order of the Chief of Air Defence, you are appointed Sector commander\.$/);
+          /^By order of the Chief of Air Defence, you are appointed Sector Commander\.$/);
         assert.equal(order.kind, 'appointment', 'the promotion gets its own shot');
         return;
       }

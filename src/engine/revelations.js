@@ -30,9 +30,9 @@ export const REVELATIONS = {
       'Your expenditure for the watch was queried within the hour. The query is a standard form'
         + ' with a box for the number of rounds spent outside the freeze, and a box for the reason'
         + ' that is four lines long.',
-      'The clerk who brought it up from signals has done this before. He said, not unkindly, that'
-        + ' nobody reads the reason, and that you should write "target misidentified" because that'
-        + ' one goes through without a second signature.',
+      'The clerk who brought it up from signals has done this before. He said nobody reads the'
+        + ' reason, and that you should write "target misidentified", because that one goes through'
+        + ' without a second signature.',
       'He also said, on his way out, that the district allocation had already been spent when the'
         + ' quarter began.',
     ],
@@ -52,8 +52,8 @@ export const REVELATIONS = {
         all[0],
         'Your expenditure for the watch was queried within the hour and the query was closed the'
           + ' same evening, because nothing of yours was outside the freeze. The clerk who brought'
-          + ' the returns up from signals said, not unkindly, that the quiet files are the ones'
-          + ' that get read.',
+          + ' the returns up from signals said he had expected more paper from this sector, and'
+          + ' that a quarter with no queries in it draws an inspection in the spring.',
         all[3],
       ];
     },

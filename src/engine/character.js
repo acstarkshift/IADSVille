@@ -272,7 +272,7 @@ export const HOUSEHOLDS = {
     tm: 'МАТЬ, КСЕНИЯ',
     en: 'Your mother, Ksenia',
     district: 'east',
-    blurb: 'She writes every fortnight about the weather and the queue at the dispensary, and never about anything else. You understand why.',
+    blurb: 'She writes every fortnight about the weather and the queue at the dispensary, and never once about the war.',
   },
   sister: {
     id: 'sister',

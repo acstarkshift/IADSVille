@@ -33,7 +33,7 @@ export const ECHELONS = {
     order: 0,
     tm: 'ДИВИЗИОН',
     en: 'Battalion',
-    appointment: { tm: 'КОМАНДИР ДИВИЗИОНА', en: 'Battalion commander' },
+    appointment: { tm: 'КОМАНДИР ДИВИЗИОНА', en: 'Battalion Commander' },
     /** The formation's own name, for headings about the formation. */
     heading: 'BATTALION COMMAND',
     short: 'BN',
@@ -68,7 +68,7 @@ export const ECHELONS = {
     order: 1,
     tm: 'СЕКТОР',
     en: 'Sector',
-    appointment: { tm: 'НАЧАЛЬНИК СЕКТОРА', en: 'Sector commander' },
+    appointment: { tm: 'НАЧАЛЬНИК СЕКТОРА', en: 'Sector Commander' },
     heading: 'SECTOR COMMAND',
     short: 'SEC',
     directLimit: Infinity,
@@ -86,7 +86,7 @@ export const ECHELONS = {
     order: 2,
     tm: 'ОКРУГ ПВО',
     en: 'Air Defence District',
-    appointment: { tm: 'КОМАНДУЮЩИЙ ОКРУГОМ', en: 'District commander' },
+    appointment: { tm: 'КОМАНДУЮЩИЙ ОКРУГОМ', en: 'District Commander' },
     heading: 'DISTRICT COMMAND',
     short: 'DIST',
     /**
@@ -180,10 +180,11 @@ export function withinAppointment(scenario, campaign, scenarios) {
 export function appointmentNote(echelon) {
   return {
     battalion: 'Four batteries, one radar, and the valley they sit in are yours from tonight.',
-    // Said plainly. It used to be a sentence repeated with one word changed
-    // for effect, which is the one mannerism the standard names by name.
-    sector: 'The order came up with the morning traffic. Nobody mentioned it beforehand, and'
-      + ' nobody is going to mention it now.',
+    // One clause about how the order arrived and one concrete thing about the
+    // paper it arrived on. It used to be a sentence repeated with one word
+    // changed for effect, which is the mannerism the standard names by name.
+    sector: 'The order came up with the morning traffic, in a bundle with the ration returns and'
+      + ' a notice about the water.',
     region: 'Four sectors answer to you. You will not meet three of the four commanders during'
       + ' this war.',
     national: 'The order is two lines long and does not say who held the appointment before you.',

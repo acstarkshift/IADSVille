@@ -42,6 +42,21 @@ const stampFace = (tm, en) => (en
 /** Every screen opens at the top of itself, however far the last one scrolled. */
 const toTop = (host) => { if (host) host.scrollTop = 0; };
 
+/**
+ * What a command you have not been given says about itself, by how far above
+ * your appointment it is.
+ *
+ * One line per block of the roster. Every locked watch used to carry the same
+ * two sentences under its own name, so a new record opened on the same line
+ * printed eight times down one screen.
+ */
+const NOT_HELD = [
+  '',
+  'Above your appointment. You will be given it when you are given it.',
+  'Two appointments above yours. You have not met the officer who holds it.',
+  'Three appointments above yours. It is held in Mostrograd.',
+];
+
 /* ------------------------------------------------------------- title */
 
 export function renderMenu(host, state) {
@@ -80,9 +95,15 @@ export function renderMenu(host, state) {
             <small>Not on the roster. This watch has not happened yet.</small>
             <div class="flags"><span class="pill tight">SEALED</span></div>
           </button>`
+        /*
+         * A watch you have not been given carries its name and the stamp, and
+         * nothing else. The sentence about being given it when you are given
+         * it is true and it is worth saying — once, at the head of the block
+         * it applies to, rather than eight times down one screen on a new
+         * record, which is how it read as a wall of the same line.
+         */
         : `<button class="mission is-sealed" disabled>
             <b>${esc(sc.name)}</b>
-            <small>Above your appointment. You will be given it when you are given it.</small>
             <div class="flags"><span class="pill tight">NOT YOUR COMMAND</span></div>
           </button>`;
     }
@@ -113,7 +134,14 @@ export function renderMenu(host, state) {
       <div class="record-stamp">${stampFace(tier.label)}</div>
       <h3>Personnel file</h3>
       ${character ? `<div class="ident-row">
-        <span class="ident-board">${rankInsignia(character.rankIndex, { size: 40 })}</span>
+        ${/* The print on the front of the file — the same face as the card in
+             the reader, the dossier and the end card. The menu is the screen
+             the player sees most and it used to carry no face at all. */ ''}
+        <span class="file-ident-photo">
+          <canvas class="portrait file-photo" width="24" height="30"
+            data-seed="${esc(character.name)}" aria-label="Photograph on file"></canvas>
+        </span>
+        <span class="ident-board">${rankInsignia(character.rankIndex, { size: 40, title: rank.en })}</span>
         <span class="ident-name"><b>${esc(rank.en)} ${esc(character.name)}</b>
           <small>${esc(appointment.appointment.en)}</small></span>
       </div>` : ''}
@@ -142,7 +170,7 @@ export function renderMenu(host, state) {
     <div class="card">
       <h3>Select a watch</h3>
       <p class="lede">
-        You hold the appointment of <b class="urgent">${esc(appointment.appointment.en.toLowerCase())}</b>.
+        You hold the appointment of <b class="urgent">${esc(appointment.appointment.en)}</b>.
         ${esc(appointment.blurb)}</p>
       ${ECHELON_ORDER.map((echelon) => {
     const watches = SCENARIOS.filter((sc) => sc.echelon === echelon.id);
@@ -151,7 +179,8 @@ export function renderMenu(host, state) {
     return `<div class="act ${reached ? '' : 'is-locked'}">
           <div class="act-head">
             <span class="lg"><b>${esc(echelon.heading)}</b></span>
-            <span>${reached ? esc(echelon.teaches) : 'Not yet held.'}</span>
+            <span>${reached ? esc(echelon.teaches) : esc(NOT_HELD[echelon.order - appointment.order]
+    ?? NOT_HELD[3])}</span>
           </div>
           <div class="mission-grid">${watches.map(missionCard).join('')}</div>
         </div>`;
@@ -204,6 +233,7 @@ export function renderMenu(host, state) {
       ${flown ? '<button class="btn is-danger" id="btn-wipe">DESTROY FILE</button>' : ''}
     </div>
   </div>`;
+  paintFilePhotos(host);
   toTop(host);
 }
 
@@ -229,8 +259,11 @@ export function renderBriefing(host, state) {
          and gets his own line; he used to be the last item in a middot list
          after the temperature. */ ''}
     <p class="note conditions">${esc(watchConditions(mission).line)}</p>
-    <p class="note">You stand this watch as ${esc((ECHELONS[mission.echelon]?.appointment?.en
-    ?? String(mission.echelon ?? '')).toLowerCase())}.</p>
+    ${/* One spelling for the job, everywhere it is named: the order of
+         appointment, the personnel file, the roster and this line all say
+         Sector Commander. This one used to lower-case it. */ ''}
+    <p class="note">You stand this watch as ${esc(ECHELONS[mission.echelon]?.appointment?.en
+    ?? String(mission.echelon ?? ''))}.</p>
     ${character ? `<div class="card record-card is-tight">
       <div class="record-stamp">${stampFace(STATE.serviceShort.tm, STATE.serviceShort.en)}</div>
       <p>Posting order for <b>${esc(rank.en)} ${esc(character.name)}</b>.
@@ -373,13 +406,26 @@ function sectorMap(mission) {
     taken.push({ x0, x1, y });
     return { y: Math.max(10, Math.min(H - 6, y)).toFixed(1), x: (middle ? (x0 + x1) / 2 : x0).toFixed(1) };
   };
-  const batteries = sites.map((s, i) => {
-    const at = settle(Number(X(s.pos.x)), Number(Y(s.pos.y)) + (i % 2 ? 17 : -10), s.name ?? '', true);
-    return `<g class="map-site ${s.id === mission.playerBatteryId ? 'is-own' : ''}">
+  /*
+   * The batteries are lettered on the map and named in the key under it.
+   *
+   * All three judges: "LANCE CAPITAL, HAMMER CAPITAL and THISTLE NORTH occupy
+   * the same forty pixels, and THISTLE VALLEY, LANCE VALLEY and HAMMER do the
+   * same over THE VILLE ... a battery symbol is drawn straight through THISTLE
+   * NORTH so the name renders as THIST and NORTH either side of a green
+   * square." Six names cannot be printed inside twenty kilometres at this
+   * scale, and no amount of nudging makes them fit: what a map does with a
+   * cluster is letter it and put the names in a key.
+   */
+  const LETTERS = 'ABCDEFGH';
+  const batteries = sites.map((s, i) => `<g class="map-site ${s.id === mission.playerBatteryId ? 'is-own' : ''}">
       <rect x="${X(s.pos.x) - 4}" y="${Y(s.pos.y) - 4}" width="8" height="8"></rect>
-      <text x="${at.x}" y="${at.y}">${esc(s.name ?? '')}</text>
-    </g>`;
-  }).join('');
+      <text class="map-key-mark" x="${Number(X(s.pos.x)) + (i % 2 ? -12 : 7)}" y="${Number(Y(s.pos.y)) + (i % 2 ? 14 : -6)}">${LETTERS[i] ?? '?'}</text>
+    </g>`).join('');
+  const key = sites.map((s, i) => `<li class="${s.id === mission.playerBatteryId ? 'is-own' : ''}">
+      <b>${LETTERS[i] ?? '?'}</b> ${esc(s.name ?? '')}
+      <small>${esc(SAM_TYPES[s.type]?.label ?? '')} · ${reach(s)} km</small>
+    </li>`).join('');
   // Names only for the places the brief talks about; marks for everything.
   const NAMED = new Set(['town', 'city', 'palace', 'hospital', 'camp']);
   const places = assets.map((a) => {
@@ -451,6 +497,7 @@ function sectorMap(mission) {
         <text x="${W - 30}" y="${H - 44}">N</text>
       </g>
     </svg>
+    <figcaption class="map-key"><ul>${key}</ul></figcaption>
   </figure>`;
 }
 
@@ -458,31 +505,37 @@ function sectorMap(mission) {
 
 /**
  * The night's side of a divergence row: one factual sentence about what the
- * decision the file priced actually was. The card promised pairs and rendered
- * only the file column — half a thesis. This is the other half, read straight
- * off the result, never off the ledger.
+ * decision the file priced actually came to on the ground. The card promised
+ * pairs and rendered only the file column — half a thesis. This is the other
+ * half, read straight off the result, never off the ledger.
+ *
+ * One written outcome per kind of order, and null where there is honestly
+ * nothing to report, so the row is dropped instead of being padded. The column
+ * used to fall through to "0 casualties are on the returns." for anything it
+ * had no rule for, which on the first watch printed the same sentence in all
+ * three rows and on the last one printed it against a radio check.
  */
 function nightSideFor(reason, result) {
   const s = result.stats ?? {};
   const asset = (type) => result.assets?.find((a) => a.type === type);
+  const byLabel = (text) => result.assets
+    ?.find((a) => a.label && String(text).toLowerCase().includes(a.label.toLowerCase()));
   const fate = (a, name) => {
     if (!a) return null;
     if (a.destroyed) return `${name} was lost.`;
     if ((a.damagePct ?? 0) > 0) return `${name} stands, struck to ${Math.round(a.damagePct)}%.`;
     return `${name} stands untouched.`;
   };
-  if (/freeze|hospital/i.test(reason)) {
-    return fate(asset('hospital'), 'The hospital') ?? 'The hospital was not on this watch.';
-  }
-  if (/border|encampment|Listonian/i.test(reason)) {
-    return fate(asset('camp'), 'The camp at Gorna') ?? 'The camp was not on this watch.';
-  }
+  const casualties = (opening) => (s.civilianCasualties
+    ? `${opening} ${s.civilianCasualties} casualties are on the returns.`
+    : `${opening} No casualties are on the returns.`);
+
+  if (/freeze|hospital/i.test(reason)) return fate(asset('hospital'), 'The hospital');
+  if (/border|encampment|Listonian/i.test(reason)) return fate(asset('camp'), 'The camp at Gorna');
   // "civilian area struck" is the town taking casualties, not the corridor:
   // it has to be read before the civil transit, or every strike on the Ville
   // reported that an airliner had crossed the sector safely.
-  if (/civilian area/i.test(reason)) {
-    return `${s.civilianCasualties ?? 0} casualties are on the returns.`;
-  }
+  if (/civilian area/i.test(reason)) return casualties('The town was struck.');
   if (/civil transit|civil corridor|civil aircraft|inside the civil/i.test(reason)) {
     return s.civilianAircraftShot
       ? 'A civil aircraft with people aboard was destroyed.'
@@ -494,15 +547,49 @@ function nightSideFor(reason, result) {
     if (s.vipEscaped) return 'STATE 01 cleared national airspace.';
     return 'STATE 01 left the picture unresolved.';
   }
-  if (/movement order/i.test(reason)) {
+  if (/movement order|district battalion/i.test(reason)) {
     return /refused/i.test(reason)
-      ? 'The battalion stayed. So did its coverage.'
+      ? 'The battalion stayed, and so did the coverage it carries.'
       : 'The only battalion that reaches Kubin and Lozan moved that night.';
   }
-  if (/priority|designat/i.test(reason)) {
-    return `${s.civilianCasualties ?? 0} casualties are on the returns.`;
+  // The order to keep the set radiating: what the sector could see for it, and
+  // what that cost, which is the whole argument of that directive. It answers
+  // in engagements rather than in leakers, so it does not print the leaker
+  // row's sentence again with one word changed.
+  if (/radiat/i.test(reason)) {
+    const seen = s.kills
+      ? `${s.kills} aircraft ${s.kills === 1 ? 'was' : 'were'} engaged and destroyed in all.`
+      : 'Nothing in the sector was engaged all night.';
+    return s.radarsLost
+      ? `${seen} ${s.radarsLost} radar${s.radarsLost > 1 ? 's were' : ' was'} lost doing it.`
+      : `${seen} No set was lost doing it.`;
   }
-  return `${s.civilianCasualties ?? 0} casualties are on the returns.`;
+  // The emissions restriction is about sets, and the expenditure restriction is
+  // about rounds. Both used to be caught by the same word.
+  if (/emissions/i.test(reason)) {
+    return s.radarsLost
+      ? `${s.radarsLost} radar${s.radarsLost > 1 ? 's were' : ' was'} lost tonight.`
+      : 'No set was lost tonight.';
+  }
+  if (/expenditure|over allocation/i.test(reason)) {
+    return `${s.roundsFired ?? 0} rounds were expended in all.`;
+  }
+  if (/leaker|standing order/i.test(reason)) {
+    return s.leakers
+      ? `${s.leakers} aircraft reached what ${s.leakers === 1 ? 'it was' : 'they were'} sent for.`
+      : 'Nothing reached what it was sent for.';
+  }
+  // The designation names its place in the row itself, so the row can be
+  // answered with that place's own fate.
+  if (/priority|designat/i.test(reason)) {
+    const named = byLabel(reason);
+    if (named) return fate(named, named.label);
+    return fate(asset('palace'), 'The palace');
+  }
+  if (/displacement/i.test(reason)) {
+    return result.reason === 'site-lost' ? 'The post was struck anyway.' : 'The post was not struck.';
+  }
+  return null;
 }
 
 export function renderDebrief(host, state, result, entry) {
@@ -545,17 +632,48 @@ export function renderDebrief(host, state, result, entry) {
     ? `${s.leakers - unrecognised} (+${unrecognised} UNCOUNTED)`
     : `${s.leakers}`;
 
-  // Filtered on what the state CHARGED, not what it could still collect — the
-  // account at its floor keeps being billed, and the bill is the point.
-  const ledger = result.ledger
+  /*
+   * Sector command's ledger, one row per decision.
+   *
+   * Filtered on what the state CHARGED, not what it could still collect — the
+   * account at its floor keeps being billed, and the bill is the point. The
+   * rows used to be printed one per charge, so the same decision taken four
+   * times filled four identical lines of lowercase fragment, each carrying the
+   * parenthesis "(at the floor)" — a term the game teaches nowhere. Grouped,
+   * counted, set as a line of English, and the floor is said once underneath
+   * in words.
+   */
+  /*
+   * Rows about one aircraft or one weapon are grouped by what they were about
+   * rather than by the track's callsign: four rows reading "VAMPIRE 27
+   * released on THE VILLE" through "VAMPIRE 30 released on THE VILLE" are one
+   * line about four weapons over the Ville.
+   */
+  const ledgerName = (reason) => String(reason)
+    .replace(/^[A-Z]+ \d+ released on /, 'Weapons released on ')
+    .replace(/^[A-Z]+ \d+ destroyed$/, 'Aircraft destroyed');
+  const ledgerRows = [...result.ledger
     .filter((l) => Math.abs(l.charged ?? l.delta) >= 0.5)
-    .slice(-14)
-    .map((l) => {
+    .reduce((map, l) => {
       const charged = l.charged ?? l.delta;
-      const shown = `${charged > 0 ? '+' : ''}${charged.toFixed(1)}${l.atFloor ? ' (at the floor)' : ''}`;
-      return `<tr><td>${esc(l.reason)}</td><td class="${charged > 0 ? 'up' : 'down'}">${shown}</td></tr>`;
-    })
-    .join('');
+      const reason = ledgerName(l.reason);
+      const seen = map.get(reason);
+      map.set(reason, {
+        reason,
+        charged: (seen?.charged ?? 0) + charged,
+        times: (seen?.times ?? 0) + 1,
+        atFloor: (seen?.atFloor ?? false) || !!l.atFloor,
+      });
+      return map;
+    }, new Map())
+    .values()].slice(-14);
+  const anyAtFloor = ledgerRows.some((l) => l.atFloor);
+  const sentence = (s) => String(s).charAt(0).toUpperCase() + String(s).slice(1);
+  const ledger = ledgerRows.map((l) => {
+    const shown = `${l.charged > 0 ? '+' : ''}${l.charged.toFixed(1)}`;
+    return `<tr><td>${esc(sentence(l.reason))}${l.times > 1 ? ` <span class="note">&times;${l.times}</span>` : ''}${l.atFloor ? ' *' : ''}</td>
+        <td class="${l.charged > 0 ? 'up' : 'down'}">${shown}</td></tr>`;
+  }).join('');
 
   /*
    * THE FILE vs THE NIGHT: the game's two currencies, side by side, for the
@@ -582,6 +700,10 @@ export function renderDebrief(host, state, result, entry) {
       return map;
     }, new Map())
     .values()]
+    // A row whose night side has nothing to report is left out rather than
+    // padded with a sentence that fits every night equally badly.
+    .map((l) => ({ ...l, night: nightSideFor(l.reason, result) }))
+    .filter((l) => l.night)
     .slice(-8);
 
   /*
@@ -636,14 +758,19 @@ export function renderDebrief(host, state, result, entry) {
      * cell is neutral, because none of them was earned either way.
      */ ''}
         ${cell('TOTAL', result.score, result.abandoned ? '' : result.score > 0 ? 'is-good' : 'is-bad')}
-        ${cell('KILLS', s.kills)}
+        ${/* The tape prints AIRCRAFT DESTROYED and the prose says aircraft were
+             destroyed; this tile said KILLS, which is a third name for one
+             number on screens the player reads minutes apart. */ ''}
+        ${cell('AIRCRAFT DESTROYED', s.kills)}
         ${cell('TURNED BACK', s.turnedBack, !result.abandoned && s.turnedBack ? 'is-good' : '')}
         ${cell('LEAKERS', leakerCell, result.abandoned ? '' : s.leakers ? 'is-bad' : 'is-good')}
         ${cell('ROUNDS', `${s.roundsFired}`)}
         ${cell('ASSETS LOST', s.assetsLost, result.abandoned ? '' : s.assetsLost ? 'is-bad' : 'is-good')}
       </div>
       ${result.abandoned ? `<p class="note score-withheld">Nothing on this line was
-        earned or lost: the watch was not stood.</p>` : ''}
+        earned or lost: the watch was not stood.</p>`
+    : `<p class="note">A leaker is an aircraft that got past you and struck what it was sent for.${unrecognised > 0
+      ? ' The uncounted ones arrived at a place tonight\'s orders had struck off the list.' : ''}</p>`}
     </div>
 
     <div class="debrief-cols">
@@ -709,6 +836,8 @@ export function renderDebrief(host, state, result, entry) {
     ${ledger ? `<div class="card">
       <h3>Sector command's ledger</h3>
       <table class="ledger">${ledger}</table>
+      ${anyAtFloor ? `<p class="aside">* Charged in full and collected in part: your standing was
+        already at its lowest, so there was nothing left for the file to take.</p>` : ''}
       <p class="aside">Standing: ${Math.round(result.standing)} — ${esc(result.tierLabel)}</p>
     </div>` : ''}
 
@@ -721,9 +850,9 @@ export function renderDebrief(host, state, result, entry) {
         <tr><th>decision</th><th class="is-figure">the file</th><th>the night</th></tr>
         ${divergences.map((l) => {
     const charged = l.charged;
-    return `<tr><td>${esc(l.reason)}${l.times > 1 ? ` <span class="note">&times;${l.times}</span>` : ''}</td>
+    return `<tr><td>${esc(sentence(l.reason))}${l.times > 1 ? ` <span class="note">&times;${l.times}</span>` : ''}</td>
           <td class="${charged > 0 ? 'up' : 'down'}">${charged > 0 ? '+' : ''}${charged.toFixed(1)}</td>
-          <td class="is-prose note">${esc(nightSideFor(l.reason, result))}</td></tr>`;
+          <td class="is-prose note">${esc(l.night)}</td></tr>`;
   }).join('')}
       </table>
       <p class="aside">The score above, ${result.score}, is what actually happened tonight:
@@ -774,6 +903,13 @@ export function renderDebrief(host, state, result, entry) {
         ${esc(entry.appointment.gazetted.en)} on the same order.</p>` : ''}
       ${state.narrativePressure && entry.appointment.note
     ? `<p>${esc(entry.appointment.note)}</p>` : ''}
+      ${/* The order and the file entry above it are about the same night, and
+           the report used to print SERVICE RECORD — MAJOR GENERAL beside a
+           standing of nine with nothing between them. */ ''}
+      ${state.narrativePressure && (consequence.tier.id === 'flagged' || consequence.tier.id === 'condemned')
+    ? `<p>${consequence.tier.id === 'condemned'
+      ? 'The order is dated today and mentions nothing that happened tonight.'
+      : 'The order was drawn up before tonight\'s entry reached the file. Nobody has withdrawn it.'}</p>` : ''}
       <p class="note">${esc(entry.appointment.echelon.blurb)}</p>
     </div>` : ''}
 
@@ -854,7 +990,13 @@ export function renderEndCard(host, state, result) {
            BATTLE MANAGER" beside SCORE and STANDING. */ ''}
       <p class="subtitle endcard-watch">${esc(state.mission.name)}</p>
       <hr class="endcard-rule">
-      ${ending ? `<p class="ending-lede">${esc(ending.lines[0] ?? '')}</p>`
+      ${/*
+       * The card carries what happens NEXT, not the sentence the scene has
+       * just finished typing. It used to reprint the ending's own first line
+       * one beat after the player read it, so the one screen the campaign
+       * leaves you sitting on said nothing the evening had not.
+       */ ''}
+      ${ending ? `<p class="ending-lede">${esc(ending.card ?? ending.lines[0] ?? '')}</p>`
     : cause ? `<p class="subtitle grave">${esc(cause)}</p>` : ''}
       <div class="endcard-facts">
         ${facts.map(([label, value]) => `<span><label>${esc(label)}</label><b>${esc(value)}</b></span>`).join('')}

@@ -90,9 +90,9 @@ requires the pen.
 
 | | Appointment | You decide | It costs you |
 |---|---|---|---|
-| **ДИВИЗИОН** | Battalion commander | Which battery shoots this track | — |
-| **СЕКТОР** | Sector commander | Which tracks are worth a round at all | The illusion that you can answer everything |
-| **ОКРУГ ПВО** | District commander | *Which sector you are standing in* | The console. You never sit in a launcher again |
+| **ДИВИЗИОН** | Battalion Commander | Which battery shoots this track | — |
+| **СЕКТОР** | Sector Commander | Which tracks are worth a round at all | The illusion that you can answer everything |
+| **ОКРУГ ПВО** | District Commander | *Which sector you are standing in* | The console. You never sit in a launcher again |
 | **ГЛАВНЫЙ ШТАБ ПВО** | Chief of Air Defence | *Which region is allowed to be defended* | Everything else |
 
 The mechanism is the number of subordinate commands you may hold under your own
@@ -154,7 +154,7 @@ into numbers the simulation uses:
 |---|---|
 | **Backgrounds** | The works at Kubin taught you machinery, so you reload and displace faster. Never leaving the valley taught you to identify aircraft lying in a field. Two years at the academy in Mostrograd start you with standing — and with people who watch you more closely for losing it. A penal transfer starts you in disgrace and lets you climb faster. |
 | **Home** | Fixed: the Ville, in the western valley, eleven kilometres from the console you sit at. At enlistment you choose which household is still there — your mother, your sister and her children, your grandmother, your brother who failed the medical — and which quarter of the village they live in. Damage to the town is reported by quarter, and one of those quarters is theirs — and when it is theirs, a few seconds after the strike report, the net carries one line only you have any use for: the trunk lines to that quarter are down. |
-| **The letters** | The household writes, all campaign long, and the post goes through the political section. You read the letter itself, not a summary of it: a salutation with your own name in it, the body in that person's hand, a sign-off. Ksenia keeps the house and closes every letter the same way; Nata writes about the children and numbers her sheets so you can tell when one has gone missing; Vera writes six lines and means all of them; Ilya says the thing and then says it again harder. How it reached you is stencilled on the plate above the paper — delivered unopened, opened and resealed, held and then released — with the section's own docket clipped to the sheet where it has something to add. A flagged file gets no letter at all: the notice of withholding stands in its place, signed by the section. The letters never mention the war, and what they conspicuously do not say — a repainted kitchen, children moved to the room facing away from the valley, an enamel box taken down and kept by the door — is the war arriving anyway. You never get to write back. The one unmonitored telephone call in this game is in the epilogue, and it costs what it costs to get there. |
+| **The letters** | The household writes, all campaign long, and the post goes through the political section. You read the letter itself, not a summary of it: a salutation with your own name in it, the body in that person's hand, a sign-off. Ksenia keeps the house and closes every letter the same way; Nata writes about the children and numbers her sheets so you can tell when one has gone missing; Vera writes six lines and means all of them; Ilya says the thing and then says it again harder. How it reached you is shown rather than narrated, and shown once: the section's own docket is clipped to the sheet — delivered unopened, opened and resealed, held and then released — in the section's words and nobody else's. A flagged file gets no letter at all: the notice of withholding stands in its place, signed by the section. The letters never mention the war, and what they conspicuously do not say — a repainted kitchen, children moved to the room facing away from the valley, an enamel box taken down and kept by the door — is the war arriving anyway. You never get to write back. The one unmonitored telephone call in this game is in the epilogue, and it costs what it costs to get there. |
 | **Rank** | Eleven grades from Recruit to Captain. Promotion needs experience *and* standing: the army will not promote someone it does not trust. A catastrophic watch can reduce you, and it keeps the training you were given. |
 | **Training** | One point per promotion. A steady hand gets rounds off the rail sooner; signal discipline slows enemy direction finding against your sets; a cool head shortens the blackout after a hit; a drilled crew holds an extra engagement channel. Qualifications apply in full at your own battery and at half strength across the sector — you drilled those crews, but you are not sitting in them. |
 | **Decorations** | Awarded for things that are hard to do, including one for losing your position and holding the sector anyway. |
@@ -338,10 +338,13 @@ A watch does not end on a page of tables. It ends the way an evening does:
 the tape comes out of the printer into your own hands and types the night as
 figures, a line at a time — what time the watch ended, how long it ran, what it
 scored, and what the file now carries; you are stood in front of the political
-section, whose commissar raises at most three things the log shows you did —
-the hospital, the border, the order you did not answer — with the minute against
-each of them, before the file entry, a line about where your household is
-registered when the file has turned, and a dismissal that costs you something.
+section, whose commissar opens with what the night was — the crossing on the
+loss return, the aircraft that got through, a watch with no rounds on it at all
+— then raises up to two things the log shows you did, with the minute against
+each of them, then the file entry and one thing it costs you this month, a line
+about where your household is registered, and a dismissal that costs you
+something. What he says moves with the file as well as the tier: the entry is
+the same form every month and the man reading it is not.
 An order of appointment is read when there is one, on its own, over the order
 and a new shoulder board on a desk; a watch that has taught you something puts
 the folder on the desk; and the letter from home, when one comes, is read in
@@ -355,8 +358,9 @@ red sky. Every
 scene is drawn — there is not an image file in the game — at 320 by 180 and
 scaled in whole pixels, with the words laid over the picture as type, and a
 key or a tap finishes a line and moves to the next; SKIP goes straight to the
-card at the end, where STAND ANOTHER WATCH sits beside THE FULL REPORT, which
-is the old page of tables, kept for anyone who wants the arithmetic.
+card at the end, which carries what happens next rather than the sentence you
+have just read, and where STAND ANOTHER WATCH sits beside THE FULL REPORT, the
+old page of tables, kept for anyone who wants the arithmetic.
 
 **And the beginning.** Every watch opens first person, in the same drawn
 style: the walk up to the console in the dark, with the watch's own hour on

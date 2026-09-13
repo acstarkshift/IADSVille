@@ -95,6 +95,12 @@ export function composeFlightEnding(result, character, { narrativePressure = tru
     title: ending.title,
     subtitle: ending.subtitle,
     lines: ending.lines(r, character).filter(Boolean),
+    /*
+     * One sentence for the card the evening ends on: the next fact, not the
+     * last one. The card used to reprint the ending's own first line one beat
+     * after the scene had finished typing it.
+     */
+    card: ending.card ?? null,
     reading: r,
   };
 }
@@ -102,6 +108,26 @@ export function composeFlightEnding(result, character, { narrativePressure = tru
 function householdPhrase(character) {
   if (!character) return 'your household';
   return householdOf(character).en;
+}
+
+/**
+ * The household as the subject of a sentence, with the comma its own clause
+ * needs. The label used to be dropped into the middle of a line — "a ration
+ * category is raised one grade for Your grandmother Vera" — because the phrase
+ * is written for the head of a sentence and was used anywhere but. Two of the
+ * four households are plural, so nothing below inflects a verb for number.
+ */
+function householdSubject(character) {
+  const phrase = householdPhrase(character);
+  return phrase.includes(',') ? `${phrase},` : phrase;
+}
+
+/** Damage as a review writes it, rather than as the simulation holds it. */
+function harmPhrase(harm) {
+  const pct = Math.round((harm ?? 0) * 100);
+  if (pct >= 95) return 'a total loss';
+  if (pct <= 0) return 'undamaged';
+  return `assessed at ${pct}% damage`;
 }
 
 /**
@@ -139,13 +165,14 @@ export const FLIGHT_ENDINGS = {
     subtitle: 'THE CORRIDOR WAS HELD OPEN',
     plainTitle: 'STATE 01 CLEARED NATIONAL AIRSPACE',
     plainSummary: (r) => `STATE 01 left national airspace. ${r.fightersKilled} aircraft were destroyed`
-      + ` in the corridor and the palace ended at ${Math.round(r.palaceHarm * 100)}% damage.`,
+      + ` in the corridor and the palace is ${harmPhrase(r.palaceHarm)}.`,
+    card: 'You are stood down at 0700 and told to be back on the sixteenth.',
     lines: (r, character) => [
       'STATE 01 crossed the frontier at 0438 and was met eleven minutes later by an escort that was not'
         + ' ours and had not been notified to this sector.',
       `The corridor was held for as long as it needed to be. ${Spell(r.fightersKilled)} aircraft`
         + ` ${r.fightersKilled === 1 ? 'was' : 'were'} destroyed over the Tavrov district${r.palaceHarm > 0.3
-          ? `, and the palace at ${CAPITAL.en} was struck to ${Math.round(r.palaceHarm * 100)}% while the batteries were engaged elsewhere`
+          ? `, and the palace at ${CAPITAL.en} was struck while the batteries were engaged elsewhere and is ${harmPhrase(r.palaceHarm)}`
           : ''}.`,
       // Firing on it and failing to bring it down is not the same watch as never
       // firing at all, and the file notices even when the outcome is identical.
@@ -161,8 +188,8 @@ export const FLIGHT_ENDINGS = {
       'Four days after the file entry, sector command records your conduct as exemplary and'
         + ' recommends a decoration. The citation describes the protection of a state aircraft. It'
         + ' says nothing about what the aircraft was carrying.',
-      `A ration category is raised one grade for ${householdPhrase(character)}. The order raising`
-        + ' it is dated the sixteenth, which is the last day the ministry issued any.',
+      `${householdSubject(character)} will draw one ration grade higher from the sixteenth, and`
+        + ' the order raising it is the last one the ministry issued.',
       'The citation is entered against your file on the sixteenth. The file carries no entry for the'
         + ' night of the two cities, because the outcome there conformed to the order as well.',
     ],
@@ -179,6 +206,7 @@ export const FLIGHT_ENDINGS = {
     plainTitle: 'STATE 01 WAS SHOT DOWN BY ENEMY FIGHTERS',
     plainSummary: (r) => `STATE 01 was destroyed by enemy fighters. ${r.fightersKilled} aircraft were`
       + ' destroyed in the corridor.',
+    card: 'The board sits on Thursday. You are not on the list of witnesses.',
     lines: (r, character) => [
       'STATE 01 was engaged from twenty-six kilometres and came down in the Tavrov district at 0431.'
         + ' The sector was informed by the fighters, in the sense that the sector was listening to them.',
@@ -197,8 +225,8 @@ export const FLIGHT_ENDINGS = {
         + ' it again. Nineteen months of this war and nobody has written down what it is about.',
       'The state broadcast said nothing for two days and then described an accident during a routine'
         + ' inspection flight. Nobody in the sector has repeated this and nobody has contradicted it.',
-      `${householdPhrase(character)} — no notification has been received either way, and the office`
-        + ' that would make one is being packed into crates.',
+      `${householdSubject(character)} had no notification either way, and the office that would`
+        + ' make one is being packed into crates.',
       'You are relieved of the watch pending the inquiry. Nobody has told you where to go, which is'
         + ' the first order this service has ever failed to give you.',
     ],
@@ -215,6 +243,7 @@ export const FLIGHT_ENDINGS = {
     plainTitle: 'YOU SHOT DOWN STATE 01',
     plainSummary: (r) => `STATE 01 was destroyed by ${r.firedBy ?? 'your own battery'}`
       + `, ${r.roundsAtFlight} round${r.roundsAtFlight === 1 ? '' : 's'} expended.`,
+    card: 'You are still at the console at noon. Nobody has come to relieve you.',
     lines: (r, character) => [
       `STATE 01 was engaged by ${r.firedBy ?? 'this sector'} and came down in the Tavrov district,`
         + ' which is farmland with villages in it. The list of who was aboard is held by the ministry'
@@ -233,10 +262,10 @@ export const FLIGHT_ENDINGS = {
       'There was no state broadcast at 0600, and none at 1200. At 1800 a man who did not give a'
         + ' rank read out a list of ministries that would be answering telephones from Monday, and'
         + ' the political section was not among them.',
-      `${householdPhrase(character)} — you telephoned the Ville at 0900. The call was twenty minutes`
-        + ' and nobody was listening to it.',
-      'Nobody asks you to explain yourself. It is the first morning in eleven years on which nobody'
-        + ' in this country is being asked to explain themselves.',
+      `${householdSubject(character)} will have heard your voice at 0900. The call was twenty`
+        + ' minutes and nobody was listening to it.',
+      'Nobody asks you to explain yourself. The office that would have asked has not answered its'
+        + ' telephone since five this morning.',
     ],
   },
 
@@ -250,6 +279,7 @@ export const FLIGHT_ENDINGS = {
     subtitle: 'THE WATCH WAS BROKEN OFF',
     plainTitle: 'THE FLIGHT LEFT THE PICTURE UNRESOLVED',
     plainSummary: () => 'The watch ended with STATE 01 still airborne and unaccounted for.',
+    card: 'You are relieved at 0700 by a man who does not ask what happened.',
     lines: (r, character) => [
       'The watch ended with STATE 01 still airborne, south-east of Tavrov, outside the coverage of'
         + ' anything this sector still had on the air.',
@@ -261,7 +291,8 @@ export const FLIGHT_ENDINGS = {
       tapeLine(r),
       'The sector has recorded the flight as unresolved. There is a printed heading for that on the'
         + ' form, and it has been used four times this month.',
-      `${householdPhrase(character)} — no notification. The line is down and there is no crew for it.`,
+      `${householdSubject(character)} had no notification. The line is down and there is no crew`
+        + ' for it.',
     ],
   },
 };

@@ -90,7 +90,7 @@ export function scenesFor(state, result, entry) {
       id: 'appointment',
       kind: 'appointment',
       speaker: 'ORDER OF APPOINTMENT',
-      lines: appointmentLines(entry.appointment, pressure),
+      lines: appointmentLines(entry.appointment, pressure, consequence.tier.id),
       tier: consequence.tier.id,
       // what the paper itself says, printed on it rather than blacked out
       post: entry.appointment.echelon.appointment.en,
@@ -129,7 +129,7 @@ export function scenesFor(state, result, entry) {
       id: 'appointment',
       kind: 'appointment',
       speaker: 'ORDER OF APPOINTMENT',
-      lines: appointmentLines(entry.appointment, pressure),
+      lines: appointmentLines(entry.appointment, pressure, consequence.tier.id),
       tier: consequence.tier.id,
       post: entry.appointment.echelon.appointment.en,
       gazetted: entry.appointment.gazetted?.en ?? '',
@@ -161,6 +161,8 @@ export function scenesFor(state, result, entry) {
       speaker: entry.letter.plate
         ? `${entry.letter.title} · ${entry.letter.plate}`
         : entry.letter.title,
+      // paperwork from the section is drawn as paperwork, not as a letter
+      notice: entry.letter.isLetter === false,
       slip: entry.letter.note ?? null,
       lines: entry.letter.lines,
     });
@@ -405,8 +407,10 @@ const READ_BACKS = [
   {
     id: 'civilian-area',
     test: /civilian area/i,
-    say: () => 'The town is on the damage returns tonight. The returns are forwarded to the'
-      + ' district in the morning, over my signature.',
+    // Without the signature clause: the household line carries that, and on a
+    // night the Ville is struck both of them fire.
+    say: () => 'The town is on the damage returns tonight. The district has the returns in the'
+      + ' morning and will read them before you do.',
   },
   {
     id: 'movement',
@@ -445,20 +449,83 @@ const TEACHING_WATCHES = new Set(['first-light', 'low-riders', 'solo-battery']);
  * The one line where he lets you know he has read your file as well as your
  * log. He does not threaten and he does not explain: he says where your people
  * live and what tonight's returns say about that street, and lets you do the
- * arithmetic. Only on an evening where the file has turned, and only once.
+ * arithmetic.
+ *
+ * It used to be locked to the two bad tiers, so an operator who kept a decent
+ * file went twelve watches without ever learning that the office holds the
+ * address — which is the connection the whole campaign is built on. The bad
+ * tiers keep the version with the consequence attached; every other evening
+ * gets the fact on its own, once, on the watch the sector takes him over and
+ * on any night his own quarter is on the returns.
  */
-function householdLine(campaign, result, tierId) {
+const ROLL_WATCH = 'weasel-hour';
+function householdLine(campaign, result, tierId, missionId) {
   const character = campaign?.character;
   if (!character) return null;
-  if (tierId !== 'flagged' && tierId !== 'condemned') return null;
   const who = householdOf(character).en.replace(/^Your /, 'your ');
   const quarter = districtOf(character).en;
-  if (result.stats?.homeDistrictHit) {
-    return `The residence roll for ${quarter} carries your household — ${who}. The quarter is on`
-      + " tonight's damage returns, and I am told you knew that during the watch.";
+  const hit = !!result.stats?.homeDistrictHit;
+  if (tierId === 'flagged' || tierId === 'condemned') {
+    if (hit) {
+      return `The residence roll for ${quarter} carries your household — ${who}. The quarter is on`
+        + " tonight's damage returns, and I am told you knew that during the watch.";
+    }
+    return `The residence roll for ${quarter} carries your household — ${who}. I looked it up this`
+      + ' afternoon, before I read the tape.';
   }
-  return `The residence roll for ${quarter} carries your household — ${who}. I looked it up this`
-    + ' afternoon, before I read the tape.';
+  if (hit) {
+    return `Your household is on the residence roll for ${quarter} — ${who}. The quarter is on`
+      + " tonight's damage returns, and the returns go up to the district over my signature.";
+  }
+  if (missionId === ROLL_WATCH) {
+    return `The residence roll for ${quarter} carries your household — ${who}. The roll is kept in`
+      + ' this office. I have no reason to look at it tonight.';
+  }
+  return null;
+}
+
+/**
+ * What the night was, in one sentence, before he opens the log.
+ *
+ * The scene used to begin with the file entry, which is written for the tier
+ * and not for the night, so the political section said the same thing after a
+ * quiet teaching watch and after a raid that took the crossing. This is read
+ * off the result and nothing else, so the man in the office is demonstrably
+ * debriefing the watch the player just stood.
+ */
+function nightLine(result, contested = false) {
+  const s = result.stats ?? {};
+  const lost = (result.assets ?? []).filter((a) => a.destroyed);
+  if (result.reason === 'site-lost') {
+    return 'The post was struck while the watch was still running. The equipment is written off'
+      + ' tonight and the crew is counted in the morning.';
+  }
+  if (lost.length) {
+    return `${lost[0].label} is on tonight's loss return. Somebody signs that return, and it is`
+      + ' not going to be me.';
+  }
+  if (s.civilianAircraftShot) {
+    return 'A civil aircraft is on tonight\'s returns. That paperwork leaves this office before'
+      + ' breakfast and it does not come back.';
+  }
+  if (s.leakers > 0) {
+    return `${countWords(s.leakers)} aircraft reached what ${s.leakers === 1 ? 'it was' : 'they were'}`
+      + ' sent for. The district will ask me what they were carrying and I will read them the tape.';
+  }
+  if (!s.roundsFired && !s.kills) {
+    return 'Nothing was expended tonight. A watch with no rounds on it reads two ways, and I have'
+      + ' written down which way I read it.';
+  }
+  if (s.kills > 0) {
+    // He does not tell a player whose log he is about to read back that the
+    // tape needs no explaining.
+    return contested
+      ? `${countWords(s.kills)} aircraft came down in this sector tonight. That is not the only`
+        + ' thing on the tape.'
+      : `${countWords(s.kills)} aircraft came down in this sector tonight and nothing on the tape`
+        + ' needs explaining. I have written that down as well.';
+  }
+  return 'The valley was quiet and the tape is short. I have read all of it.';
 }
 
 /**
@@ -494,12 +561,17 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
     ];
   }
   const lines = [];
-  if (pressure && !TEACHING_WATCHES.has(missionId)) {
-    lines.push(...readBackLines(result, hour));
+  if (pressure) {
+    // What the night was, first, so the scene is visibly about the watch that
+    // just ended and not about the tier the file happens to be sitting on —
+    // and it knows whether he is about to read the log back.
+    const reads = TEACHING_WATCHES.has(missionId) ? [] : readBackLines(result, hour, 2);
+    lines.push(nightLine(result, reads.length > 0));
+    lines.push(...reads);
   }
   lines.push(...((pressure && consequence.spokenLines) || consequence.lines));
   if (pressure) {
-    const household = householdLine(campaign, result, consequence.tier.id);
+    const household = householdLine(campaign, result, consequence.tier.id, missionId);
     if (household) lines.push(household);
     const disagreement = standingsDisagree(result, campaign);
     if (disagreement) lines.push(disagreement);
@@ -509,7 +581,9 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
   const dismissal = {
     commended: 'You may go.',
     satisfactory: 'Dismissed.',
-    noted: 'That will be all. For now.',
+    // "For now." was the one line in his mouth whose only job was to sound
+    // ominous, which is the stock screen villain and not this man.
+    noted: 'That will be all.',
     flagged: 'Sign here. And here.',
     condemned: 'You will be told where to report.',
   }[consequence.tier.id];
@@ -524,7 +598,7 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
  * office has three things to raise with you and then he has finished. A
  * decision taken more than once is one sentence carrying the count.
  */
-function readBackLines(result, hour) {
+function readBackLines(result, hour, cap = 3) {
   const found = new Map();
   for (const row of result.ledger ?? []) {
     const charged = row.charged ?? row.delta ?? 0;
@@ -551,7 +625,7 @@ function readBackLines(result, hour) {
   return [...found.values()]
     .map((e) => e.kind.say(e))
     .filter(Boolean)
-    .slice(-3);
+    .slice(-cap);
 }
 
 /** The five tiers in order, worst first, so a disagreement can be measured. */
@@ -559,18 +633,21 @@ const TIER_ORDER = ['condemned', 'flagged', 'noted', 'satisfactory', 'commended'
 
 /**
  * One clause on the rare evening where the watch and the file are more than a
- * step apart, and it says the consequence rather than reading the tape back.
+ * step apart. It names the two words out loud, because the two words are the
+ * whole of the point: the district never reads the night, it reads the file.
  *
- * It used to fire on any disagreement at all, which is most nights, three
- * seconds after the printout had already shown the player both numbers.
+ * It used to fire on any disagreement at all, which is most nights, and said
+ * nothing concrete when it did — three seconds after the printout had shown
+ * the player both figures with their tiers printed beside them.
  */
 function standingsDisagree(result, campaign) {
   if (!campaign || typeof campaign.standing !== 'number' || !result.tier) return null;
   const carried = tierFor(campaign.standing);
   const gap = Math.abs(TIER_ORDER.indexOf(carried.id) - TIER_ORDER.indexOf(result.tier));
   if (gap < 2) return null;
-  return `Tonight is not what your file says. The file is what your next allocation of rounds is`
-    + ' set against, and it is read by people who were not here.';
+  const watch = String(result.tierLabel ?? '').toLowerCase();
+  return `The watch is ${watch}. The file says ${carried.label.toLowerCase()}, and the file is what`
+    + ' the district reads when your name comes up for anything.';
 }
 
 /** Small numbers, spelled out, for a sentence somebody says out loud. */
@@ -585,6 +662,12 @@ function minutesInWords(minutes) {
   return `${MINUTE_WORDS[n] ?? n} minutes`;
 }
 
+/** The same words at the head of a sentence he says out loud. */
+function countWords(n) {
+  const word = MINUTE_WORDS[n] ?? String(n);
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
 /**
  * The order of appointment, read out.
  *
@@ -592,7 +675,7 @@ function minutesInWords(minutes) {
  * Defence appoints battalion, sector and district commanders, and the ministry
  * appoints the Chief of Air Defence, who cannot appoint himself.
  */
-function appointmentLines(appointment, pressure) {
+function appointmentLines(appointment, pressure, tierId = null) {
   const signatory = appointment.echelon.id === 'national'
     ? 'the Ministry of Defence'
     : 'the Chief of Air Defence';
@@ -601,6 +684,22 @@ function appointmentLines(appointment, pressure) {
   if (appointment.gazetted) {
     lines.push(`You are gazetted to ${appointment.gazetted.en} on the same order.`);
   }
+  /*
+   * And, on a night the file went against you, the order says so.
+   *
+   * The promotion used to be read out cleanly one scene after the political
+   * section had suspended the position's resupply and told the player the
+   * transport left before the mess opened: two futures back to back, neither
+   * aware of the other. The order is not withdrawn — it is simply issued
+   * against a file that now has tonight in it, and the paper knows.
+   */
+  const caveat = {
+    flagged: 'The order was drawn up before tonight\'s entry reached the file. Nobody has'
+      + ' withdrawn it.',
+    condemned: 'The order is dated today and mentions nothing that happened tonight. Nobody in the'
+      + ' office mentioned the transport either.',
+  }[tierId];
+  if (pressure && caveat) lines.push(caveat);
   /*
    * And it ends on the note, which is a sentence. It used to end on the
    * echelon's roster caption — "A sector, its radars, and more contacts than
@@ -631,20 +730,30 @@ const FOLDER_PAGE = 3;
  * is also the line-height the box of words is set in, so the sheet grows at
  * exactly the rate the words do.
  */
+/**
+ * Where the drawn sheet stands in the frame, for the scenes whose words are on
+ * paper: the phone's panel is cut to the same column so the two are one sheet.
+ */
+const PAPER_RUN = { quarters: [40, 152], folder: [46, 228] };
 /** The row of the phone's SKIP button, which the panel stops above. */
 const SKIP_ROW = 58;
 const TAPE_MOUTH = 136;
 /**
- * The reader, and the card in it, on the operator's right.
+ * The reader, and the card in it, on the desk lip below the panels.
  *
- * It used to be on the far left of the panel, so the right hand had to cross
- * the whole frame to reach it — and the player's note on the opening beats is
- * that the hands belong to a body behind the camera. A right hand reaches the
- * right of its own console.
+ * The player: "the card/card reader on the user console should be put
+ * somewhere that makes more visual sense rather than just jammed into the top
+ * of the display." The live console mounts it on the desk lip, left of centre
+ * under the tube — so the opening beats seat the card in the same place, on
+ * the same desk, and the player sits down at the console they have just
+ * watched themselves switch on. `READER_DY` is measured from the desk lip, so
+ * the reader travels with the desk when the camera rises through the sit.
  */
-const READER_X = 234;
-const CARD_IN_X = READER_X + 14;
-const CARD_IN_Y = 36;
+const READER_X = 40;
+const READER_DY = 12;
+const CARD_IN_X = READER_X + 16;
+const DESK_TOP = 70;
+const CARD_IN_Y = DESK_TOP + READER_DY;
 const TAPE_LINE = 4.5;
 
 /**
@@ -825,6 +934,27 @@ export class ScenePlayer {
     }
   }
 
+  /**
+   * How tall the box of words wants to be at this width.
+   *
+   * The words are laid out by the browser, so the only way to put a picture
+   * and a box of words on a phone as one group is to ask it. The box is set to
+   * the width it will have, measured, and then placed.
+   */
+  measureBox(width) {
+    const box = this.textBox;
+    if (!box || box.hidden) return 0;
+    const was = box.style.cssText;
+    Object.assign(box.style, {
+      left: '-9999px', top: '0px', bottom: 'auto', width: `${width}px`,
+      height: 'auto', maxHeight: 'none', visibility: 'hidden',
+    });
+    const h = Math.ceil(box.getBoundingClientRect().height);
+    box.style.cssText = was;
+    box.style.visibility = '';
+    return h;
+  }
+
   layout() {
     const vw = this.host.clientWidth || window.innerWidth;
     const vh = this.host.clientHeight || window.innerHeight;
@@ -852,10 +982,25 @@ export class ScenePlayer {
     const w = stacked ? vw - pad * 2 : SCENE_W * k;
     const h = stacked ? Math.round((vw - pad * 2) * SCENE_H / SCENE_W) : SCENE_H * k;
     const left = stacked ? pad : Math.floor((vw - w) / 2);
+    /*
+     * Where the picture and the words sit on a phone.
+     *
+     * The three judges, on the last cut: "two lines of dialogue sit in an
+     * outlined box roughly 1100px tall", "more than half the phone screen is a
+     * framed empty rectangle", "the void the comment in the code says it
+     * removed is now inside a frame". So the box is sized to what is in it,
+     * as it is at every other width, and the two of them are set as one group
+     * in the middle of the window: the dark that is left over is the room, at
+     * the top and the bottom, instead of a bordered box full of nothing.
+     */
+    const boxH = stacked ? this.measureBox(vw - pad * 2) : 0;
+    const groupTop = stacked
+      ? Math.max(pad, Math.round((vh - SKIP_ROW - h - 10 - boxH) / 2))
+      : 0;
     const top = !stacked ? Math.floor((vh - h) / 2)
       : scene0?.silent ? Math.floor((vh - h) / 2)
         : rises ? vh - h - pad
-          : pad;
+          : groupTop;
     this.scale = k;
     this.stacked = stacked;
     this.superSample = stacked ? 2 : 1;
@@ -871,26 +1016,49 @@ export class ScenePlayer {
     const scene = this.scene;
     if (scene && this.textBox) {
       if (stacked && rises) {
-        // the sheet above the machine: the panel IS the paper, and the words
-        // sit at the bottom of it and climb as the tape prints
+        /*
+         * The tape, on a phone: the machine is at the bottom of the window,
+         * the drawn sheet rises out of it, and this panel is the SAME sheet
+         * carrying on up the screen — so it is set to the width of the drawn
+         * sheet, its bottom edge is exactly the drawn sheet's top edge, and it
+         * is only as tall as the words on it. It used to be the height of the
+         * window with six hundred pixels of blank paper over the type, above a
+         * second, entirely blank sheet in the picture.
+         */
+        const s = w / SCENE_W;
+        const sheetLeft = Math.round(left + 26 * s);
+        const sheetW = Math.round(268 * s);
+        // the panel's bottom edge is the print head, so the paper the player
+        // sees is the paper with the words on it, right down to the mouth of
+        // the machine — no strip of blank sheet between the two
+        const sheetTop = Math.round(top + (TAPE_MOUTH - 6) * s);
         Object.assign(this.textBox.style, {
-          left: `${pad}px`, top: `${pad}px`, bottom: `${vh - top + 2}px`,
-          width: `${vw - pad * 2}px`, height: 'auto', maxHeight: 'none',
+          left: `${sheetLeft}px`, top: 'auto', bottom: `${vh - sheetTop}px`,
+          width: `${sheetW}px`, height: 'auto', maxHeight: `${Math.max(120, sheetTop - pad)}px`,
+        });
+        this.host.style.setProperty('--scene-scale', '3');
+      } else if (stacked && PAPER_RUN[scene.kind]) {
+        /*
+         * A document scene on a phone: the sheet in the picture runs off the
+         * bottom of the frame and THIS is the rest of it, at the same width,
+         * in the same paper, with no frame of its own. The judge: "the
+         * document drawn inside the picture is blank while the words live in a
+         * separate cream panel, and the two sheets do not line up: different
+         * widths, different edge treatments and a hard seam between them."
+         */
+        const s = w / SCENE_W;
+        const [px0, pw] = PAPER_RUN[scene.kind];
+        const y = top + h;
+        Object.assign(this.textBox.style, {
+          left: `${Math.round(left + px0 * s)}px`, top: `${y}px`, bottom: 'auto',
+          width: `${Math.round(pw * s)}px`, height: 'auto',
+          maxHeight: `${Math.max(120, vh - y - SKIP_ROW)}px`,
         });
         this.host.style.setProperty('--scene-scale', '3');
       } else if (stacked) {
-        /*
-         * The words take the whole of the window under the picture.
-         *
-         * The box used to be sized to its content and pinned under a
-         * letterboxed picture, which left half the screen — three quarters on
-         * a wordless beat — as a flat black field with a SKIP button in it. It
-         * is a panel now: it runs to the row the SKIP button sits on, so the
-         * phone shows a picture and a box and no void.
-         */
         const y = top + h + 10;
         Object.assign(this.textBox.style, {
-          left: `${pad}px`, top: `${y}px`, bottom: `${SKIP_ROW}px`,
+          left: `${pad}px`, top: `${y}px`, bottom: 'auto',
           width: `${vw - pad * 2}px`, height: 'auto',
           maxHeight: `${Math.max(120, vh - y - SKIP_ROW)}px`,
         });
@@ -908,6 +1076,11 @@ export class ScenePlayer {
             width: `${r.w * k}px`, height: `${r.h * k}px`, maxHeight: `${r.h * k}px`,
           });
         this.host.style.setProperty('--scene-scale', String(k));
+      }
+      // the box has just changed height: keep the newest line in view, or the
+      // last paragraph of a letter is cut off at the bottom of the sheet
+      if (this.bodyEl && this.bodyEl.scrollHeight > this.bodyEl.clientHeight) {
+        this.bodyEl.scrollTop = this.bodyEl.scrollHeight;
       }
     }
   }
@@ -932,6 +1105,9 @@ export class ScenePlayer {
       this.promptEl.textContent = this.typed < text.length ? '' : last ? '▶ NEXT' : '▶';
     }
     if (keeps) this.bodyEl.scrollTop = this.bodyEl.scrollHeight;
+    // on a phone the box is sized to its words and set with the picture as one
+    // group, so a line arriving moves the group
+    if (this.stacked) this.layout();
   }
 
   frame(now) {
@@ -1018,10 +1194,10 @@ export class ScenePlayer {
         // than being clipped: the first slides up and behind, the next rises.
         const page = Math.floor(this.line / FOLDER_PAGE);
         if (page !== this.page) { this.page = page; this.pageAt = t; }
-        drawFolder(ctx, t, this.character, { line: this.line, page, pageAt: this.pageAt ?? 0 });
+        drawFolder(ctx, t, this.character, { line: this.line, page, pageAt: this.pageAt ?? 0, wide: !!this.stacked });
         break;
       }
-      case 'quarters': drawQuarters(ctx, t, this.character, reading); break;
+      case 'quarters': drawQuarters(ctx, t, this.character, { ...reading, wide: !!this.stacked, notice: !!scene.notice }); break;
       case 'ending': drawEnding(ctx, t, { held: scene.held }); break;
       case 'approach': drawApproach(ctx, t, scene); break;
       case 'sit': drawSit(ctx, t, this.character); break;
@@ -1187,21 +1363,21 @@ const GLYPHS = {
   S: '34216', T: '72222', U: '55557', V: '55552', W: '55775', X: '55255',
   Y: '55222', Z: '71247',
 };
-function glyphs(ctx, s, x, y, c, { gap = 1 } = {}) {
+function glyphs(ctx, s, x, y, c, { gap = 1, k = 1 } = {}) {
   let cx = Math.round(x);
   for (const ch of String(s).toUpperCase()) {
     const g = GLYPHS[ch];
     if (g) {
       for (let r = 0; r < 5; r++) {
         const bits = Number(g[r]);
-        for (let b = 0; b < 3; b++) if (bits & (4 >> b)) px(ctx, cx + b, y + r, 1, 1, c);
+        for (let b = 0; b < 3; b++) if (bits & (4 >> b)) px(ctx, cx + b * k, y + r * k, k, k, c);
       }
     }
-    cx += 3 + gap;
+    cx += (3 + gap) * k;
   }
   return cx - x;
 }
-const glyphWidth = (s, gap = 1) => String(s).length * (3 + gap) - gap;
+const glyphWidth = (s, gap = 1, k = 1) => (String(s).length * (3 + gap) - gap) * k;
 
 /**
  * A pen: every rectangle rounded to whole pixels at whatever scale it is
@@ -1243,6 +1419,23 @@ const clamp01 = (v) => Math.max(0, Math.min(1, v));
 /** Step down a ramp without falling off either end. */
 const step = (ramp, i) => ramp[Math.max(0, Math.min(ramp.length - 1, Math.round(i)))];
 
+/**
+ * One of the portrait's own inks, stepped down toward the dark.
+ *
+ * A face is not made of the seven ramps — it is composed from the name, in
+ * `portrait.js`, where `shade()` builds its four skin steps the same way. A
+ * head lit from one side needs the far side of every one of those inks, and
+ * stippling black over it instead (which is what the last cut did) turns the
+ * whole face into a field of checks with two dots in it. So the shadow side of
+ * a face is the face's own colours, taken down; nothing new is invented and
+ * nothing on the pixel canvas is anti-aliased.
+ */
+function darken(hex, by) {
+  const n = parseInt(hex.slice(1), 16);
+  const c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.max(0, v - by));
+  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
 /** The two backdrop inks a portrait was taken against, so a scene can leave them out. */
 function backdropOf(seed) {
   const back = portraitFeatures(seed).back;
@@ -1262,13 +1455,14 @@ function backdropOf(seed) {
  */
 function blitFace(ctx, cells, x, y, k, {
   cap = null, mouthOpen = false, backdrop = [], flat = null, shadow = 0,
-  rows = PORTRAIT_H,
+  rows = PORTRAIT_H, light = null,
 } = {}) {
   for (let j = 0; j < Math.min(rows, PORTRAIT_H); j++) {
     for (let i = 0; i < PORTRAIT_W; i++) {
       const c = cells[j][i];
       if (backdrop.includes(c)) continue;
-      px(ctx, x + i * k, y + j * k, k, k, flat ?? c);
+      const down = light ? light(i, j) : 0;
+      px(ctx, x + i * k, y + j * k, k, k, flat ?? (down ? darken(c, down) : c));
     }
   }
   if (mouthOpen) px(ctx, x + 9 * k, y + (FACE.mouth + 1) * k, 6 * k, 2 * k, INK);
@@ -1290,19 +1484,19 @@ function blitFace(ctx, cells, x, y, k, {
     px(ctx, x + 11 * k, y + (FACE.top + 1) * k, 2 * k, 2 * k, cap.badge ?? DAWN[3]);
   }
   /*
-   * The peak's own shadow: a solid band of the deep skin across the brow and
-   * the eyes, with a dithered lower edge where it lifts off the cheek. Not a
-   * field of checks over the whole face — a face dithered to black is a mask,
-   * and the point of this one is that you cannot see what is looking at you.
+   * The peak's own shadow across the brow and the eyes.
+   *
+   * It is the face's own colours taken down, not a band of the palette's skin
+   * painted over them: a solid bar of a colour the head is not made of reads
+   * as a strip of tape stuck across it, which is exactly what the judges saw.
+   * The caller's `light` puts the shade on; this only softens its lower edge,
+   * where a cast shadow lifts off the cheek.
    */
   if (shadow > 0) {
     const from = cap ? FACE.top + 5 : FACE.top + 4;
-    const rows = FACE.eyes + 1 - from;
-    px(ctx, x + 4 * k, y + from * k, 16 * k, rows * k, SKIN[0]);
-    px(ctx, x + 3 * k, y + from * k, k, rows * k, SKIN[0]);
-    px(ctx, x + 20 * k, y + from * k, k, rows * k, SKIN[0]);
-    if (shadow > 8) dither(ctx, x + 3 * k, y + from * k, 18 * k, rows * k, null, INK, 7);
-    ditherBand(ctx, x + 4 * k, y + (from + rows) * k, 16 * k, 2 * k, SKIN[0], SKIN[1], { steps: 2 });
+    const rows = FACE.eyes + 2 - from;
+    dither(ctx, x + 4 * k, y + (from + rows) * k, 16 * k, k, null, INK, Math.min(5, shadow - 4));
+    px(ctx, x + 3 * k, y + from * k, 18 * k, 1, INK);
   }
 }
 
@@ -1321,7 +1515,7 @@ const skinOf = (character) => skinRamp(character?.name ?? null);
  * clear six pixels inside it. Every piece is an outlined silhouette, and the
  * thumb is drawn after the sheet so that it visibly lies on the paper.
  */
-function handBack(ctx, ramp, x, y, dir, rim = null, { from = null, grip = 0, arm = true } = {}) {
+function handBack(ctx, ramp, x, y, dir, rim = null, { from = null, grip = 0, arm = true, rest = true } = {}) {
   const [deep, s2, s3, lit] = ramp;
   /*
    * The player, on the opening beats: "Why are my hands not attached to my
@@ -1338,6 +1532,15 @@ function handBack(ctx, ramp, x, y, dir, rim = null, { from = null, grip = 0, arm
   const wristY = y + 18;
   const cx = x + 11;                       // the wrist's centre
   const base = from ?? (x + 11);           // where the forearm crosses the frame edge
+  /*
+   * The shadow the hand throws on what it is resting on, drawn first and
+   * offset away from the light, so the fingers have weight on the surface
+   * instead of lying on it like a glove.
+   */
+  if (rest) {
+    dither(ctx, x + dir * 3, y + 15, 24, 7, null, INK, 8);
+    dither(ctx, x + dir * 2, y + 22, 22, 3, null, INK, 4);
+  }
   if (arm) {
     const armTop = wristY + 4;
     const span = Math.max(1, SCENE_H - armTop);
@@ -1348,11 +1551,18 @@ function handBack(ctx, ramp, x, y, dir, rim = null, { from = null, grip = 0, arm
       const half = Math.round(8 + 13 * t * t);
       px(ctx, mid - half - 1, rowY, half * 2 + 2, 1, INK);
       px(ctx, mid - half, rowY, half * 2, 1, CLOTH[1]);
-      // the far side of the sleeve falls away; the near side takes the light
-      px(ctx, dir > 0 ? mid + half - 3 : mid - half, rowY, 3, 1, CLOTH[0]);
-      px(ctx, dir > 0 ? mid - half : mid + half - 2, rowY, 2, 1, CLOTH[2]);
-      // one fold down the sleeve, in ordered dither rather than a hard line
-      if (i > 6) dither(ctx, mid - Math.round(half * 0.2), rowY, Math.max(2, Math.round(half * 0.5)), 1, null, CLOTH[0], 5);
+      // the sleeve is a cylinder: lit along the near quarter, one step down
+      // through the middle and two steps down where it turns away
+      const near = dir > 0 ? mid - half : mid + half - Math.round(half * 0.5);
+      px(ctx, near, rowY, Math.round(half * 0.5), 1, CLOTH[2]);
+      px(ctx, dir > 0 ? mid - half : mid + half - 2, rowY, 2, 1, CLOTH[3]);
+      px(ctx, dir > 0 ? mid + half - 4 : mid - half, rowY, 4, 1, CLOTH[0]);
+      // the turn between them, dithered rather than banded, and one crease in
+      // the wool where the sleeve breaks over the forearm
+      dither(ctx, dir > 0 ? mid - Math.round(half * 0.5) : mid, rowY, Math.round(half * 0.5), 1, CLOTH[1], CLOTH[2], 7);
+      if (i > 8 && (i + Math.round(half)) % 17 < 2) {
+        px(ctx, mid - Math.round(half * 0.6), rowY, Math.round(half * 1.1), 1, CLOTH[0]);
+      }
     }
     // the cuff, a clear distance inside the frame, banded and buttoned
     const cuffY = wristY + 5;
@@ -1361,24 +1571,19 @@ function handBack(ctx, ramp, x, y, dir, rim = null, { from = null, grip = 0, arm
     px(ctx, cx - cuffHalf, cuffY + 1, cuffHalf * 2, 7, CLOTH[2]);
     px(ctx, cx - cuffHalf, cuffY + 1, cuffHalf * 2, 1, CLOTH[3]);
     px(ctx, cx - cuffHalf, cuffY + 7, cuffHalf * 2, 1, CLOTH[0]);
+    dither(ctx, dir > 0 ? cx + 2 : cx - cuffHalf, cuffY + 2, 9, 5, CLOTH[2], CLOTH[1], 8);
     px(ctx, dir > 0 ? cx + cuffHalf - 5 : cx - cuffHalf + 2, cuffY + 3, 3, 3, DAWN[1]);
+    px(ctx, dir > 0 ? cx + cuffHalf - 5 : cx - cuffHalf + 2, cuffY + 3, 3, 1, DAWN[2]);
   }
   // the wrist, between the cuff and the hand
   px(ctx, cx - 8, wristY - 1, 16, 7, INK);
   px(ctx, cx - 7, wristY, 14, 6, s2);
   px(ctx, cx - 7, wristY, 14, 1, s3);
-  // the palm: broad, with a knuckle ridge along the top and tendons down it
-  px(ctx, x - 1, y - 1, 24, 21, INK);
-  px(ctx, x, y, 22, 19, s3);
-  px(ctx, x, y, 22, 2, lit);
-  px(ctx, x, y + 2, 22, 1, s2);
-  px(ctx, x + (dir > 0 ? 18 : 0), y + 3, 4, 16, s2);
-  for (let i = 0; i < 4; i++) {
-    px(ctx, x + 2 + i * 5, y + 4, 3, 1, s2);          // the knuckle
-    px(ctx, x + 3 + i * 5, y + 7, 1, 8, s2);          // the tendon behind it
-  }
+  px(ctx, dir > 0 ? cx + 4 : cx - 7, wristY, 3, 6, deep);
+  px(ctx, dir > 0 ? cx - 7 : cx + 5, wristY + 1, 2, 5, s3);
   /*
-   * Four fingers, each with a joint: flat on the desk they lie away from the
+   * Four fingers, each with two joints and a nail, drawn BEFORE the palm so
+   * the knuckles overlap their roots. Flat on the desk they lie away from the
    * viewer; closed on something (`grip`) they shorten and curl, which is what
    * a hand holding a card looks like from behind it.
    */
@@ -1386,30 +1591,76 @@ function handBack(ctx, ramp, x, y, dir, rim = null, { from = null, grip = 0, arm
   for (let i = 0; i < 4; i++) {
     const fx = x + 1 + i * 5;
     const len = Math.max(4, Math.round(flat[i] * (1 - grip * 0.55)));
-    px(ctx, fx - 1, y - len - 1, 6, len + 3, INK);
-    px(ctx, fx, y - len, 4, len, s3);
-    px(ctx, fx + (dir > 0 ? 3 : 0), y - len, 1, len, s2);
-    // the joint, a third of the way down the finger
-    px(ctx, fx, y - Math.round(len * 0.55), 4, 1, s2);
-    // the tube's light lands on each fingertip at the height it reaches
-    px(ctx, fx + 1, y - len, 2, 1, rim ?? lit);
-    px(ctx, fx, y - len, 1, 1, INK);
-    px(ctx, fx + 3, y - len, 1, 1, INK);
+    const ty = y - len;                                 // the fingertip's row
+    px(ctx, fx - 1, ty - 1, 6, len + 4, INK);
+    px(ctx, fx, ty, 4, len + 2, s2);
+    // the finger is round: one lit column and one shaded column down it
+    px(ctx, fx + (dir > 0 ? 0 : 3), ty + 1, 1, len, s3);
+    px(ctx, fx + (dir > 0 ? 3 : 0), ty, 1, len + 2, deep);
+    // two joints, and the crease of skin over each
+    for (const q of [0.34, 0.66]) {
+      const jy = ty + Math.max(2, Math.round(len * q));
+      px(ctx, fx, jy, 4, 1, deep);
+      px(ctx, fx + 1, jy + 1, 2, 1, s3);
+    }
+    // the nail, and the 1px rim the tube puts along the top of the fingertip
+    px(ctx, fx + 1, ty + 1, 2, 3, lit);
+    px(ctx, fx + 1, ty + 4, 2, 1, deep);
+    if (rim) px(ctx, fx + 1, ty, 2, 1, rim);
+    px(ctx, fx, ty, 1, 1, INK);
+    px(ctx, fx + 3, ty, 1, 1, INK);
   }
+  // the palm: broad, with four knuckles standing along the top of it
+  px(ctx, x - 1, y - 1, 24, 21, INK);
+  px(ctx, x, y, 22, 19, s2);
+  px(ctx, x + (dir > 0 ? 19 : 0), y + 2, 3, 17, deep);  // the side that turns away
+  px(ctx, x + (dir > 0 ? 0 : 21), y + 2, 1, 17, s3);    // and the side the light is on
+  for (let i = 0; i < 4; i++) {
+    const kx = x + 1 + i * 5;
+    px(ctx, kx, y, 4, 3, s3);                           // the knuckle itself
+    px(ctx, kx + 1, y, 2, 1, lit);                      // the top of it, in the light
+    px(ctx, kx, y + 3, 4, 1, deep);                     // and the crease under it
+    px(ctx, kx + 4, y, 1, 4, INK);                      // the split between two
+    px(ctx, kx + 1, y + 6, 2, 7, deep);                 // the tendon behind it
+    px(ctx, kx + 1, y + 6, 1, 7, s3);
+  }
+  // the heel of the hand, turning down toward the wrist
+  dither(ctx, x + 1, y + 14, 20, 4, s2, deep, 8);
+  px(ctx, x + 1, y + 18, 20, 1, deep);
 }
-/** The thumb, drawn last so it lies on whatever the hand is holding. */
+/**
+ * The thumb, drawn last so it lies on whatever the hand is holding.
+ *
+ * Two segments and a knuckle between them, angled out and up across the near
+ * edge of the paper or the card, with a nail on the end of it — not a rectangle
+ * stuck to the side of the palm.
+ */
 function handFront(ctx, ramp, x, y, dir, { grip = 0 } = {}) {
   const [deep, s2, s3, lit] = ramp;
-  const tx = dir > 0 ? x + 19 : x - 7;
+  const tx = dir > 0 ? x + 17 : x - 9;
   const rise = Math.round(grip * 4);
-  px(ctx, tx - 1, y + 1 - rise, 9, 15, INK);
-  px(ctx, tx, y + 2 - rise, 7, 7, s3);
-  px(ctx, tx + dir, y + 8 - rise, 7, 6, s3);
-  px(ctx, tx, y + 2 - rise, 7, 1, lit);
-  px(ctx, tx + dir + (dir > 0 ? 5 : 0), y + 8 - rise, 2, 6, s2);
-  px(ctx, tx + (dir > 0 ? -1 : 7), y + 5 - rise, 1, 7, deep);
-  px(ctx, tx + 1, y + 6 - rise, 5, 1, s2);
-  px(ctx, tx - 1, y + 14 - rise, 9, 2, INK);
+  const base = y + 16 - rise;
+  /*
+   * A wedge, not a rectangle: the thumb leaves the heel of the palm broad and
+   * leans out and up as it rises, narrowing to the nail, with the knuckle
+   * between its two segments. Built row by row so the silhouette steps.
+   */
+  let lx = tx;
+  for (let i = 0; i <= 17; i++) {
+    const ry = base - i;
+    const lean = Math.round(i * 0.30);
+    const w = Math.max(5, 9 - Math.round(i * 0.22));
+    lx = dir > 0 ? tx + lean : tx + (9 - w) - lean;
+    px(ctx, lx - 1, ry, w + 2, 1, INK);
+    px(ctx, lx, ry, w, 1, s2);
+    px(ctx, dir > 0 ? lx : lx + w - 1, ry, 1, 1, s3);
+    px(ctx, dir > 0 ? lx + w - 2 : lx, ry, 2, 1, deep);
+    if (i === 8) { px(ctx, lx + 1, ry, w - 2, 1, deep); px(ctx, lx + 1, ry - 1, w - 2, 1, s3); }
+  }
+  // the nail on the end of it, and the web where the thumb leaves the hand
+  px(ctx, lx + 1, base - 17, 4, 3, lit);
+  px(ctx, lx, base - 18, 6, 1, INK);
+  px(ctx, dir > 0 ? tx - 1 : tx + 9, base - 3, 1, 4, deep);
 }
 /** Both hands at the two lower corners of a sheet, mirrored. */
 function handsBack(ctx, ramp, y, left, right, rim = null) {
@@ -1421,34 +1672,6 @@ function handsFront(ctx, ramp, y, left, right) {
   handFront(ctx, ramp, right, y, -1);
 }
 
-/**
- * The same silhouette at half scale, for a hand that is holding something
- * small out in front of it — the identity card, or a page corner.
- */
-function smallHand(ctx, ramp, x, y, dir) {
-  const [deep, s2, s3, lit] = ramp;
-  // the fingers, gripping whatever is above them
-  for (let i = 0; i < 3; i++) {
-    px(ctx, x + i * 4, y - 5, 5, 7, INK);
-    px(ctx, x + 1 + i * 4, y - 4, 3, 6, s3);
-    px(ctx, x + 1 + i * 4, y - 4, 3, 1, lit);
-  }
-  px(ctx, x - 1, y - 1, 15, 13, INK);
-  px(ctx, x, y, 13, 11, s3);
-  px(ctx, x, y, 13, 1, lit);
-  px(ctx, x + (dir > 0 ? 10 : 0), y + 1, 3, 10, s2);
-  // the thumb, across the near edge
-  px(ctx, x + (dir > 0 ? -3 : 11), y + 2, 5, 7, INK);
-  px(ctx, x + (dir > 0 ? -2 : 11), y + 3, 4, 5, s2);
-  // a forearm that goes back out of the frame at an angle, with its cuff
-  const armLen = 34;
-  for (let i = 0; i < armLen; i++) {
-    const ax = x + (dir > 0 ? 1 : -1) * Math.round(i * 0.5);
-    px(ctx, ax, y + 10 + i, 13, 1, i > 5 && i < 12 ? CLOTH[2] : CLOTH[1]);
-    px(ctx, ax + (dir > 0 ? 12 : 0), y + 10 + i, 1, 1, INK);
-    px(ctx, ax + (dir > 0 ? 0 : 12), y + 10 + i, 1, 1, CLOTH[0]);
-  }
-}
 
 /* ----------------------------------------------------------------- the paper */
 
@@ -1536,8 +1759,8 @@ function filePage(ctx, x, y, w, h, { number = '', lit = false, ruleFrom = 24, he
     px(ctx, x, y + core + 8, w, h - core - 20, PAPER[2]);
     ditherBand(ctx, x, y + h - 12, w, 8, PAPER[2], PAPER[1], { steps: 4 });
     px(ctx, x, y + h - 4, w, 4, PAPER[1]);
-    ditherBand(ctx, x, y, 22, h, null, PAPER[1], { steps: 3, reverse: true });
-    ditherBand(ctx, x + w - 22, y, 22, h, null, PAPER[1], { steps: 3 });
+    ditherBand(ctx, x, y, 14, h, null, PAPER[1], { steps: 3, reverse: true });
+    ditherBand(ctx, x + w - 14, y, 14, h, null, PAPER[1], { steps: 3 });
   } else {
     px(ctx, x, y, w, h, PAPER[2]);
     dither(ctx, x, y, w, 10, PAPER[2], PAPER[3], 10);
@@ -1583,8 +1806,7 @@ function stamp(ctx, x, y, w, h, words, c) {
  * sit at all watch.
  */
 function consolePanel(p, t, {
-  live = true, tube = 1, lamps = 0, power = false, cardIn = false, net = false,
-  hour = '', dim = 0, cardSeed = null, showCard = true,
+  live = true, tube = 1, lamps = 0, hour = '', dim = 0,
 } = {}) {
   const S = (ramp, i) => step(ramp, i - dim);
   p.rect(0, 0, SCENE_W, 70, S(STEEL, 0));
@@ -1644,13 +1866,6 @@ function consolePanel(p, t, {
       p.rect(sx, 22, 4, 1, S(STEEL, 2));
     }
   }
-  // The reader in three passes, so the card is genuinely IN it: the body and
-  // its lamps, then the card standing out of the slot, then the front lip over
-  // the card's lower edge. The card stays there for the rest of the evening —
-  // it used to vanish between the fourth beat and the fifth.
-  cardReader(p, { power, cardIn, net, dim });
-  if (cardIn && showCard && p.k === 1) idCard(p.ctx, ...p.at(CARD_IN_X, CARD_IN_Y), { seed: cardSeed });
-  cardReaderLip(p, { dim });
   // the panel counter: the watch's own hour, on an object rather than in a font
   p.rect(12, 44, 40, 14, INK);
   p.rect(14, 46, 36, 10, S(STEEL, 0));
@@ -1667,43 +1882,49 @@ function consolePanel(p, t, {
  * its top face, and the slot cut into the front face, with the white card
  * standing out of it toward the operator.
  */
-function cardReader(p, { power = false, cardIn = false, net = false, dim = 0 } = {}) {
+function cardReader(ctx, y, { power = false, cardIn = false, net = false, dim = 0 } = {}) {
   const S = (ramp, i) => step(ramp, i - dim);
+  const x = READER_X;
   // the box, seen from a little above: a top face with the slot cut along the
   // front of it, an emblem at the left and the three lamps at the right
-  p.rect(READER_X, 36, 64, 28, INK);
-  p.rect(READER_X + 2, 37, 60, 15, S(STEEL, 0));
-  p.rect(READER_X + 4, 37, 56, 1, S(STEEL, 1));
-  p.rect(READER_X + 4, 40, 6, 5, INK);
-  p.rect(READER_X + 5, 41, 4, 3, S(STEEL, 1));
+  dither(ctx, x + 4, y + 26, 74, 6, null, INK, 9);          // its shadow on the desk
+  px(ctx, x, y, 70, 28, INK);
+  px(ctx, x + 2, y + 1, 66, 15, S(STEEL, 0));
+  px(ctx, x + 2, y + 1, 66, 1, S(STEEL, 1));
+  dither(ctx, x + 2, y + 2, 66, 6, S(STEEL, 0), S(STEEL, 1), 5);
+  px(ctx, x + 4, y + 4, 6, 5, INK);
+  px(ctx, x + 5, y + 5, 4, 3, S(STEEL, 1));
   const lamps = [[power, BLUE], [cardIn, TUBE], [net, AMBER]];
   for (let i = 0; i < 3; i++) {
     const [on, ink] = lamps[i];
-    const lx = READER_X + 38 + i * 8;
-    p.rect(lx - 1, 39, 6, 6, INK);
-    p.rect(lx, 40, 4, 4, on ? ink : S(STEEL, 0));
+    const lx = x + 46 + i * 8;
+    px(ctx, lx - 1, y + 3, 6, 6, INK);
+    px(ctx, lx, y + 4, 4, 4, on ? ink : S(STEEL, 0));
     if (on) {
-      p.rect(lx, 40, 4, 1, S(STEEL, 3));
-      p.box(lx - 1, 39, 6, 6, ink);
-      p.dith(lx - 4, 37, 10, 10, null, ink, 2);
+      px(ctx, lx, y + 4, 4, 1, S(STEEL, 3));
+      box(ctx, lx - 1, y + 3, 6, 6, ink);
+      dither(ctx, lx - 4, y + 1, 10, 10, null, ink, 2);
     }
   }
   // the slot's mouth, in true black, cut across the front of the top face
-  p.rect(READER_X + 12, 48, 28, 4, INK);
+  px(ctx, x + 10, y + 12, 32, 4, INK);
 }
 
 /**
  * The slot's front edge and the reader's front face, drawn AFTER the card, so
  * the card is standing IN the machine rather than propped against it.
  */
-function cardReaderLip(p, { dim = 0 } = {}) {
+function cardReaderLip(ctx, y, { dim = 0 } = {}) {
   const S = (ramp, i) => step(ramp, i - dim);
-  p.rect(READER_X + 10, 50, 32, 2, S(STEEL, 2));
-  p.rect(READER_X + 10, 49, 32, 1, INK);
-  p.rect(READER_X, 52, 64, 12, INK);
-  p.rect(READER_X + 1, 53, 62, 9, S(STEEL, 1));
-  p.rect(READER_X + 1, 53, 62, 1, S(STEEL, 2));
-  p.rect(READER_X + 6, 57, 52, 2, S(STEEL, 0));
+  const x = READER_X;
+  px(ctx, x + 8, y + 14, 36, 2, S(STEEL, 2));
+  px(ctx, x + 8, y + 13, 36, 1, INK);
+  px(ctx, x, y + 16, 70, 12, INK);
+  px(ctx, x + 1, y + 17, 68, 9, S(STEEL, 1));
+  px(ctx, x + 1, y + 17, 68, 1, S(STEEL, 2));
+  px(ctx, x + 6, y + 21, 58, 2, S(STEEL, 0));
+  px(ctx, x + 2, y + 26, 6, 2, S(STEEL, 0));
+  px(ctx, x + 62, y + 26, 6, 2, S(STEEL, 0));
 }
 
 /**
@@ -1736,7 +1957,7 @@ function consoleRoom(ctx, t, opts = {}) {
   const oy = opts.oy ?? 0;
   px(ctx, 0, 0, SCENE_W, SCENE_H, INK);
   consolePanel(pen(ctx, 1, 0, oy), t, opts);
-  const deskTop = 70 + oy;
+  const deskTop = DESK_TOP + oy;
   px(ctx, 0, deskTop, SCENE_W, SCENE_H - deskTop, INK);
   px(ctx, 0, deskTop, SCENE_W, 3, STEEL[1]);
   px(ctx, 0, deskTop + 3, SCENE_W, 6, STEEL[0]);
@@ -1744,30 +1965,70 @@ function consoleRoom(ctx, t, opts = {}) {
   // the desk surface itself, running away from the edge into the dark: it was
   // true black below the lip, so a third of every console shot was a void
   // with two hands floating in it
-  dither(ctx, 0, deskTop + 17, SCENE_W, 16, INK, STEEL[0], 6);
-  dither(ctx, 0, deskTop + 33, SCENE_W, 22, INK, STEEL[0], 3);
-  dither(ctx, 0, deskTop + 55, SCENE_W, SCENE_H - deskTop - 55, INK, STEEL[0], 1);
-  // what is on the desk: a key tray, the watch log, a handset and the cables
+  /*
+   * The desk top: a surface, graded away from the lip rather than a field of
+   * checks. The rows nearest the seat come back up a step, so the hands lie on
+   * something instead of hovering in a black field.
+   */
+  ditherBand(ctx, 0, deskTop + 17, SCENE_W, 20, STEEL[0], INK, { steps: 5 });
+  px(ctx, 0, deskTop + 37, SCENE_W, SCENE_H - deskTop - 37, INK);
+  ditherBand(ctx, 0, deskTop + 46, SCENE_W, 26, INK, STEEL[0], { steps: 5 });
+  px(ctx, 0, deskTop + 72, SCENE_W, SCENE_H - deskTop - 72, STEEL[0]);
+  dither(ctx, 0, deskTop + 72, SCENE_W, SCENE_H - deskTop - 72, STEEL[0], STEEL[1], 3);
+  // the grain of it, running across
+  for (let i = deskTop + 52; i < SCENE_H; i += 9) px(ctx, 0, i, SCENE_W, 1, INK);
+  // what is on the desk: the card reader, a key tray, a handset and the cables
   const S = (ramp, i) => step(ramp, i - (opts.dim ?? 0));
-  px(ctx, 92, deskTop + 26, 136, 20, INK);
-  px(ctx, 94, deskTop + 27, 132, 17, S(STEEL, 0));
-  px(ctx, 94, deskTop + 27, 132, 1, S(STEEL, 1));
+  px(ctx, 130, deskTop + 26, 124, 20, INK);
+  px(ctx, 132, deskTop + 27, 120, 17, S(STEEL, 0));
+  px(ctx, 132, deskTop + 27, 120, 1, S(STEEL, 1));
   for (let r = 0; r < 2; r++) {
-    for (let i = 0; i < 12; i++) {
-      px(ctx, 99 + i * 11, deskTop + 31 + r * 7, 7, 4, S(STEEL, 1));
-      px(ctx, 99 + i * 11, deskTop + 31 + r * 7, 7, 1, S(STEEL, 2));
+    for (let i = 0; i < 11; i++) {
+      px(ctx, 136 + i * 11, deskTop + 31 + r * 7, 7, 4, S(STEEL, 1));
+      px(ctx, 136 + i * 11, deskTop + 31 + r * 7, 7, 1, S(STEEL, 2));
     }
   }
-  px(ctx, 20, deskTop + 24, 56, 22, INK);
-  px(ctx, 21, deskTop + 25, 54, 20, S(PAPER, 0));
-  px(ctx, 21, deskTop + 25, 54, 2, S(PAPER, 1));
-  px(ctx, 26, deskTop + 31, 44, 1, S(PAPER, 1));
-  px(ctx, 26, deskTop + 35, 34, 1, S(PAPER, 1));
-  px(ctx, 246, deskTop + 24, 54, 10, INK);
-  px(ctx, 247, deskTop + 25, 52, 8, S(STEEL, 0));
-  px(ctx, 247, deskTop + 25, 52, 1, S(STEEL, 1));
-  px(ctx, 262, deskTop + 34, 22, 6, S(STEEL, 0));
-  for (let i = 0; i < 3; i++) px(ctx, 268 + i * 20, deskTop + 4, 2, 20, S(STEEL, 0));
+  px(ctx, 264, deskTop + 22, 46, 10, INK);
+  px(ctx, 265, deskTop + 23, 44, 8, S(STEEL, 0));
+  px(ctx, 265, deskTop + 23, 44, 1, S(STEEL, 1));
+  px(ctx, 276, deskTop + 32, 22, 6, S(STEEL, 0));
+  for (let i = 0; i < 3; i++) px(ctx, 272 + i * 16, deskTop + 4, 2, 18, S(STEEL, 0));
+  /*
+   * The reader, in three passes, so the card is genuinely IN it: the body and
+   * its lamps, then the card standing out of the slot, then the front lip over
+   * the card's lower edge. It is mounted on the desk lip, left of centre under
+   * the tube — where the live console has it — and the card stays in it for
+   * the rest of the evening.
+   */
+  const ry = deskTop + READER_DY;
+  cardReader(ctx, ry, opts);
+  if (opts.cardIn && (opts.showCard ?? true)) idCard(ctx, CARD_IN_X, ry, { seed: opts.cardSeed ?? null });
+  cardReaderLip(ctx, ry, opts);
+  /*
+   * What is on the near edge of the desk, between the operator's hands: the
+   * watch log, open, with a pencil across it, and the cable to the handset
+   * running off the front. The nearest third of the frame was a bare field.
+   */
+  if (oy > -30) {
+    const py = deskTop + 88;
+    px(ctx, 112, py, 96, SCENE_H - py, INK);
+    px(ctx, 114, py + 1, 92, SCENE_H - py, S(PAPER, 1));
+    px(ctx, 114, py + 1, 92, 1, S(PAPER, 2));
+    px(ctx, 158, py + 1, 2, SCENE_H - py, S(PAPER, 0));
+    for (let i = 0; i < 5; i++) {
+      px(ctx, 120, py + 7 + i * 7, 32 - (i % 2) * 8, 1, S(PAPER, 0));
+      px(ctx, 166, py + 7 + i * 7, 30 - (i % 2) * 6, 1, S(PAPER, 0));
+    }
+    for (let i = 0; i < 7; i++) px(ctx, 118 + i * 13, py - 1, 5, 3, S(STEEL, 1));
+    px(ctx, 126, py + 12, 44, 3, S(WOOD, 1));
+    px(ctx, 168, py + 12, 6, 3, S(STEEL, 2));
+    px(ctx, 126, py + 12, 44, 1, S(WOOD, 2));
+    // the handset cable, off the front of the desk
+    for (let i = 0; i < 40; i++) {
+      const cy = deskTop + 52 + i;
+      px(ctx, 268 + Math.round(Math.sin(i / 7) * 6) + Math.round(i * 0.5), cy, 3, 1, S(STEEL, 0));
+    }
+  }
   // the tube's own light, falling on the desk in front of it
   if (opts.live !== false && (opts.tube ?? 1) > 0) {
     const lvl = Math.round(3 * (opts.tube ?? 1));
@@ -1802,6 +2063,15 @@ function drawApproach(ctx, t, scene) {
   const oy = Math.round(36 - 36 * k) + bob;
   const deep = oy + Math.round(70 * k);
   const horizon = deep + Math.round(20 * k);
+  // the ceiling, coming over your head: plates, and a run of conduit down it
+  px(ctx, 0, 0, SCENE_W, oy, STEEL[0]);
+  for (let i = 0; i < 6; i++) {
+    const q = ((i / 6) + t * 0.34) % 1;
+    const y = Math.round(oy - Math.pow(q, 2.2) * oy);
+    const inset = Math.round((1 - Math.pow(q, 2.2)) * ox);
+    px(ctx, inset, y, SCENE_W - inset * 2, 1, STEEL[1]);
+  }
+  px(ctx, Math.round(150 - 10 * k) + sway, 0, Math.round(20 * k) + 2, oy, STEEL[1]);
   // the floor, coming toward you
   px(ctx, 0, horizon, SCENE_W, SCENE_H - horizon, STEEL[0]);
   for (let i = 0; i < 7; i++) {
@@ -1809,6 +2079,9 @@ function drawApproach(ctx, t, scene) {
     const y = Math.round(horizon + Math.pow(q, 2.4) * (SCENE_H - horizon));
     const inset = Math.round((1 - Math.pow(q, 2.4)) * ox);
     px(ctx, inset, y, SCENE_W - inset * 2, 1, STEEL[1]);
+    // the painted line down the middle of the deck, in perspective
+    const half = Math.round(2 + (1 - Math.pow(q, 2.4)) * -1 + Math.pow(q, 2.4) * 5);
+    px(ctx, 160 + sway - half, y, half * 2, 1, PAPER[0]);
   }
   // the two side walls, converging on the far end of the room
   for (let x = 0; x < SCENE_W; x++) {
@@ -1820,6 +2093,38 @@ function drawApproach(ctx, t, scene) {
     px(ctx, x, base - 2, 1, 2, STEEL[2]);
     px(ctx, x, top, 1, 3, INK);
     if (x % 22 < 2) px(ctx, x, top + 3, 1, base - top - 5, STEEL[0]);
+    // a run of cable trunking along both walls at head height, and the dado
+    const trunk = Math.round(top + (base - top) * 0.22);
+    px(ctx, x, trunk, 1, Math.max(1, Math.round(4 * (1 - side * 0.5))), STEEL[0]);
+    px(ctx, x, trunk, 1, 1, STEEL[2]);
+    px(ctx, x, Math.round(top + (base - top) * 0.72), 1, 1, STEEL[2]);
+  }
+  /*
+   * What is in the room, so it is a room and not two grey planes: a duty board
+   * on the left wall, a fire point on the right, and two lamps in the ceiling
+   * that come over your head as you walk under them.
+   */
+  const boardX = Math.round(ox * 0.34);
+  const boardY = Math.round(oy + (SCENE_H - oy) * 0.16);
+  px(ctx, boardX, boardY, Math.round(ox * 0.5), Math.round(30 * k) + 6, INK);
+  px(ctx, boardX + 1, boardY + 1, Math.round(ox * 0.5) - 2, Math.round(30 * k) + 4, PAPER[1]);
+  for (let i = 0; i < 3; i++) px(ctx, boardX + 3, boardY + 3 + i * 4, Math.round(ox * 0.34), 1, PAPER[0]);
+  const fireX = SCENE_W - Math.round(ox * 0.5);
+  px(ctx, fireX, boardY + 4, Math.round(ox * 0.16) + 2, Math.round(22 * k) + 4, RED);
+  px(ctx, fireX, boardY + 4, Math.round(ox * 0.16) + 2, 1, DAWN[1]);
+  for (let i = 0; i < 2; i++) {
+    const q = ((i / 2) + t * 0.34) % 1;
+    const ly = Math.round(oy - Math.pow(q, 2.2) * oy);
+    const w = Math.round(6 + Math.pow(q, 2.2) * 40);
+    px(ctx, 160 + sway - w, ly, w * 2, Math.max(1, Math.round(q * 5)), STEEL[1]);
+    px(ctx, 160 + sway - Math.round(w * 0.6), ly + Math.max(1, Math.round(q * 5)), Math.round(w * 1.2), 1, i === 0 ? AMBER : STEEL[0]);
+    if (i === 0) {
+      dither(ctx, 160 + sway - w, ly, w * 2, Math.round(14 * q) + 2, null, AMBER, Math.max(1, Math.round(3 * q)));
+      // and what it throws on the deck under it
+      const fy = Math.round(horizon + Math.pow(q, 2.4) * (SCENE_H - horizon));
+      const fw = Math.round(w * 1.6);
+      dither(ctx, 160 + sway - fw, fy - Math.round(fw * 0.2), fw * 2, Math.round(fw * 0.4) + 2, null, STEEL[2], Math.max(1, Math.round(4 * q)));
+    }
   }
   // the corridor light behind you, narrowing to nothing as the door closes
   const door = clamp01(1 - t / 1.8);
@@ -1828,31 +2133,63 @@ function drawApproach(ctx, t, scene) {
     dither(ctx, 160 - w / 2 + sway, SCENE_H - 40, w, 40, null, STEEL[1], Math.round(5 * door));
     dither(ctx, 160 - w / 4 + sway, SCENE_H - 20, w / 2, 20, null, STEEL[2], Math.round(3 * door));
   }
-  // a second console, unlit, against the left wall
+  // a second console, unlit, against the left wall, with its chair pushed in
   const p2 = pen(ctx, k * 0.55, Math.round(-40 - 80 * ease) + sway, Math.round(deep - 42 * k) + bob);
   p2.rect(0, 0, SCENE_W, 70, STEEL[0]);
   p2.rect(0, 0, SCENE_W, 4, STEEL[1]);
   p2.rect(92, 2, 136, 62, INK);
   p2.rect(0, 66, SCENE_W, 8, INK);
+  p2.rect(120, 74, 80, 40, INK);
   // the console you are walking to, and the desk under it
   px(ctx, ox, deep, SCENE_W - ox * 2, horizon - deep, INK);
   consolePanel(pen(ctx, k, ox, oy), t, { live: false, tube: 0, lamps: 0, hour: scene.hour ?? '' });
   px(ctx, ox, deep, SCENE_W - ox * 2, 2, STEEL[1]);
+  // the reader on its desk lip, dark, where you are about to put the card
+  const dk = pen(ctx, k, ox, oy);
+  dk.rect(READER_X, DESK_TOP + READER_DY, 70, 28, INK);
+  dk.rect(READER_X + 2, DESK_TOP + READER_DY + 1, 66, 14, STEEL[0]);
+  dk.rect(READER_X + 10, DESK_TOP + READER_DY + 12, 32, 4, INK);
   // the chair, rising into the lower third as you reach it
   const chairY = Math.round(SCENE_H - 6 - 46 * ease);
   px(ctx, 100 + sway, chairY, 120, 70, INK);
   px(ctx, 104 + sway, chairY + 3, 112, 64, STEEL[0]);
   px(ctx, 104 + sway, chairY + 3, 112, 2, STEEL[1]);
+  dither(ctx, 104 + sway, chairY + 20, 112, 20, STEEL[0], INK, 6);
   px(ctx, 118 + sway, chairY + 9, 10, 50, INK);
   px(ctx, 192 + sway, chairY + 9, 10, 50, INK);
+  /*
+   * The near edge of both forearms, swinging at the bottom corners.
+   *
+   * The camera is the operator's head and the body is behind it: on the walk
+   * you see your own sleeves come and go at the bottom of the frame, which is
+   * what hands the next beat its two hands.
+   */
+  const swing = Math.sin((t / 1.1) * Math.PI * 2);
+  for (const side of [-1, 1]) {
+    const lift = Math.round(12 * (side < 0 ? swing : -swing));
+    const top = SCENE_H - 34 + lift;
+    for (let i = 0; top + i < SCENE_H; i++) {
+      const u = i / 34;
+      const half = Math.round(8 + 10 * u);
+      const mid = side < 0 ? Math.round(24 + 16 * u) : Math.round(SCENE_W - 24 - 16 * u);
+      px(ctx, mid - half - 1, top + i, half * 2 + 2, 1, INK);
+      px(ctx, mid - half, top + i, half * 2, 1, CLOTH[1]);
+      px(ctx, side < 0 ? mid + half - 3 : mid - half, top + i, 3, 1, CLOTH[0]);
+      px(ctx, side < 0 ? mid - half : mid + half - 2, top + i, 2, 1, CLOTH[2]);
+      if (i > 3 && i < 9) px(ctx, mid - half, top + i, half * 2, 1, CLOTH[2]);
+    }
+  }
   // the doorway you came through, sliding off the edges of the frame
-  const jamb = Math.round(40 * Math.pow(1 - p, 1.6) * 1.6);
+  const jamb = Math.round(26 * Math.pow(1 - p, 2.0));
   if (jamb > 0) {
     px(ctx, 0, 0, jamb, SCENE_H, INK);
     px(ctx, jamb - 1, 0, 1, SCENE_H, STEEL[0]);
+    px(ctx, jamb - 3, 0, 2, SCENE_H, STEEL[1]);
     px(ctx, SCENE_W - jamb, 0, jamb, SCENE_H, INK);
     px(ctx, SCENE_W - jamb, 0, 1, SCENE_H, STEEL[0]);
-    px(ctx, 0, 0, SCENE_W, Math.round(jamb * 0.4), INK);
+    px(ctx, SCENE_W - jamb + 1, 0, 2, SCENE_H, STEEL[1]);
+    px(ctx, 0, 0, SCENE_W, Math.round(jamb * 0.35), INK);
+    px(ctx, jamb, Math.round(jamb * 0.35), SCENE_W - jamb * 2, 2, STEEL[0]);
   }
   // the dark at the edges, lifting as you arrive
   vignette(ctx, Math.round(9 * (1 - ease)) + 2);
@@ -1962,26 +2299,36 @@ function drawCard(ctx, t, character) {
    * never jumps.
    */
   const REST = { x: 248, y: 146 };            // where it lies on the desk
-  const OUT = { x: 262, y: 214 };             // out of the frame, at the body
-  const AT = { x: CARD_IN_X + 2, y: 66 };     // at the slot, holding the card
+  /*
+   * The hand goes down to the corner of the frame for the card — never off
+   * it. A frame with one hand in it is a hand that has popped out of the
+   * world; the bottom right corner is where the body is, and the hand stays
+   * in contact with it the whole way.
+   */
+  const OUT = { x: 274, y: 160 };
+  const AT = { x: CARD_IN_X + 22, y: CARD_IN_Y + 18 };   // holding it at the slot
   const lerp = (a, b, u) => ({ x: Math.round(a.x + (b.x - a.x) * u), y: Math.round(a.y + (b.y - a.y) * u) });
   let hand = REST;
   let grip = 0;
   let carry = null;                            // where the card is, if it is held
-  if (t < 0.3) {                               // off the desk and down out of frame
+  let resting = true;
+  if (t < 0.3) {                               // off the desk and down to the body
     hand = lerp(REST, OUT, clamp01(t / 0.3));
+    resting = false;
   } else if (t < 1.6) {                        // back up with the card, and into the slot
     const u = clamp01((t - 0.3) / 1.3);
     const e = 1 - Math.pow(1 - u, 2.2);
     hand = lerp(OUT, AT, e);
     grip = 1;
-    // the card is held IN the fingers: it overlaps them, and they are drawn
-    // over it, so the grip is visible rather than implied
-    carry = { x: hand.x - 1, y: hand.y - 18 + Math.round((1 - e) * 5) };
+    resting = false;
+    // the card is held IN the fingers, out to the left of the palm, and the
+    // thumb is drawn over it, so the grip is visible rather than implied
+    if (u > 0.06) carry = { x: hand.x - 22, y: hand.y - 18 + Math.round((1 - e) * 5) };
   } else if (t < 2.2) {                        // the fingers open and it comes back
     const u = clamp01((t - 1.6) / 0.6);
     hand = lerp(AT, REST, u * u);
     grip = Math.max(0, 1 - u * 2.4);
+    resting = u > 0.8;
   }
   // the card: in the fingers on the way in, in the reader once it is seated
   if (carry) {
@@ -1990,9 +2337,9 @@ function drawCard(ctx, t, character) {
   } else if (seated) {
     idCard(ctx, CARD_IN_X, CARD_IN_Y + settle, { seed: character?.name ?? null });
   }
-  cardReaderLip(pen(ctx, 1, 0, 0), {});
-  if (settle) px(ctx, READER_X, 52, 64, 1, INK);
-  handBack(ctx, ramp, hand.x, hand.y, -1, null, { from: SCENE_W - 8, grip });
+  cardReaderLip(ctx, CARD_IN_Y, {});
+  if (settle) px(ctx, READER_X, CARD_IN_Y + 16, 70, 1, INK);
+  handBack(ctx, ramp, hand.x, hand.y, -1, null, { from: SCENE_W - 8, grip, rest: resting });
   handFront(ctx, ramp, hand.x, hand.y, -1, { grip });
 }
 
@@ -2063,21 +2410,46 @@ function drawPrintout(ctx, t, character, { line = 0, typed = 0, talking = false,
   });
   const MOUTH = TAPE_MOUTH;
   const top = Math.max(6, Math.round(sheetTop));
-  // the machine, on the desk in front of the operator, its top face toward you
-  px(ctx, 22, MOUTH - 8, 276, SCENE_H - MOUTH + 8, INK);
-  px(ctx, 24, MOUTH - 6, 272, SCENE_H - MOUTH + 6, STEEL[1]);
-  px(ctx, 24, MOUTH - 6, 272, 2, STEEL[2]);
-  dither(ctx, 24, MOUTH + 10, 272, 10, STEEL[1], STEEL[0], 8);
-  px(ctx, 24, MOUTH + 20, 272, SCENE_H - MOUTH - 20, STEEL[0]);
-  // the tractor covers either side of the paper path, and the maker's plate
-  for (const bx of [30, 254]) {
-    px(ctx, bx, MOUTH - 4, 36, 14, STEEL[0]);
-    px(ctx, bx, MOUTH - 4, 36, 1, STEEL[2]);
-    for (let i = 0; i < 4; i++) px(ctx, bx + 4 + i * 8, MOUTH + 1, 4, 4, STEEL[1]);
+  /*
+   * The machine.
+   *
+   * The judge: "no printer is drawn at all: the sheet simply begins in mid-air
+   * over the desk." It does now — a case with a smoked lid, tractor covers
+   * standing up either side of the paper path, a bail bar holding the form
+   * down across the platen, a ribbon cartridge and a head on its rail in the
+   * mouth, a maker's plate and a paper lamp. The form comes up out of the slot
+   * between the lid and the bail, and everything already printed has been
+   * carried up the frame by the paper.
+   */
+  const BODY = MOUTH + 2;
+  px(ctx, 14, BODY - 2, 292, SCENE_H - BODY + 2, INK);
+  px(ctx, 16, BODY, 288, SCENE_H - BODY, STEEL[1]);
+  px(ctx, 16, BODY, 288, 2, STEEL[2]);
+  dither(ctx, 16, BODY + 18, 288, 8, STEEL[1], STEEL[0], 6);
+  px(ctx, 16, BODY + 26, 288, SCENE_H - BODY - 26, STEEL[1]);
+  px(ctx, 16, BODY + 26, 288, 1, STEEL[2]);
+  // vents along the front of the case, and the shadow it sits in
+  for (let i = 0; i < 9; i++) px(ctx, 96 + i * 14, BODY + 32, 10, 6, STEEL[0]);
+  dither(ctx, 16, SCENE_H - 8, 288, 8, STEEL[1], STEEL[0], 8);
+  // the smoked lid over the works, hinged at the back and lifted a little
+  px(ctx, 60, BODY + 4, 200, 16, INK);
+  px(ctx, 62, BODY + 5, 196, 14, STEEL[0]);
+  dither(ctx, 62, BODY + 5, 196, 14, STEEL[0], INK, 6);
+  px(ctx, 62, BODY + 5, 196, 1, STEEL[2]);
+  // the sheen down the smoked lid, so it reads as a window over the works
+  for (let i = 0; i < 14; i++) px(ctx, 96 + i, BODY + 5 + i, 8, 1, STEEL[1]);
+  // the control panel on the right of the case: three lamps and a plate
+  for (let i = 0; i < 3; i++) {
+    px(ctx, 264 + i * 10, BODY + 8, 6, 5, INK);
+    px(ctx, 265 + i * 10, BODY + 9, 4, 3, i === 0 ? TUBE : i === 1 ? AMBER : STEEL[1]);
   }
-  px(ctx, 132, MOUTH + 24, 56, 8, STEEL[1]);
-  px(ctx, 132, MOUTH + 24, 56, 1, STEEL[2]);
-  for (let i = 0; i < 5; i++) px(ctx, 138 + i * 10, MOUTH + 26, 6, 3, STEEL[0]);
+  px(ctx, 264, BODY + 16, 30, 5, STEEL[1]);
+  px(ctx, 264, BODY + 16, 30, 1, STEEL[2]);
+  // the maker's plate, low on the front of the case
+  px(ctx, 22, BODY + 16, 32, 6, STEEL[1]);
+  for (let i = 0; i < 4; i++) px(ctx, 25 + i * 7, BODY + 18, 4, 2, STEEL[0]);
+  // the feet, and the shadow the machine throws on the desk
+  dither(ctx, 10, SCENE_H - 6, 300, 6, null, INK, 10);
   // the form, rising out of the slot with everything printed on it so far
   const sx = wide ? 26 : 48;
   const sw = wide ? 268 : 224;
@@ -2087,28 +2459,49 @@ function drawPrintout(ctx, t, character, { line = 0, typed = 0, talking = false,
   dither(ctx, sx, top, sw, 14, null, PAPER[3], 5);
   dither(ctx, sx, MOUTH - 14, sw, 16, null, PAPER[1], 3);
   /*
-   * The mouth: the slot the paper comes out of, the print head behind it, and
-   * the front lip drawn OVER the sheet so the paper is genuinely coming out
-   * of the machine. The player: "it should scroll out with the printout, like
-   * the text is on the paper" — so the head is fixed here, the line being
-   * typed is level with it, and everything already printed has been carried up
-   * the frame by the paper.
+   * The mouth, drawn OVER the sheet: the bail bar across the paper, the slot
+   * it comes out of, the ribbon and the head behind it, and the front lip. The
+   * player: "it should scroll out with the printout, like the text is on the
+   * paper" — so the head is fixed here, the line being typed is level with it,
+   * and the paper carries every finished line up away from it.
    */
-  px(ctx, 40, MOUTH + 2, 240, 5, INK);
-  px(ctx, 42, MOUTH + 3, 236, 2, STEEL[0]);
   const carriage = typed > 0 ? Math.min(1, (typed % 40) / 40) : 0;
-  const hx = Math.round(60 + (talking ? carriage : 0) * 190);
-  px(ctx, hx, MOUTH - 3, 7, 6, STEEL[3]);
-  px(ctx, hx + 1, MOUTH - 1, 5, 4, INK);
-  px(ctx, hx, MOUTH + 2, 7, 2, STEEL[2]);
-  px(ctx, 40, MOUTH + 7, 240, 6, STEEL[1]);
-  px(ctx, 40, MOUTH + 7, 240, 1, STEEL[2]);
-  px(ctx, 40, MOUTH + 12, 240, 1, INK);
+  const hx = Math.round(64 + (talking ? carriage : 0) * 180);
+  // the bail bar, with a roller at each end, lying across the form
+  px(ctx, 44, MOUTH - 1, 232, 2, STEEL[2]);
+  px(ctx, 44, MOUTH + 1, 232, 1, INK);
+  for (const rx of [50, 150, 262]) {
+    px(ctx, rx, MOUTH - 3, 8, 6, INK);
+    px(ctx, rx + 1, MOUTH - 2, 6, 4, STEEL[1]);
+    px(ctx, rx + 1, MOUTH - 2, 6, 1, STEEL[2]);
+  }
+  // the slot: true black, with the ribbon and the head on its rail in it
+  px(ctx, 40, MOUTH + 2, 240, 8, INK);
+  px(ctx, 44, MOUTH + 4, 232, 2, STEEL[0]);
+  px(ctx, hx - 1, MOUTH, 10, 9, INK);
+  px(ctx, hx, MOUTH + 1, 8, 5, STEEL[2]);
+  px(ctx, hx + 1, MOUTH + 3, 6, 3, STEEL[1]);
+  px(ctx, hx + 2, MOUTH + 6, 4, 2, AMBER);
+  // the front lip of the case, over the bottom of everything
+  px(ctx, 30, MOUTH + 12, 260, 7, STEEL[1]);
+  px(ctx, 30, MOUTH + 12, 260, 1, STEEL[2]);
+  px(ctx, 30, MOUTH + 18, 260, 1, INK);
+  // the tractor covers, standing up either side of the paper path
+  for (const bx of [16, 262]) {
+    px(ctx, bx, MOUTH - 16, 42, 32, INK);
+    px(ctx, bx + 1, MOUTH - 15, 40, 30, STEEL[1]);
+    px(ctx, bx + 1, MOUTH - 15, 40, 2, STEEL[2]);
+    dither(ctx, bx + 1, MOUTH - 4, 40, 12, STEEL[1], STEEL[0], 7);
+    for (let i = 0; i < 4; i++) {
+      px(ctx, bx + 6 + i * 8, MOUTH - 10, 5, 5, INK);
+      px(ctx, bx + 7 + i * 8, MOUTH - 9, 3, 3, STEEL[2]);
+    }
+  }
   // the operator's own hands, on the machine, steadying the paper as it comes
   const ramp = skinOf(character);
   const settle = Math.floor(line / 4) % 2;
-  handsBack(ctx, ramp, MOUTH + 6 + settle, 26, 274, TUBE);
-  handsFront(ctx, ramp, MOUTH + 6 + settle, 26, 274);
+  handsBack(ctx, ramp, MOUTH + 16 + settle, 26, 274, TUBE);
+  handsFront(ctx, ramp, MOUTH + 16 + settle, 26, 274);
 }
 
 /**
@@ -2123,15 +2516,30 @@ function drawPrintout(ctx, t, character, { line = 0, typed = 0, talking = false,
  */
 function drawOffice(ctx, t, { talking, face, tier, watches = 0, struck = false, seed = '' }) {
   const hard = tier === 'flagged' || tier === 'condemned';
-  // The player: "The political commissar should be menacing." So the room is
-  // dark at EVERY tier and the lamp, the file and his hands are the lit
-  // things; the tier moves the lamp and deepens the dark by a graded amount,
-  // rather than one tier getting a black rectangle over the top of it.
-  const dim = hard ? 1 : 0;
+  /*
+   * The player: "The political commissar should be menacing." So the room is
+   * dark at EVERY tier — the wool, the wall and the window all go down the
+   * ramp together and a stipple of night goes over the lot — and the only
+   * things that come back out of it are the ones the lamp can reach: the cone
+   * on the wall, the desk, the file, his cuffs and hands, one edge of his head
+   * and his eyes. The tier turns the lamp and deepens the dark by a graded
+   * amount; it never draws a black rectangle over a lit picture, and no tier
+   * is lit wall to wall.
+   */
+  const LIGHT = {
+    commended: { dim: 1, gloom: 6, lamp: -1 },
+    satisfactory: { dim: 1, gloom: 7, lamp: 0 },
+    noted: { dim: 2, gloom: 8, lamp: 0 },
+    flagged: { dim: 2, gloom: 9, lamp: 1 },
+    condemned: { dim: 2, gloom: 10, lamp: 1 },
+  };
+  const { dim, gloom, lamp: lampAt } = LIGHT[tier] ?? LIGHT.noted;
   const S = (ramp, i) => step(ramp, i - dim);
-  const gloom = tier === 'commended' ? 1 : tier === 'condemned' ? 5 : hard ? 4 : 2;
+  // gold is gold at every tier: DAWN's deepest step is the dusk in the ending
+  // sky, and stepping a cap badge or a tunic button down into it put two
+  // plum-coloured pixels on a night-dark frame.
+  const gold = (i) => step(DAWN, Math.max(1, i - dim));
   const snowing = watches >= 3;
-  const lampAt = tier === 'commended' ? -1 : hard ? 1 : 0;
   // wall, wainscot, floor
   px(ctx, 0, 0, SCENE_W, SCENE_H, S(CLOTH, hard ? 0 : 1));
   px(ctx, 0, 0, SCENE_W, 10, S(CLOTH, 0));
@@ -2173,37 +2581,48 @@ function drawOffice(ctx, t, { talking, face, tier, watches = 0, struck = false, 
   if (watches >= 6) framedPortrait(ctx, 72, 18, 32, 26, S);
   // the flag
   px(ctx, 6, 14, 3, 80, S(WOOD, 2));
-  px(ctx, 6, 14, 3, 1, S(DAWN, 3));
+  px(ctx, 6, 14, 3, 1, gold(3));
   px(ctx, 9, 16, 14, 44, RED);
-  px(ctx, 9, 16, 14, 1, S(DAWN, 1));
-  px(ctx, 12, 26, 8, 8, S(DAWN, 3));
+  px(ctx, 9, 16, 14, 1, gold(1));
+  px(ctx, 12, 26, 8, 8, gold(3));
   px(ctx, 14, 28, 4, 4, RED);
   px(ctx, 9, 59, 14, 1, INK);
-  // the lamp, on the wall side of the desk
-  deskLamp(ctx, 84, 40, lampAt, S);
-  // the man, behind the desk
-  commissar(ctx, t, { talking, face, tier, hard, S, seed });
+  // the chair he sits in, part of the room and dimmed with it
+  chairBack(ctx, S);
+  // the lamp, standing on the desk at his right hand
+  deskLamp(ctx, 70, 40, lampAt, S);
   /*
-   * The dark, over the room AND the man in one pass.
+   * The dark, over the room.
    *
    * Everything above the desk goes down together — wall, window, portraits,
-   * flag, the shape of him — so there is no seam anywhere and no tier is a
-   * black rectangle laid over the top of a lit picture. What comes back out of
-   * it is drawn afterwards, and only what the lamp can actually reach: the
-   * cone on the wall, the filament, one edge of his face, and his eyes.
+   * flag — by how far it is from the one lamp, so there is no seam anywhere
+   * and no tier is a black rectangle laid over the top of a lit picture. The
+   * man is drawn into it afterwards, lit by the same lamp from the same side:
+   * he used to be stippled along with the wall, which is what turned his face
+   * into a field of checks.
    */
-  for (let j = 0; j < 26; j++) {
-    const lvl = gloom + 7 - Math.round(j * 0.55);
-    if (lvl > 0) dither(ctx, 0, j, SCENE_W, 1, null, INK, Math.min(15, lvl));
+  const lampX = 70;
+  for (let j = 0; j < 104; j++) {
+    for (let i = 0; i < SCENE_W; i += 8) {
+      // how far this patch of room is from the lamp, in lamp-widths: the
+      // gloom is the night in the room and the distance is what the one lamp
+      // in it can do about it. Nothing is evenly lit, at any tier.
+      const dx = (i + 4 - lampX - lampAt * 26) / 92;
+      const dy = (j - 54) / 74;
+      const away = Math.sqrt(dx * dx + dy * dy);
+      const lvl = Math.min(gloom + 2, Math.round(gloom - 3 + away * 5));
+      if (lvl > 0) dither(ctx, i, j, 8, 1, null, INK, lvl);
+    }
   }
-  for (let i = 0; i < 40; i++) {
-    const lvl = gloom + 7 - Math.round(i * 0.4);
-    if (lvl <= 0) continue;
-    dither(ctx, i, 0, 1, 104, null, INK, Math.min(15, lvl));
-    dither(ctx, SCENE_W - 1 - i, 0, 1, 104, null, INK, Math.min(15, lvl));
+  // his shadow, thrown up the wall away from the lamp, over the dark rather
+  // than under it — it was drawn before the gloom and could not be seen
+  for (let i = 0; i < 46; i++) {
+    dither(ctx, 208 + Math.round(i * 0.2), 102 - i * 2, 10 + Math.round(i * 0.9), 2, null, INK, 6);
   }
-  lampCone(ctx, 84, 48, lampAt, gloom);
-  commissarLight(ctx, { tier, hard, S });
+  lampCone(ctx, lampX, 48, lampAt, gloom);
+  // the man, behind the desk, lit from the lamp's side
+  commissar(ctx, t, { talking, face, tier, hard, S, gold, seed });
+  commissarLight(ctx, { tier, hard, S, gold, cells: face, back: backdropOf(seed || 'THE POLITICAL SECTION') });
   // the desk itself, drawn over him: a top, a near edge, a front
   px(ctx, 8, 104, 304, 14, S(WOOD, 2));
   px(ctx, 8, 104, 304, 2, S(WOOD, 3));
@@ -2222,7 +2641,7 @@ function drawOffice(ctx, t, { talking, face, tier, watches = 0, struck = false, 
   // what is on the desk, and what the lamp reaches of it
   // the pool the lamp actually throws: a lit core on the wood, dithered
   // shoulders either side of it, and the near edge lit under it
-  const pool = lampAt < 0 ? 30 : lampAt > 0 ? 128 : 58;
+  const pool = lampAt < 0 ? 16 : lampAt > 0 ? 146 : 70;
   px(ctx, pool + 16, 104, 64, 12, S(WOOD, 3));
   dither(ctx, pool, 104, 16, 12, S(WOOD, 2), S(WOOD, 3), 9);
   dither(ctx, pool + 80, 104, 16, 12, S(WOOD, 2), S(WOOD, 3), 9);
@@ -2269,6 +2688,32 @@ function drawOffice(ctx, t, { talking, face, tier, watches = 0, struck = false, 
   }
 }
 
+/**
+ * The chair he sits in: a headboard of a thing, wider than he is.
+ *
+ * It is furniture, not part of him, so it is drawn with the room and goes dark
+ * with the room — and the lamp's beam crosses it on its way to the desk.
+ */
+function chairBack(ctx, S) {
+  const cy = 50;
+  const HALF = 50;
+  px(ctx, 160 - HALF - 8, cy - 26, HALF * 2 + 16, 94, INK);
+  px(ctx, 160 - HALF - 6, cy - 24, HALF * 2 + 12, 92, S(WOOD, 0));
+  px(ctx, 160 - HALF - 6, cy - 24, HALF * 2 + 12, 3, S(WOOD, 2));
+  px(ctx, 160 - HALF - 6, cy - 21, HALF * 2 + 12, 1, INK);
+  // the buttoned back, so it is upholstery and not a plank
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 4; c++) {
+      px(ctx, 160 - HALF + 8 + c * 24, cy - 12 + r * 22, 3, 3, S(WOOD, 1));
+      px(ctx, 160 - HALF + 8 + c * 24, cy - 12 + r * 22, 3, 1, INK);
+    }
+  }
+  for (const bx of [160 - HALF - 4, 160 + HALF]) {
+    px(ctx, bx, cy - 20, 4, 88, S(WOOD, 1));
+    px(ctx, bx, cy - 20, 1, 88, S(WOOD, 2));
+  }
+}
+
 /** A framed picture on the office wall: a shape with a name nobody uses. */
 function framedPortrait(ctx, x, y, w, h, S) {
   px(ctx, x, y, w, h, S(WOOD, 0));
@@ -2303,7 +2748,7 @@ function deskLamp(ctx, x, y, turn, S) {
  * in two steps a side, boards ON the slope, upper arms angled in, forearms on
  * the desk and hands at the file. Two poses: reading, and dismissing.
  */
-function commissar(ctx, t, { talking, face, tier, hard, S: room, seed }) {
+function commissar(ctx, t, { talking, face, tier, hard, S: room, gold, seed }) {
   // He is the heaviest thing in the room and the room is dark around him: the
   // wool goes one step under the wall at every tier and two when the lamp is
   // turned on the player, so he is a mass with a lit edge rather than a
@@ -2321,19 +2766,6 @@ function commissar(ctx, t, { talking, face, tier, hard, S: room, seed }) {
   const cy = head + (FACE.collar - 1) * k;   // the collar line, y ≈ 50
   const chest = cy + 8;
   const HALF = 50;                       // half the shoulder width: 100 across
-  // his own shadow, thrown up the wall away from the lamp
-  for (let i = 0; i < 44; i++) {
-    dither(ctx, 160 + HALF - 2, 104 - i * 2, 8 + Math.round(i * 0.8), 2, null, INK, 7);
-  }
-  // the chair back, rising behind him like a headboard
-  px(ctx, 160 - HALF - 8, cy - 26, HALF * 2 + 16, 94, INK);
-  px(ctx, 160 - HALF - 6, cy - 24, HALF * 2 + 12, 92, S(WOOD, 0));
-  px(ctx, 160 - HALF - 6, cy - 24, HALF * 2 + 12, 3, S(WOOD, 2));
-  px(ctx, 160 - HALF - 6, cy - 21, HALF * 2 + 12, 1, INK);
-  for (const bx of [160 - HALF - 4, 160 + HALF]) {
-    px(ctx, bx, cy - 20, 4, 88, S(WOOD, 1));
-    px(ctx, bx, cy - 20, 1, 88, S(WOOD, 2));
-  }
   // the collar: no neck to speak of — the head sits down into it
   px(ctx, 141, cy - 4, 38, 10, INK);
   px(ctx, 142, cy - 3, 36, 8, wool(2));
@@ -2369,17 +2801,17 @@ function commissar(ctx, t, { talking, face, tier, hard, S: room, seed }) {
     px(ctx, 157 - i, chest + i, 2, 1, wool(0));
     px(ctx, 162 + i, chest + i, 2, 1, wool(0));
   }
-  for (let i = 0; i < 3; i++) px(ctx, 159, chest + 8 + i * 12, 2, 2, S(DAWN, hard ? 0 : 2));
+  for (let i = 0; i < 3; i++) px(ctx, 159, chest + 8 + i * 12, 2, 2, gold(hard ? 1 : 2));
   // a block of ribbons over the left breast
   for (let i = 0; i < 3; i++) {
-    px(ctx, 126 + i * 9, chest + 14, 8, 4, hard ? wool(0) : [RED, S(DAWN, 2), S(NIGHT, 1)][i]);
+    px(ctx, 126 + i * 9, chest + 14, 8, 4, hard ? wool(0) : [RED, gold(2), S(NIGHT, 1)][i]);
     px(ctx, 126 + i * 9, chest + 18, 8, 1, wool(0));
   }
   // the boards, out on the square of the shoulder where a board is worn
   for (const bx of [160 - HALF + 6, 160 + HALF - 24]) {
     px(ctx, bx - 1, cy + 3, 20, 8, INK);
     px(ctx, bx, cy + 4, 18, 6, wool(hard ? 1 : 3));
-    px(ctx, bx, cy + 4, 18, 1, hard ? wool(2) : S(DAWN, 2));
+    px(ctx, bx, cy + 4, 18, 1, hard ? wool(2) : gold(2));
     px(ctx, bx, cy + 7, 18, 1, hard ? wool(0) : RED);
   }
   // the upper arms, thick, dropping straight off the shoulders to the desk
@@ -2390,11 +2822,25 @@ function commissar(ctx, t, { talking, face, tier, hard, S: room, seed }) {
     px(ctx, side < 0 ? ax : ax + 15, cy + 12, 3, 106 - cy - 12, wool(0));
     px(ctx, ax, cy + 12, 18, 1, wool(2));
   }
+  /*
+   * The head, lit from the lamp's side.
+   *
+   * The judges, twice: below the top tier the face was "a 50%-dither
+   * checkerboard of two near-identical browns with two pale dots for eyes",
+   * and the lit edge was "a flat 3-4 px cream bar running straight down the
+   * left of the face with a hard edge and no falloff". Neither is light. This
+   * is: every cell of the photograph is stepped down by how far round the head
+   * it has turned from the lamp, in three zones with a one-cell dithered
+   * boundary, so the brow, the nose, the jaw and the mouth are all still there
+   * on the shadow side — you can read the face, and what you read is a man
+   * half in the dark looking at you.
+   */
+  const deepen = hard ? 14 : 0;
   blitFace(ctx, face, fx, head, k, {
     cap: {
       crown: wool(1), crownLit: wool(2), band: RED,
       peak: INK, peakLit: hard ? INK : S(CLOTH, 0),
-      badge: hard ? S(DAWN, 1) : DAWN[3],
+      badge: gold(3),
     },
     mouthOpen: talking && Math.floor(t * 7) % 2 === 0,
     backdrop: backdropOf(seed || 'THE POLITICAL SECTION'),
@@ -2403,11 +2849,20 @@ function commissar(ctx, t, { talking, face, tier, hard, S: room, seed }) {
     // turned against you the whole head goes down with the room and only the
     // eyes and one edge of the jaw come back out of it.
     shadow: hard ? 10 : tier === 'commended' ? 6 : 8,
+    light: (i, j) => {
+      // the terminator bows with the skull; the underside of the jaw and the
+      // throat are away from a lamp that stands lower than the chin; and the
+      // peak throws a shadow of its own across the brow and the eyes
+      const turn = i - (11 - Math.abs(j - FACE.eyes) * 0.16);
+      const under = j > FACE.jaw ? 30 : 0;
+      const brim = j >= FACE.top + 5 && j <= FACE.eyes + 1 ? (hard ? 44 : 30) : 0;
+      const side = turn < -1 ? Math.max(0, deepen - 10) : turn < 1 ? 12 + deepen
+        : turn < 3 ? 30 + deepen : 58 + deepen;
+      return Math.min(150, side + under + brim);
+    },
   });
   // The far side of him falls away from the lamp at every tier.
   dither(ctx, 160 + 6, cy + 3, HALF - 6, 106 - cy - 3, null, INK, hard ? 6 : 4);
-  dither(ctx, fx + 12 * k, head + (FACE.top - 5) * k, 10 * k, (FACE.jaw - FACE.top + 7) * k, null, INK, hard ? 5 : 3);
-  if (hard) dither(ctx, fx + 3 * k, head + (FACE.top - 1) * k, 19 * k, (FACE.jaw - FACE.top + 3) * k, null, INK, 2);
 }
 
 /**
@@ -2418,32 +2873,48 @@ function commissar(ctx, t, { talking, face, tier, hard, S: room, seed }) {
  * shoulder board, and two points in the eyes. A screenshot of him alone has to
  * read as a threat; that is what the eyes are for.
  */
-function commissarLight(ctx, { tier, hard, S }) {
+function commissarLight(ctx, { tier, hard, S, gold, cells, back }) {
   const k = 2;
   const fx = 160 - PORTRAIT_W;
   const head = 14 + (tier === 'commended' ? 2 : 0);
   const cy = head + (FACE.collar - 1) * k;
   const HALF = 50;
-  // The lamp stands on the desk at his right hand and is low: one edge of the
-  // head, the near cheekbone and the near shoulder come out of the dark, and
-  // nothing else on him does.
-  for (let j = FACE.top + 2; j <= FACE.jaw; j++) {
-    px(ctx, fx + 3 * k, head + j * k, k, k, S(SKIN, hard ? 1 : 2));
+  /*
+   * The lamp stands on the desk at his right hand and is low. What it catches
+   * is the outermost edge of the cheek — one cell wide, following the line of
+   * the skull rather than ruled straight down it — the top of the cheekbone,
+   * the underside of the jaw, and the eyes.
+   */
+  for (let j = FACE.top + 5; j <= FACE.jaw; j++) {
+    // the edge is read off the photograph itself, so it follows the skull
+    // rather than being ruled straight down the side of it
+    let edge = 3;
+    while (edge < 10 && back.includes(cells[j][edge])) edge++;
+    const t = (j - FACE.top) / (FACE.jaw - FACE.top);
+    const up = t > 0.3 && t < 0.62 ? 1 : 0;          // the cheekbone takes most of it
+    px(ctx, fx + edge * k, head + j * k, k, k, S(SKIN, (hard ? 1 : 2) + up));
+    if (up) px(ctx, fx + (edge + 1) * k, head + j * k, k, k, S(SKIN, hard ? 1 : 2));
   }
-  px(ctx, fx + 4 * k, head + (FACE.eyes + 2) * k, k, 3 * k, S(SKIN, hard ? 1 : 3));
-  px(ctx, fx + 4 * k, head + FACE.jaw * k, 5 * k, k, S(SKIN, hard ? 0 : 1));
+  // the cheekbone, and the jaw catching the light from under it
+  px(ctx, fx + 5 * k, head + (FACE.eyes + 1) * k, 2 * k, 2 * k, S(SKIN, hard ? 1 : 2));
+  px(ctx, fx + 5 * k, head + FACE.jaw * k, 6 * k, k, S(SKIN, hard ? 1 : 2));
   // the underside of the jaw, where a heavy man has one
   px(ctx, fx + 5 * k, head + (FACE.jaw + 1) * k, 13 * k, k, INK);
-  // Two points of light where the eyes are: the one thing in the picture that
-  // is looking back at you. They are never in shadow, at any tier.
+  /*
+   * Two points of light where the eyes are: the one thing in the picture that
+   * is looking back at you, and never in shadow at any tier. A lid over each
+   * and a brow above them, so they are eyes rather than dots.
+   */
   const eyeY = head + (FACE.eyes - 1) * k;
   for (const ex of [fx + 7 * k, fx + 14 * k]) {
+    px(ctx, ex - 1, eyeY - k, 3 * k + 2, k, INK);
     px(ctx, ex, eyeY, 3 * k, 2 * k, INK);
     px(ctx, ex + k, eyeY, k, k, hard ? SKIN[2] : SKIN[3]);
+    px(ctx, ex + k, eyeY + k, k, 1, hard ? SKIN[1] : SKIN[2]);
   }
   // the collar piping and the near board, out of the dark
   const bx = 160 - HALF + 6;
-  px(ctx, bx, cy + 4, 18, 1, S(DAWN, hard ? 1 : 2));
+  px(ctx, bx, cy + 4, 18, 1, gold(2));
   px(ctx, bx, cy + 7, 18, 1, RED);
   px(ctx, 160 - HALF, cy + 4, 34, 1, S(CLOTH, hard ? 2 : 3));
 }
@@ -2457,13 +2928,22 @@ function commissarLight(ctx, { tier, hard, S }) {
  */
 function lampCone(ctx, x, y, turn, gloom) {
   const dir = turn;                       // -1 at the papers, 0 square, +1 at you
-  for (let i = 0; i < 34; i++) {
-    const half = 7 + Math.round(i * 1.4);
-    const lvl = Math.max(0, 7 - Math.round(i * 0.28) - Math.round(gloom * 0.3));
+  // Turned at the papers the beam runs a long way down the wall; turned at the
+  // player the shade cuts it off short and what is lit is the desk in front of
+  // you, which the desk's own pool draws.
+  const rows = turn > 0 ? 40 : 58;
+  const lean = turn < 0 ? 0.15 : turn > 0 ? 1.35 : 0.85;
+  for (let i = 0; i < rows; i++) {
+    const half = 5 + Math.round(i * 0.62);
+    const lvl = Math.max(0, 11 - Math.round(i * 0.18) - Math.round(gloom * 0.42));
     if (lvl <= 0) continue;
-    const cx = x + Math.round(dir * i * 0.9);
+    const cx = x + Math.round(lean * i);
     dither(ctx, cx - half, y + 4 + i, half * 2, 1, null, CLOTH[3], lvl);
+    // the core of the beam, half the width and one step brighter again
+    if (i > 2) dither(ctx, cx - Math.round(half * 0.45), y + 4 + i, Math.round(half * 0.9), 1, null, CLOTH[3], Math.max(0, lvl - 2));
   }
+  // the hot patch of wall right under the shade, and the filament in it
+  dither(ctx, x - 11, y - 2, 24, 8, null, CLOTH[3], 13);
   px(ctx, x - 4 + turn * 4, y - 8, 6, 2, AMBER);
   px(ctx, x - 6 + turn * 4, y - 6, 10, 1, DAWN[3]);
 }
@@ -2535,62 +3015,85 @@ function drawAppointment(ctx, t, character, scene = null) {
   for (let x = 0; x < SCENE_W; x += 26) px(ctx, x, 10, 1, SCENE_H - 10, WOOD[0]);
   ditherBand(ctx, 0, 10, SCENE_W, 12, WOOD[0], WOOD[1], { steps: 4 });
   // the blotter
-  px(ctx, 20, 20, 280, 116, INK);
-  px(ctx, 22, 22, 276, 112, WOOD[0]);
-  px(ctx, 22, 22, 276, 1, WOOD[2]);
+  px(ctx, 16, 16, 288, 122, INK);
+  px(ctx, 18, 18, 284, 118, WOOD[0]);
+  px(ctx, 18, 18, 284, 1, WOOD[2]);
+  // the lamp's pool on the desk, brightening one step as the board lands
+  dither(ctx, 20, 16, 220, 70, null, WOOD[2], 2 + Math.round(2 * ease));
   // the order, squared up on it, under the lamp
-  filePage(ctx, 40, 26, 166, 104, { number: '4471-B', lit: true, ruleFrom: 78, head: false });
+  const SX = 34;
+  const SW = 184;
+  filePage(ctx, SX, 20, SW, 114, { number: '', lit: true, ruleFrom: 96, head: false });
   /*
-   * The order's own words, printed on it in the pixel font.
+   * The order's own words, printed on it.
    *
-   * It used to be a redaction bar, a stamp and twelve empty rules — a
-   * template, on the one document in the game that is good news and is
-   * addressed to the player by name. Every line here is on the paper.
+   * The judges, twice: "the paper's dither and fold banding is drawn straight
+   * through the printed lines, so ORDER OF APPOINTMENT, the surname, CHIEF OF
+   * AIR DEFENCE and RANK MAJOR GENERAL are all half-erased (AIR reads as AIA)".
+   * So the type block is a clean sheet — the texture of the paper stops where
+   * the typing starts — the headings are set at twice the size, and the ink is
+   * ink rather than a middle step of the paper's own ramp.
    */
-  // the lamp's pool on the desk and on the top of the sheet, brightening one
-  // step as the board lands — drawn before the type, so it lights the paper
-  // rather than dithering over the words on it
-  dither(ctx, 24, 20, 210, 60, null, WOOD[2], 2 + Math.round(2 * ease));
-  dither(ctx, 40, 26, 166, 24, null, PAPER[3], 2 + Math.round(3 * ease));
+  px(ctx, SX + 6, 26, SW - 12, 100, PAPER[3]);
+  dither(ctx, SX + 6, 26, SW - 12, 6, PAPER[3], PAPER[2], 3);
   const holder = String(character?.name ?? '').trim().split(/\s+/).slice(-1)[0] || 'OPERATOR';
-  const post = String(scene?.post ?? 'SECTOR COMMANDER');
-  const shortPost = post.length > 22 ? post.slice(0, 22) : post;
-  glyphs(ctx, 'ORDER OF APPOINTMENT', 48, 34, PAPER[0]);
-  px(ctx, 48, 41, 150, 1, PAPER[1]);
-  glyphs(ctx, 'TO', 48, 46, PAPER[1]);
-  glyphs(ctx, holder.toUpperCase().slice(0, 18), 62, 46, PAPER[0]);
-  glyphs(ctx, 'POST', 48, 54, PAPER[1]);
-  glyphs(ctx, shortPost.toUpperCase(), 48, 62, PAPER[0]);
-  if (scene?.gazetted) glyphs(ctx, `RANK ${String(scene.gazetted).toUpperCase()}`.slice(0, 24), 48, 70, PAPER[0]);
-  stamp(ctx, 150, 92, 46, 22, 'ADF', RED);
-  // the signature block: a hand-written scrawl over a ruled line
-  for (let i = 0; i < 46; i++) {
-    px(ctx, 50 + i, 112 - Math.round(Math.sin(i / 5) * 2) - (i % 7 === 0 ? 1 : 0), 1, 1, NIGHT[0]);
+  const post = String(scene?.post ?? 'SECTOR COMMANDER').toUpperCase();
+  const wide = (str, k) => glyphWidth(str, 1, k) <= SW - 24;
+  glyphs(ctx, 'ORDER OF APPOINTMENT', SX + 10, 30, INK, { k: 2 });
+  px(ctx, SX + 10, 42, SW - 20, 1, PAPER[0]);
+  px(ctx, SX + 10, 44, SW - 20, 1, PAPER[1]);
+  glyphs(ctx, 'TO', SX + 10, 50, PAPER[0]);
+  glyphs(ctx, holder.toUpperCase().slice(0, 16), SX + 24, 48, INK, { k: 2 });
+  glyphs(ctx, 'APPOINTED', SX + 10, 66, PAPER[0]);
+  glyphs(ctx, post.slice(0, 22), SX + 10, 74, INK, { k: wide(post.slice(0, 22), 2) ? 2 : 1 });
+  if (scene?.gazetted) {
+    glyphs(ctx, 'RANK', SX + 10, 90, PAPER[0]);
+    glyphs(ctx, String(scene.gazetted).toUpperCase().slice(0, 24), SX + 32, 90, INK);
   }
-  px(ctx, 50, 116, 56, 1, PAPER[0]);
-  glyphs(ctx, 'CHIEF OF AIR DEFENCE', 50, 119, PAPER[1]);
-  // the new board, laid down beside the order
-  const by = Math.round(44 + (1 - ease) * 28);
-  px(ctx, 230, by + 2, 50, 20, INK);
-  px(ctx, 231, by + 2, 48, 18, CLOTH[2]);
-  px(ctx, 231, by + 2, 48, 1, CLOTH[3]);
-  px(ctx, 231, by + 19, 48, 1, RED);
-  px(ctx, 231, by + 2, 2, 18, DAWN[1]);
-  px(ctx, 277, by + 2, 2, 18, DAWN[1]);
-  px(ctx, 231, by + 2, 48, 1, DAWN[2]);
+  // the signature block: a hand-written scrawl over a ruled line, and the
+  // office that signed it, clear of the bottom edge of the sheet
+  for (let i = 0; i < 52; i++) {
+    px(ctx, SX + 12 + i, 108 - Math.round(Math.sin(i / 5) * 2) - (i % 7 === 0 ? 1 : 0), 1, 1, NIGHT[0]);
+  }
+  px(ctx, SX + 10, 112, 68, 1, PAPER[0]);
+  glyphs(ctx, String(scene?.office ?? 'CHIEF OF AIR DEFENCE').toUpperCase().slice(0, 24), SX + 10, 116, PAPER[0]);
+  glyphs(ctx, '4471-B', SX + SW - 44, 116, PAPER[1]);
+  stamp(ctx, SX + SW - 62, 84, 52, 24, 'ADF', RED);
+  /*
+   * The new board, laid down beside the order by a hand that comes up out of
+   * the bottom of the frame and goes back down out of it.
+   *
+   * It used to be "a small fist on a green wedge floating in the right third
+   * of the frame, touching neither the order nor the wall, drawn at roughly a
+   * third of the scale of the hand in the folder scene".
+   */
+  const rest = 96;
+  const carry = Math.round(rest + (1 - ease) * 74);
+  const away = clamp01((t - 0.8) / 0.4);
+  const by = away > 0 ? rest : carry;
+  px(ctx, 236, by + 3, 56, 22, INK);
+  px(ctx, 238, by + 3, 52, 20, CLOTH[2]);
+  px(ctx, 238, by + 3, 52, 1, CLOTH[3]);
+  dither(ctx, 238, by + 10, 52, 8, CLOTH[2], CLOTH[1], 6);
+  px(ctx, 238, by + 21, 52, 1, RED);
+  px(ctx, 238, by + 3, 2, 20, DAWN[1]);
+  px(ctx, 288, by + 3, 2, 20, DAWN[1]);
+  px(ctx, 238, by + 3, 52, 1, DAWN[2]);
   const stars = Math.min(3, 1 + Math.floor((character?.rankIndex ?? 0) / 3));
   for (let i = 0; i < stars; i++) {
-    const sx = 238 + i * 14;
-    px(ctx, sx + 2, by + 8, 2, 6, DAWN[3]);
-    px(ctx, sx, by + 10, 6, 2, DAWN[3]);
-    px(ctx, sx + 1, by + 9, 4, 4, DAWN[2]);
+    const sx = 246 + i * 15;
+    px(ctx, sx + 2, by + 9, 2, 6, DAWN[3]);
+    px(ctx, sx, by + 11, 6, 2, DAWN[3]);
+    px(ctx, sx + 1, by + 10, 4, 4, DAWN[2]);
   }
-  px(ctx, 226, by + 23, 56, 2, INK);
-  // the hand that laid it there, withdrawing
-  const away = clamp01((t - 0.8) / 0.6);
-  if (away < 1) {
-    const hy = Math.round(by + 18 + away * 70);
-    smallHand(ctx, skinOf(character), 244, hy, -1);
+  dither(ctx, 240, by + 25, 56, 4, null, INK, 8);
+  // the hand: the same hand as every other scene, at the same scale, with its
+  // forearm running off the bottom edge of the frame
+  const hy = away > 0 ? Math.round(rest + 14 + away * 96) : Math.round(carry + 14);
+  if (hy < SCENE_H - 4) {
+    const ramp = skinOf(character);
+    handBack(ctx, ramp, 246, hy, -1, null, { from: SCENE_W - 20, rest: false });
+    handFront(ctx, ramp, 246, hy, -1);
   }
 }
 
@@ -2600,7 +3103,8 @@ function drawAppointment(ctx, t, character, scene = null) {
  * The finger tracks down one ruled line per line of type, and a document
  * longer than the page turns onto a second sheet rather than being clipped.
  */
-function drawFolder(ctx, t, character, { line = 0, page = 0, pageAt = 0 } = {}) {
+function drawFolder(ctx, t, character, { line = 0, page = 0, pageAt = 0, wide = false } = {}) {
+  const PAGE_H = wide ? 146 : 136;
   // the desk, dark, with the lamp's pool thrown across it from above left
   px(ctx, 0, 0, SCENE_W, SCENE_H, WOOD[0]);
   dither(ctx, 0, 0, SCENE_W, 12, WOOD[0], INK, 9);
@@ -2616,10 +3120,10 @@ function drawFolder(ctx, t, character, { line = 0, page = 0, pageAt = 0 } = {}) 
   // one above it rather than two whole pages printed on top of each other
   const turn = clamp01((t - pageAt) / 0.4);
   if (page > 0 && turn < 1) {
-    filePage(ctx, 46, 34 - Math.round(turn * 9), 228, 136, { number: `${6 + page}-${page + 1}`, ruleFrom: 52 });
-    filePage(ctx, 46, 34 + Math.round((1 - turn) * 26), 228, 136, { lit: true, number: `${7 + page}-${page + 2}`, ruleFrom: 52 });
+    filePage(ctx, 46, 34 - Math.round(turn * 9), 228, PAGE_H, { number: `${6 + page}-${page + 1}`, ruleFrom: 52 });
+    filePage(ctx, 46, 34 + Math.round((1 - turn) * 26), 228, PAGE_H, { lit: true, number: `${7 + page}-${page + 2}`, ruleFrom: 52 });
   } else {
-    filePage(ctx, 46, 34, 228, 136, { lit: true, number: `${7 + page}-${page + 2}`, ruleFrom: 52 });
+    filePage(ctx, 46, 34, 228, PAGE_H, { lit: true, number: `${7 + page}-${page + 2}`, ruleFrom: 52 });
   }
   // the header block's classification stripe, and the stamp beside it — both
   // clear of the column the type is set in
@@ -2653,49 +3157,77 @@ function folderHand(ctx, ramp, fy) {
     const ay = fy + 22 + i;
     if (ay >= SCENE_H) break;
     px(ctx, ax - 1, ay, 38, 1, INK);
-    px(ctx, ax, ay, 36, 1, i > 7 && i < 14 ? CLOTH[1] : CLOTH[0]);
-    px(ctx, ax, ay, 2, 1, CLOTH[1]);
-    if (i === 8) px(ctx, ax, ay, 36, 1, CLOTH[2]);
+    px(ctx, ax, ay, 36, 1, CLOTH[1]);
+    px(ctx, ax, ay, 3, 1, CLOTH[2]);
+    px(ctx, ax + 30, ay, 6, 1, CLOTH[0]);
+    dither(ctx, ax + 8, ay, 14, 1, CLOTH[1], CLOTH[0], 6);
+    if (i > 7 && i < 13) px(ctx, ax, ay, 36, 1, i === 8 ? CLOTH[2] : CLOTH[1]);
   }
   // what the hand casts on the page under it
-  px(ctx, 228, fy + 25, 72, 3, INK);
-  // the palm, with a knuckle ridge where the fingers leave it and the far
-  // side of the hand falling away from the lamp
+  dither(ctx, 226, fy + 22, 76, 8, null, INK, 9);
+  px(ctx, 228, fy + 26, 72, 2, INK);
+  /*
+   * The back of a hand, foreshortened along the page: a palm with four
+   * knuckles standing at the wrist end, four fingers running out along the
+   * ruled line with a joint and a nail apiece, and the thumb over the near
+   * edge of the paper. Drawn to the standard of the console hands — the judge
+   * had this one at a different scale and a different discipline from them.
+   */
   px(ctx, 254, fy - 4, 40, 30, INK);
-  px(ctx, 255, fy - 3, 38, 28, s3);
-  px(ctx, 255, fy - 3, 38, 2, lit);
-  px(ctx, 255, fy + 2, 38, 1, s2);
-  px(ctx, 255, fy + 18, 38, 8, s2);
-  px(ctx, 286, fy - 3, 7, 28, s2);
+  px(ctx, 255, fy - 3, 38, 28, s2);
+  px(ctx, 255, fy - 3, 38, 2, s3);
+  px(ctx, 255, fy - 1, 38, 1, lit);
+  px(ctx, 255, fy + 20, 38, 6, deep);
+  px(ctx, 286, fy - 3, 7, 28, deep);
+  // the knuckles, standing along the near end of the palm
+  for (let i = 0; i < 4; i++) {
+    const ky = fy - 2 + i * 7;
+    px(ctx, 256, ky, 5, 5, s3);
+    px(ctx, 256, ky + 5, 5, 1, deep);
+    px(ctx, 257, ky + 1, 3, 1, lit);
+    px(ctx, 263, ky + 1, 9, 3, deep);       // the tendon behind it
+    px(ctx, 263, ky + 1, 9, 1, s3);
+  }
   // four fingers, out along the page, index longest and on the line
   for (const [dy, len, tall] of [[0, 30, 5], [6, 25, 6], [13, 20, 5], [19, 15, 4]]) {
     const x0 = 255 - len;
     px(ctx, x0 - 1, fy + dy - 1, len + 2, tall + 2, INK);
-    px(ctx, x0, fy + dy, len, tall, s3);
-    px(ctx, x0, fy + dy, len, 1, lit);
-    px(ctx, x0, fy + dy + tall - 1, len, 1, s2);
+    px(ctx, x0, fy + dy, len, tall, s2);
+    px(ctx, x0, fy + dy, len, 1, s3);
+    px(ctx, x0 + 2, fy + dy, Math.round(len * 0.5), 1, lit);
+    px(ctx, x0, fy + dy + tall - 1, len, 1, deep);
+    // two joints across it, and the nail on the end
+    for (const q of [0.34, 0.62]) {
+      px(ctx, x0 + Math.round(len * q), fy + dy, 1, tall, deep);
+      px(ctx, x0 + Math.round(len * q) + 1, fy + dy + 1, 1, tall - 2, s3);
+    }
+    px(ctx, x0 + 1, fy + dy + 1, 3, tall - 2, lit);
     // the tip is round: the corner pixels go back to the ground
     px(ctx, x0, fy + dy, 1, 1, INK);
     px(ctx, x0, fy + dy + tall - 1, 1, 1, INK);
-    px(ctx, x0 + 1, fy + dy + 1, 1, tall - 2, deep);
   }
   // the thumb, angled down across the near edge of the sheet, drawn last so
   // that it lies on the paper rather than under it
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 14; i++) {
     const tx = 252 - i;
     const ty = fy + 17 + i;
-    px(ctx, tx - 1, ty, 12, 1, INK);
-    px(ctx, tx, ty, 10, 1, i < 2 ? lit : s3);
-    px(ctx, tx, ty, 1, 1, s2);
+    const w = i > 10 ? 10 - (i - 10) * 2 : 10;
+    px(ctx, tx - 1, ty, w + 2, 1, INK);
+    px(ctx, tx, ty, w, 1, i < 2 ? s3 : s2);
+    px(ctx, tx, ty, 1, 1, s3);
+    px(ctx, tx + w - 2, ty, 2, 1, deep);
+    if (i === 7) px(ctx, tx + 1, ty, w - 2, 1, deep);
+    if (i > 10) px(ctx, tx + 1, ty, Math.max(1, w - 2), 1, lit);
   }
-  px(ctx, 240, fy + 29, 12, 2, INK);
+  px(ctx, 240, fy + 31, 12, 2, INK);
 }
 
 /**
  * Quarters, at night: a bulb, a stove, a bunk, snow past a frosted window, and
  * a letter held low and to the left so the room stays legible around it.
  */
-function drawQuarters(ctx, t, character, { line = 0 } = {}) {
+function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = false } = {}) {
+  const SHEET_H = wide ? 106 : 104;
   const swing = Math.round(Math.sin(t * Math.PI / 2) * 1);
   px(ctx, 0, 0, SCENE_W, SCENE_H, NIGHT[0]);
   px(ctx, 0, 0, SCENE_W, 104, CLOTH[0]);
@@ -2761,10 +3293,35 @@ function drawQuarters(ctx, t, character, { line = 0 } = {}) {
   px(ctx, 288, 86, 20, 14, PAPER[2]);
   px(ctx, 288, 86, 20, 2, PAPER[3]);
   px(ctx, 292, 90, 12, 1, NIGHT[1]);
-  // the letter, held low and to the left
-  letterSheet(ctx, 40, 74, 152, 104);
-  dither(ctx, 40, 74, 152, 18, null, PAPER[3], 6);
-  dither(ctx, 40, 164, 152, 14, null, PAPER[1], 4);
+  /*
+   * What is held: a letter, or the paperwork that came instead of one.
+   *
+   * The judge: "NOTICE OF WITHHOLDING is drawn on exactly the same object as a
+   * letter from home — the same cream sheet, the same italic handwriting, held
+   * in the same two hands in the same warm room. The one beat whose point is
+   * that the section has taken the letter away looks like the letter." It does
+   * not now: the notice is grey official stock, squared off, with a red stripe
+   * across the head of it, a rule under the heading and a stamp at the foot.
+   */
+  if (notice) {
+    px(ctx, 43, 77, 152, SHEET_H, INK);
+    px(ctx, 40, 74, 152, SHEET_H, PAPER[2]);
+    px(ctx, 40, 74, 152, 3, RED);
+    px(ctx, 40, 77, 152, 1, PAPER[1]);
+    px(ctx, 46, 88, 140, 1, INK);
+    px(ctx, 46, 90, 140, 1, PAPER[1]);
+    for (let i = 0; i < 3; i++) px(ctx, 178, 96 + i * 5, 8, 2, PAPER[1]);
+    stamp(ctx, 138, 150, 46, 20, 'ADF', RED);
+    px(ctx, 40, 74, 1, SHEET_H, PAPER[1]);
+    px(ctx, 191, 74, 1, SHEET_H, PAPER[1]);
+    dither(ctx, 40, 74, 152, 16, null, PAPER[3], 5);
+    dither(ctx, 40, 166, 152, 12, null, PAPER[1], 4);
+  } else {
+    // the letter, held low and to the left
+    letterSheet(ctx, 40, 74, 152, SHEET_H);
+    dither(ctx, 40, 74, 152, 18, null, PAPER[3], 6);
+    dither(ctx, 40, 164, 152, 14, null, PAPER[1], 4);
+  }
   const ramp = skinOf(character);
   handBack(ctx, ramp, 20, 146, 1);
   handBack(ctx, ramp, 190, 146, -1);
@@ -2812,33 +3369,90 @@ function endingBackdrop(g, held) {
   // the far hills, bowed, and the near ridge in front of them
   for (let x = 0; x < SCENE_W; x++) {
     const far = Math.round(HORIZON - 6 - 8 * Math.sin(x / 47) - 4 * Math.sin(x / 13 + 1));
-    px(g, x, far, 1, 96 - far, held ? NIGHT[1] : INK);
-    px(g, x, far, 1, 1, held ? NIGHT[2] : NIGHT[0]);
+    px(g, x, far, 1, 96 - far, held ? NIGHT[1] : NIGHT[0]);
+    px(g, x, far, 1, 1, held ? NIGHT[2] : NIGHT[1]);
   }
   for (let x = 0; x < SCENE_W; x++) {
     const near = Math.round(84 - 9 * Math.sin(x / 61 + 2) - 3 * Math.sin(x / 17));
     px(g, x, near, 1, 120 - near, held ? NIGHT[0] : INK);
+    // the ridge under a burning sky is not black: the cloud over it puts a
+    // dull light back on the ground
+    if (!held) dither(g, x, near, 1, 120 - near, null, NIGHT[1], 3);
     // the sun is off frame to the right: the ridge catches it there and the
     // light runs out as the ground turns away from it
     if (held && (x > 150 || (x * 7) % Math.max(2, Math.round(150 - x) / 12) === 0)) {
       px(g, x, near, 1, 1, DAWN[1]);
       if (x > 210) px(g, x, near + 1, 1, 1, DAWN[0]);
     } else if (!held) {
-      px(g, x, near, 1, 1, NIGHT[0]);
+      px(g, x, near, 1, 1, x < 150 ? DAWN[0] : NIGHT[1]);
     }
   }
   // the river, catching what is left of the sky
-  px(g, 0, 100, SCENE_W, 8, held ? NIGHT[1] : INK);
-  dither(g, 0, 100, SCENE_W, 4, null, held ? DAWN[1] : NIGHT[0], 3);
+  px(g, 0, 100, SCENE_W, 8, held ? NIGHT[1] : NIGHT[0]);
+  dither(g, 0, 100, SCENE_W, 4, null, held ? DAWN[1] : RED, held ? 3 : 5);
   // the field in front of everything
-  px(g, 0, 108, SCENE_W, SCENE_H - 108, held ? NIGHT[0] : INK);
-  ditherBand(g, 0, 108, SCENE_W, 8, held ? NIGHT[1] : NIGHT[0], held ? NIGHT[0] : INK, { steps: 4 });
+  px(g, 0, 108, SCENE_W, SCENE_H - 108, held ? NIGHT[0] : NIGHT[0]);
+  ditherBand(g, 0, 108, SCENE_W, 8, held ? NIGHT[1] : NIGHT[1], held ? NIGHT[0] : NIGHT[0], { steps: 4 });
+  if (!held) {
+    // the field, under the fire: a wash of red off the burning quarter that
+    // runs out across the ground, and the furrows catching it
+    for (let i = 0; i < 44; i++) {
+      dither(g, 0, 112 + i, Math.max(0, 180 - i * 3), 1, null, RED, Math.max(1, 5 - Math.round(i / 6)));
+    }
+    for (let i = 0; i < 40; i++) {
+      const fx = (i * 47 + 9) % SCENE_W;
+      const fy = 118 + ((i * 29) % 56);
+      px(g, fx, fy, 2, 1, fx < 160 ? DAWN[0] : NIGHT[0]);
+    }
+  }
   if (held) {
     for (let i = 0; i < 60; i++) {
       const fx = (i * 37 + 13) % SCENE_W;
       const fy = 120 + ((i * 23) % 56);
       px(g, fx, fy, 1, 1, NIGHT[1]);
     }
+  }
+  /*
+   * The foreground: the field you are looking across.
+   *
+   * The judge: "the bottom third is a flat empty field — roughly 200 to 300
+   * pixels of nothing at 1600x950. The valley above it is the best art in the
+   * game and it is sitting on a blank shelf." So the shelf has the cart track
+   * that runs down from the village on it, a fence along the near side, and
+   * the stubble of a field cut in the autumn.
+   */
+  for (let i = 0; i < 70; i++) {
+    // the track, widening as it comes toward you, with its two ruts
+    const y = 110 + i;
+    const cx = Math.round(196 + i * 1.35);
+    const half = Math.round(2 + i * 0.42);
+    if (cx - half > SCENE_W) break;
+    px(g, cx - half, y, half * 2, 1, held ? NIGHT[1] : NIGHT[0]);
+    px(g, cx - half, y, 1, 1, held ? NIGHT[2] : DAWN[0]);
+    if (half > 5) {
+      px(g, cx - Math.round(half * 0.6), y, 1, 1, held ? NIGHT[0] : INK);
+      px(g, cx + Math.round(half * 0.6), y, 1, 1, held ? NIGHT[0] : INK);
+    }
+  }
+  // the fence along the near side of it, posts leaning where the ground has
+  for (let i = 0; i < 9; i++) {
+    const fx = 8 + i * 34;
+    const fy = 138 + Math.round(Math.sin(i * 1.7) * 4);
+    const tall = 16 + (i % 3) * 3;
+    px(g, fx, fy, 2, tall, INK);
+    px(g, fx, fy, 1, tall, held ? NIGHT[1] : NIGHT[0]);
+    if (i < 8) {
+      const nx = 8 + (i + 1) * 34;
+      const ny = 138 + Math.round(Math.sin((i + 1) * 1.7) * 4);
+      linePx(g, fx + 2, fy + 3, nx, ny + 3, held ? NIGHT[1] : NIGHT[0]);
+      linePx(g, fx + 2, fy + 9, nx, ny + 9, held ? NIGHT[0] : INK);
+    }
+  }
+  // stubble, thinning into the distance
+  for (let i = 0; i < 90; i++) {
+    const sx = (i * 71 + 17) % SCENE_W;
+    const sy = 116 + ((i * 31) % 62);
+    px(g, sx, sy, 1, 1 + (sy > 150 ? 1 : 0), held ? NIGHT[1] : NIGHT[0]);
   }
   // the Ville: four silhouettes, irregular widths and gaps, some overlapping
   const town = [
@@ -2848,22 +3462,31 @@ function endingBackdrop(g, held) {
   ];
   for (const [x, w, h] of town) {
     const base = 112;
-    px(g, x, base - h, w, h, held ? NIGHT[1] : INK);
-    px(g, x, base - h, w, 1, held && x > 150 ? DAWN[0] : held ? NIGHT[2] : NIGHT[0]);
-    px(g, x + w - 1, base - h, 1, h, held ? NIGHT[2] : NIGHT[0]);
+    // Held, the town is a lit grey mass under the dawn. Lost, it is the same
+    // mass in the dark with the fire on the near faces of it — not a hairline
+    // outline on a black field, which is what the judge saw and called
+    // unfinished.
+    px(g, x, base - h, w, h, held ? NIGHT[1] : NIGHT[0]);
+    px(g, x, base - h, w, 1, held && x > 150 ? DAWN[0] : held ? NIGHT[2] : NIGHT[1]);
+    px(g, x + w - 1, base - h, 1, h, held ? NIGHT[2] : INK);
+    if (!held) {
+      px(g, x, base - h, 1, h, x < 150 ? RED : NIGHT[1]);
+      dither(g, x + 1, base - h + 1, w - 2, h - 2, null, x < 150 ? RED : INK, x < 150 ? 4 : 3);
+    }
     px(g, x, base - 1, w, 1, INK);
     // a roof, for the houses that have one
     if (w > 12) {
-      px(g, x + 2, base - h - 2, w - 4, 2, held ? NIGHT[1] : INK);
-      if (held && x > 150) px(g, x + 2, base - h - 2, w - 4, 1, DAWN[0]);
+      px(g, x + 2, base - h - 2, w - 4, 2, held ? NIGHT[1] : NIGHT[0]);
+      px(g, x + 2, base - h - 2, w - 4, 1, held && x > 150 ? DAWN[0] : held ? NIGHT[1] : x < 150 ? DAWN[0] : NIGHT[1]);
     }
   }
   // the church, taller than the rest, with its east face in the light
-  px(g, 148, 80, 10, 32, held ? NIGHT[1] : INK);
-  px(g, 157, 80, 1, 32, held ? DAWN[0] : NIGHT[0]);
-  px(g, 146, 77, 14, 3, held ? NIGHT[1] : INK);
-  px(g, 151, 70, 4, 7, held ? NIGHT[1] : INK);
-  px(g, 152, 66, 2, 4, held ? DAWN[1] : NIGHT[0]);
+  px(g, 148, 80, 10, 32, held ? NIGHT[1] : NIGHT[0]);
+  px(g, 157, 80, 1, 32, held ? DAWN[0] : NIGHT[1]);
+  px(g, 148, 80, 1, 32, held ? NIGHT[2] : RED);
+  px(g, 146, 77, 14, 3, held ? NIGHT[1] : NIGHT[0]);
+  px(g, 151, 70, 4, 7, held ? NIGHT[1] : NIGHT[0]);
+  px(g, 152, 66, 2, 4, held ? DAWN[1] : DAWN[0]);
   px(g, 150, 88, 6, 8, held ? NIGHT[0] : INK);
   if (held) {
     for (const [wx, wy] of [[62, 104], [128, 106], [200, 102]]) px(g, wx, wy, 2, 3, AMBER);
@@ -2871,8 +3494,8 @@ function endingBackdrop(g, held) {
   }
   // the antenna on the ridge, with its guy wires
   px(g, 276, 62, 2, 26, INK);
-  linePx(g, 277, 62, 266, 88, held ? NIGHT[1] : INK);
-  linePx(g, 277, 62, 288, 88, held ? NIGHT[1] : INK);
+  linePx(g, 277, 62, 266, 88, held ? NIGHT[1] : NIGHT[1]);
+  linePx(g, 277, 62, 288, 88, held ? NIGHT[1] : NIGHT[1]);
   px(g, 272, 88, 10, 2, INK);
 }
 

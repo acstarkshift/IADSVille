@@ -145,6 +145,12 @@ export function renderDossier(host, state) {
         <div class="score-cell is-word ${character.wounded ? 'is-bad' : ''}"><label>CONDITION</label>
           <b>${character.wounded ? 'INJURED' : 'FIT'}</b></div>
       </div>
+      ${/* What the number means, where the number lives. It is explained once
+           on the first briefing and then printed on the tape, the card, this
+           file and the report for eleven more watches. */ ''}
+      <p class="note">Standing is the figure the file keeps on you, from nothing to a hundred.
+      Seventy-eight and above is commended; below fifteen the file goes to the political
+      section.</p>
       ${next ? `<div class="rank-progress">
         <div class="crew-row is-plain"><span>Toward ${esc(next.rank.en)}</span>
           <b>${next.xpShort ? `${next.xpShort} experience` : 'experience met'}${next.standingShort ? `, standing ${next.rank.standing}` : ''}</b></div>
@@ -296,6 +302,9 @@ export function renderDossier(host, state) {
  * The block appended to a debrief: what this watch did to the record. Returned
  * as markup so the debrief screen can place it, rather than rendering itself.
  */
+/** A long number with room to breathe: 121 940, not 121940. */
+const grouped = (n) => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');
+
 export function serviceSummary(character, service, campaign) {
   if (!character || !service) return '';
   const rank = rankOf(character);
@@ -322,9 +331,11 @@ export function serviceSummary(character, service, campaign) {
 
   const next = nextRank(character, campaign.standing);
   if (next) {
-    rows.push(`<tr><td>Toward ${esc(next.rank.en)}</td><td>${next.xpShort
-      ? `${next.xpShort} experience` : 'experience met'}${next.standingShort
-      ? `, standing ${next.rank.standing}` : ''}</td></tr>`);
+    // "121940 experience, standing 84": a six-figure number with nothing in it
+    // to hold on to, on a row that did not say what it was counting.
+    rows.push(`<tr><td>Still to earn, toward ${esc(next.rank.en)}</td><td>${next.xpShort
+      ? `${grouped(next.xpShort)} experience` : 'experience met'}${next.standingShort
+      ? `, and standing ${next.rank.standing}` : ''}</td></tr>`);
   }
 
   return `<div class="card record-card">
@@ -335,7 +346,12 @@ export function serviceSummary(character, service, campaign) {
         <canvas class="portrait file-photo is-small" width="24" height="30"
           data-seed="${esc(character.name)}" aria-label="Photograph on file"></canvas>
       </span>
-      <span class="ident-board">${rankInsignia(character.rankIndex, { size: 34 })}</span>
+      ${/* The board is captioned: it used to sit under the print with nothing
+            beside it and no word to say what it was. */ ''}
+      <span class="ident-board is-captioned">
+        ${rankInsignia(character.rankIndex, { size: 34, title: rank.en })}
+        <small>${esc(rank.en)}</small>
+      </span>
       <h3>Service record — ${esc(rank.en)} ${esc(character.name)}</h3>
     </div>
     <table class="ledger">${rows.join('')}</table>

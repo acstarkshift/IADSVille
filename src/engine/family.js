@@ -37,11 +37,11 @@
  * Nata writes about the children and numbers her sheets, Vera writes six lines
  * and means all of them, Ilya says the thing and then says it again harder.
  *
- * How the letter arrived is never narrated either. It is shown: a line on the
- * plate above the paper (A LETTER FROM THE VILLE · OPENED AND RESEALED) and,
- * where the section has something to add, its own slip pinned to the sheet.
- * When a letter is withheld there is no letter, and the notice the section
- * sends stands in its place, signed by the section.
+ * How the letter arrived is never narrated either. It is shown once, on the
+ * section's own slip clipped to the sheet, and stencilled on the plate above
+ * the paper only on the surfaces that have no room for a slip. When a letter
+ * is withheld there is no letter, and the notice the section sends stands in
+ * its place, signed by the section.
  */
 
 import { districtOf, rankOf } from './character.js';
@@ -112,10 +112,10 @@ export const LETTERS = [
       },
       grandmother: {
         body: [
-          'The garden is finished for the year and the frost came on the ninth. Paraffin is up by'
-            + ' two again and the shop pretends not to know why.',
           'I have written letters that other people read before, in the last war. There is nothing'
             + ' in this one for them.',
+          'The garden is finished for the year and the frost came on the ninth. Paraffin is up by'
+            + ' two again and the shop pretends not to know why.',
         ],
         sign: 'Keep your boots dry. Your grandmother, Vera.',
       },
@@ -144,10 +144,10 @@ export const LETTERS = [
         body: [
           'The dispensary queue was an hour and ten on Tuesday and an hour on Friday, which they'
             + ' call an improvement. Flour is steady. Paraffin is not.',
-          'I have repainted the kitchen. I last did that the month you enlisted, so you can work out'
-            + ' how much time I have on my hands.',
           'You will hear things about the valley at night. I would rather write to you about'
             + ' flour.',
+          'I have repainted the kitchen. I last did that the month you enlisted, so you can work out'
+            + ' how much time I have on my hands.',
         ],
         sign: 'All well here. Ksenia.',
       },
@@ -162,18 +162,18 @@ export const LETTERS = [
       },
       grandmother: {
         body: [
+          'I have had the cellar aired and the shelves stocked. Do not ask me what for.',
           'Rain all fortnight. The queue at the dispensary is the same queue it was in the last war,'
             + ' with different people standing in it.',
-          'I have had the cellar aired and the shelves stocked. Do not ask me what for.',
         ],
         sign: 'Keep your boots dry. Vera.',
       },
       brother: {
         body: [
-          'Flour is holding and paraffin is a disgrace. The dispensary queue goes round the corner'
-            + ' now and everybody in it has an opinion about the weather.',
           'I have been up on the mill roof after the weathervane. You can see a long way from the'
             + ' mill roof.',
+          'Flour is holding and paraffin is a disgrace. The dispensary queue goes round the corner'
+            + ' now and everybody in it has an opinion about the weather.',
         ],
         sign: 'Ilya.',
       },
@@ -287,8 +287,8 @@ export const LETTERS = [
         body: [
           'The mill quarter took it worst, which you will have seen on whatever it is you look at.'
             + ' Two streets on the river road as well. We are all here.',
-          'I have not asked you a single question in this letter. I noticed it when I read the thing'
-            + ' back, and I have decided to leave it as it is.',
+          'The children went back to school on Tuesday. The elder has a new teacher who cannot say'
+            + ' our name and will not be told how.',
         ],
         sign: 'Nata.',
       },
@@ -343,8 +343,8 @@ export const LETTERS = [
           body: [
             'I have written about the dispensary, the weather and the road, and there is nothing on'
               + ' this page you could not read out to somebody.',
-            'I have written both children\'s names and their ages at the bottom of this page. A month'
-              + ' ago I would not have thought to.',
+            'I have written both children\'s names and their ages at the bottom of this page. The'
+              + ' younger one insisted on it and wrote her own.',
           ],
           sign: 'Nata.',
         },
@@ -352,8 +352,8 @@ export const LETTERS = [
           body: [
             'The road is still closed at the twenty-first kilometre. It has rained for nine days.'
               + ' The queue is no shorter.',
-            'I have enclosed a list of what is in the cellar, itemised, with the quantities. You'
-              + ' will want it one day and you will not want to ask for it then.',
+            'I have enclosed a list of what is in the cellar, itemised, with the quantities. Keep it'
+              + ' in the back of your pay book.',
           ],
           sign: 'Vera.',
         },
@@ -453,11 +453,13 @@ const PERMIT_NOTICE = {
 /**
  * How the post arrived, shown rather than narrated.
  *
- * `plate` goes on the line above the paper, beside the letter's own title, so
- * the player reads A LETTER FROM THE VILLE · OPENED AND RESEALED before a word
- * of the letter. `slip` is the section's own docket, pinned to the sheet where
- * it has something to add. Neither is a narrator: the plate is stencilling and
- * the slip is a piece of paper somebody clipped on.
+ * `slip` is the section's own docket, a piece of paper clipped to the sheet.
+ * `plate` is the same fact stencilled short, for the surfaces that have no
+ * room for a slip — the dossier's correspondence list. One of the two, never
+ * both on one screen: the quarters scene and the report used to stencil
+ * OPENED AND RESEALED on the plate above the letter and then clip a slip to
+ * the sheet saying the envelope had been opened and resealed, which is the
+ * same sentence twice, eighteen inches apart.
  */
 const DISPOSITIONS = {
   unopened: {
@@ -515,15 +517,16 @@ function recordOnFile(campaign, id, disposition) {
 
 function letterPayload(template, disposition, hh, ctx, family) {
   const lines = template.lines(hh, ctx) ?? [];
+  const slip = dispositionNote(disposition);
   return {
     id: template.id,
     tm: template.tm,
     title: template.title,
     disposition,
-    /** The stencilled line above the paper. */
-    plate: dispositionPlate(disposition),
+    /** The stencil above the paper, only where no slip says the same thing. */
+    plate: slip ? null : dispositionPlate(disposition),
     /** The section's slip, clipped to the sheet. */
-    note: dispositionNote(disposition),
+    note: slip,
     heldCount: family.withheld.length,
     lines,
     /** The letter without its salutation and signature, for a one-line quote. */
@@ -533,14 +536,20 @@ function letterPayload(template, disposition, hh, ctx, family) {
   };
 }
 
-function noticePayload(notice, disposition, family, standsFor = null) {
+function noticePayload(notice, disposition, family, standsFor = false) {
   return {
     id: notice.id,
     tm: notice.tm,
     title: notice.title,
     disposition,
-    // A notice of withholding says on its face what it is standing in for.
-    plate: standsFor ? `IN PLACE OF ${standsFor}` : dispositionPlate(disposition),
+    /*
+     * A notice of withholding says on its face what it is standing in for, and
+     * it says it as English. It used to stencil the withheld letter's own
+     * headline after the words IN PLACE OF, and the headlines are sentences,
+     * so four of the six produced NOTICE OF WITHHOLDING · IN PLACE OF THE ROAD
+     * IS CLOSED FOR WORKS.
+     */
+    plate: standsFor ? 'IN PLACE OF A LETTER FROM THE VILLE' : dispositionPlate(disposition),
     note: null,
     heldCount: family.withheld.length,
     lines: notice.lines(),
@@ -599,7 +608,7 @@ export function recordFamily(campaign, result, tierId) {
   if (candidate && withholding) {
     family.withheld.push({ id: candidate.id, sinceWatch: watch });
     recordOnFile(campaign, candidate.id, 'withheld');
-    payload = noticePayload(WITHHELD_NOTICE, 'withheld', family, candidate.title);
+    payload = noticePayload(WITHHELD_NOTICE, 'withheld', family, true);
   } else if (candidate) {
     const disposition = tierId === 'commended' ? 'unopened' : 'resealed';
     const built = letterPayload(candidate, disposition, hh, ctx, family);
@@ -669,8 +678,8 @@ export function familyBriefingNote(campaign, missionId = null) {
   }
   const last = family.lastDisposition;
   if (last?.disposition === 'withheld' && last.watch === (campaign.history?.length ?? 0)) {
-    return 'Somewhere in the sector office there is a letter addressed to you. The office knows'
-      + ' what it says. You do not.';
+    return 'Somewhere in the sector office there is a letter addressed to you, and somebody there'
+      + ' has read it.';
   }
   return null;
 }

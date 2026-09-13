@@ -1985,6 +1985,25 @@ table.ledger .down { color: var(--hostile); }
     margin: 8px 0 4px; font-size: 11px;
   }
 }
+/*
+ * A stamp is applied to a clear part of the form, not across the type.
+ *
+ * The judge: "the red rotated stamp is printed across the end of the first
+ * paragraph, so both the stamp's second line and the words are unreadable",
+ * and on the posting order "the stamp straddles the card's bottom-right border
+ * and its second line, TM ADF, is cut in half by it". So the head of every
+ * stamped card keeps a gutter for it, and a one-line card is tall enough to
+ * take the impression inside its own edges.
+ */
+@media (min-width: 901px) {
+  .record-card > h3,
+  .record-card > .ident-row,
+  .record-card > p:first-of-type,
+  .record-card > .record-stamp + h3 + p { padding-right: 178px; }
+  .record-card.is-tight { min-height: 78px; display: flex; flex-direction: column; justify-content: center; }
+  .record-card.is-tight > p { padding-right: 178px; }
+  .record-card.is-tight .record-stamp { top: 50%; transform: translateY(-50%) rotate(-4deg); }
+}
 .record-stamp .tm { display: block; }
 .record-stamp .en { display: block; font-size: 8.5px; opacity: .9; }
 .record-stamp + .score-grid { margin-top: 26px; }
@@ -2275,6 +2294,20 @@ table.ledger .down { color: var(--hostile); }
  */
 /* The scene host: the whole window, black, with the picture centred in it. */
 .scene { position: fixed; inset: 0; z-index: 60; background: #000; overflow: hidden; font-family: var(--font-mono); }
+/*
+ * On a phone the picture cannot fill a screen twice as tall as it is wide, so
+ * what is left over is the dark of the room the player is sitting in rather
+ * than a black void with a bordered empty box in it: the same ink, with the
+ * same grain the scenes are dithered in, and the picture and the words set as
+ * one group in the middle of it.
+ */
+.scene.is-stacked {
+  background-color: #0a0d0a;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(74, 79, 72, .16) 0 2px, transparent 2px 4px),
+    repeating-linear-gradient(90deg, rgba(74, 79, 72, .16) 0 2px, transparent 2px 4px);
+  background-size: 4px 4px, 4px 4px;
+}
 .scene[hidden] { display: none; }
 /* A wordless beat has no words: the box is hidden, and it has to stay hidden
    against its own `display: flex`. */
@@ -2315,14 +2348,16 @@ table.ledger .down { color: var(--hostile); }
 .scene-slip {
   position: relative; display: block; flex: 0 0 auto; align-self: flex-start;
   max-width: 72%; margin: calc(2px * var(--scene-scale, 3)) 0 calc(3px * var(--scene-scale, 3)) calc(3px * var(--scene-scale, 3));
-  padding: calc(1.6px * var(--scene-scale, 3)) calc(2.4px * var(--scene-scale, 3)) calc(1.2px * var(--scene-scale, 3));
+  /* the top edge is left clear for the wire clip: the loop used to land on
+     the first line of the docket and eat letters out of it */
+  padding: calc(3.4px * var(--scene-scale, 3)) calc(2.4px * var(--scene-scale, 3)) calc(1.2px * var(--scene-scale, 3));
   font-size: calc(2.9px * var(--scene-scale, 3)); line-height: 1.3; letter-spacing: .03em;
   font-style: normal; color: #3a3226; background: #cdbf9c;
   border: 1px solid #6f6552;
   /* the torn lower edge of a docket, in the paper's own two inks */
   border-bottom: 0;
   box-shadow: calc(1px * var(--scene-scale, 3)) calc(1.4px * var(--scene-scale, 3)) 0 rgba(10, 13, 10, .5);
-  transform: rotate(-1.6deg);
+  transform: rotate(-1.2deg);
 }
 /* the tear along the bottom */
 .scene-slip::after {
@@ -2332,7 +2367,7 @@ table.ledger .down { color: var(--hostile); }
 }
 /* the wire clip that holds it to the sheet */
 .scene-slip::before {
-  content: ''; position: absolute; left: 12%; top: calc(-2.6px * var(--scene-scale, 3));
+  content: ''; position: absolute; left: 12%; top: calc(-2.2px * var(--scene-scale, 3));
   width: calc(6px * var(--scene-scale, 3)); height: calc(5px * var(--scene-scale, 3));
   border: calc(.9px * var(--scene-scale, 3)) solid #6b7168; border-bottom: 0; border-radius: 40% 40% 0 0;
 }
@@ -2391,9 +2426,17 @@ table.ledger .down { color: var(--hostile); }
 .scene.is-stacked .scene-body { flex: 0 1 auto; }
 .scene.is-stacked .scene-speaker { font-size: 10px; margin-bottom: 6px; }
 .scene.is-stacked .scene-prompt { font-size: 11px; right: 14px; bottom: 8px; }
-.scene.is-stacked[data-kind="printout"] .scene-text, .scene.is-stacked[data-kind="quarters"] .scene-text, .scene.is-stacked[data-kind="folder"] .scene-text {
-  background: #ebe7d9; box-shadow: 0 0 0 2px #cfd8cc, 0 0 0 4px #0a0d0a;
+/* On a phone the letter and the file page run off the bottom of the picture
+   and carry on down the screen: the panel is the same sheet, so it takes the
+   paper's own ink and no frame of its own. */
+.scene.is-stacked[data-kind="quarters"] .scene-text,
+.scene.is-stacked[data-kind="folder"] .scene-text {
+  background: #f4efe2; box-shadow: none; color: #23261f;
+  border-left: 1px solid #b2a482; border-right: 1px solid #b2a482;
+  border-bottom: 2px solid #b2a482;
+  padding: 4px 14px 22px;
 }
+.scene.is-stacked[data-kind="folder"] .scene-text { background: #ded3b8; }
 /*
  * On a phone the tape's panel IS the paper: the machine is at the bottom of
  * the picture, the sheet rises out of it, and this is the same sheet carrying
@@ -2401,9 +2444,19 @@ table.ledger .down { color: var(--hostile); }
  */
 .scene.is-stacked[data-kind="printout"] .scene-text {
   font-size: 13px; justify-content: flex-end; overflow: hidden;
-  background: #efe9d8; box-shadow: none;
-  border-left: 5px dotted #b2a482; border-right: 5px dotted #b2a482;
-  padding: 12px 12px 6px;
+  background: #f4efe2; box-shadow: none; color: #23261f;
+  /* the sprocket margins of the drawn sheet, carried up the panel at the same
+     pitch, so the paper in the picture and the paper under the words are one
+     piece of paper */
+  border-left: 11px solid #ebe4d2; border-right: 11px solid #ebe4d2;
+  border-top: 3px dotted #b2a482;
+  padding: 10px 10px 4px;
+  background-image:
+    repeating-linear-gradient(180deg, transparent 0 5px, #b2a482 5px 8px, transparent 8px 13px),
+    repeating-linear-gradient(180deg, transparent 0 5px, #b2a482 5px 8px, transparent 8px 13px);
+  background-size: 3px 100%, 3px 100%;
+  background-position: -7px 0, calc(100% + 7px) 0;
+  background-repeat: repeat-y, repeat-y;
 }
 .scene.is-stacked[data-kind="printout"] .scene-body { flex: 0 0 auto; overflow: visible; }
 .scene.is-stacked[data-kind="printout"] .scene-prompt { bottom: 4px; right: 12px; color: #6f6552; }
@@ -2530,11 +2583,37 @@ table.ledger .down { color: var(--hostile); }
  * missing-glyph box, and it appeared that way three times in a new player's
  * first minute. It gets its own cell beside the name instead.
  */
+/* the menu's file head: the print, the board and the name, on one line */
 .ident-row { display: flex; align-items: center; gap: 14px; margin: 2px 0 12px; }
+.ident-row .file-photo { width: 72px; height: 90px; border-width: 2px; }
+.ident-row .file-ident-photo::after { width: 24px; height: 24px; right: 4px; bottom: 7px; }
 .ident-board { display: block; flex: 0 0 auto; line-height: 0; }
+/* a board with its rank written under it, so it is captioned rather than
+   sitting on the form as an unexplained sprite */
+.ident-board.is-captioned { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.ident-board.is-captioned small {
+  line-height: 1.2; font-size: 8px; letter-spacing: .14em; color: var(--ink-dim);
+  text-transform: uppercase; max-width: 68px; text-align: center;
+}
 .ident-name { display: flex; flex-direction: column; gap: 3px; }
 .ident-name b { font-size: 15px; color: var(--ink-bright); letter-spacing: .06em; }
 .ident-name small { font-size: 10px; letter-spacing: .14em; color: var(--ink-dim); text-transform: uppercase; }
+
+
+/* the key under the map: the battery letters and what they are */
+.map-key { margin: 8px 0 0; padding: 0; }
+.map-key ul {
+  display: flex; flex-wrap: wrap; gap: 4px 22px; margin: 0; padding: 0; list-style: none;
+  font-size: 10px; letter-spacing: .1em; color: var(--ink-dim); text-transform: uppercase;
+}
+.map-key li { display: flex; align-items: baseline; gap: 6px; }
+.map-key b { color: var(--ink-bright); font-size: 11px; }
+.map-key li.is-own b, .map-key li.is-own { color: var(--good, #7fd6a2); }
+.map-key small { font-size: 9px; opacity: .75; letter-spacing: .08em; }
+.map-key-mark {
+  font-size: 12px; font-weight: 700; letter-spacing: 0;
+  fill: #dff0e2; stroke: #06120b; stroke-width: 2.8px; paint-order: stroke fill;
+}
 
 /*
  * The briefing's sector map.

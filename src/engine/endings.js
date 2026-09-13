@@ -169,6 +169,12 @@ export function composeEnding(result, character, { narrativePressure = true, fam
     title: ending.title,
     subtitle: ending.subtitle,
     lines,
+    /*
+     * One sentence for the card the player is left sitting on, and it is the
+     * next fact rather than the last one. The card used to reprint the
+     * ending's own first line, one beat after the scene had typed it out.
+     */
+    card: ending.card ?? null,
     standing: ending.standing,
     reading: r,
   };
@@ -204,6 +210,49 @@ function householdPhrase(character) {
   return householdOf(character).en;
 }
 
+/**
+ * The household as the subject of a sentence.
+ *
+ * Every ending used to close its family thread the same way — the household
+ * label, an em dash, and a clause bolted on — which is a caption four times
+ * over on the paragraphs the player is meant to feel. Two of the four
+ * households are plural ("Your sister Nata, and her two children"), so the
+ * sentences below are written with verbs that do not inflect for number.
+ */
+function householdSubject(character) {
+  const phrase = householdPhrase(character);
+  return phrase.includes(',') ? `${phrase},` : phrase;
+}
+
+/**
+ * Damage as a review writes it.
+ *
+ * A percentage that has run to the end of its scale is the simulation's own
+ * number showing through the paperwork: no clerk writes "100% damage" about a
+ * street. Past ninety-five the return says what it means, and everything below
+ * that keeps the figure, because a figure is what a return carries.
+ */
+function harmPhrase(harm) {
+  const pct = Math.round((harm ?? 0) * 100);
+  if (pct >= 95) return 'a total loss';
+  if (pct <= 0) return 'undamaged';
+  return `assessed at ${pct}% damage`;
+}
+
+/**
+ * The two places in one clause, so a night that did the same thing to both is
+ * not reported as the same sentence twice with one word changed.
+ */
+const HARM_PLURAL = { 'a total loss': 'total losses' };
+function harmPair(a, b, nameA, nameB, past = false) {
+  const pa = harmPhrase(a);
+  const pb = harmPhrase(b);
+  const was = past ? 'was' : 'is';
+  const were = past ? 'were' : 'are';
+  if (pa === pb) return `${nameA} and ${nameB} ${were} both ${HARM_PLURAL[pa] ?? pa}`;
+  return `${nameA} ${was} ${pa} and ${nameB} ${was} ${pb}`;
+}
+
 export const ENDINGS = {
   /**
    * The state's preferred outcome, and the one it will decorate you for. It is
@@ -214,8 +263,10 @@ export const ENDINGS = {
     title: 'ПРИКАЗ ВЫПОЛНЕН',
     subtitle: 'THE ORDER WAS CARRIED OUT',
     plainTitle: 'PALACE HELD, VILLE LOST',
-    plainSummary: (r) => `The palace stands. The Ville took ${Math.round(r.villeHarm * 100)}% damage and ${r.casualties} casualties.`,
+    plainSummary: (r) => `The palace stands. The Ville is ${harmPhrase(r.villeHarm)}, with ${r.casualties} casualties.`,
     standing: 14,
+    card: 'Your file closes on this watch with a recommendation in it. The recommendation does not'
+      + ' mention the valley.',
     lines: (r, character) => [
       `The presidential palace at ${CAPITAL.en} is undamaged. The state broadcast at 0600 described the`
         + ' defence of the capital as exemplary and did not mention the western valley.',
@@ -232,8 +283,8 @@ export const ENDINGS = {
           + ' adherence to the priority of fires under difficult conditions.',
       `You are granted seven days' leave, to be taken at a destination of the ministry's choosing.`
         + ' The Ville is not on the list of permitted destinations while the area is being cleared.',
-      `${householdPhrase(character)} — no notification has been received either way. Notification, where`
-        + ' it is made, is made in writing.',
+      `${householdSubject(character)} had no notification by morning, either way. Notification,`
+        + ' where it is made, is made in writing.',
     ],
   },
 
@@ -246,12 +297,13 @@ export const ENDINGS = {
     title: 'ОТСТУПЛЕНИЕ ОТ ПРИКАЗА',
     subtitle: 'DEPARTURE FROM THE ORDER',
     plainTitle: 'VILLE HELD, PALACE LOST',
-    plainSummary: (r) => `The Ville stands. The palace took ${Math.round(r.palaceHarm * 100)}% damage.`,
+    plainSummary: (r) => `The Ville stands. The palace is ${harmPhrase(r.palaceHarm)}.`,
     standing: -45,
+    card: 'You are held at the sector office. The tribunal sits when the political section can'
+      + ' spare an officer for it.',
     lines: (r, character) => [
-      `The presidential palace at ${CAPITAL.en} was struck during the night and is assessed as`
-        + ` ${Math.round(r.palaceHarm * 100)}% destroyed. The state broadcast has not yet described`
-        + ' this.',
+      `The presidential palace at ${CAPITAL.en} was struck during the night and is`
+        + ` ${harmPhrase(r.palaceHarm)}. The state broadcast has not yet described this.`,
       `The Ville is standing. ${r.casualties ? `${r.casualties} casualties are recorded` : 'No casualties are recorded'}`
         + ' in the valley, against the eleven aircraft that came down it.',
       r.orderRefused
@@ -262,8 +314,8 @@ export const ENDINGS = {
           + ' transmitted the acknowledgement yourself.',
       'You are relieved of the watch and detained pending a hearing before a military tribunal of the'
         + ' political section. Your equipment has been signed for by your relief.',
-      `${householdPhrase(character)} — reached by telephone from the crossing at first light. Everybody`
-        + ' in the household is accounted for. The call was three minutes and was monitored.',
+      `${householdSubject(character)} will have had your call by now. It went through from the`
+        + ' crossing at first light, everybody in the house is accounted for, and it was monitored.',
       'The charge sheet says that the order was clear and that you understood it. Both of those are'
         + ' true, and you have said so.',
     ],
@@ -278,11 +330,13 @@ export const ENDINGS = {
     title: 'РАЗДЕЛЁННЫЙ ОГОНЬ',
     subtitle: 'FIRES DIVIDED',
     plainTitle: 'BOTH DAMAGED',
-    plainSummary: (r) => `The palace took ${Math.round(r.palaceHarm * 100)}% damage; the Ville took ${Math.round(r.villeHarm * 100)}% and ${r.casualties} casualties.`,
+    plainSummary: (r) => `${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')}, with ${r.casualties} casualties.`,
     standing: -12,
+    card: 'The finding goes into the file tonight. Nobody at the district has asked to see you'
+      + ' about it.',
     lines: (r, character) => [
-      `Both places were struck. The palace is assessed at ${Math.round(r.palaceHarm * 100)}% damage and the`
-        + ` Ville at ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties in the valley.`,
+      `Both places were struck. ${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')},`
+        + ` with ${r.casualties} casualties recorded in the valley.`,
       'The review finds that fires were divided between a designated defended place and an area that was'
         + ' not one, and that this division reduced the effect achieved at both.',
       r.displaced
@@ -297,8 +351,9 @@ export const ENDINGS = {
       r.homeDistrictHit
         ? `${homeSentence(character)} is on the damage returns.`
         : `${homeSentence(character)} is not on the damage returns.`,
-      `${householdPhrase(character)} — the sector has undertaken to forward any notification, and has`
-        + ' undertaken it in writing. Nothing else about this night was put in writing for you.',
+      `${householdSubject(character)} will be notified if there is anything to notify, and the`
+        + ' sector has undertaken that in writing. Nothing else about tonight was put in writing'
+        + ' for you.',
       'You remain on the watch roster. Nobody has said anything to you about it, which is the outcome'
         + ' most people in this service would take.',
     ],
@@ -313,8 +368,10 @@ export const ENDINGS = {
     title: 'ОБА ГОРОДА',
     subtitle: 'BOTH CITIES',
     plainTitle: 'BOTH HELD',
-    plainSummary: (r) => `Both places held: palace ${Math.round(r.palaceHarm * 100)}% damage, the Ville ${Math.round(r.villeHarm * 100)}%.`,
+    plainSummary: (r) => `Both places held: the palace ${harmPhrase(r.palaceHarm)}, the Ville ${harmPhrase(r.villeHarm)}.`,
     standing: 6,
+    card: 'The file is annotated and closed. You are on the same roster in the morning, at the'
+      + ' same seat.',
     lines: (r, character) => [
       `The palace is intact. The Ville is standing${r.casualties ? `, with ${r.casualties} casualties recorded` : ' and no casualties are recorded'}.`
         + ` ${r.sorties || 28} aircraft were committed against this sector and both places were held.`,
@@ -326,11 +383,12 @@ export const ENDINGS = {
           + ' batteries. You have said that you did not know. This has been recorded.'
         : 'The political section has asked how the western axis came to be engaged at all. You have'
           + ' explained the geometry twice. It has been recorded both times.',
-      `${householdPhrase(character)} — all accounted for. The line to the Ville was working by morning`
-        + ' and you were permitted one call.',
+      `${householdSubject(character)} will not be on any list from tonight. The line to the Ville`
+        + ' was working by morning and you were permitted one call.',
       'You are not decorated for this. A decoration would require the citation to describe what was'
         + ' defended, and one of the two things you defended does not officially exist.',
-      'Your file is annotated. The annotation is a single word and you are not shown it.',
+      'Your file is annotated in one word. You are not shown it, and it goes with the file to your'
+        + ' next posting and to the one after that.',
     ],
   },
 
@@ -344,8 +402,10 @@ export const ENDINGS = {
     title: 'ПОЗИЦИЯ СОХРАНЕНА',
     subtitle: 'THE POSITION WAS PRESERVED',
     plainTitle: 'YOU SURVIVED; BOTH CITIES LOST',
-    plainSummary: (r) => `You displaced and the post was not hit. The palace took ${Math.round(r.palaceHarm * 100)}% damage and the Ville ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties.`,
+    plainSummary: (r) => `You displaced and the post was not hit. ${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')}, with ${r.casualties} casualties.`,
     standing: -38,
+    card: 'The post stands where it moved to. The two cities are somebody else\'s file from'
+      + ' tomorrow.',
     lines: (r, character) => [
       /*
        * Two figures in this ending used to be invented. The strike package did
@@ -361,13 +421,13 @@ export const ENDINGS = {
       'BASTION was off the air for the three and a half minutes that took, and for the time after it'
         + ' while the set warmed and the crews found the picture again. Both raids ran through that'
         + ' window.',
-      `The palace is assessed at ${Math.round(r.palaceHarm * 100)}% damage. The Ville is assessed at`
-        + ` ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties recorded in the valley.`,
+      `${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')}, with ${r.casualties}`
+        + ' casualties recorded in the valley.',
       r.homeDistrictHit
         ? `${homeSentence(character)} is on the damage returns.`
         : `${homeSentence(character)} is on the damage returns, along with the rest of it.`,
-      `${householdPhrase(character)} — no notification. The line to the valley is down and the sector`
-        + ' has no crew to spare for it.',
+      `${householdSubject(character)} had no notification. The line to the valley is down and the`
+        + ' sector has no crew to spare for it.',
       'The review will establish that the displacement was correct by the manual. It will not ask'
         + ' what the battery was for. Nobody is going to ask you that.',
     ],
@@ -382,20 +442,23 @@ export const ENDINGS = {
     title: 'ПОСТ УТРАЧЕН',
     subtitle: 'THE POST WAS LOST',
     plainTitle: 'YOUR POSITION WAS OVERRUN',
-    plainSummary: (r) => `The forward post was destroyed. The palace ended at ${Math.round(r.palaceHarm * 100)}% damage and the Ville at ${Math.round(r.villeHarm * 100)}%.`,
+    plainSummary: (r) => `The forward post was destroyed. ${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')}.`,
     standing: -55,
+    card: 'The post is written off on the equipment return. The people who were on it are listed'
+      + ' separately, and that list is short.',
     lines: (r, character) => [
       'The third axis was not engaged in time. The forward post was struck while the battalion was'
         + ' still guiding, and the watch continued for another'
         + ` ${spellCount(Math.max(1, Math.round(r.playedOutS / 60)))} minutes without anybody on`
         + ' it.',
-      `In that time the palace reached ${Math.round(r.palaceHarm * 100)}% damage and the Ville`
-        + ` ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties in the valley. The`
-        + ' batteries that were already engaged finished their engagements and then stopped, because'
-        + ' nobody was left to give them anything else.',
+      `In that time ${harmPair(r.palaceHarm, r.villeHarm, 'the palace', 'the Ville', true)}, and`
+        + ` the valley's returns came up carrying ${r.casualties} names. The batteries that were already`
+        + ' engaged finished their engagements and then stopped, because nobody was left to give'
+        + ' them anything else.',
       'The review will find that the post neither displaced nor engaged the third axis. It will not'
         + ' record what either of those would have cost the two cities, because it was not asked to.',
-      `${householdPhrase(character)} — the notification, when it is made, will not be made to you.`,
+      `${householdSubject(character)} will hear from the district office in writing, whenever the`
+        + ' district office gets to it. You are not on the list of people it writes to.',
       'The sector will record the loss of the post as an equipment casualty, because the alternative'
         + ' heading requires a signature from the political section and nobody wants to ask for one'
         + ' tonight.',
@@ -410,9 +473,10 @@ export const ENDINGS = {
     plainTitle: 'BOTH LOST',
     plainSummary: (r) => `The palace and the Ville were both destroyed. ${r.casualties} casualties.`,
     standing: -60,
+    card: 'The sector office is making up returns for two places it no longer defends.',
     lines: (r, character) => [
-      `The presidential palace and the Ville are both destroyed. ${r.casualties} casualties are`
-        + ' recorded in the valley, and the figure for the capital has not been released.',
+      'The presidential palace and the Ville are both destroyed. The valley\'s returns carry'
+        + ` ${r.casualties} names, and the figure for the capital has not been released.`,
       'The post is intact. Nobody attacked it in the end, or nobody attacked it successfully, and the'
         + ' distinction is not one the review will trouble itself with.',
       `The raid was ${r.sorties || 28} aircraft against six batteries with no resupply behind them.`
@@ -420,7 +484,8 @@ export const ENDINGS = {
       r.homeDistrictHit
         ? `${homeSentence(character)} was among the quarters struck.`
         : `Every quarter was struck, ${homePhrase(character)} among them.`,
-      `${householdPhrase(character)} — no notification. There is nobody at the sector office to ask.`,
+      `${householdSubject(character)} had no notification, and there is nobody left at the sector`
+        + ' office to ask.',
       'You are removed from the watch roster and referred to the political section. The referral does'
         + ' not specify a charge. They rarely do at this stage.',
     ],

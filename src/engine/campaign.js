@@ -330,25 +330,96 @@ export function consequenceFor(campaign, { narrativePressure = true } = {}) {
     ],
   }[tier.id];
 
-  if (marks >= 3 && (tier.id === 'flagged' || tier.id === 'condemned')) {
-    lines.push(`This is the ${ordinal(marks)} entry of its kind in your file.`);
-  }
+  const markLine = marks >= 3 && (tier.id === 'flagged' || tier.id === 'condemned')
+    ? `This is the ${ordinalWord(marks)} entry of its kind in your file.` : null;
+  if (markLine) lines.push(markLine);
   lines.push(supplyLine(tactical));
 
   /*
    * The same entry twice, for two mouths.
    *
    * `lines` is the form: it is printed on the report under FORM 4471-B, and a
-   * form is allowed a label, a colon and a percentage. `spokenLines` is what
-   * the man in the office reads out, and no man reads "SUPPLY: Allocation
-   * reduced to 95%." aloud to another man. Everything above the supply line is
-   * already a sentence and is shared between them.
+   * form is allowed a label, a colon and a percentage — and a form is allowed
+   * to say the same thing every month, because that is what a form is.
+   *
+   * `spokenLines` is what the man in the office reads out, and a man does not.
+   * He said the identical five sentences on every evening of the campaign,
+   * which made the one recurring character in the game a form letter read
+   * aloud. Now he says the entry, then one thing the entry costs you this
+   * month, and he only mentions the allocation on a night it actually moved.
    */
-  const spokenLines = [...lines.slice(0, -1), supplySpoken(tactical)];
+  const previous = campaign.history?.[campaign.history.length - 2]?.tier ?? null;
+  const supplyMoved = previous === null || previous !== tier.id || !tactical.reloadsAllowed;
+  const spokenLines = [
+    lines[0],
+    monthlyLine(tier.id, campaign),
+    markLine,
+    supplyMoved ? supplySpoken(tactical) : null,
+  ].filter(Boolean);
 
   return {
     tier, modifiers: tactical, title: `FILE ENTRY — ${tier.label}`, lines, spokenLines,
   };
+}
+
+/**
+ * What the file entry costs you this month, in his mouth.
+ *
+ * Four per tier, taken in turn by the number of watches the file carries, so a
+ * player who is noted six times hears six different consequences instead of
+ * the same sentence about a correspondence allowance six times. Deterministic,
+ * like everything else here: the same file on the same watch always hears the
+ * same line.
+ */
+const MONTHLY = {
+  commended: [
+    'Your housing category is revised upward by one grade. Somebody in this office signed for'
+      + ' that, and it was me.',
+    'Your travel category goes up a grade. It does not extend to the western valley.',
+    'The district asked this office for a name on Tuesday and I gave them yours. You will hear'
+      + ' nothing more about it.',
+    'Your correspondence allowance is increased by two letters a month. You are not obliged to'
+      + ' use it.',
+  ],
+  satisfactory: [
+    'Nothing further is required of you at this time.',
+    'Your file goes back in the drawer tonight with one more page in it.',
+    'Your allowances are unchanged this month. The clerk brings the paper round on Thursday.',
+    'The tape is filed. Nobody above me has asked for it.',
+  ],
+  noted: [
+    'Your correspondence allowance is unchanged this month.',
+    'The district has asked for a copy of the tape. I have not sent it yet.',
+    'Your leave application for the eleventh is held until the review closes. It is not refused.',
+    'You are on a list this month that you were not on last month. It is a short list.',
+  ],
+  flagged: [
+    'Your file has been forwarded to the political section for assessment.',
+    'Your correspondence is stopped while the assessment runs. Anything addressed to you stays in'
+      + ' this office.',
+    'You will be asked to account for the discrepancy. You will not be told which one.',
+    'A second officer has read the tape. He is not from this sector and you have not met him.',
+  ],
+  condemned: [
+    'Your unit is reassigned forward. Resupply for your position is suspended pending review.',
+    'Your pay is stopped this month while the review runs. The mess has been told.',
+    'Two men from the district will sit behind you on the next watch. They will not speak to you.',
+    'Your name is off the duty roster from Monday. It has not been put on any other roster yet.',
+  ],
+};
+
+/**
+ * And the one thing that outranks the rotation: while the residence permit is
+ * open, that is what he raises, because it is the thing that matters.
+ */
+function monthlyLine(tierId, campaign) {
+  if (tierId === 'condemned' && (campaign.family?.permit ?? 'standing') === 'review') {
+    return "Your family's residence permit in the Ville is listed as under review. You will be"
+      + ' informed of the outcome.';
+  }
+  const list = MONTHLY[tierId];
+  if (!list?.length) return null;
+  return list[Math.max(0, (campaign.history?.length ?? 1) - 1) % list.length];
 }
 
 function supplyLine(tactical) {
@@ -394,7 +465,16 @@ export function briefingNote(campaign, { narrativePressure = true, missionId = n
   }[last.tier] ?? null;
 }
 
-function ordinal(n) {
+/**
+ * Ordinals in words, because a man in an office says "the fourth entry" and
+ * the file entry is read out loud before it is ever printed. Past twelfth it
+ * falls back to the figure, and a file with thirteen marks in it has other
+ * problems.
+ */
+const ORDINAL_WORDS = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh',
+  'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth'];
+function ordinalWord(n) {
+  if (ORDINAL_WORDS[n]) return ORDINAL_WORDS[n];
   const suffix = ['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] ?? ['th', 'st', 'nd', 'rd'][n % 100] ?? 'th';
   return `${n}${suffix}`;
 }
