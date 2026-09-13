@@ -416,7 +416,7 @@ function sectorMap(mission) {
    * The batteries are lettered on the map and named in the key under it.
    *
    * All three judges: "LANCE CAPITAL, HAMMER CAPITAL and THISTLE NORTH occupy
-   * the same forty pixels, and THISTLE VALLEY, LANCE VALLEY and HAMMER do the
+   * the same forty pixels, and THISTLE TOWN, LANCE WEST and HAMMER do the
    * same over THE VILLE ... a battery symbol is drawn straight through THISTLE
    * NORTH so the name renders as THIST and NORTH either side of a green
    * square." Six names cannot be printed inside twenty kilometres at this
