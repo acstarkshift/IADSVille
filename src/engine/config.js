@@ -782,6 +782,68 @@ export const ENGAGEMENT = {
   reengageDelayS: 4,
 };
 
+/**
+ * How a round of ours climbs, by class of battery.
+ *
+ * A surface-to-air missile does not fly to its target at the height of its
+ * target. It leaves the rail, climbs, and arrives from above, and how much it
+ * climbs is a property of how far it has to go. A battalion round shot at a
+ * hundred kilometres is thrown up out of the thick air near the ground, cruises
+ * in the thin air where it costs almost nothing to stay fast, and comes down on
+ * the aeroplane at the end: a lofted shot. A point-defence round shot at five
+ * kilometres has no time to be clever and no thick air to escape, so it boosts
+ * off the launcher and flies the straight line to where the target will be: a
+ * direct ascent. A gun lays a shell on a flat arc and is done in three seconds.
+ *
+ * Three numbers describe one profile:
+ *
+ * - `loftFraction` — the height of the apex above the straight line from the
+ *   rail to the intercept, as a fraction of the distance to be flown. A
+ *   hundred-kilometre shot at 0.15 tops out about fifteen kilometres above the
+ *   line, which puts a real battalion round somewhere around twenty. Zero is a
+ *   straight line, which is what a short-range round flies.
+ * - `apexAt` — how far along the run that apex sits. Early, because a missile
+ *   spends its motor in the first seconds and everything after that is a glide.
+ * - `climbBias` — the shape of the climb along the straight line itself.
+ *   Below one, the round gains its height early, the way a missile that pitches
+ *   over after a vertical boost does; at one it climbs in step with the ground
+ *   it covers.
+ *
+ * None of this touches whether a round hits. The intercept is resolved in the
+ * horizontal plane — where the round is against where the aeroplane is — so
+ * these numbers change the picture on the height indicator and nothing else.
+ * That is deliberate: the campaign's difficulty is measured and re-measured
+ * against the timings in this file, and a flight profile is not the place to
+ * quietly move them.
+ */
+export const FLIGHT = {
+  /** A battalion round, thrown high and brought down on the target. */
+  long: { loftFraction: 0.15, apexAt: 0.38, climbBias: 0.9 },
+  /** A battery round: enough reach to be worth some loft, not much. */
+  medium: { loftFraction: 0.07, apexAt: 0.42, climbBias: 0.85 },
+  /** A point-defence round: boost, and fly the line. */
+  short: { loftFraction: 0, apexAt: 0.5, climbBias: 0.8 },
+  /** A shell: a flat arc, and it is over before it is a trajectory. */
+  guns: { loftFraction: 0.02, apexAt: 0.5, climbBias: 1 },
+  /**
+   * Nothing above about this height, whatever the arithmetic says — a round
+   * lofting into space would be a bug on the height indicator rather than a
+   * flourish.
+   */
+  ceilingM: 30000,
+  /**
+   * And nothing climbs at an angle a missile cannot hold. These are the tangent
+   * of the steepest flight path allowed, up and down, against the distance the
+   * round covers along the ground: 0.6 is a climb of about thirty-one degrees.
+   * Without the limit the arc arithmetic will happily ask a battalion round to
+   * gain eight kilometres of height in the first six seconds, which would have
+   * it flying half again its own stated speed. Coming down is allowed to be
+   * steeper, because gravity is on that side.
+   */
+  maxClimbSlope: 0.6,
+  maxDiveSlope: 0.8,
+};
+
 /** Anti-radiation missiles — the enemy's answer to your emissions. */
 export const ARM = {
   speed: 0.92,

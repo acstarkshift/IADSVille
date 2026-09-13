@@ -11,7 +11,7 @@
  * the game's central dilemma, and it is enforced here in stepMissile().
  */
 
-import { SAM_TYPES, AIR_TYPES, ENGAGEMENT, ARM, DAMAGE } from './config.js';
+import { SAM_TYPES, AIR_TYPES, ENGAGEMENT, ARM, DAMAGE, FLIGHT } from './config.js';
 import { addEffect } from './damage.js';
 import {
   dist, sub, add, scale, bearing, headingVec, turnToward, leadPoint, clamp,
@@ -201,6 +201,12 @@ export function createMissile(spec) {
     /** Height it came off the aircraft at, for the descent along its run. */
     launchAltM: spec.altM ?? 0,
     runKm: null,
+    /**
+     * How much of the run is behind it, for the climb — see arcAltitude. Kept
+     * on the round rather than recomputed because it is not allowed to go
+     * backwards: a target that turns away must not pull the round back up.
+     */
+    arcF: 0,
   };
 }
 
@@ -271,6 +277,65 @@ function aimPointFor(world, missile) {
   return missile.briefedPos ?? asset.pos;
 }
 
+/**
+ * Where one of our rounds is in the vertical, this instant.
+ *
+ * The old answer was that it was wherever the aeroplane was: the round left the
+ * rail at twenty metres and slid onto the target's height within about three
+ * seconds, then held that height all the way in. On the cabin's height
+ * indicator that read as a flat line crossing the board at nine thousand
+ * metres, which is not how anything flies.
+ *
+ * A round now climbs along its run, and how it climbs depends on the class of
+ * battery that fired it — a lofted arc for a battalion's long shot, a straight
+ * climbing line for a point-defence round, a flat one for a shell. FLIGHT in
+ * config.js holds the three numbers per class and explains them. The shape is a
+ * climb along the straight line from the rail to the intercept, plus a half
+ * sine bent so its top lands where the profile puts the apex; the sine is zero
+ * at both ends, so the round leaves the rail on the line and arrives on it.
+ *
+ * The intercept itself is resolved in the horizontal plane, so nothing here
+ * decides whether a round hits. This is what the operator sees, made true.
+ */
+function arcAltitude(world, missile, targetAlt) {
+  const site = missile.siteId ? world.siteById.get(missile.siteId) : null;
+  const profile = FLIGHT[SAM_TYPES[site?.type]?.class] ?? FLIGHT.short;
+
+  /*
+   * The run is measured once, from where the round was when it first had a
+   * solution to where that solution pointed — and progress along it never goes
+   * backwards. A target that turns away extends the cruise; it does not haul
+   * the round back up into the climb it has already flown.
+   */
+  const toGo = dist(missile.pos, missile.aimPos);
+  if (missile.runKm == null) missile.runKm = Math.max(toGo, 0.1);
+  missile.arcF = Math.max(missile.arcF ?? 0, clamp01(1 - toGo / missile.runKm));
+  const f = missile.arcF;
+
+  const line = missile.launchAltM
+    + (targetAlt - missile.launchAltM) * Math.pow(f, profile.climbBias);
+  let wanted = line;
+  if (profile.loftFraction) {
+    // sin(pi * f^k) peaks where f^k is a half, so this k puts the top of the
+    // arc exactly at the profile's apex.
+    const k = Math.log(0.5) / Math.log(profile.apexAt);
+    wanted += missile.runKm * profile.loftFraction * 1000
+      * Math.sin(Math.PI * Math.pow(f, k));
+  }
+  wanted = clamp(wanted, 0, FLIGHT.ceilingM);
+
+  /*
+   * Held to an angle a missile can actually fly. The round covers `travelled`
+   * metres of ground this step; the slopes are the tangent of the steepest
+   * flight path it is allowed to be on while doing it. This is what keeps a
+   * long shot's opening climb from outrunning the round's own speed.
+   */
+  const travelled = missile.speed * 1000 * world.dt;
+  return clamp(wanted,
+    missile.altM - travelled * FLIGHT.maxDiveSlope,
+    missile.altM + travelled * FLIGHT.maxClimbSlope);
+}
+
 /** Move one round and resolve any intercept it achieves this step. */
 function stepMissile(world, missile, dt) {
   const aim = aimPointFor(world, missile);
@@ -298,22 +363,33 @@ function stepMissile(world, missile, dt) {
   /*
    * Altitude.
    *
-   * This used to be frankly cosmetic — a fast exponential onto the target's
-   * height, which for anything aimed at the ground meant the round was at zero
-   * metres within a couple of seconds of leaving the aircraft. That was
-   * harmless while rounds were invisible. Now that the enemy's are tracked and
-   * can be shot at, it was the whole game: a weapon at zero metres is under
-   * every radar horizon on the board, so it could never be held, never
-   * announced, and never engaged — the option existed on paper only.
+   * Two cases, and they are different problems.
    *
-   * A released weapon descends along its flight instead, from the height it
-   * came off the aircraft to the height of what it is aimed at, in proportion
-   * to how much of the run it has flown. Which is both what one does and what
-   * gives the defence the twenty or thirty seconds the whole idea needs.
+   * The enemy's rounds — a released weapon, an anti-radiation missile — descend
+   * along their run, from the height they came off the aircraft at to the
+   * height of what they are aimed at. This used to be a fast exponential onto
+   * the target's height, which for anything aimed at the ground put the round
+   * at zero metres within a couple of seconds of release. That was harmless
+   * while rounds were invisible. Once the enemy's could be tracked and shot at
+   * it was the whole game: a weapon at zero metres is under every radar horizon
+   * on the board, so it could never be held, never announced and never
+   * engaged. Descending along the run is both what one does and what gives the
+   * defence the twenty or thirty seconds the idea needs.
+   *
+   * Ours climb, which is arcAltitude above.
+   */
+  /*
+   * The height it is trying to reach. A round shot at another round used to
+   * find nothing in the aircraft list and fall back to its own height, so a gun
+   * section defending itself against a weapon coming down on it fired shells
+   * that stayed at twenty metres the whole way. It looks its target up in the
+   * right list now.
    */
   const targetAlt = missile.targetKind === 'aircraft'
     ? (world.aircraftById.get(missile.targetId)?.altM ?? missile.altM)
-    : 0;
+    : missile.targetKind === 'missile'
+      ? (world.missiles.find((m) => m.id === missile.targetId)?.altM ?? missile.altM)
+      : 0;
   if (missile.contactType) {
     /*
      * Distance still to run, against the distance the run started at. The
@@ -327,7 +403,7 @@ function stepMissile(world, missile, dt) {
     const fraction = clamp01(1 - toGo / missile.runKm);
     missile.altM = missile.launchAltM + (targetAlt - missile.launchAltM) * fraction;
   } else {
-    missile.altM += (targetAlt - missile.altM) * clamp01(dt * 0.6);
+    missile.altM = arcAltitude(world, missile, targetAlt);
   }
 
   missile.trail.push({ x: before.x, y: before.y, t: world.t });
