@@ -209,14 +209,14 @@ export const DECORATIONS = {
     id: 'steadfast',
     tm: 'КРЕСТ «ЗА СТОЙКОСТЬ»',
     en: 'Cross for Steadfastness',
-    blurb: 'The position was overrun. The sector was not.',
+    blurb: 'The post was destroyed and nothing got past the sector.',
     test: (r) => r.reason === 'site-lost' && r.stats.leakers <= 1,
   },
   turncoat: {
     id: 'turncoat',
     tm: 'БЛАГОДАРНОСТЬ',
     en: 'Letter of Thanks',
-    blurb: 'Five sorties sent home without their weapons. No aircraft destroyed is still an attack defeated.',
+    blurb: 'Five aircraft turned for home before they could drop.',
     test: (r) => r.stats.turnedBack >= 5,
   },
   transit: {

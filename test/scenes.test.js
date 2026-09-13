@@ -16,13 +16,14 @@ import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
 import { scenarioById } from '../src/engine/scenarios.js';
 import { emptyCampaign, enlist, recordMission } from '../src/engine/campaign.js';
-import { scenesFor } from '../src/ui/scenes.js';
+import { scenesFor, standingsDisagree, DISMISSAL_CONSEQUENCE } from '../src/ui/scenes.js';
 import { SCENARIOS } from '../src/engine/scenarios.js';
 import { LETTERS } from '../src/engine/family.js';
 import { REVELATIONS } from '../src/engine/revelations.js';
 import { ENDINGS } from '../src/engine/endings.js';
 import { HOUSEHOLDS } from '../src/engine/character.js';
 import { DIRECTIVES, LEDGER_SUBJECTS } from '../src/engine/command.js';
+import { ASSET_TYPES } from '../src/engine/config.js';
 
 function stood(missionId, { seed = 5, role = 'net', reason = 'raid-spent', campaign = null, seconds = 600 } = {}) {
   const c = campaign ?? enlisted();
@@ -208,33 +209,126 @@ describe('what is said', () => {
     assert.ok(['You may go.', 'Dismissed.', 'That will be all.', 'Sign here. And here.', 'You will be told where to report.']
       .includes(office.lines.at(-1)), `a dismissal closes the scene: "${office.lines.at(-1)}"`);
     // And the dismissal has something behind it: the line before it costs you
-    // something or withholds something.
-    assert.ok(Object.values({
-      commended: 'One of your crews will be interviewed this week. It is not about tonight.',
-      satisfactory: 'I will read the tape again in the morning, when the office is quieter.',
-      noted: 'The review is minuted, and the minute goes up to the district with the rest of the post.',
-      flagged: 'There are two copies. One goes to the district and one stays in this room.',
-      condemned: 'The transport leaves before the mess opens.',
-    }).includes(office.lines.at(-2)),
-    `the dismissal carries a consequence: "${office.lines.at(-2)}"`);
+    // something or withholds something. Four to a tier, taken in turn by the
+    // watch, so the same man does not say the same thing before every
+    // dismissal of the campaign.
+    assert.ok(Object.values(DISMISSAL_CONSEQUENCE).flat().includes(office.lines.at(-2)),
+      `the dismissal carries a consequence: "${office.lines.at(-2)}"`);
+    for (const [tierId, said] of Object.entries(DISMISSAL_CONSEQUENCE)) {
+      assert.ok(said.length >= 4, `${tierId} has more than one thing to say`);
+      assert.equal(new Set(said).size, said.length, `${tierId} says four different things`);
+    }
+  });
+
+  /*
+   * The one recurring character in the game does not read a stencil label out
+   * loud, and he debriefs the watch that was actually about something.
+   */
+  test('he says the place aloud, and it is the place the watch was about', () => {
+    const { state, result, entry } = stood('economy-of-force');
+    // Two places lost: the one the scenario's list happens to hold first, and
+    // the one the whole watch is built around.
+    result.assets = [
+      { id: 'a_airbase', type: 'airbase', label: 'AIRBASE', destroyed: true, damagePct: 100, casualties: 0, districtsHit: [] },
+      { id: 'a_hospital', type: 'hospital', label: 'DISTRICT HOSPITAL', destroyed: true, damagePct: 100, casualties: 31, districtsHit: [] },
+    ];
+    const office = scenesFor(state, result, entry).find((s) => s.id === 'commissar');
+    assert.match(office.lines[0], /the district hospital/,
+      `the watch about the hospital is debriefed about the hospital: "${office.lines[0]}"`);
+    const SHOUTED = /\b(AIRBASE|SECTOR OPS|DISTRICT HOSPITAL|THE VILLE|REFUGEE ENCAMPMENT|PRESIDENTIAL PALACE|DEMOBODEDOVO)\b/;
+    for (const line of office.lines) {
+      assert.ok(!SHOUTED.test(line), `nobody speaks in stencil capitals: "${line}"`);
+    }
+  });
+
+  /*
+   * And every place on every board has a spoken name, so a scenario adding a
+   * building cannot put a stencil label back in his mouth.
+   */
+  test('every place the raid can take has a name he can say out loud', () => {
+    const { state, result, entry } = stood('economy-of-force');
+    const seen = new Map();
+    for (const sc of SCENARIOS) {
+      for (const a of sc.assets ?? []) {
+        seen.set(a.label ?? ASSET_TYPES[a.type]?.label ?? '', a.type);
+      }
+    }
+    assert.ok(seen.size >= 10, 'the campaign has a board to check');
+    for (const [label, type] of seen) {
+      const r = { ...result, reason: 'raid-spent', assets: [{ id: 'x', type, label, destroyed: true, damagePct: 100, casualties: 0, districtsHit: [] }] };
+      const line = scenesFor(state, r, entry).find((s) => s.id === 'commissar').lines[0];
+      assert.ok(!/\b[A-Z][A-Z0-9]{2,}\b/.test(line),
+        `"${label}" is read out as a stencil label: "${line}"`);
+      assert.ok(!line.includes(label.toLowerCase()) || label.length < 5
+        || /the |at |Kubin|Lozan|Brasov/.test(line),
+        `"${label}" needs a spoken form: "${line}"`);
+    }
+  });
+
+  /*
+   * And he does not open every evening of the campaign on one sentence. The
+   * round that gave him a line about the night installed exactly one per
+   * outcome shape, so ten watches in a row began identically.
+   */
+  test('the office does not open on the same sentence watch after watch', () => {
+    const { state, result, entry } = stood('economy-of-force');
+    const openings = new Set();
+    for (let i = 0; i < 6; i++) {
+      state.campaign.history.push({ tier: 'satisfactory', missionId: `filler-${i}` });
+      openings.add(scenesFor(state, result, entry).find((s) => s.id === 'commissar').lines[0]);
+    }
+    assert.ok(openings.size >= 3,
+      `the same night on six watches opens more than one way: ${[...openings].join(' / ')}`);
+  });
+
+  /*
+   * The evening after the post itself was struck. The operator was not at the
+   * console for the end of that watch — the engine plays the rest of it out
+   * without them and marks the record wounded — so there is nobody to
+   * interview, and the ending three minutes later says so out loud.
+   */
+  test('a night the post was struck arrives as a written finding, not an interview', () => {
+    const { state, result, entry } = stood('economy-of-force');
+    result.reason = 'site-lost';
+    const office = scenesFor(state, result, entry).find((s) => s.id === 'commissar');
+    assert.equal(office.written, true, 'the picture is told it is a document');
+    assert.match(office.speaker, /FINDING/, `the plate says what it is: "${office.speaker}"`);
+    assert.match(office.lines[0], /sent to you rather than read to you/);
+    assert.equal(office.lines.at(-1), 'You will be told where to report.');
+    assert.ok(!office.lines.some((l) => /^Dismissed\.$|^You may go\.$/.test(l)),
+      'nobody is dismissed from a room they were never in');
   });
 
   /*
    * The rare-case clause is rare again. It used to fire on every evening where
    * the watch and the file differed at all, which is most of them, three
-   * seconds after the tape had printed both figures.
+   * seconds after the tape had printed both figures. And it says which way they
+   * parted, in words, rather than setting two bureaucratic labels beside each
+   * other and leaving a new player to rank them.
    */
   test('the two standings are only reconciled aloud when they are far apart', () => {
     const { state, result, entry } = stood('economy-of-force');
     const said = (standing, tier) => {
       state.campaign.standing = standing;
       result.tier = tier;
-      return scenesFor(state, result, entry).find((s) => s.id === 'commissar').lines
-        .some((l) => /the file is what the district reads/.test(l));
+      const clause = standingsDisagree(result, state.campaign,
+        state.campaign.history?.length ?? 0);
+      const office = scenesFor(state, result, entry).find((s) => s.id === 'commissar');
+      // Whatever it says, the scene says exactly that and nothing else about it.
+      assert.equal(office.lines.includes(clause), clause !== null,
+        'the clause the helper composes is the clause the office speaks');
+      return clause;
     };
-    assert.equal(said(60, 'satisfactory'), false, 'the file and the watch agree');
-    assert.equal(said(60, 'noted'), false, 'one step apart is not worth a sentence');
-    assert.equal(said(60, 'condemned'), true, 'three steps apart is');
+    assert.equal(said(60, 'satisfactory'), null, 'the file and the watch agree');
+    assert.equal(said(60, 'noted'), null, 'one step apart is not worth a sentence');
+    const worse = said(60, 'condemned');
+    assert.ok(worse, 'three steps apart is');
+    assert.match(worse, /worse|deserves/, `it names which way they parted: "${worse}"`);
+    const better = said(10, 'commended');
+    assert.ok(better, 'and so is three steps the other way');
+    assert.match(better, /better|best/, `it names which way they parted: "${better}"`);
+    assert.ok(!/under review|referred/i.test(`${worse} ${better}`),
+      'and it does not set two bureaucratic labels against each other');
   });
 
   /*
@@ -267,6 +361,35 @@ describe('what is said', () => {
         assert.match(order.lines[0],
           /^By order of the Chief of Air Defence, you are appointed Sector Commander\.$/);
         assert.equal(order.kind, 'appointment', 'the promotion gets its own shot');
+        // The first order the player is ever handed writes the service out.
+        // The stamp on it, the stamp on the report and the plate on the card
+        // are all the short form, and nothing had ever expanded it.
+        assert.ok(order.lines.some((l) => /Air Defence Forces of Trans Mordovia/.test(l)),
+          'the service is spelled out where its stamp first appears');
+        // And the sheet is signed by an office above the one it appoints to.
+        assert.equal(order.office, 'CHIEF OF AIR DEFENCE');
+
+        /*
+         * The order knows what kind of night it was issued on. It used to read
+         * the CARRIED file only, so the worst night in the campaign — the post
+         * lost under a record whose carried tier happened to be noted — was
+         * gazetted perfectly clean.
+         */
+        // With the carried file settled at satisfactory, the caveat can only
+        // be coming from the night itself.
+        state.campaign.standing = 60;
+        const clean = scenesFor(state, { ...result, tier: 'satisfactory' }, entry)
+          .find((s) => s.id === 'appointment');
+        assert.ok(!clean.lines.some((l) => /Nobody has withdrawn it|will sit in the same file/.test(l)),
+          'a decent night gets the order without a caveat');
+        const bad = scenesFor(state, { ...result, tier: 'condemned' }, entry)
+          .find((s) => s.id === 'appointment');
+        assert.ok(bad.lines.some((l) => /will sit in the same file/.test(l)),
+          `a referred night is on the order: ${JSON.stringify(bad.lines)}`);
+        const lost = scenesFor(state, { ...result, reason: 'site-lost' }, entry)
+          .find((s) => s.id === 'appointment');
+        assert.ok(lost.lines.some((l) => /the position no longer exists/.test(l)),
+          `and a lost post outranks whatever the file was carrying: ${JSON.stringify(lost.lines)}`);
         return;
       }
     }

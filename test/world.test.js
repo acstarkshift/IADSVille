@@ -581,7 +581,9 @@ describe('a lost watch says why it was lost', () => {
     const said = world.failureCause({
       reason: 'raid-spent', success: false, criticalLost: false, leakersCounted: 2,
     });
-    assert.match(said, /^2 LEAKERS REACHED/, said);
+    // "Leaker" is glossed on the report; the clause the player reads at the
+    // moment of impact says the thing instead of naming the term.
+    assert.match(said, /^2 AIRCRAFT GOT PAST YOU AND STRUCK WHAT THEY WERE SENT FOR\./, said);
     assert.ok(!/NEVER RADIATED/.test(said), 'the sets were up, so that is not the reason');
   });
 

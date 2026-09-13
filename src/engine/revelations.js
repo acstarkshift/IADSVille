@@ -25,8 +25,16 @@ export const REVELATIONS = {
     tm: 'НАРЯД',
     title: 'THE ALLOCATION',
     lines: [
-      'The district hospital took four weapons. The sector return lists the building as an'
-        + ' undesignated structure and the casualties under a heading that does not require a name.',
+      /*
+       * This paragraph used to open "The district hospital took four weapons",
+       * a fixed count, on an evening whose own ledger three minutes later said
+       * three. Nothing on the result counts weapons per building, so the
+       * document quotes what it can actually see — the return, and whether the
+       * building is still there — and the two papers stop contradicting each
+       * other about a night the player watched.
+       */
+      'The sector return for tonight lists the district hospital as an undesignated structure, and'
+        + ' its casualties under a heading that does not require a name.',
       'Your expenditure for the watch was queried within the hour. The query is a standard form'
         + ' with a box for the number of rounds spent outside the freeze, and a box for the reason'
         + ' that is four lines long.',
@@ -45,11 +53,21 @@ export const REVELATIONS = {
      */
     linesFor: (result) => {
       const all = REVELATIONS.freeze.lines;
+      const hospital = (result?.assets ?? []).find((a) => a.type === 'hospital');
+      // What the return says about the building, read off the building.
+      const opening = !hospital || hospital.destroyed ? all[0]
+        : (hospital.damagePct ?? 0) > 0
+          ? 'The sector return for tonight lists the district hospital as an undesignated'
+            + ' structure, and its casualties under a heading that does not require a name. The'
+            + ' building itself is still standing.'
+          : 'The sector return for tonight lists the district hospital as an undesignated'
+            + ' structure. Nothing reached it, and the return would have read the same if'
+            + ' something had.';
       const outside = (result?.stats?.roundsAgainstFreeze ?? 0)
         + (result?.stats?.roundsAgainstOrder ?? 0);
-      if (outside > 0) return all;
+      if (outside > 0) return [opening, all[1], all[2], all[3]];
       return [
-        all[0],
+        opening,
         'Your expenditure for the watch was queried within the hour and the query was closed the'
           + ' same evening, because nothing of yours was outside the freeze. The clerk who brought'
           + ' the returns up from signals said he had expected more paper from this sector, and'

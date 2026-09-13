@@ -306,7 +306,13 @@ export function consequenceFor(campaign, { narrativePressure = true } = {}) {
 
   const lines = {
     commended: [
-      'Sector command records your conduct as exemplary. File 4471-B is amended accordingly.',
+      /*
+       * "File 4471-B" was the form's number doing duty as the operator's own
+       * file number, on a record whose card is stamped with a service number
+       * and whose form is headed FORM 4471-B. Three numbers, two of them the
+       * same, none of them agreeing about what it named.
+       */
+      'Sector command records your conduct as exemplary. Your file is amended accordingly.',
       'Your housing and travel categories have both been revised upward by one grade.',
     ],
     satisfactory: [
@@ -452,7 +458,15 @@ export function briefingNote(campaign, { narrativePressure = true, missionId = n
   if (fromFamily) return fromFamily;
   const last = campaign.history[campaign.history.length - 1];
   if (!last) {
-    return 'You have the watch. The sector is quiet. It will not stay that way.';
+    /*
+     * The first-night line, on a record that has a first night. A file that
+     * has completed watches has stood them whatever its history array says,
+     * and it was being told the sector was quiet on the night it took the seat
+     * as Chief of Air Defence.
+     */
+    return Object.keys(campaign.completed ?? {}).length === 0
+      ? 'You have the watch. The sector is quiet. It will not stay that way.'
+      : 'You have the watch. Nobody has briefed you tonight and nobody is going to.';
   }
   return {
     commended: 'The mess has been giving you the good coffee. Nobody has explained why.',

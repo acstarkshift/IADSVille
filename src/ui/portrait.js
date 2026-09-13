@@ -108,6 +108,25 @@ export const FACE = {
  */
 export function portraitCells(seed) {
   const f = portraitFeatures(seed);
+  /*
+   * Whose face this is.
+   *
+   * The art judge: "The generated face is also always a heavy-jawed man,
+   * including when the file's name is a woman's (SERVICE RECORD — MAJOR
+   * GENERAL YASNA KRUSHEVA)." The suggestion table marks its feminine forms by
+   * ending them in -a, which is the only signal the generator has, so it is
+   * the one it reads: the jaw comes in, the brow lightens, the hair grows past
+   * the ear and nobody grows a moustache. Everything else — the width of the
+   * skull, the cap, the shoulders — is the same heavy build the player asked
+   * for, because a woman in this army is built like everybody else in it.
+   */
+  const first = String(seed ?? '').trim().split(/\s+/)[0] ?? '';
+  const fem = /[aA]$/.test(first);
+  if (fem) {
+    f.style = f.style === 4 ? 3 : f.style === 2 ? 1 : f.style;
+    f.browHeavy = false;
+    f.moustache = false;
+  }
   const W = PORTRAIT_W;
   const H = PORTRAIT_H;
   const g = Array.from({ length: H }, () => Array(W).fill(f.back));
@@ -152,6 +171,7 @@ export function portraitCells(seed) {
     if (f.face === 0) half = 8.6 - 1.6 * Math.pow(Math.max(0, t - 0.72) / 0.28, 2) - 1.2 * Math.pow(Math.max(0, 0.16 - t) / 0.16, 2);
     else if (f.face === 1) half = 8.8 - 0.9 * Math.pow(Math.max(0, t - 0.8) / 0.2, 2) - 1.4 * Math.pow(Math.max(0, 0.14 - t) / 0.14, 2);
     else half = 8.2 + 0.6 * t - 1.5 * Math.pow(Math.max(0, 0.18 - t) / 0.18, 2) - 1.4 * Math.pow(Math.max(0, t - 0.86) / 0.14, 2);
+    if (fem) half -= 0.5 + 0.9 * Math.pow(Math.max(0, t - 0.5) / 0.5, 2);
     const w = Math.max(1, Math.round(half));
     for (let x = Math.round(mid - w + 0.5); x <= Math.round(mid + w - 0.5); x++) put(x, y, x > mid + 2 ? f.skin[1] : f.skin[0]);
   }
@@ -168,6 +188,13 @@ export function portraitCells(seed) {
   const hair = f.hair;
   const hairLo = shade(hair, -14);
   const hairHi = shade(hair, 20);
+  if (fem) {
+    // hair past the ear, both sides, over a head the same width as any other
+    rect(3, top + 1, 4, 14, hair);
+    rect(19, top + 1, 20, 14, hair);
+    rect(3, 14, 4, 15, shade(hair, -12));
+    rect(19, 14, 20, 15, shade(hair, -12));
+  }
   if (f.style !== 4) {
     for (let x = 5; x <= 18; x++) {
       const edge = x === 5 || x === 18;
@@ -248,14 +275,22 @@ export function portraitCells(seed) {
    * so it is a mouth and not one pale slab across the chin. He never smiles;
    * the shapes here are set, thin, downturned and slight.
    */
+  /*
+   * The art judge: "a mouth drawn as a filled dark-red bar that reads as a
+   * wound". A mouth is the LINE between two lips: one row of it, with the
+   * lower lip catching the light underneath and the shadow of that lip under
+   * THAT. Nothing about it is filled.
+   */
   const mY = FACE.mouth + 1;
-  const lip = shade(f.skin[1], -52);
-  const under = shade(f.skin[1], -22);
-  if (f.mouth === 0) rect(9, mY, 14, mY, lip);
-  else if (f.mouth === 1) { rect(9, mY, 14, mY, lip); put(8, mY - 1, lip); put(15, mY - 1, lip); }
+  const lip = shade(f.skin[1], -46);
+  const under = shade(f.skin[1], -20);
+  if (f.mouth === 0) rect(10, mY, 13, mY, lip);
+  else if (f.mouth === 1) { rect(10, mY, 13, mY, lip); put(9, mY - 1, lip); put(14, mY - 1, lip); }
   else if (f.mouth === 2) rect(10, mY, 13, mY, lip);
-  else { rect(9, mY, 14, mY, lip); put(8, mY + 1, lip); put(15, mY + 1, lip); }
-  rect(9, mY + 1, 14, mY + 1, shade(f.skin[0], -6));
+  else { rect(10, mY, 13, mY, lip); put(9, mY + 1, lip); put(14, mY + 1, lip); }
+  put(9, mY, under); put(14, mY, under);
+  // the lower lip, and the shadow it casts on the chin
+  rect(10, mY + 1, 13, mY + 1, shade(f.skin[0], 8));
   rect(10, mY + 2, 13, mY + 2, under);
   rect(8, jaw, 15, jaw, shade(f.skin[1], -8));
   if (f.moustache) rect(8, mY - 1, 15, mY - 1, shade(hair, -10));

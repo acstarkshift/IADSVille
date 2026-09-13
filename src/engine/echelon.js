@@ -59,7 +59,7 @@ export const ECHELONS = {
     rankFloor: 'jlt',
     /** Seats this appointment may be played from. */
     roles: ['net', 'crew', 'both'],
-    blurb: 'Four batteries in one valley. Every one of them is yours to point.',
+    blurb: 'Four batteries sit in one valley and every one of them is yours to point.',
     teaches: 'You see a contact, hand it to something that can reach it, and watch the round go.',
   },
 
@@ -77,7 +77,7 @@ export const ECHELONS = {
     reserveRounds: 0,
     rankFloor: 'slt',
     roles: ['net', 'crew', 'both'],
-    blurb: 'A sector, its radars, and more contacts than you have rounds.',
+    blurb: 'A sector and its radars answer to you, and every night brings more contacts than you have rounds.',
     teaches: 'You choose what is worth a round, and you learn that the building holding your picture together can be bombed.',
   },
 
@@ -104,7 +104,7 @@ export const ECHELONS = {
      * entirely through other people's hands.
      */
     roles: ['net'],
-    blurb: 'Four sectors, three hundred kilometres, and one of you.',
+    blurb: 'Three hundred kilometres wide, and you may hold two of its four sectors under your own hand at a time.',
     teaches: 'You fight through other people, and the order you leave them with is usually the only weapon you have.',
   },
 
@@ -132,7 +132,7 @@ export const ECHELONS = {
      * on the last watch is the battery sitting in the room you are sitting in.
      */
     roles: ['net', 'both'],
-    blurb: 'The whole country, one seat, and a reserve that will not cover two of anything.',
+    blurb: 'One seat runs the air defence of the whole country, with a reserve that will not cover two of anything at once.',
     teaches: 'You decide which places are defended, which means you decide which people are, and you sign it.',
   },
 };

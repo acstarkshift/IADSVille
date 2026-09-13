@@ -343,8 +343,13 @@ loss return, the aircraft that got through, a watch with no rounds on it at all
 — then raises up to two things the log shows you did, with the minute against
 each of them, then the file entry and one thing it costs you this month, a line
 about where your household is registered, and a dismissal that costs you
-something. What he says moves with the file as well as the tier: the entry is
-the same form every month and the man reading it is not.
+something. He names the place he is talking about the way a man says it aloud,
+and nothing he says is a fixed sentence: the opening, the monthly consequence
+and the line before the dismissal each have three or four of their own, taken
+in turn by the watch and by the night's own figures, so two similar nights
+running never open the same way. On the one night the post itself is struck
+there is no interview at all, because nobody was in the chair for the end of
+it: what arrives instead is the section's finding, written and signed and sent.
 An order of appointment is read when there is one, on its own, over the order
 and a new shoulder board on a desk; a watch that has taught you something puts
 the folder on the desk; and the letter from home, when one comes, is read in
@@ -638,7 +643,8 @@ Eleven watches across four appointments, each teaching one thing and then never
 letting you forget it, and a twelfth that only some records ever see. Each names
 its own hardware, so the campaign visibly changes equipment as it escalates.
 
-**Act I — battalion command.** *A cathode-ray cabin. Four batteries in one valley.*
+**Act I — battalion command.** *A cathode-ray cabin, and four batteries in one
+valley that are all yours to point.*
 
 | Watch | Teaches |
 |---|---|
@@ -646,8 +652,9 @@ its own hardware, so the campaign visibly changes equipment as it escalates.
 | Low Riders | The radar horizon. Low contacts arrive close and stay close |
 | Solo Battery | The whole engagement loop from the seat, alone *(operator only)* |
 
-**Act II — sector command.** *The same cabin, a bigger board. A sector,
-its radars, and more contacts than you have rounds.*
+**Act II — sector command.** *The same cabin and a bigger board: a sector and
+its radars answer to you, and every night brings more contacts than you have
+rounds.*
 
 | Watch | Teaches |
 |---|---|
@@ -657,16 +664,17 @@ its radars, and more contacts than you have rounds.*
 | Across the Line | What the schedule of defended places is really a schedule of |
 | Ville Under Fire | All of it, and then the centre goes down |
 
-**Act III — district command.** *Four sectors, a hundred and ninety kilometres,
-and one of you. No console from here on.*
+**Act III — district command.** *Three hundred kilometres wide, and you may
+hold two of its four sectors under your own hand at a time. No console from
+here on.*
 
 | Watch | Teaches |
 |---|---|
 | Four Sectors | That a standing order given to somebody you cannot see is a real weapon, and usually the only one you have |
 | Reinforce the Capital | What a redeployment order costs, and who it is actually for |
 
-**Act IV — national command.** *The whole country, one seat, and a reserve that
-will not cover two of anything.*
+**Act IV — national command.** *One seat runs the air defence of the whole
+country, with a reserve that will not cover two of anything at once.*
 
 | Watch | Teaches |
 |---|---|

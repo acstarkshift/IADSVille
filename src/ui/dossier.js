@@ -117,7 +117,19 @@ export function renderDossier(host, state) {
       / Math.max(1, next.rank.xp - RANKS[character.rankIndex].xp)))
     : 100;
 
-  host.innerHTML = `<div class="screen-inner">
+  host.innerHTML = `<div class="screen-inner is-paper">
+    ${/*
+     * The service record is a document. The art judge: "these are the two
+     * longest reads in the game and they are styled divs ... no paper ground,
+     * no rule work, no form furniture beyond one small mark and a FORM 4471-B
+     * label. The appointment sheet in the same build proves the team can draw
+     * a document." So the file is printed on the same stock the report is, with
+     * a punched filing margin and its own form number in the letterhead.
+     */ ''}
+    <div class="paper-head">
+      <span class="paper-head-title">PERSONNEL FILE — AIR DEFENCE FORCES</span>
+      <span class="paper-head-no">FORM 2-19</span>
+    </div>
     <h1 class="title is-file">${esc(rank.en)} ${esc(character.name)}</h1>
     <p class="subtitle">${esc(STATE.service.en)} · ${esc(STATE.country.en)}
       · FILE NO. ${esc(serviceNumber(character))}</p>
@@ -151,9 +163,11 @@ export function renderDossier(host, state) {
       <p class="note">Standing is the figure the file keeps on you, from nothing to a hundred.
       Seventy-eight and above is commended; below fifteen the file goes to the political
       section.</p>
+      ${/* One number style with the report's, and a row that says what it is
+           counting rather than fusing a label to half a sentence. */ ''}
       ${next ? `<div class="rank-progress">
         <div class="crew-row is-plain"><span>Toward ${esc(next.rank.en)}</span>
-          <b>${next.xpShort ? `${next.xpShort} experience` : 'experience met'}${next.standingShort ? `, standing ${next.rank.standing}` : ''}</b></div>
+          <b>${next.xpShort ? `${grouped(next.xpShort)} experience` : 'experience met'}${next.standingShort ? `, and a standing of ${next.rank.standing}` : ''}</b></div>
         <div class="meter"><i style="width:${progress}%"></i></div>
       </div>` : '<p class="verdict gained">The highest rank this appointment allows.</p>'}
       ${character.wounded ? `<p class="grave aside">
@@ -302,8 +316,8 @@ export function renderDossier(host, state) {
  * The block appended to a debrief: what this watch did to the record. Returned
  * as markup so the debrief screen can place it, rather than rendering itself.
  */
-/** A long number with room to breathe: 121 940, not 121940. */
-const grouped = (n) => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');
+/** A long number with room to breathe: 121,940, not 121940. */
+const grouped = (n) => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 export function serviceSummary(character, service, campaign) {
   if (!character || !service) return '';
@@ -331,11 +345,19 @@ export function serviceSummary(character, service, campaign) {
 
   const next = nextRank(character, campaign.standing);
   if (next) {
-    // "121940 experience, standing 84": a six-figure number with nothing in it
-    // to hold on to, on a row that did not say what it was counting.
-    rows.push(`<tr><td>Still to earn, toward ${esc(next.rank.en)}</td><td>${next.xpShort
-      ? `${grouped(next.xpShort)} experience` : 'experience met'}${next.standingShort
-      ? `, and standing ${next.rank.standing}` : ''}</td></tr>`);
+    /*
+     * One sentence, one number style. It was "Still to earn, toward Lieutenant
+     * General | 121 188 experience, and standing 84" — a label fused to half a
+     * sentence, a thin space between the thousands where the row two lines up
+     * writes 747 with nothing in it, and no way to tell that 84 is a standing
+     * the file has to reach rather than a second count of something.
+     */
+    const needs = [
+      next.xpShort ? `another ${grouped(next.xpShort)} experience` : null,
+      next.standingShort ? `a standing of ${next.rank.standing}` : null,
+    ].filter(Boolean);
+    rows.push(`<tr><td>Next rank</td><td>${esc(next.rank.en)} ${needs.length
+      ? `needs ${needs.join(' and ')}.` : 'is earned; the appointment decides when it is given.'}</td></tr>`);
   }
 
   return `<div class="card record-card">
@@ -346,11 +368,13 @@ export function serviceSummary(character, service, campaign) {
         <canvas class="portrait file-photo is-small" width="24" height="30"
           data-seed="${esc(character.name)}" aria-label="Photograph on file"></canvas>
       </span>
-      ${/* The board is captioned: it used to sit under the print with nothing
-            beside it and no word to say what it was. */ ''}
+      ${/* The board is captioned with what it IS. It used to be captioned with
+            the rank, directly above a heading that reads "Service record —
+            Senior Lieutenant Bavich": the rank set twice, adjacent, on a card
+            whose whole job is to look like a typed record. */ ''}
       <span class="ident-board is-captioned">
         ${rankInsignia(character.rankIndex, { size: 34, title: rank.en })}
-        <small>${esc(rank.en)}</small>
+        <small>RANK BOARD</small>
       </span>
       <h3>Service record — ${esc(rank.en)} ${esc(character.name)}</h3>
     </div>

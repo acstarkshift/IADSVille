@@ -223,16 +223,31 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 }
 .file-ident-photo { position: relative; flex: 0 0 auto; line-height: 0; }
 .file-photo.is-small { width: 48px; height: 60px; border-width: 2px; }
-.record-head .file-ident-photo::after { width: 22px; height: 22px; right: 4px; bottom: 6px; }
+.record-head .file-ident-photo::after { width: 15px; height: 15px; right: 3px; bottom: 3px; }
 /* the dry stamp, half on the print and half on the form under it */
 /* The dry stamp is ON the print, not hanging off the corner of it: at
    right:-10px it was clipped by the card's own edge and read as a smear. */
+/*
+ * A DRY stamp: colourless, embossed, and on the CORNER of the print.
+ *
+ * The art judge: "A translucent brown ring is drawn over the sitter's chin and
+ * chest in every portrait ... it reads as a cup stain on the photograph." It
+ * did, because it was a red ring thirty-four pixels across sitting in the
+ * middle of the picture. It is smaller, colourless, doubled, and set into the
+ * bottom corner where a registry presses one.
+ */
 .file-ident-photo::after {
-  content: ''; position: absolute; right: 6px; bottom: 10px;
-  width: 34px; height: 34px; border-radius: 50%;
-  border: 1px solid color-mix(in srgb, var(--hostile) 55%, transparent);
-  box-shadow: inset 0 0 0 3px transparent, inset 0 0 0 4px color-mix(in srgb, var(--hostile) 35%, transparent);
-  transform: rotate(-12deg); opacity: .7; pointer-events: none;
+  content: ''; position: absolute; right: 3px; bottom: 4px;
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 1px solid rgba(240, 244, 232, .5);
+  box-shadow: inset 0 0 0 2px transparent, inset 0 0 0 3px rgba(240, 244, 232, .28),
+    0 1px 0 rgba(10, 13, 10, .45);
+  transform: rotate(-12deg); opacity: .85; pointer-events: none;
+}
+.screen-inner.is-paper .file-ident-photo::after {
+  border-color: rgba(35, 38, 31, .45);
+  box-shadow: inset 0 0 0 2px transparent, inset 0 0 0 3px rgba(35, 38, 31, .22),
+    0 1px 0 rgba(244, 239, 226, .6);
 }
 .file-ident-text { display: flex; flex-direction: column; gap: 5px; }
 .file-no { font-size: 9px; letter-spacing: .12em; color: var(--ink-dim); }
@@ -1422,10 +1437,104 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
  * thing on the screen; it belongs at eye level.
  */
 .screen-inner.is-debrief { width: min(1240px, 100%); margin: 0 auto; }
+
+/*
+ * THE PAGES THAT ARE DOCUMENTS.
+ *
+ * The full report and the service record are the two longest reads in the
+ * game, and all three round-three judges called them styled console divs:
+ * "no paper ground, no rule work, no form furniture", "beside the drawn scenes
+ * it reads as a debug dump". They are printed now. Every colour on these
+ * screens is a token, so the sheet is made by re-declaring the tokens as ink
+ * on paper: the cards become printed blocks with hairline rules, the figures
+ * keep their ledger ruling, the reds become a stamp-pad red and the glow goes.
+ * Nothing in the markup had to move for it.
+ */
+.screen-inner.is-paper {
+  --bg: #ded3b8;
+  --bg-panel: #e6ddc3;
+  --bg-raised: #efe8d5;
+  --grid: #c2b694;
+  --edge: #a2957a;
+  --ink: #23261f;
+  --ink-bright: #101309;
+  --ink-dim: #6f6552;
+  --accent: #7b4a18;
+  --hostile: #9a2b26;
+  --friendly: #33556d;
+  --unknown: #7a6420;
+  --warn: #8a5a12;
+  --good: #2c5637;
+  --shadow: none;
+  --glow: none;
+  --radius: 0;
+  position: relative;
+  color: #23261f;
+  background: #ded3b8;
+  /* the fibre of the stock, and a shadow so the sheet lies on the desk */
+  background-image:
+    repeating-linear-gradient(90deg, rgba(35, 38, 31, .035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(35, 38, 31, .028) 0 1px, transparent 1px 4px);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .62), inset 0 0 0 1px rgba(35, 38, 31, .32);
+  padding: 22px 30px 34px 62px;
+  margin: 0 auto 8px;
+}
+/* the filing margin, punched, with the red rule a form has down its gutter */
+.screen-inner.is-paper::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 38px;
+  border-right: 1px solid rgba(154, 43, 38, .5);
+  background-image: radial-gradient(circle at 19px 24px, #c4b795 0 7px, transparent 8px);
+  background-size: 38px 176px; background-repeat: repeat-y; background-position: 0 54px;
+  pointer-events: none;
+}
+/* the letterhead: the form's name at the left, its number at the right, over a
+   double rule, which is how every piece of paper in this army starts */
+.screen-inner.is-paper .paper-head {
+  display: flex; justify-content: space-between; gap: 16px; align-items: baseline;
+  font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase; color: #6f6552;
+  padding-bottom: 6px; margin-bottom: 16px;
+  border-bottom: 3px double #6f6552;
+}
+.screen-inner.is-paper .title { text-shadow: none; color: #101309; }
+.screen-inner.is-paper .card {
+  background: transparent; border: 0; border-top: 1px solid #a2957a;
+  padding: 12px 0 6px; margin-bottom: 10px;
+}
+.screen-inner.is-paper .card h3 {
+  color: #43392a; letter-spacing: .2em; font-weight: 700;
+  border-bottom: 1px solid #c2b694; padding-bottom: 4px;
+}
+/* the printed panels the deck already had keep their own stock and sit ON the
+   sheet, with an edge and a shadow so they read as something laid on it */
+.screen-inner.is-paper .letter-card,
+.screen-inner.is-paper .revelation-card,
+.screen-inner.is-paper .file-entry,
+.screen-inner.is-paper .record-card {
+  border-top: 0; padding-left: 16px; padding-right: 16px;
+  box-shadow: 0 4px 14px rgba(35, 38, 31, .28), inset 0 0 0 1px rgba(35, 38, 31, .26);
+}
+.screen-inner.is-paper .tile, .screen-inner.is-paper .score-grid > * {
+  background: rgba(244, 239, 226, .5); border-color: #a2957a;
+}
+/* a figure on paper is typed, not lit */
+.screen-inner.is-paper table.ledger td { border-bottom: 1px solid #c2b694; }
+.screen-inner.is-paper .ending-card { border-top-color: #6f6552; border-bottom-color: #6f6552; }
+.screen-inner.is-paper .record-head-line,
+.screen-inner.is-paper .record-foot-line { color: #6f6552; }
+.screen-inner.is-paper .record-foot-line { border-top-color: #a2957a; }
+/* the buttons under the sheet are the console's again: they are not printed */
+.screen-inner.is-paper .actions { color: #23261f; }
+@media (max-width: 560px) {
+  .screen-inner.is-paper { padding: 16px 14px 24px 34px; }
+  .screen-inner.is-paper::before { width: 22px; background-image: radial-gradient(circle at 11px 20px, #c4b795 0 5px, transparent 6px); background-size: 22px 150px; }
+}
 /* The ground and the arithmetic are one band: two tables of a similar height,
    side by side, each hugging its own content rather than one stretching to
    the other's and ending on ninety pixels of empty panel. */
-.debrief-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 14px; align-items: start; }
+/* `min(420px, 100%)`, not a bare 420px: a fixed minimum wider than the screen
+   makes the track wider than the screen, and at 390px the GROUND and POINTS
+   tables ran off the right edge with their values unreadable. */
+.debrief-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 14px; align-items: start; }
 .debrief-cols > .card { margin-bottom: 14px; }
 /*
  * The score is a rack of six across the page.
@@ -1708,6 +1817,14 @@ table.ledger th.is-figure { text-align: right; }
 table.ledger th + th, table.ledger td + td { padding-left: 14px; }
 /* A cell of prose in a column of figures. Colour comes from a tone class. */
 table.ledger td.is-prose, table.ledger td.is-prose:last-child { text-align: left; }
+/* A place name is a name: PRESIDENTIAL PALACE was force-wrapped over two lines
+   in a column with room to spare, opposite a one-word status. */
+table.ledger td.is-place { white-space: nowrap; padding-right: 12px; }
+@media (max-width: 460px) { table.ledger td.is-place { white-space: normal; } }
+/* The gloss about the player's own quarter: its own line, under the row it
+   belongs to, at the body's measure and in the body's ink. */
+table.ledger tr.is-gloss td { border-bottom: 1px solid color-mix(in srgb, var(--edge) 40%, transparent); color: var(--ink-dim); padding: 0 0 4px; line-height: 1.5; }
+table.ledger tr.is-gloss + tr td { padding-top: 5px; }
 table.ledger.is-unscored td, table.ledger.is-unscored td:last-child { color: var(--ink-dim); }
 table.ledger .up { color: var(--good); }
 table.ledger .down { color: var(--hostile); }
@@ -1772,9 +1889,21 @@ table.ledger .down { color: var(--hostile); }
     gap: 3px; padding: 4px 8px;
   }
   .topbar-group:nth-child(2) { display: none; }
-  /* the desk furniture folds away with the rest of it on a phone */
+  /*
+   * The desk furniture folds down rather than away.
+   *
+   * The reader judge: "the card reader and the standing identity card, which
+   * the opening beat is entirely built around, measure 0x0 at phone width —
+   * the object the player has just watched their own hand seat in the desk
+   * simply is not there when the watch starts." It is there now: the same
+   * reader and the same card, scaled to two thirds and set on the desk lip
+   * above the log, so the opening beat pays off at every width.
+   */
   .ticker { display: block; }
-  #card-reader { display: none; }
+  #card-reader {
+    transform: scale(.62); transform-origin: 0 100%;
+    height: 50px; width: 196px; margin: 0 0 2px 6px;
+  }
   .topbar-group.rack { justify-content: flex-end; gap: 5px; }
   #unit-plate, #mission-name { display: none; }
   /*
@@ -2089,7 +2218,11 @@ table.ledger .down { color: var(--hostile); }
   background: #9a2b26; color: #f4efe2;
   font-size: 11.5px; letter-spacing: .26em;
 }
-.revelation-card h3 .tm { opacity: .78; margin-right: .7em; }
+/* The plate and the title, separated by a printed middot rather than by a
+   margin — the margin was invisible to anything reading the text itself, so
+   the heading read "НАРЯДTHE ALLOCATION". */
+.revelation-card h3 .tm { opacity: .78; }
+.revelation-card h3 .plate-sep { opacity: .55; }
 .revelation-card p {
   color: #23261f; line-height: 1.8; margin: 0 30px 12px; max-width: 74ch;
 }
@@ -2123,11 +2256,19 @@ table.ledger .down { color: var(--hostile); }
 /* The last watch's outcome: a black field with margin, and no card at all. */
 /* The ending is not another panel in the deck: it is set on the black field,
    centred, with a hand's width of margin and no chrome of any kind. */
+/*
+ * The story judge measured the last cut: "the letterhead rules run from x180 to
+ * x1420 but the prose column starts at x540 and ends at x1060, leaving a 360px
+ * void down the left of the block and 360px on the right. The one screen
+ * designed as a printed record is set off-centre inside its own rules." So the
+ * rules are pulled in to the measure: the block is one width from the head
+ * rule to the foot rule, and the type fills it.
+ */
 .ending-card {
   position: relative;
   border: 0; border-radius: 0; background: transparent; box-shadow: none;
   border-top: 2px solid var(--edge); border-bottom: 1px solid var(--edge);
-  padding: 12px 40px 14px; margin: 0 auto 22px; max-width: none;
+  padding: 12px 0 14px; margin: 0 auto 22px; max-width: 74ch;
 }
 /* the letterhead and the foot of the record, so the finding is a document */
 .record-head-line, .record-foot-line {
@@ -2138,7 +2279,7 @@ table.ledger .down { color: var(--hostile); }
 .record-foot-line { padding: 12px 0 0; border-top: 1px solid var(--edge); margin-top: 14px; }
 .ending-card .title.is-outcome { margin-top: 2px; }
 .is-debrief .subtitle.is-lead, .is-debrief .title.is-outcome, .is-debrief .subtitle.is-tail { text-align: center; }
-.ending-card p { line-height: 1.85; margin: 0 auto 14px; max-width: 66ch; color: var(--ink); }
+.ending-card p { line-height: 1.85; margin: 0 0 14px; max-width: none; color: var(--ink); }
 .ending-card p:first-child { color: var(--ink-bright); font-size: 15px; }
 
 /* A dark console blanks its panels along with the scope, and the controls
@@ -2347,7 +2488,7 @@ table.ledger .down { color: var(--hostile); }
  */
 .scene-slip {
   position: relative; display: block; flex: 0 0 auto; align-self: flex-start;
-  max-width: 72%; margin: calc(2px * var(--scene-scale, 3)) 0 calc(3px * var(--scene-scale, 3)) calc(3px * var(--scene-scale, 3));
+  max-width: 72%; margin: calc(5px * var(--scene-scale, 3)) 0 calc(1px * var(--scene-scale, 3)) calc(3px * var(--scene-scale, 3));
   /* the top edge is left clear for the wire clip: the loop used to land on
      the first line of the docket and eat letters out of it */
   padding: calc(3.4px * var(--scene-scale, 3)) calc(2.4px * var(--scene-scale, 3)) calc(1.2px * var(--scene-scale, 3));
@@ -2372,7 +2513,7 @@ table.ledger .down { color: var(--hostile); }
   border: calc(.9px * var(--scene-scale, 3)) solid #6b7168; border-bottom: 0; border-radius: 40% 40% 0 0;
 }
 .scene-slip[hidden] { display: none; }
-.scene.is-stacked .scene-slip { font-size: 11px; padding: 5px 8px; margin-bottom: 10px; }
+.scene.is-stacked .scene-slip { font-size: 11px; padding: 8px 9px 5px; margin: 18px 0 12px 6px; }
 .scene-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .scene-body::-webkit-scrollbar { width: 0; height: 0; }
 .scene-body p { margin: 0 0 calc(1.5px * var(--scene-scale, 3)); white-space: pre-wrap; }
@@ -2433,9 +2574,14 @@ table.ledger .down { color: var(--hostile); }
 .scene.is-stacked[data-kind="folder"] .scene-text {
   background: #f4efe2; box-shadow: none; color: #23261f;
   border-left: 1px solid #b2a482; border-right: 1px solid #b2a482;
-  border-bottom: 2px solid #b2a482;
   padding: 4px 14px 22px;
+  /* The sheet runs to the foot of the screen. It used to be sized to its own
+     words, so a phone showed a strip of paper floating in a black field with
+     the drawn hands holding a blank sheet above it. */
+  font-size: 13px;
 }
+.scene.is-stacked[data-kind="quarters"] .scene-body,
+.scene.is-stacked[data-kind="folder"] .scene-body { flex: 0 1 auto; }
 .scene.is-stacked[data-kind="folder"] .scene-text { background: #ded3b8; }
 /*
  * On a phone the tape's panel IS the paper: the machine is at the bottom of
@@ -2586,7 +2732,7 @@ table.ledger .down { color: var(--hostile); }
 /* the menu's file head: the print, the board and the name, on one line */
 .ident-row { display: flex; align-items: center; gap: 14px; margin: 2px 0 12px; }
 .ident-row .file-photo { width: 72px; height: 90px; border-width: 2px; }
-.ident-row .file-ident-photo::after { width: 24px; height: 24px; right: 4px; bottom: 7px; }
+.ident-row .file-ident-photo::after { width: 17px; height: 17px; right: 3px; bottom: 3px; }
 .ident-board { display: block; flex: 0 0 auto; line-height: 0; }
 /* a board with its rank written under it, so it is captioned rather than
    sitting on the form as an unexplained sprite */

@@ -404,8 +404,8 @@ export const ENDINGS = {
     plainTitle: 'YOU SURVIVED; BOTH CITIES LOST',
     plainSummary: (r) => `You displaced and the post was not hit. ${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')}, with ${r.casualties} casualties.`,
     standing: -38,
-    card: 'The post stands where it moved to. The two cities are somebody else\'s file from'
-      + ' tomorrow.',
+    card: 'The post stands where it moved to. Both cities and their returns pass to the district'
+      + ' office in the morning.',
     lines: (r, character) => [
       /*
        * Two figures in this ending used to be invented. The strike package did
@@ -444,8 +444,8 @@ export const ENDINGS = {
     plainTitle: 'YOUR POSITION WAS OVERRUN',
     plainSummary: (r) => `The forward post was destroyed. ${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')}.`,
     standing: -55,
-    card: 'The post is written off on the equipment return. The people who were on it are listed'
-      + ' separately, and that list is short.',
+    card: 'You are moved to the district rest station in the morning. The transport takes four'
+      + ' hours and stops twice.',
     lines: (r, character) => [
       'The third axis was not engaged in time. The forward post was struck while the battalion was'
         + ' still guiding, and the watch continued for another'

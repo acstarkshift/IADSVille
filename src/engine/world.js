@@ -2719,7 +2719,13 @@ export class World {
       : refused
         ? ' YOU REFUSED AN ORDER TONIGHT; THE FILE WILL SAY SO BESIDE THIS.'
         : ' THE ALLOWANCE WAS ' + tolerance + '.';
-    return `${n} LEAKER${n === 1 ? '' : 'S'} REACHED WHAT ${n === 1 ? 'IT WAS' : 'THEY WERE'} `
+    /*
+     * The word the report has to gloss for the player is not the word the
+     * ticker should use at the moment of impact. This clause used to read
+     * "12 LEAKERS REACHED WHAT THEY WERE SENT FOR", which is the debrief's own
+     * definition of a leaker printed back as though it were news.
+     */
+    return `${n} AIRCRAFT GOT PAST YOU AND STRUCK WHAT ${n === 1 ? 'IT WAS' : 'THEY WERE'} `
       + `SENT FOR.${tail}`;
   }
 

@@ -264,8 +264,14 @@ export const FLIGHT_ENDINGS = {
         + ' the political section was not among them.',
       `${householdSubject(character)} will have heard your voice at 0900. The call was twenty`
         + ' minutes and nobody was listening to it.',
-      'Nobody asks you to explain yourself. The office that would have asked has not answered its'
-        + ' telephone since five this morning.',
+      /*
+       * It used to close on the office not answering its telephone since five
+       * this morning, which is the fact the fourth paragraph opens with. The
+       * last sentence of the campaign says what the morning is, instead of
+       * saying the middle of the page again.
+       */
+      'At ten the duty clerk brought the morning returns in and put them on the desk beside you,'
+        + ' because that is where they go. He did not ask you to sign for them.',
     ],
   },
 
