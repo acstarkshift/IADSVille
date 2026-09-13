@@ -547,6 +547,22 @@ orders about an actual line. `M` toggles it.
   guide so the channel count stops reading four of four over wreckage, and the
   cabin says АНТЕННЫ УНИЧТОЖЕНЫ · ANTENNAS DESTROYED rather than advising the
   operator to select a target.
+- **A round climbs to its target.** How it climbs depends on the class of
+  battery that fired it. A battalion's long shot is lofted: it goes up steeply
+  off the rail, tops out around seventeen kilometres about forty per cent of the
+  way out on a hundred-kilometre engagement, and comes down on the aeroplane at
+  the end. A point-defence round has neither the time nor the reason for that,
+  so it boosts and flies the straight climbing line to where the target will
+  be — a direct ascent — and a gun lays its shells on a flat arc. Nothing climbs
+  at more than about thirty degrees, which is the limit that stops the
+  arithmetic asking a round to gain height faster than it can fly. The profiles
+  are the four entries in `FLIGHT` in `src/engine/config.js`, and the shape is a
+  climb along the straight line from the rail to the intercept plus a half sine
+  bent so its top lands where the profile puts the apex. Watch it on the cabin's
+  range-and-height indicator, which is where a flat line at nine thousand metres
+  used to be. The intercept is resolved in the horizontal plane, so this changes
+  what the operator sees and nothing about who wins: sixty-four paired harness
+  cells across eight watches and eight seeds came back identical.
 - **What they launch is a target too.** An anti-radiation round or a released
   weapon is an air object like any other — small, low, and fast, so the horizon
   hides it until late, and the net calls it out on its own line the moment it goes
