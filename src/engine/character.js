@@ -286,7 +286,7 @@ export const HOUSEHOLDS = {
     tm: 'БАБУШКА ВЕРА',
     en: 'Your grandmother Vera',
     district: 'high',
-    blurb: 'She remembers the last war and refuses to discuss it, which is its own kind of account.',
+    blurb: 'She remembers the last war and will not talk about it, and nobody in the house presses her.',
   },
   brother: {
     id: 'brother',

@@ -36,7 +36,7 @@ import { createCharacter } from '../src/engine/character.js';
  */
 function walk(household, standingFor = () => 60) {
   const campaign = emptyCampaign();
-  enlist(campaign, { name: 'Тест', background: 'factory', household });
+  enlist(campaign, { name: 'Dragan Krushev', background: 'factory', household });
   const sequence = [];
   for (const scenario of SCENARIOS) {
     const target = standingFor(scenario.id);
@@ -90,7 +90,9 @@ describe('the letters themselves', () => {
   });
 
   test('every household has a voice in every lettered slot', () => {
-    const ctx = { hit: false, permit: 'standing', watch: 3 };
+    const ctx = {
+      hit: false, permit: 'standing', watch: 3, name: 'Dragan Krushev', rank: 'Sergeant',
+    };
     for (const letter of LETTERS) {
       for (const hh of Object.keys(HOUSEHOLDS)) {
         const lines = letter.lines(hh, ctx);
@@ -101,14 +103,68 @@ describe('the letters themselves', () => {
     }
   });
 
+  /*
+   * The player: "The letter from home shouldn't be a 3rd party describing the
+   * letter. I should be the text of the letter from home." So every branch of
+   * every letter is a letter: it opens with a salutation, it is written in the
+   * first person, it is signed by somebody with a name, and nowhere in it does
+   * a narrator explain the post to the man holding it.
+   */
+  test('every letter is the letter itself, in the first person of the one who wrote it', () => {
+    const WRITERS = {
+      mother: /Ksenia/, sister: /Nata/, grandmother: /Vera/, brother: /Ilya/,
+    };
+    for (const letter of LETTERS) {
+      for (const hh of Object.keys(HOUSEHOLDS)) {
+        for (const hit of [true, false]) {
+          const lines = letter.lines(hh, {
+            hit, permit: 'standing', watch: 8, name: 'Dragan Krushev', rank: 'Sergeant',
+          });
+          const where = `${letter.id}/${hh}${hit ? '/hit' : ''}`;
+          assert.ok(lines.length >= 3, `${where} has a salutation, a body and a signature`);
+          assert.match(lines[0], /,$/, `${where} opens on a salutation: "${lines[0]}"`);
+          assert.match(lines.at(-1), WRITERS[hh],
+            `${where} is signed by the person who wrote it: "${lines.at(-1)}"`);
+          const body = lines.slice(1, -1).join(' ');
+          assert.match(body, /\b(?:I|me|my|we|us|our)\b/i,
+            `${where} is written in the first person`);
+          assert.ok(!/\b(?:writes|reports|adds|remarks) that\b/.test(body),
+            `${where} has no narrator standing between the player and the paper`);
+          assert.ok(!/^(?:Your|The) (?:mother|sister|grandmother|brother|letter)\b/.test(body),
+            `${where} does not describe itself`);
+          assert.ok(!/[А-Яа-яЁё]/.test(lines.join(' ')), `${where} is in Latin letters`);
+        }
+      }
+    }
+  });
+
+  /* The salutation is the player's own given name, and one letter is not. */
+  test('the letters are addressed to you, and the shorter one is addressed to your rank', () => {
+    const ctx = {
+      hit: false, permit: 'standing', watch: 9, name: 'Dragan Krushev', rank: 'Junior Lieutenant',
+    };
+    for (const hh of Object.keys(HOUSEHOLDS)) {
+      assert.match(LETTERS.find((l) => l.id === 'first-post').lines(hh, ctx)[0], /Dragan/,
+        `the first letter greets ${hh}'s soldier by name`);
+      const shorter = LETTERS.find((l) => l.id === 'shorter').lines(hh, ctx);
+      assert.equal(shorter[0], 'To Junior Lieutenant Krushev,',
+        'the shorter letter is addressed to the rank and the surname, which is the point of it');
+    }
+  });
+
   test('the aftermath letter knows whether their quarter is on the returns', () => {
+    const ctx = { permit: 'standing', watch: 8, name: 'Dragan Krushev', rank: 'Sergeant' };
     const hit = LETTERS.find((l) => l.id === 'aftermath')
-      .lines('mother', { hit: true, permit: 'standing', watch: 8 }).join(' ');
+      .lines('mother', { ...ctx, hit: true }).join(' ');
     const spared = LETTERS.find((l) => l.id === 'aftermath')
-      .lines('mother', { hit: false, permit: 'standing', watch: 8 }).join(' ');
+      .lines('mother', { ...ctx, hit: false }).join(' ');
     assert.notEqual(hit, spared);
-    assert.match(hit, /repairs/i);
-    assert.match(spared, /asks you nothing/i);
+    // Her quarter was struck: the letter is the repairs, and one sentence about
+    // the night that she then refuses to expand on.
+    assert.match(hit, /glazier/i);
+    assert.match(hit, /some excitement here/i);
+    // It was not: she names the quarters that were, and stops asking questions.
+    assert.match(spared, /stopped asking you questions/i);
   });
 });
 
@@ -210,7 +266,7 @@ describe('the surfaces', () => {
       constraints: { palaceOrderAccepted: true },
       ...over,
     });
-    const character = createCharacter({ name: 'Тест', household: 'mother' });
+    const character = createCharacter({ name: 'Dragan Krushev', household: 'mother' });
     const family = { ...emptyFamily(), withheld: [{ id: 'hospital-road', sinceWatch: 6 }] };
 
     const withClause = composeEnding(finaleOutcome(), character, { family });
@@ -283,7 +339,7 @@ describe('the surfaces', () => {
 
 describe('the quarter on the returns', () => {
   test('a hit on the home quarter is followed by the trunk-lines line, once, flagged personal', () => {
-    const character = createCharacter({ name: 'Тест', household: 'mother' });
+    const character = createCharacter({ name: 'Dragan Krushev', household: 'mother' });
     const world = new World(scenarioById('ville-under-fire'), {
       role: 'net', seed: 'trunks', character,
     });

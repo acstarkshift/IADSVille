@@ -691,6 +691,25 @@ export function standingDelta(world, amount, reason) {
   });
 }
 
+/**
+ * The words a ledger reason can be recognised by.
+ *
+ * Three surfaces read the ledger back to the player — the divergence table on
+ * the full report, the night-side column beside it, and the political
+ * section's read-backs — and all three used to carry their own copy of this
+ * word list. When the routine directive was renamed from "the priority of
+ * fires" to "the designation of a defended place", one copy still tested for
+ * `designated` and silently dropped every row about it off the report. One
+ * list, exported, with a test that every directive label matches it.
+ */
+export const LEDGER_SUBJECTS = new RegExp([
+  'civil', 'hospital', 'encampment', 'freeze', 'border', 'priority', 'designat',
+  'state aircraft', 'movement order', 'district battalion', 'Listonian', 'relayed',
+  'standing order',
+  'restriction', 'own authority', 'radiat', 'leaker', 'corridor', 'confirmation',
+  'displacement',
+].join('|'), 'i');
+
 export function tierFor(standing) {
   return COMMAND.tiers.find((t) => standing >= t.min) ?? COMMAND.tiers[COMMAND.tiers.length - 1];
 }

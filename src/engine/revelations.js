@@ -73,8 +73,9 @@ export const REVELATIONS = {
         + ' and there is nothing in there to protect.',
       'It is written on the inside back cover by hand, under no heading, in a folder that has no'
         + ' business containing a point in Listonia at all.',
-      'Somebody wrote those coordinates down before the war started. What happened over Gorna was'
-        + ' not a stray, and the order you were given about the border was not about the border.',
+      'Somebody wrote those coordinates down before the war started. Two rounds have now been put'
+        + ' on them, and the order you were given was issued to keep the sector away from the point'
+        + ' while it was done.',
     ],
   },
 
@@ -140,8 +141,7 @@ export const REVELATIONS = {
         + ' capital garrison, which is the garrison your battalion was sent to reinforce.',
       'The assessed threat to the capital, which is the stated reason for taking the battalion, is'
         + ' dated two days after that freight left.',
-      'The household effects went first. The threat was written down two days later. The guns moved'
-        + ' after that.',
+      'The air defence of the country was moved to cover a departure that had already happened.',
     ],
   },
 
@@ -200,8 +200,8 @@ export function standing(campaign) {
       + ' means yet.';
   }
   if (known.includes('border')) {
-    return 'You know the strays over Gorna were not strays, and that the order about the border was'
-      + ' not about the border.';
+    return 'You know the strays over Gorna were aimed, and that the order about the border was'
+      + ' issued to keep you off the point while they landed.';
   }
   if (known.includes('freeze')) {
     return 'You were ordered not to defend a hospital, and the order cost you almost nothing. That'

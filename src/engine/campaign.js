@@ -335,7 +335,20 @@ export function consequenceFor(campaign, { narrativePressure = true } = {}) {
   }
   lines.push(supplyLine(tactical));
 
-  return { tier, modifiers: tactical, title: `FILE ENTRY — ${tier.label}`, lines };
+  /*
+   * The same entry twice, for two mouths.
+   *
+   * `lines` is the form: it is printed on the report under FORM 4471-B, and a
+   * form is allowed a label, a colon and a percentage. `spokenLines` is what
+   * the man in the office reads out, and no man reads "SUPPLY: Allocation
+   * reduced to 95%." aloud to another man. Everything above the supply line is
+   * already a sentence and is shared between them.
+   */
+  const spokenLines = [...lines.slice(0, -1), supplySpoken(tactical)];
+
+  return {
+    tier, modifiers: tactical, title: `FILE ENTRY — ${tier.label}`, lines, spokenLines,
+  };
 }
 
 function supplyLine(tactical) {
@@ -343,6 +356,20 @@ function supplyLine(tactical) {
   if (tactical.roundsMult > 1) return 'SUPPLY: Allocation increased.';
   if (tactical.roundsMult < 1) return `SUPPLY: Allocation reduced to ${Math.round(tactical.roundsMult * 100)}%.`;
   return 'SUPPLY: Allocation nominal.';
+}
+
+/** The same fact, said out loud by somebody who is not going to give you the figure. */
+function supplySpoken(tactical) {
+  if (!tactical.reloadsAllowed) {
+    return 'You will not be reloading. Whatever is on the rails at the start of the next watch is'
+      + ' what you have for it.';
+  }
+  if (tactical.roundsMult > 1) return 'Your allocation of rounds goes up. Somebody signed for that.';
+  if (tactical.roundsMult < 1) {
+    return 'Your allocation of rounds is cut for the next watch. You will be told by how much when'
+      + ' you sign for it.';
+  }
+  return 'Your allocation of rounds is unchanged.';
 }
 
 /** A quiet line before the shooting starts, coloured by how the last one went. */

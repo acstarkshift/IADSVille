@@ -13,7 +13,7 @@ import { SCENARIOS, isUnlocked, appointmentOf, watchConditions } from '../engine
 import { ECHELON_ORDER, ECHELONS } from '../engine/echelon.js';
 import { DIFFICULTY, ROLES, SAM_TYPES, DEFENCE_CLASSES, ASSET_TYPES } from '../engine/config.js';
 import { consequenceFor, briefingNote } from '../engine/campaign.js';
-import { tierFor } from '../engine/command.js';
+import { tierFor, LEDGER_SUBJECTS } from '../engine/command.js';
 import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/character.js';
 import { serviceSummary, abandonedRecord, paintFilePhotos } from './dossier.js';
 import { STATE } from './lexicon.js';
@@ -65,7 +65,15 @@ export function renderMenu(host, state) {
     const done = campaign.completed[sc.id];
     const active = state.missionId === sc.id;
     if (!isUnlocked(sc, campaign)) {
-      const held = ECHELON_ORDER.find((e) => e.id === sc.echelon).order <= appointment.order;
+      /*
+       * The one watch whose existence is the surprise stays redacted at every
+       * appointment until it is genuinely open. It used to be named on the
+       * roster in the first minute of a new record — "The President's Flight,
+       * above your appointment" — and only blacked out in the tenth hour, once
+       * the player held national command and already knew about it.
+       */
+      const held = sc.requiresEnding
+        || ECHELON_ORDER.find((e) => e.id === sc.echelon).order <= appointment.order;
       return held
         ? `<button class="mission is-sealed" disabled>
             <b>▓▓▓▓▓▓▓▓ ▓▓▓▓▓▓</b>
@@ -217,7 +225,12 @@ export function renderBriefing(host, state) {
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title is-watch">${esc(mission.name)}</h1>
     <p class="subtitle">${esc(mission.subtitle)}</p>
-    <p class="note conditions">${esc(watchConditions(mission).line)} · ${esc(ECHELONS[mission.echelon]?.appointment?.en ?? mission.echelon ?? '')}</p>
+    ${/* The hour, the sky and the cold. The officer briefing you is a person
+         and gets his own line; he used to be the last item in a middot list
+         after the temperature. */ ''}
+    <p class="note conditions">${esc(watchConditions(mission).line)}</p>
+    <p class="note">You stand this watch as ${esc((ECHELONS[mission.echelon]?.appointment?.en
+    ?? String(mission.echelon ?? '')).toLowerCase())}.</p>
     ${character ? `<div class="card record-card is-tight">
       <div class="record-stamp">${stampFace(STATE.serviceShort.tm, STATE.serviceShort.en)}</div>
       <p>Posting order for <b>${esc(rank.en)} ${esc(character.name)}</b>.
@@ -259,11 +272,31 @@ export function renderBriefing(host, state) {
       <p class="note"><b>What this watch is for.</b> ${esc(mission.teaches)}</p>
     </div>
 
-    <div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : consequence.tier.id === 'satisfactory' ? '' : 'file-entry'}">
+    ${/*
+     * The file, before there is anything in it.
+     *
+     * On a brand-new record this card used to read "FILE ENTRY — SATISFACTORY
+     * / Sector command has recorded the engagement. No comment is appended."
+     * before the player had stood a single watch. The one document whose job
+     * is to prove the file is watching opened by describing something that had
+     * not happened. It now opens the file, and says once — here, where they
+     * first meet them — what the two figures the tape prints all campaign
+     * actually mean.
+     */ ''}
+    ${(state.campaign.history?.length ?? 0) === 0 ? `<div class="card file-entry">
+      <span class="form-no">FORM 4471-B</span>
+      <h3>FILE ENTRY — OPENED</h3>
+      <p>File 4471-B is opened today. It holds your posting order and nothing else.</p>
+      <p>Your standing is the number the file keeps on you. It runs from nothing to a hundred and
+      begins at ${Math.round(state.campaign.standing)}. At seventy-eight and above a file is
+      commended; below fifteen it is referred to the political section.</p>
+      <p>The other figure the tape prints is leakers: aircraft that got past you and struck what
+      they were sent for. Every watch has an allowance, and the allowance is small.</p>
+    </div>` : `<div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : consequence.tier.id === 'satisfactory' ? '' : 'file-entry'}">
       <span class="form-no">FORM 4471-B</span>
       <h3>${esc(consequence.title)}</h3>
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
-    </div>
+    </div>`}
 
     <div class="actions">
       <button class="btn-primary" id="btn-start">BEGIN</button>
@@ -321,33 +354,45 @@ function sectorMap(mission) {
    */
   const taken = [];
   const settle = (lx, ly, text, middle) => {
-    const half = text.length * 2.7;
-    const x0 = middle ? lx - half : lx;
-    const x1 = middle ? lx + half : lx + half * 2;
+    // The real set width of the label, at the map's own type size — the
+    // estimate used to be half of it, so four names inside twenty kilometres
+    // all passed the test and printed on top of each other.
+    const wide = String(text).length * 5.6;
+    const half = wide / 2;
     let y = ly;
-    for (let guard = 0; guard < 8; guard++) {
-      if (!taken.some((t) => Math.abs(t.y - y) < 11 && t.x1 > x0 && t.x0 < x1)) break;
-      y += 11;
+    let x0 = middle ? lx - half : lx;
+    let x1 = middle ? lx + half : lx + wide;
+    for (let guard = 0; guard < 10; guard++) {
+      if (!taken.some((tk) => Math.abs(tk.y - y) < 10 && tk.x1 > x0 - 3 && tk.x0 < x1 + 3)) break;
+      // down a row, and every other row out to the side, so a cluster of
+      // names fans out instead of stacking into the next mark
+      y += 10;
+      const shift = guard % 2 ? 10 : -10;
+      x0 += shift; x1 += shift;
     }
     taken.push({ x0, x1, y });
-    return Math.min(H - 6, y).toFixed(1);
+    return { y: Math.max(10, Math.min(H - 6, y)).toFixed(1), x: (middle ? (x0 + x1) / 2 : x0).toFixed(1) };
   };
-  const batteries = sites.map((s, i) => `<g class="map-site ${s.id === mission.playerBatteryId ? 'is-own' : ''}">
+  const batteries = sites.map((s, i) => {
+    const at = settle(Number(X(s.pos.x)), Number(Y(s.pos.y)) + (i % 2 ? 17 : -10), s.name ?? '', true);
+    return `<g class="map-site ${s.id === mission.playerBatteryId ? 'is-own' : ''}">
       <rect x="${X(s.pos.x) - 4}" y="${Y(s.pos.y) - 4}" width="8" height="8"></rect>
-      <text x="${X(s.pos.x)}" y="${settle(Number(X(s.pos.x)), Number(Y(s.pos.y)) + (i % 2 ? 17 : -10), s.name ?? '', true)}">${esc(s.name ?? '')}</text>
-    </g>`).join('');
+      <text x="${at.x}" y="${at.y}">${esc(s.name ?? '')}</text>
+    </g>`;
+  }).join('');
   // Names only for the places the brief talks about; marks for everything.
   const NAMED = new Set(['town', 'city', 'palace', 'hospital', 'camp']);
   const places = assets.map((a) => {
     const big = a.type === 'town' || a.type === 'city' || a.type === 'palace';
     const label = NAMED.has(a.type) || a === home ? (a.label ?? ASSET_TYPES[a.type]?.label ?? '') : '';
     const lx = Number(X(a.pos.x)) + 8;
-    const ly = label ? settle(lx, Number(Y(a.pos.y)) + 4, label, false) : 0;
+    const at = label ? settle(lx, Number(Y(a.pos.y)) + 4, label, false) : null;
     return `<g class="map-place ${a === home ? 'is-home' : ''}">
       ${big
     ? `<circle cx="${X(a.pos.x)}" cy="${Y(a.pos.y)}" r="5"></circle>`
     : `<rect x="${X(a.pos.x) - 3}" y="${Y(a.pos.y) - 3}" width="6" height="6"></rect>`}
-      ${label ? `<text x="${lx}" y="${ly}">${esc(label)}</text>` : ''}
+      ${label ? `<line class="map-leader" x1="${X(a.pos.x)}" y1="${Y(a.pos.y)}" x2="${at.x}" y2="${Number(at.y) - 3}"></line>
+      <text x="${at.x}" y="${at.y}">${esc(label)}</text>` : ''}
     </g>`;
   }).join('');
 
@@ -454,7 +499,7 @@ function nightSideFor(reason, result) {
       ? 'The battalion stayed. So did its coverage.'
       : 'The only battalion that reaches Kubin and Lozan moved that night.';
   }
-  if (/priority|designated/i.test(reason)) {
+  if (/priority|designat/i.test(reason)) {
     return `${s.civilianCasualties ?? 0} casualties are on the returns.`;
   }
   return `${s.civilianCasualties ?? 0} casualties are on the returns.`;
@@ -528,7 +573,7 @@ export function renderDebrief(host, state, result, entry) {
   const divergences = [...result.ledger
     .filter((l) => {
       const charged = l.charged ?? l.delta;
-      return Math.abs(charged) >= 2 && /civil|hospital|encampment|freeze|border|priority|designated|state aircraft|movement order|Listonian|relayed/i.test(l.reason);
+      return Math.abs(charged) >= 2 && LEDGER_SUBJECTS.test(l.reason);
     })
     .reduce((map, l) => {
       const charged = l.charged ?? l.delta;
@@ -546,13 +591,21 @@ export function renderDebrief(host, state, result, entry) {
    * cells and a hand's width of empty page under the buttons.
    */
   host.innerHTML = `<div class="screen-inner is-debrief">
+    ${/*
+     * The finding, as a printed record rather than a column of prose floating
+     * on black: a letterhead rule over it, the paragraphs at a reading measure
+     * inside a block the width of the page, and the sector's stamp at the foot
+     * of it. The page used to run a 510 px column of type over a 1240 px band
+     * of figures, which is two pages at once.
+     */ ''}
     ${ending ? `
-      <p class="subtitle is-lead">${esc(ending.title)}</p>
-      <h1 class="title is-outcome">${esc(ending.subtitle ?? ending.title)}</h1>
       <div class="card ending-card">
+        <div class="record-head-line"><span>SECTOR RECORD · THE FINDING</span><span>${esc(state.mission.name)}</span></div>
+        <p class="subtitle is-lead">${esc(ending.title)}</p>
+        <h1 class="title is-outcome">${esc(ending.subtitle ?? ending.title)}</h1>
         ${ending.lines.map((line) => `<p>${esc(line)}</p>`).join('')}
+        <div class="record-foot-line"><span>${esc(ROLES[result.role].label)}</span><span>ВПВО ТМ · TM ADF</span></div>
       </div>
-      <p class="subtitle is-tail">${esc(state.mission.name)} · ${esc(ROLES[result.role].label)}</p>
     ` : `
       <h1 class="title is-watch ${result.success ? 'gained' : 'grave'}">${esc(result.headline)}</h1>
       ${result.cause ? `<p class="subtitle grave">${esc(result.cause)}</p>` : ''}
@@ -694,10 +747,21 @@ export function renderDebrief(host, state, result, entry) {
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>`}
 
+    ${/*
+     * The letter card carries the letter, the same way the quarters scene
+     * does: the disposition is stencilled beside the title and the section's
+     * docket is a slip clipped to the sheet, never a sentence describing the
+     * post to the man who just read it.
+     */ ''}
     ${state.narrativePressure && entry?.letter ? `<div class="card letter-card">
-      <h3>${esc(entry.letter.title)}</h3>
-      ${entry.letter.note ? `<p class="note quoted">${esc(entry.letter.note)}</p>` : ''}
-      ${entry.letter.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
+      <h3>${esc(entry.letter.title)}${entry.letter.plate
+    ? ` <span class="letter-plate">${esc(entry.letter.plate)}</span>` : ''}</h3>
+      ${entry.letter.note ? `<p class="letter-slip">${esc(entry.letter.note)}</p>` : ''}
+      ${entry.letter.lines.map((l, i) => {
+    const cls = entry.letter.isLetter && i === 0 ? ' class="letter-salutation"'
+      : entry.letter.isLetter && i === entry.letter.lines.length - 1 ? ' class="letter-sign"' : '';
+    return `<p${cls}>${esc(l)}</p>`;
+  }).join('')}
     </div>` : ''}
 
     ${entry?.appointment ? `<div class="card file-entry is-good">
@@ -767,11 +831,11 @@ export function renderEndCard(host, state, result) {
    * its first line under them, and the figures as a single row.
    */
   const facts = [
-    [state.mission.name, ROLES[result.role].label],
     ...(result.abandoned
       ? [['SCORE', 'NOT SCORED']]
       : [['SCORE', String(result.score)],
         ['STANDING', `${Math.round(result.standing)} — ${result.tierLabel}`]]),
+    ['SEAT', ROLES[result.role].label],
   ];
 
   host.innerHTML = `<div class="screen-inner is-endcard ${ending ? 'is-title-card' : ''}">
@@ -785,6 +849,10 @@ export function renderEndCard(host, state, result) {
       </span>` : ''}
       ${ending && ending.subtitle ? `<p class="endcard-tm">${esc(ending.title)}</p>` : ''}
       <h1 class="title is-watch ${result.success ? 'gained' : 'grave'}">${esc(headline)}</h1>
+      ${/* The watch's name belongs under the title, not in the figure row as a
+           label over the seat: the card used to read "The President's Flight →
+           BATTLE MANAGER" beside SCORE and STANDING. */ ''}
+      <p class="subtitle endcard-watch">${esc(state.mission.name)}</p>
       <hr class="endcard-rule">
       ${ending ? `<p class="ending-lede">${esc(ending.lines[0] ?? '')}</p>`
     : cause ? `<p class="subtitle grave">${esc(cause)}</p>` : ''}
@@ -885,7 +953,7 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
         ${key('Click a contact', 'make it your target')}
         ${key('L', 'lock a fire-control channel onto it; press again to let it go')}
         ${key('F', 'launch a missile at it, once LAUNCH lights')}
-        ${key('A', 'your radar switch — up is RADIATE (you can see and shoot, and be found), down is SILENCE (this is the whole game)')}
+        ${key('A', 'your radar switch — up is RADIATE (you can see and shoot, and be found), down is SILENCE')}
         ${salvo ? key('S', 'missiles per shot — one or two') : ''}
         ${key('R', 'loaders out — top the rails up now, instead of waiting for them to go bare')}
         ${displace ? key('X', 'move the battery — a minute off the air, and the enemy has to find it again') : ''}
@@ -938,7 +1006,9 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
       reconciles them.</p>
       <p>A contact in dashed brackets is one a battery has been given, with the battery's name under
       it; solid brackets mean that battery has a round in the air on it. A contact with no
-      brackets is nobody's. In the shootlist the same states are ◇ and ◆.</p>
+      brackets is nobody's. The shootlist marks the same two states in its battery column: an open
+      diamond means the contact has been assigned, and a filled one means a round is in the
+      air.</p>
     </div>
     <div class="actions"><button class="btn-primary" id="btn-close-help">BACK</button></div>
   </div>`;

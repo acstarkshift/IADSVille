@@ -1479,17 +1479,20 @@ export const SCENARIOS = [
     roundAllowance: 18,
     brief: [
       'One of tonight\'s cruise missiles is not tracking anything in this sector. Its course takes it'
-        + ' west, over the ridge, across the Listonian border, and down near Gorna. A second one will'
-        + ' do the same thing later, which tells you something about the first.',
+        + ' west, over the ridge, across the Listonian border, and down near Gorna. A second one'
+        + ' follows the same course four hours later. Two rounds arriving on the same point four'
+        + ' hours apart are not a malfunction.',
       'There is a camp at Gorna. Four hundred people who left Trans Mordovia and have been living in'
         + ' tents on the far side of that line for two years, and whose continued existence is a'
         + ' subject the ministry does not enjoy.',
       'LANCE WEST holds it at thirty-seven kilometres, five inside its envelope, and BASTION reaches'
         + ' it with sixty to spare. It is a straight, slow, unmanoeuvring target and you have rounds'
-        + ' on the rails. There is no version of this where you could not have stopped it.',
-      'Sector will transmit its position on this. You already know what it is going to be.',
+        + ' on the rails. You can stop it.',
+      'Sector will transmit its position during the watch, and its position will be that the camp'
+        + ' is not your concern.',
     ],
-    teaches: 'You learn what the schedule of defended places is a schedule of.',
+    teaches: 'You learn that the schedule of defended places lists installations and does not'
+      + ' list people.',
     assets: [
       GROUND.town, GROUND.c2, GROUND.power, GROUND.bridge, CAMP,
     ],
@@ -2109,10 +2112,12 @@ export const SCENARIOS = [
     /** The watch the whole campaign has been walking toward. */
     finale: true,
     brief: [
-      'Three formations crossed the frontier on divergent axes.',
-      'The northern one is tracking Mostrograd and the presidential palace. The western one is'
-        + ' tracking the valley, and there is nothing in the valley but the crossing and your village.',
-      'The third is tracking this post. You have been radiating all night and they have known where'
+      'Three formations crossed the frontier on divergent axes. They are numbered 1, 2 and 3 on the'
+        + ' map above, in the order they are described here.',
+      'Axis 1, from the north, is tracking Mostrograd and the presidential palace. Axis 2, from the'
+        + ' west, is tracking the valley, and there is nothing in the valley but the crossing and'
+        + ' your village.',
+      'Axis 3 is tracking this post. You have been radiating all night and they have known where'
         + ' you are for some time. You can displace and live, and BASTION — the only battery that can'
         + ' reach either city — will be off the air for the three and a half minutes that takes.',
       'Sector command has already transmitted its priority of fires. You will receive it shortly and'
@@ -2460,7 +2465,8 @@ export const SCENARIOS = [
       'STATE 01 will be on your scope, identified, until it is out of national airspace or it is'
         + ' not. Nothing else on this watch matters beside that.',
     ],
-    teaches: 'The last decision of the war turns out not to be about a building either.',
+    teaches: 'You find out that the last order of the war is about one man rather than any'
+      + ' place on the map.',
     briefIfKnown: {
       buyer: ['You know who has been buying what, and through which ministry, and what the aircraft'
         + ' at Demobodedovo has been loading since yesterday afternoon. Nobody has asked you to know it.'],

@@ -119,9 +119,26 @@ kbd {
  * reader sets the bar's row height; the tilt is on the card alone, so nothing
  * beside it moves.
  */
-.reader { position: relative; width: 210px; height: 66px; flex: 0 0 auto; }
+/*
+ * The reader is mounted in the desk lip, not in the top strip.
+ *
+ * The player: "the card/card reader on the user console should be put
+ * somewhere that makes more visual sense rather than just jammed into the top
+ * of the display." A desktop reader belongs on the desk, and the opening beat
+ * has been showing one there all along — so it sits on the lip below the
+ * panels, under the left of the tube, with the card standing out of the slot
+ * toward the operator. It is laid out by the ticker's grid, so it takes the
+ * middle column and the event log keeps its own; nothing is covered.
+ */
+.reader { position: relative; width: 196px; height: 78px; flex: 0 0 auto; align-self: end; margin: 0 14px 6px 0; }
+.reader::after {
+  /* the machined lip the reader is sunk into */
+  content: ''; position: absolute; left: -10px; right: -10px; bottom: -6px; height: 12px;
+  background: linear-gradient(180deg, #2b2f2b, #14171400);
+  border-top: 1px solid var(--metal-edge);
+}
 .reader-top {
-  position: absolute; left: 0; right: 0; top: 0; height: 16px;
+  position: absolute; left: 0; right: 0; top: 30px; height: 16px;
   background: linear-gradient(180deg, #343434 0%, #222 55%, #191919 100%);
   clip-path: polygon(7% 0, 93% 0, 100% 100%, 0 100%);
 }
@@ -130,8 +147,8 @@ kbd {
   border: 1px solid rgba(255, 255, 255, .07); border-radius: 2px;
 }
 .reader-emblem {
-  position: absolute; left: 50%; top: 3px; width: 11px; height: 11px; margin-left: -5.5px;
-  border-radius: 50%;
+  position: absolute; left: 10px; top: 3px; width: 11px; height: 11px; margin-left: -5.5px;
+  border-radius: 50%; z-index: 2;
   background: radial-gradient(circle at 40% 35%, #4a4a4a, #0d0d0d 75%);
   box-shadow: inset 0 0 0 1px #050505, 0 0 0 1px #3a3a3a;
 }
@@ -139,13 +156,13 @@ kbd {
   content: ''; position: absolute; left: 3px; top: 5px; width: 5px; height: 1.5px;
   background: #2e2e2e; transform: rotate(-20deg);
 }
-.reader-leds { position: absolute; right: 24px; top: 5px; display: flex; gap: 6px; }
+.reader-leds { position: absolute; right: 7px; top: 5px; display: flex; gap: 6px; z-index: 2; }
 .led { width: 5px; height: 5px; border-radius: 50%; background: #262626; box-shadow: inset 0 0 1px 1px #000; }
 .led.is-blue.is-lit { background: #5a92ff; box-shadow: 0 0 5px 1px rgba(90, 146, 255, .9); }
 .led.is-green.is-lit { background: #45e874; box-shadow: 0 0 5px 1px rgba(69, 232, 116, .9); }
 .led.is-amber.is-lit { background: #ffb43c; box-shadow: 0 0 5px 1px rgba(255, 180, 60, .9); }
 .reader-front {
-  position: absolute; left: 0; right: 0; top: 16px; height: 12px; z-index: 2;
+  position: absolute; left: 0; right: 0; top: 46px; height: 12px; z-index: 2;
   background: linear-gradient(180deg, #262626, #0e0e0e); border-radius: 0 0 4px 4px;
   box-shadow: 0 2px 3px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .12);
 }
@@ -154,8 +171,8 @@ kbd {
   border-radius: 1px; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 1), 0 1px 0 rgba(255, 255, 255, .12);
 }
 .idcard {
-  position: absolute; left: 40px; top: 22px; width: 130px; height: 54px; z-index: 1;
-  transform-origin: 50% 0; transform: perspective(300px) rotateX(34deg) rotate(-1.2deg);
+  position: absolute; left: 34px; top: 0; width: 130px; height: 54px; z-index: 1;
+  transform-origin: 50% 100%; transform: perspective(320px) rotateX(-24deg) rotate(-1.4deg);
   background: linear-gradient(120deg, #fbfaf6 0%, #f2f0e9 45%, #e7e4db 100%);
   color: #17191c; border-radius: 4px; overflow: hidden;
   font-family: var(--font-mono); text-shadow: none;
@@ -206,11 +223,13 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 }
 .file-ident-photo { position: relative; flex: 0 0 auto; line-height: 0; }
 .file-photo.is-small { width: 48px; height: 60px; border-width: 2px; }
-.record-head .file-ident-photo::after { width: 26px; height: 26px; right: -6px; bottom: 6px; }
+.record-head .file-ident-photo::after { width: 22px; height: 22px; right: 4px; bottom: 6px; }
 /* the dry stamp, half on the print and half on the form under it */
+/* The dry stamp is ON the print, not hanging off the corner of it: at
+   right:-10px it was clipped by the card's own edge and read as a smear. */
 .file-ident-photo::after {
-  content: ''; position: absolute; right: -10px; bottom: 12px;
-  width: 44px; height: 44px; border-radius: 50%;
+  content: ''; position: absolute; right: 6px; bottom: 10px;
+  width: 34px; height: 34px; border-radius: 50%;
   border: 1px solid color-mix(in srgb, var(--hostile) 55%, transparent);
   box-shadow: inset 0 0 0 3px transparent, inset 0 0 0 4px color-mix(in srgb, var(--hostile) 35%, transparent);
   transform: rotate(-12deg); opacity: .7; pointer-events: none;
@@ -1319,7 +1338,14 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 .ticker {
   position: relative;   /* the command net anchors to this */
   border-top: 1px solid var(--metal-edge); box-shadow: 0 -2px 6px rgba(0,0,0,.4);
+  /* the desk lip: the same columns as the stage, so the reader lands under
+     the left of the tube rather than under the left-hand panel */
+  display: grid; grid-template-columns: minmax(210px, 300px) auto minmax(0, 1fr);
+  align-items: end;
 }
+.ticker > #card-reader { grid-column: 2; grid-row: 1; }
+.ticker > .event-log { grid-column: 3; grid-row: 1; }
+.ticker > .action-bar { grid-column: 1 / -1; grid-row: 2; }
 
 /*
  * The command net floats above the ticker rather than sitting in it.
@@ -1746,6 +1772,9 @@ table.ledger .down { color: var(--hostile); }
     gap: 3px; padding: 4px 8px;
   }
   .topbar-group:nth-child(2) { display: none; }
+  /* the desk furniture folds away with the rest of it on a phone */
+  .ticker { display: block; }
+  #card-reader { display: none; }
   .topbar-group.rack { justify-content: flex-end; gap: 5px; }
   #unit-plate, #mission-name { display: none; }
   /*
@@ -1936,16 +1965,25 @@ table.ledger .down { color: var(--hostile); }
 .record-stamp {
   position: absolute; top: 14px; right: 16px;
   display: flex; flex-direction: column; align-items: center; gap: 1px;
-  font-size: 10px; line-height: 1.3; letter-spacing: .2em; text-align: center;
-  color: color-mix(in srgb, var(--hostile) 70%, #6b5a52);
+  /* Bigger type, a lighter break-up and less rotation: at ten pixels with a
+     nine-pixel mask over it the impression came out as an illegible smear,
+     which is not what a stamp on a form does. */
+  font-size: 12px; line-height: 1.25; letter-spacing: .16em; text-align: center;
+  color: color-mix(in srgb, var(--hostile) 74%, #6b5a52);
   border: 1px solid currentColor; box-shadow: 0 0 0 2px transparent, inset 0 0 0 2px transparent;
   outline: 1px solid currentColor; outline-offset: 2px;
-  padding: 4px 10px; transform: rotate(-6deg); opacity: .85;
+  padding: 5px 12px; transform: rotate(-4deg); opacity: .9;
   pointer-events: none;
-  /* the ink breaks up, the way a rubber stamp's does, and the impression is
-     doubled a pixel off itself */
-  mask-image: repeating-linear-gradient(58deg, #000 0 9px, transparent 9px 10px);
+  mask-image: repeating-linear-gradient(58deg, #000 0 15px, transparent 15px 16px);
   text-shadow: 1px 1px 0 color-mix(in srgb, var(--hostile) 30%, transparent);
+}
+/* On a narrow window a stamp in the corner prints across the name of the
+   person the form is about: it takes its own row under the heading instead. */
+@media (max-width: 900px) {
+  .record-stamp {
+    position: static; transform: rotate(-2deg); align-self: flex-start;
+    margin: 8px 0 4px; font-size: 11px;
+  }
 }
 .record-stamp .tm { display: block; }
 .record-stamp .en { display: block; font-size: 8.5px; opacity: .9; }
@@ -1994,6 +2032,31 @@ table.ledger .down { color: var(--hostile); }
 .letter-card p { color: #2b2f4a; font-style: italic; line-height: 24px; margin-bottom: 0; }
 .letter-card p + p { margin-top: 24px; }
 .letter-card .note, .letter-card .quoted { color: #55597a; }
+/*
+ * How the post arrived, shown and not narrated: the disposition stencilled
+ * beside the letter's own title, and the section's docket as a buff slip
+ * clipped to the sheet. First cut; the artist owns the finish.
+ */
+.letter-card .letter-plate {
+  float: right; margin-left: 14px;
+  font-style: normal; font-size: 9.5px; letter-spacing: .18em; color: #7a2f2a;
+  border: 1px solid rgba(122, 47, 42, .55); padding: 2px 7px;
+}
+.letter-card .letter-slip {
+  display: inline-block; float: right; clear: right;
+  max-width: 46%; margin: 4px 0 10px 18px; padding: 8px 11px;
+  font-style: normal; font-size: 11px; line-height: 1.45; color: #3a3226;
+  background: #cdbf9c; border: 1px solid #6f6552;
+  box-shadow: 3px 3px 0 rgba(10, 13, 10, .28); transform: rotate(-1.1deg);
+}
+.letter-card .letter-salutation { margin-top: 4px; }
+.letter-card .letter-sign { margin-top: 24px; text-align: right; }
+/* On a narrow sheet nothing is set beside anything: the stamp and the slip go
+   across the page and the letter starts under them. */
+@media (max-width: 760px) {
+  .letter-card .letter-plate { float: none; display: inline-block; margin: 0 0 10px; }
+  .letter-card .letter-slip { float: none; max-width: 100%; margin: 6px 0 16px; }
+}
 
 /* The file nobody meant you to read: buff stock, a red header, a stamp. */
 .revelation-card {
@@ -2042,9 +2105,19 @@ table.ledger .down { color: var(--hostile); }
 /* The ending is not another panel in the deck: it is set on the black field,
    centred, with a hand's width of margin and no chrome of any kind. */
 .ending-card {
+  position: relative;
   border: 0; border-radius: 0; background: transparent; box-shadow: none;
-  padding: 10px 40px 24px; margin: 0 auto 22px; max-width: 76ch;
+  border-top: 2px solid var(--edge); border-bottom: 1px solid var(--edge);
+  padding: 12px 40px 14px; margin: 0 auto 22px; max-width: none;
 }
+/* the letterhead and the foot of the record, so the finding is a document */
+.record-head-line, .record-foot-line {
+  display: flex; justify-content: space-between; gap: 12px;
+  font-size: 9px; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-dim);
+  padding: 2px 0 10px;
+}
+.record-foot-line { padding: 12px 0 0; border-top: 1px solid var(--edge); margin-top: 14px; }
+.ending-card .title.is-outcome { margin-top: 2px; }
 .is-debrief .subtitle.is-lead, .is-debrief .title.is-outcome, .is-debrief .subtitle.is-tail { text-align: center; }
 .ending-card p { line-height: 1.85; margin: 0 auto 14px; max-width: 66ch; color: var(--ink); }
 .ending-card p:first-child { color: var(--ink-bright); font-size: 15px; }
@@ -2224,10 +2297,47 @@ table.ledger .down { color: var(--hostile); }
   padding: calc(4px * var(--scene-scale, 3)) calc(5px * var(--scene-scale, 3))
            calc(7px * var(--scene-scale, 3));
   color: #e9efe4; font-size: calc(4.6px * var(--scene-scale, 3)); line-height: 1.35;
-  background: rgba(8, 12, 9, .86);
+  /* Opaque. It was 86% black, so the desk drawers and their verticals printed
+     through the box and crossed the type on every office shot. */
+  background: #070a08;
   box-shadow: 0 0 0 calc(1px * var(--scene-scale, 3)) #cfd8cc, 0 0 0 calc(2px * var(--scene-scale, 3)) #0a0d0a;
 }
 .scene-speaker { display: block; flex: 0 0 auto; font-size: calc(3.4px * var(--scene-scale, 3)); letter-spacing: .12em; color: #9fb3a0; margin-bottom: calc(2px * var(--scene-scale, 3)); text-transform: uppercase; }
+/*
+ * The section's slip.
+ *
+ * The player: the letter's disposition should be "a slip, a stamp or a line in
+ * the speaker plate", never a sentence a narrator reads out. The plate above
+ * carries the short form; this is the docket itself, a scrap of buff paper
+ * clipped to the sheet at a slight angle. First cut — the artist owns how it
+ * finally looks.
+ */
+.scene-slip {
+  position: relative; display: block; flex: 0 0 auto; align-self: flex-start;
+  max-width: 72%; margin: calc(2px * var(--scene-scale, 3)) 0 calc(3px * var(--scene-scale, 3)) calc(3px * var(--scene-scale, 3));
+  padding: calc(1.6px * var(--scene-scale, 3)) calc(2.4px * var(--scene-scale, 3)) calc(1.2px * var(--scene-scale, 3));
+  font-size: calc(2.9px * var(--scene-scale, 3)); line-height: 1.3; letter-spacing: .03em;
+  font-style: normal; color: #3a3226; background: #cdbf9c;
+  border: 1px solid #6f6552;
+  /* the torn lower edge of a docket, in the paper's own two inks */
+  border-bottom: 0;
+  box-shadow: calc(1px * var(--scene-scale, 3)) calc(1.4px * var(--scene-scale, 3)) 0 rgba(10, 13, 10, .5);
+  transform: rotate(-1.6deg);
+}
+/* the tear along the bottom */
+.scene-slip::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: calc(-1.4px * var(--scene-scale, 3));
+  height: calc(1.6px * var(--scene-scale, 3));
+  background: repeating-linear-gradient(90deg, #cdbf9c 0 3px, #6f6552 3px 4px, #cdbf9c 4px 6px, transparent 6px 7px);
+}
+/* the wire clip that holds it to the sheet */
+.scene-slip::before {
+  content: ''; position: absolute; left: 12%; top: calc(-2.6px * var(--scene-scale, 3));
+  width: calc(6px * var(--scene-scale, 3)); height: calc(5px * var(--scene-scale, 3));
+  border: calc(.9px * var(--scene-scale, 3)) solid #6b7168; border-bottom: 0; border-radius: 40% 40% 0 0;
+}
+.scene-slip[hidden] { display: none; }
+.scene.is-stacked .scene-slip { font-size: 11px; padding: 5px 8px; margin-bottom: 10px; }
 .scene-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 .scene-body::-webkit-scrollbar { width: 0; height: 0; }
 .scene-body p { margin: 0 0 calc(1.5px * var(--scene-scale, 3)); white-space: pre-wrap; }
@@ -2243,27 +2353,61 @@ table.ledger .down { color: var(--hostile); }
 /* The tape's type is locked to the paper: two printed lines to one bar of the
    continuous stationery, so the words sit ON the sheet instead of floating
    above a ruling that disagrees with them. */
-.scene[data-kind="printout"] .scene-text { font-size: calc(3.9px * var(--scene-scale, 3)); line-height: calc(4.5px * var(--scene-scale, 3)); letter-spacing: .04em; }
+/*
+ * The tape is set at the pitch the paper feeds at: TAPE_LINE in scenes.js is
+ * 4.5 scene pixels and so is this, so a line of type and a line of paper are
+ * the same distance. The box is anchored at the print head and grows upward,
+ * which is why it needs no padding under the last line and why the prompt is
+ * outside it, on the machine's own front face.
+ */
+.scene[data-kind="printout"] .scene-text {
+  font-size: calc(3.9px * var(--scene-scale, 3)); line-height: calc(4.5px * var(--scene-scale, 3));
+  letter-spacing: .04em; overflow: visible; padding-bottom: 0;
+}
+.scene[data-kind="printout"] .scene-body { overflow: visible; }
 .scene[data-kind="printout"] .scene-body p { margin-bottom: 0; }
+.scene[data-kind="printout"] .scene-prompt {
+  bottom: calc(-9px * var(--scene-scale, 3)); right: calc(2px * var(--scene-scale, 3)); color: #d9dcd4;
+}
 /* The file and the letter are locked to their own ruling the same way: two
    lines of type to one rule, so the words sit on the paper. */
 .scene[data-kind="folder"] .scene-text { font-size: calc(4.1px * var(--scene-scale, 3)); line-height: calc(4.5px * var(--scene-scale, 3)); color: #2b2f28; }
 .scene[data-kind="folder"] .scene-body p { margin-bottom: calc(4.5px * var(--scene-scale, 3)); }
-.scene[data-kind="quarters"] .scene-body p { margin-bottom: calc(4.5px * var(--scene-scale, 3)); }
-.scene[data-kind="printout"] .scene-speaker, .scene[data-kind="quarters"] .scene-speaker, .scene[data-kind="folder"] .scene-speaker { color: #6f6552; }
-.scene[data-kind="quarters"] .scene-text { font-style: italic; font-size: calc(4.1px * var(--scene-scale, 3)); line-height: calc(4.5px * var(--scene-scale, 3)); color: #2b2f4a; }
+/* Half a ruled line between paragraphs, so a whole letter — salutation,
+   body and signature — is on the sheet at once at every width. The sheet's
+   ruling has to be laid on these baselines rather than the other way round. */
+.scene[data-kind="quarters"] .scene-body p { margin-bottom: calc(2.25px * var(--scene-scale, 3)); }
+.scene[data-kind="printout"] .scene-speaker, .scene[data-kind="quarters"] .scene-speaker { color: #6f6552; }
+/* the file's own heading, in the ink the file is typed in — it used to be
+   the same grey as the page ruling, with a rule through it. */
+.scene[data-kind="folder"] .scene-speaker { color: #43392a; font-weight: 700; }
+.scene[data-kind="quarters"] .scene-text { font-style: italic; font-size: calc(3.9px * var(--scene-scale, 3)); line-height: calc(4.5px * var(--scene-scale, 3)); color: #2b2f4a; }
 .scene[data-kind="printout"] .scene-prompt, .scene[data-kind="quarters"] .scene-prompt, .scene[data-kind="folder"] .scene-prompt { color: #6f6552; }
 /* The order of appointment is read across the desk front, in the spoken box —
    named here so a kind can never fall through to the default by accident. */
-.scene[data-kind="appointment"] .scene-text, .scene[data-kind="office"] .scene-text, .scene[data-kind="ending"] .scene-text { background: rgba(8, 12, 9, .9); }
+.scene[data-kind="appointment"] .scene-text, .scene[data-kind="office"] .scene-text, .scene[data-kind="ending"] .scene-text { background: #070a08; }
 /* A phone held upright: the words under the picture, on their own sheet. */
-.scene.is-stacked .scene-text { font-size: 14px; line-height: 1.45; padding: 12px 14px 24px; }
+.scene.is-stacked .scene-text { font-size: 14px; line-height: 1.45; padding: 12px 14px 24px; justify-content: flex-start; }
+.scene.is-stacked .scene-body { flex: 0 1 auto; }
 .scene.is-stacked .scene-speaker { font-size: 10px; margin-bottom: 6px; }
 .scene.is-stacked .scene-prompt { font-size: 11px; right: 14px; bottom: 8px; }
 .scene.is-stacked[data-kind="printout"] .scene-text, .scene.is-stacked[data-kind="quarters"] .scene-text, .scene.is-stacked[data-kind="folder"] .scene-text {
   background: #ebe7d9; box-shadow: 0 0 0 2px #cfd8cc, 0 0 0 4px #0a0d0a;
 }
-.scene.is-stacked[data-kind="printout"] .scene-text { font-size: 13px; }
+/*
+ * On a phone the tape's panel IS the paper: the machine is at the bottom of
+ * the picture, the sheet rises out of it, and this is the same sheet carrying
+ * on up the screen with the words at the bottom of it, climbing as they print.
+ */
+.scene.is-stacked[data-kind="printout"] .scene-text {
+  font-size: 13px; justify-content: flex-end; overflow: hidden;
+  background: #efe9d8; box-shadow: none;
+  border-left: 5px dotted #b2a482; border-right: 5px dotted #b2a482;
+  padding: 12px 12px 6px;
+}
+.scene.is-stacked[data-kind="printout"] .scene-body { flex: 0 0 auto; overflow: visible; }
+.scene.is-stacked[data-kind="printout"] .scene-prompt { bottom: 4px; right: 12px; color: #6f6552; }
+.scene.is-stacked[data-kind="printout"] .scene-skip { bottom: auto; top: 12px; right: 14px; left: auto; }
 .scene.is-stacked[data-kind="folder"] .scene-text, .scene.is-stacked[data-kind="quarters"] .scene-text { line-height: 1.5; }
 .scene.is-stacked[data-kind="folder"] .scene-body p, .scene.is-stacked[data-kind="quarters"] .scene-body p { margin-bottom: 10px; }
 /* On a phone the picture goes to the top of the window, so SKIP cannot sit
@@ -2356,8 +2500,14 @@ table.ledger .down { color: var(--hostile); }
 .endcard-rule {
   width: 190px; margin: 14px auto 16px; border: 0; border-top: 1px solid var(--edge);
 }
+/* The watch's own name, under the title, where a subtitle goes. */
+.endcard-watch { margin: 0 0 2px; letter-spacing: .2em; }
+/*
+ * The ending's first line reads as a paragraph, so it is set as one. Centred,
+ * it came out as eight ragged lines on a phone.
+ */
 .is-endcard .ending-lede {
-  max-width: 62ch; margin: 0 auto 18px;
+  max-width: 62ch; margin: 0 auto 18px; text-align: left;
   color: var(--ink); font-size: 15px; line-height: 1.62;
 }
 .is-title-card .subtitle.grave { margin: 0 auto 16px; }
@@ -2407,10 +2557,15 @@ table.ledger .down { color: var(--hostile); }
 .map-reach.is-own { fill: color-mix(in srgb, var(--accent) 8%, transparent); stroke: var(--accent); stroke-dasharray: 4 3; }
 .map-site rect { fill: var(--good); }
 .map-site.is-own rect { fill: var(--accent); }
-.map-site text { fill: var(--ink-dim); font: 7.5px var(--font-mono); letter-spacing: .1em; text-anchor: middle; }
+/* Every name on the map is knocked out of the ground it sits on, so a label
+   over a reach ring or a grid line is still a word and not a tangle. */
+.sector-map text { paint-order: stroke fill; stroke: #050806; stroke-width: 3px; stroke-linejoin: round; }
+.map-site text { fill: var(--ink-dim); font: 8.5px var(--font-mono); letter-spacing: .06em; text-anchor: middle; }
 .map-site.is-own text { fill: var(--accent); }
 .map-place rect, .map-place circle { fill: none; stroke: var(--ink); stroke-width: 1.2; }
-.map-place text { fill: var(--ink-dim); font: 8px var(--font-mono); letter-spacing: .12em; }
+/* a hair line from the mark to its name, for the names that had to move */
+.map-leader { stroke: color-mix(in srgb, var(--ink-dim) 60%, transparent); stroke-width: .6; }
+.map-place text { fill: var(--ink); font: 9px var(--font-mono); letter-spacing: .06em; }
 .map-place.is-home circle { fill: color-mix(in srgb, var(--ink-bright) 35%, transparent); stroke: var(--ink-bright); stroke-width: 2; }
 .map-place.is-home text { fill: var(--ink-bright); font-weight: 700; }
 .map-axis line { stroke: var(--hostile); stroke-width: 1.6; }

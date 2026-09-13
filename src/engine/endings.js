@@ -186,6 +186,19 @@ function homeSentence(character) {
   return phrase.charAt(0).toUpperCase() + phrase.slice(1);
 }
 
+/**
+ * Small counts, spelled out.
+ *
+ * These paragraphs write "three and a half minutes" and "seven days' leave" a
+ * few lines apart, and then opened one with a bare numeral. One register per
+ * document. Percentages and casualty counts stay as figures, because those are
+ * quoted off a return.
+ */
+const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen'];
+const spellCount = (n) => (Number.isFinite(n) && n >= 0 && n < COUNT_WORDS.length
+  ? COUNT_WORDS[n] : String(n));
+
 function householdPhrase(character) {
   if (!character) return 'your household';
   return householdOf(character).en;
@@ -373,8 +386,9 @@ export const ENDINGS = {
     standing: -55,
     lines: (r, character) => [
       'The third axis was not engaged in time. The forward post was struck while the battalion was'
-        + ` still guiding, and the watch continued for another ${Math.max(1, Math.round(r.playedOutS / 60))}`
-        + ' minutes without anybody on it.',
+        + ' still guiding, and the watch continued for another'
+        + ` ${spellCount(Math.max(1, Math.round(r.playedOutS / 60)))} minutes without anybody on`
+        + ' it.',
       `In that time the palace reached ${Math.round(r.palaceHarm * 100)}% damage and the Ville`
         + ` ${Math.round(r.villeHarm * 100)}%, with ${r.casualties} casualties in the valley. The`
         + ' batteries that were already engaged finished their engagements and then stopped, because'

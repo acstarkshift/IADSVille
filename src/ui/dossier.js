@@ -17,7 +17,7 @@ import { drawPortrait } from './portrait.js';
 import { knownRevelations } from '../engine/revelations.js';
 import { tierFor } from '../engine/command.js';
 import { STATE, PLATES, STATUS } from './lexicon.js';
-import { letterById } from '../engine/family.js';
+import { letterById, dispositionPlate } from '../engine/family.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -47,7 +47,10 @@ export function renderEnlistment(host, state) {
       night.</p>
       <p class="note">Sector command keeps a file on you from today, and it is never closed. The
       file is kept by the political section — the part of the service that watches the service. It
-      reads your log, it reads your post, and in time it reads you.</p>
+      reads your log and your post, and it keeps what it reads.</p>
+      <p class="note">This sector is short of officers. You will be given a battalion on your first
+      night because you are the one who is sitting at the console, and the rank will be made to
+      catch up with the job afterwards.</p>
 
       <div class="field-row">
         <label class="field">
@@ -214,19 +217,28 @@ export function renderDossier(host, state) {
       && ((state.campaign.family?.delivered?.length ?? 0) + (state.campaign.family?.withheld?.length ?? 0) > 0)
     ? `<div class="card letter-card">
       <h3>Correspondence</h3>
+      ${/*
+       * One row per letter: its title, how it arrived stamped beside it, and a
+       * line of the letter in the hand that wrote it. Nothing here describes
+       * the post to the man it was addressed to.
+       */ ''}
       <table class="ledger">
         ${state.campaign.family.delivered.map((d) => {
     const t = letterById(d.id);
+    const plate = dispositionPlate(d.disposition);
     return t ? `<tr>
-          <td><b>${esc(t.title)}</b></td>
+          <td><b>${esc(t.title)}</b>${plate
+      ? `<br><span class="letter-plate">${esc(plate)}</span>` : ''}</td>
           <td class="is-prose note">${esc(d.excerpt ?? '')}</td>
         </tr>` : '';
   }).join('')}
         ${state.campaign.family.withheld.map((h) => {
     const t = letterById(h.id);
     return t ? `<tr>
-          <td><b>${esc(t.title)}</b></td>
-          <td class="is-prose grave">Withheld by the political section.</td>
+          <td><b>${esc(t.title)}</b><br>
+            <span class="letter-plate">${esc(dispositionPlate('withheld'))}</span></td>
+          <td class="is-prose grave">Posted from the Ville. Held pending assessment of your
+            file.</td>
         </tr>` : '';
   }).join('')}
       </table>

@@ -154,7 +154,7 @@ into numbers the simulation uses:
 |---|---|
 | **Backgrounds** | The works at Kubin taught you machinery, so you reload and displace faster. Never leaving the valley taught you to identify aircraft lying in a field. Two years at the academy in Mostrograd start you with standing — and with people who watch you more closely for losing it. A penal transfer starts you in disgrace and lets you climb faster. |
 | **Home** | Fixed: the Ville, in the western valley, eleven kilometres from the console you sit at. At enlistment you choose which household is still there — your mother, your sister and her children, your grandmother, your brother who failed the medical — and which quarter of the village they live in. Damage to the town is reported by quarter, and one of those quarters is theirs — and when it is theirs, a few seconds after the strike report, the net carries one line only you have any use for: the trunk lines to that quarter are down. |
-| **The letters** | The household writes, all campaign long, and the post goes through the political section. A commended file gets its letter unopened — and is told so. An ordinary file gets it opened and resealed. A flagged file gets a notice of withholding, and the letter itself comes back watches later under the wrong seal, or is still held at the finale, where it becomes a clause in the ending. The letters never mention the war, and what they conspicuously do not say — a repainted kitchen, children moved to the room facing away from the valley, an enamel box taken down and kept by the door — is the war arriving anyway. You never get to write back. The one unmonitored telephone call in this game is in the epilogue, and it costs what it costs to get there. |
+| **The letters** | The household writes, all campaign long, and the post goes through the political section. You read the letter itself, not a summary of it: a salutation with your own name in it, the body in that person's hand, a sign-off. Ksenia keeps the house and closes every letter the same way; Nata writes about the children and numbers her sheets so you can tell when one has gone missing; Vera writes six lines and means all of them; Ilya says the thing and then says it again harder. How it reached you is stencilled on the plate above the paper — delivered unopened, opened and resealed, held and then released — with the section's own docket clipped to the sheet where it has something to add. A flagged file gets no letter at all: the notice of withholding stands in its place, signed by the section. The letters never mention the war, and what they conspicuously do not say — a repainted kitchen, children moved to the room facing away from the valley, an enamel box taken down and kept by the door — is the war arriving anyway. You never get to write back. The one unmonitored telephone call in this game is in the epilogue, and it costs what it costs to get there. |
 | **Rank** | Eleven grades from Recruit to Captain. Promotion needs experience *and* standing: the army will not promote someone it does not trust. A catastrophic watch can reduce you, and it keeps the training you were given. |
 | **Training** | One point per promotion. A steady hand gets rounds off the rail sooner; signal discipline slows enemy direction finding against your sets; a cool head shortens the blackout after a hit; a drilled crew holds an extra engagement channel. Qualifications apply in full at your own battery and at half strength across the sector — you drilled those crews, but you are not sitting in them. |
 | **Decorations** | Awarded for things that are hard to do, including one for losing your position and holding the sector anyway. |
@@ -339,17 +339,19 @@ the tape comes out of the printer into your own hands and types the night as
 figures, a line at a time — what time the watch ended, how long it ran, what it
 scored, and what the file now carries; you are stood in front of the political
 section, whose commissar raises at most three things the log shows you did —
-the hospital, the border, the order you did not answer — before the file entry
-and a dismissal that depends on the tier; an order of appointment is read when
-there is one, on its own, over the order and a new shoulder board on a desk; a
-watch that has taught you something puts the folder on the desk; and the letter
-from home, when one comes, is read in quarters with the snow going past the
-window. On the first three watches the commissar raises nothing, because there
-is nothing yet to raise with somebody who is still finding the radiate switch.
-A watch that ends the campaign runs in a different order — the folder is on the
-desk before the interview rather than after it, the appointment waits for the
-full report, and the ending is the last thing said. The last watches end on the
-valley at first light, or under a red sky. Every
+the hospital, the border, the order you did not answer — with the minute against
+each of them, before the file entry, a line about where your household is
+registered when the file has turned, and a dismissal that costs you something.
+An order of appointment is read when there is one, on its own, over the order
+and a new shoulder board on a desk; a watch that has taught you something puts
+the folder on the desk; and the letter from home, when one comes, is read in
+quarters with the snow going past the window. On the first three watches the
+commissar raises nothing, because there is nothing yet to raise with somebody
+who is still finding the radiate switch. A watch that ends the campaign runs in
+a different order — the appointment is read straight off the tape, the folder is
+on the desk before the interview rather than after it, and the ending is the
+last thing said. The last watches end on the valley at first light, or under a
+red sky. Every
 scene is drawn — there is not an image file in the game — at 320 by 180 and
 scaled in whole pixels, with the words laid over the picture as type, and a
 key or a tap finishes a line and moves to the next; SKIP goes straight to the

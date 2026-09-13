@@ -179,8 +179,11 @@ export function withinAppointment(scenario, campaign, scenarios) {
  */
 export function appointmentNote(echelon) {
   return {
-    battalion: 'Four batteries, one radar, and the valley they sit in.',
-    sector: 'Nobody told you this was coming. Nobody tells anybody.',
+    battalion: 'Four batteries, one radar, and the valley they sit in are yours from tonight.',
+    // Said plainly. It used to be a sentence repeated with one word changed
+    // for effect, which is the one mannerism the standard names by name.
+    sector: 'The order came up with the morning traffic. Nobody mentioned it beforehand, and'
+      + ' nobody is going to mention it now.',
     region: 'Four sectors answer to you. You will not meet three of the four commanders during'
       + ' this war.',
     national: 'The order is two lines long and does not say who held the appointment before you.',

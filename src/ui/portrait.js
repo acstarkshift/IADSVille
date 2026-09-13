@@ -81,6 +81,27 @@ export function portraitFeatures(seed) {
 }
 
 /**
+ * Where the head sits in the grid, so a scene that builds a body under this
+ * head can find the jaw, the eyes and the brim without guessing.
+ *
+ * The player, having seen the first cut: "Any chance we can make the
+ * characters not look like beaker from the muppets? They need to be
+ * stockier". So: a wide short skull, a jaw as wide as the brow, no stalk of a
+ * neck — two rows and the head is down in the collar — and shoulders that go
+ * square out of the frame. Everything below is measured off this table.
+ */
+export const FACE = {
+  top: 4,        // the crown
+  jaw: 17,       // the underside of the chin
+  left: 3,       // the widest cell on the left
+  right: 20,     // and on the right
+  eyes: 11,
+  mouth: 15,
+  neck: 18,      // one row of it, and then the collar
+  collar: 19,
+};
+
+/**
  * The picture as a grid of colours, PORTRAIT_H rows of PORTRAIT_W cells.
  * Every cell is a colour string; nothing is transparent, because a photograph
  * is not.
@@ -102,66 +123,71 @@ export function portraitCells(seed) {
     }
   }
 
-  // The tunic: shoulders up to the collar, the collar open at the throat, a
-  // tab on the left collar, three buttons down the front.
-  rect(0, 24, W - 1, H - 1, TUNIC);
-  rect(0, 24, 2, 25, f.back); rect(W - 3, 24, W - 1, 25, f.back);
-  rect(0, 26, 0, 26, f.back); rect(W - 1, 26, W - 1, 26, f.back);
-  rect(7, 23, 16, 23, COLLAR);
-  rect(6, 24, 8, 26, COLLAR); rect(15, 24, 17, 26, COLLAR);
-  rect(9, 24, 14, 25, shade(f.skin[1], -10));
-  rect(11, 26, 12, H - 1, TUNIC_DARK);
-  put(11, 27, '#c9b45e'); put(12, 29, '#c9b45e');
-  rect(6, 25, 7, 26, f.tab);
+  // The tunic. The shoulders go square out of both edges of the frame two
+  // rows under the chin — no slope, no gap of backdrop at the corners.
+  rect(0, FACE.collar, W - 1, H - 1, TUNIC);
+  rect(0, FACE.collar, 1, FACE.collar, shade(TUNIC, -8));
+  rect(W - 2, FACE.collar, W - 1, FACE.collar, shade(TUNIC, -8));
+  // the collar, high and tight, with a tab on the wearer's right
+  rect(5, FACE.neck, 18, FACE.neck, COLLAR);
+  rect(4, FACE.collar, 8, FACE.collar + 2, COLLAR);
+  rect(15, FACE.collar, 19, FACE.collar + 2, COLLAR);
+  rect(9, FACE.collar, 14, FACE.collar, shade(f.skin[1], -22));
+  rect(11, FACE.collar + 1, 12, H - 1, TUNIC_DARK);
+  put(11, FACE.collar + 3, '#c9b45e'); put(12, H - 1, '#c9b45e');
+  rect(4, FACE.collar + 1, 6, FACE.collar + 2, f.tab);
 
-  // The neck.
-  rect(9, 19, 14, 24, f.skin[1]);
-  rect(9, 19, 11, 23, f.skin[0]);
+  // The neck: two rows, as wide as the jaw. The head sits into the collar.
+  rect(7, FACE.neck - 1, 16, FACE.neck, f.skin[1]);
+  rect(7, FACE.neck - 1, 11, FACE.neck, f.skin[0]);
 
-  // The head. Three shapes, all wider at the cheekbone than the jaw.
-  const top = 5;
-  const jaw = f.face === 1 ? 20 : 19;
+  // The head. Three heavy shapes — round, square and jowled — every one of
+  // them as wide at the jaw as it is at the brow.
+  const top = FACE.top;
+  const jaw = FACE.jaw;
+  const mid = (FACE.left + FACE.right) / 2;
   for (let y = top; y <= jaw; y++) {
     const t = (y - top) / (jaw - top);
     let half;
-    if (f.face === 0) half = 6.2 * Math.sin(Math.PI * Math.min(1, t * 1.05 + 0.02)) ** 0.55;
-    else if (f.face === 1) half = 5.6 * Math.sin(Math.PI * Math.min(1, t * 1.05 + 0.02)) ** 0.45;
-    else half = t < 0.85 ? 6.2 * Math.sin(Math.PI * Math.min(1, t * 0.7 + 0.15)) ** 0.35 : 6.2 * (1 - (t - 0.85) * 4);
+    if (f.face === 0) half = 8.6 - 1.6 * Math.pow(Math.max(0, t - 0.72) / 0.28, 2) - 1.2 * Math.pow(Math.max(0, 0.16 - t) / 0.16, 2);
+    else if (f.face === 1) half = 8.8 - 0.9 * Math.pow(Math.max(0, t - 0.8) / 0.2, 2) - 1.4 * Math.pow(Math.max(0, 0.14 - t) / 0.14, 2);
+    else half = 8.2 + 0.6 * t - 1.5 * Math.pow(Math.max(0, 0.18 - t) / 0.18, 2) - 1.4 * Math.pow(Math.max(0, t - 0.86) / 0.14, 2);
     const w = Math.max(1, Math.round(half));
-    for (let x = 12 - w; x <= 11 + w; x++) put(x, y, x > 14 ? f.skin[1] : f.skin[0]);
+    for (let x = Math.round(mid - w + 0.5); x <= Math.round(mid + w - 0.5); x++) put(x, y, x > mid + 2 ? f.skin[1] : f.skin[0]);
   }
-  // Ears, at the level of the eyes.
+  // Ears, at the level of the eyes, close to a heavy skull.
   const earX = f.earsOut ? 1 : 0;
-  put(5 - earX, 12, f.skin[1]); put(5 - earX, 13, f.skin[1]);
-  put(18 + earX, 12, f.skin[1]); put(18 + earX, 13, f.skin[1]);
+  for (const dy of [0, 1]) {
+    put(FACE.left - earX, FACE.eyes + dy, f.skin[1]);
+    put(FACE.right + earX, FACE.eyes + dy, f.skin[1]);
+  }
 
-  // Hair, over the top of the head, by style.
+  // Hair, over the top of the head, by style — cropped close on a wide skull.
   const hair = f.hair;
   if (f.style !== 4) {
-    for (let x = 6; x <= 17; x++) {
-      const edge = x === 6 || x === 17;
-      const depth = f.style === 3 ? 4 : f.style === 1 ? 3 : f.style === 2 ? 1 : 2;
+    for (let x = 5; x <= 18; x++) {
+      const edge = x === 5 || x === 18;
+      const depth = f.style === 3 ? 3 : f.style === 1 ? 3 : f.style === 2 ? 1 : 2;
       for (let y = top; y < top + depth + (edge ? 1 : 0); y++) put(x, y, hair);
       if (f.style === 5 && (x % 2 === 0)) put(x, top - 1, hair);
-      if (f.style === 5) put(x, top + depth, x % 3 === 0 ? hair : g[top + depth][x]);
     }
-    if (f.style === 1) { rect(6, top, 9, top + 4, hair); rect(15, top + 1, 17, top + 3, hair); put(12, top, f.skin[0]); }
+    if (f.style === 1) { rect(5, top, 9, top + 3, hair); rect(15, top + 1, 18, top + 2, hair); put(12, top, f.skin[0]); }
     if (f.style === 0 || f.style === 1 || f.style === 3 || f.style === 5) {
-      rect(6, top + 2, 6, 11, hair); rect(17, top + 2, 17, 11, hair);
+      rect(4, top + 1, 4, 10, hair); rect(19, top + 1, 19, 10, hair);
     }
-    if (f.style === 2) { for (let x = 7; x <= 16; x += 2) put(x, top + 1, hair); }
+    if (f.style === 2) { for (let x = 6; x <= 17; x += 2) put(x, top + 1, hair); }
   } else {
     // Bald, with a shine and a little at the sides.
     put(10, top + 1, WHITE); put(11, top + 1, WHITE);
-    rect(6, 9, 6, 12, hair); rect(17, 9, 17, 12, hair);
+    rect(4, 8, 4, 11, hair); rect(19, 8, 19, 11, hair);
   }
 
-  // Brows.
-  const browY = 10;
+  // Brows, heavy and level over a wide face.
+  const browY = FACE.eyes - 2;
   const browC = shade(hair, -20);
-  for (const [x0, x1, side] of [[8, 10, -1], [14, 16, 1]]) {
+  for (const [x0, x1, side] of [[6, 10, -1], [13, 17, 1]]) {
     for (let x = x0; x <= x1; x++) {
-      const lift = f.browAngled ? (side < 0 ? (x - x0) : (x1 - x)) === 2 ? -1 : 0 : 0;
+      const lift = f.browAngled ? (side < 0 ? (x - x0) : (x1 - x)) >= 3 ? -1 : 0 : 0;
       put(x, browY + lift, browC);
       // A heavy brow thickens upward, so it never runs into the eye below it.
       if (f.browHeavy) put(x, browY + lift - 1, browC);
@@ -169,8 +195,8 @@ export function portraitCells(seed) {
   }
 
   // Eyes: whites, iris, a highlight; narrow eyes lose the white row.
-  const eyeY = 12;
-  for (const x0 of [8, 14]) {
+  const eyeY = FACE.eyes;
+  for (const x0 of [7, 14]) {
     if (!f.eyesNarrow) { rect(x0, eyeY, x0 + 2, eyeY, WHITE); }
     put(x0 + 1, eyeY, INK);
     if (f.eyesWide && !f.eyesNarrow) { rect(x0, eyeY - 1, x0 + 2, eyeY - 1, WHITE); put(x0 + 1, eyeY - 1, INK); }
@@ -178,27 +204,28 @@ export function portraitCells(seed) {
     put(x0 + 2, eyeY + (f.eyesNarrow ? 0 : 1), f.eyesNarrow ? INK : shade(f.skin[1], -14));
   }
   if (f.glasses) {
-    for (const x0 of [7, 13]) {
+    for (const x0 of [6, 13]) {
       for (let x = x0; x <= x0 + 4; x++) { put(x, eyeY - 1, INK); put(x, eyeY + 1, INK); }
       put(x0, eyeY, INK); put(x0 + 4, eyeY, INK);
     }
     put(12, eyeY, INK);
   }
 
-  // Nose, down the middle, shaded on the right.
-  rect(12, 13, 12, 15, shade(f.skin[0], -12));
-  put(13, 15, shade(f.skin[1], -18));
-  put(11, 16, shade(f.skin[0], -8)); put(13, 16, shade(f.skin[1], -8));
+  // Nose, down the middle, shaded on the right, broad at the base.
+  rect(11, eyeY + 1, 12, FACE.mouth - 2, shade(f.skin[0], -12));
+  rect(10, FACE.mouth - 1, 13, FACE.mouth - 1, shade(f.skin[1], -14));
+  put(13, FACE.mouth - 2, shade(f.skin[1], -18));
 
-  // Mouth.
-  const mY = 18;
+  // Mouth, and the weight under it.
+  const mY = FACE.mouth + 1;
   const lip = shade(f.skin[1], -30);
-  if (f.mouth === 0) rect(10, mY, 14, mY, lip);
-  else if (f.mouth === 1) { rect(10, mY, 14, mY, lip); put(9, mY - 1, lip); put(15, mY - 1, lip); }
-  else if (f.mouth === 2) rect(11, mY, 13, mY, lip);
-  else { rect(10, mY, 14, mY, lip); put(9, mY + 1, lip); put(15, mY + 1, lip); }
-  if (f.moustache) rect(9, 17, 15, 17, shade(hair, -10));
-  if (f.scar) { put(15, 14, shade(f.skin[1], -24)); put(16, 15, shade(f.skin[1], -24)); }
+  if (f.mouth === 0) rect(9, mY, 14, mY, lip);
+  else if (f.mouth === 1) { rect(9, mY, 14, mY, lip); put(8, mY - 1, lip); put(15, mY - 1, lip); }
+  else if (f.mouth === 2) rect(10, mY, 13, mY, lip);
+  else { rect(9, mY, 14, mY, lip); put(8, mY + 1, lip); put(15, mY + 1, lip); }
+  rect(8, jaw, 15, jaw, shade(f.skin[1], -8));
+  if (f.moustache) rect(8, mY - 1, 15, mY - 1, shade(hair, -10));
+  if (f.scar) { put(15, eyeY + 2, shade(f.skin[1], -24)); put(16, eyeY + 3, shade(f.skin[1], -24)); }
 
   return g;
 }

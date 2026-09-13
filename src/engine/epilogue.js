@@ -104,6 +104,22 @@ function householdPhrase(character) {
   return householdOf(character).en;
 }
 
+/**
+ * Small counts, spelled out.
+ *
+ * These paragraphs write "Nine and a half tonnes" and "forty-one seats", and
+ * then opened a sentence with a bare numeral: "7 aircraft were destroyed over
+ * the Tavrov district." One register per document.
+ */
+const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine',
+  'ten', 'eleven', 'twelve'];
+const spellCount = (n) => (Number.isFinite(n) && n >= 0 && n < COUNT_WORDS.length
+  ? COUNT_WORDS[n] : String(n));
+const Spell = (n) => {
+  const word = spellCount(n);
+  return word.charAt(0).toUpperCase() + word.slice(1);
+};
+
 /** Rounds on the tape, phrased the way the tape phrases it. */
 function tapeLine(r) {
   if (!r.roundsAtFlight) return null;
@@ -127,8 +143,8 @@ export const FLIGHT_ENDINGS = {
     lines: (r, character) => [
       'STATE 01 crossed the frontier at 0438 and was met eleven minutes later by an escort that was not'
         + ' ours and had not been notified to this sector.',
-      `The corridor was held for as long as it needed to be. ${r.fightersKilled} aircraft were`
-        + ` destroyed over the Tavrov district${r.palaceHarm > 0.3
+      `The corridor was held for as long as it needed to be. ${Spell(r.fightersKilled)} aircraft`
+        + ` ${r.fightersKilled === 1 ? 'was' : 'were'} destroyed over the Tavrov district${r.palaceHarm > 0.3
           ? `, and the palace at ${CAPITAL.en} was struck to ${Math.round(r.palaceHarm * 100)}% while the batteries were engaged elsewhere`
           : ''}.`,
       // Firing on it and failing to bring it down is not the same watch as never
@@ -142,10 +158,11 @@ export const FLIGHT_ENDINGS = {
         + ' tonnes at freight class four — household and administrative effects. The load is entered'
         + ' against the seating it displaced: forty-one seats. The passenger list that was never'
         + ' transmitted was a list of empty seats.',
-      'Sector command records your conduct as exemplary and has recommended a decoration. The citation'
-        + ' describes the protection of a state aircraft in transit. It does not describe the transit.',
-      `${householdPhrase(character)} — the ration category is raised one grade. The order raising it`
-        + ' is dated the sixteenth, which is the last day the ministry issued any.',
+      'Four days after the file entry, sector command records your conduct as exemplary and'
+        + ' recommends a decoration. The citation describes the protection of a state aircraft. It'
+        + ' says nothing about what the aircraft was carrying.',
+      `A ration category is raised one grade for ${householdPhrase(character)}. The order raising`
+        + ' it is dated the sixteenth, which is the last day the ministry issued any.',
       'The citation is entered against your file on the sixteenth. The file carries no entry for the'
         + ' night of the two cities, because the outcome there conformed to the order as well.',
     ],
