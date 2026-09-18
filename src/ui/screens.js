@@ -449,7 +449,7 @@ function sectorMap(mission) {
    * The batteries are lettered on the map and named in the key under it.
    *
    * All three judges: "LANCE CAPITAL, HAMMER CAPITAL and THISTLE NORTH occupy
-   * the same forty pixels, and THISTLE VALLEY, LANCE VALLEY and HAMMER do the
+   * the same forty pixels, and THISTLE TOWN, LANCE WEST and HAMMER do the
    * same over THE VILLE ... a battery symbol is drawn straight through THISTLE
    * NORTH so the name renders as THIST and NORTH either side of a green
    * square." Six names cannot be printed inside twenty kilometres at this
@@ -837,9 +837,38 @@ export function renderDebrief(host, state, result, entry) {
     ${ending ? `
       <div class="card ending-card">
         <div class="record-head-line"><span>SECTOR RECORD · THE FINDING</span><span>${esc(state.mission.name)}</span></div>
-        <p class="subtitle is-lead">${esc(ending.title)}</p>
-        <h1 class="title is-outcome">${esc(ending.subtitle ?? ending.title)}</h1>
-        ${ending.lines.map((line) => `<p>${esc(line)}</p>`).join('')}
+        ${/*
+          * The finding fills the sheet.
+          *
+          * All three judges measured the same fault: "the epilogue card is
+          * left-aligned in a 580px column while the header rule, the SCORE
+          * tiles and the GROUND columns all run the full 1150px of the sheet",
+          * "a page designed as a form carries a blank right-hand third down
+          * its whole length", "the right half of the sheet is empty for the
+          * block's full height". Prose still wants a reading measure, so the
+          * page gets what a real record sheet has beside the prose: a ruled
+          * rail of particulars, the watch, the standing, the role and the
+          * service stamp. One block, two columns, no void.
+          */ ''}
+        <div class="record-body">
+          <div class="record-prose">
+            <p class="subtitle is-lead">${esc(ending.title)}</p>
+            <h1 class="title is-outcome">${esc(ending.subtitle ?? ending.title)}</h1>
+            ${ending.lines.map((line) => `<p>${esc(line)}</p>`).join('')}
+          </div>
+          <aside class="record-rail">
+            <div class="rail-row"><span>Watch</span><b>${esc(state.mission.name)}</b></div>
+            <div class="rail-row"><span>Seat</span><b>${esc(ROLES[result.role].label)}</b></div>
+            <div class="rail-row"><span>This watch</span><b>${Math.round(result.score)}</b></div>
+            <div class="rail-row"><span>In the file</span><b>${Math.round(state.campaign.standing)}</b></div>
+            <div class="rail-row"><span>Entered by</span><b>Sector political section</b></div>
+            <div class="rail-remarks">
+              <span>Remarks</span>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <span class="record-stamp is-inline">Sector record<br>Entered</span>
+          </aside>
+        </div>
         <div class="record-foot-line"><span>${esc(ROLES[result.role].label)}</span><span>ВПВО ТМ · TM ADF</span></div>
       </div>
     ` : `

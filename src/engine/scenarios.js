@@ -88,9 +88,16 @@ const SITES = {
    * battery that watches.
    */
   bastionCentre: { id: 's_bastion', type: 'bastion', name: 'BASTION', pos: { x: 50, y: 30 } },
-  lanceVille: { id: 's_lance_w', type: 'lance', name: 'LANCE VALLEY', pos: { x: -16, y: 10 } },
+  /*
+   * The two batteries in the Ville's own valley are the ones the operator has
+   * fought beside for seven watches, and they keep the names they were learned
+   * under. They were briefly called LANCE VALLEY and THISTLE VALLEY here, which
+   * gave one unit two names across the campaign and cost the finale the small
+   * shock of recognising them.
+   */
+  lanceVille: { id: 's_lance_w', type: 'lance', name: 'LANCE WEST', pos: { x: -16, y: 10 } },
   lanceCapital: { id: 's_lance_e', type: 'lance', name: 'LANCE CAPITAL', pos: { x: 108, y: 74 } },
-  thistleVille: { id: 's_thistle_t', type: 'thistle', name: 'THISTLE VALLEY', pos: { x: -15, y: 6 } },
+  thistleVille: { id: 's_thistle_t', type: 'thistle', name: 'THISTLE TOWN', pos: { x: -15, y: 6 } },
   thistlePalace: { id: 's_thistle_b', type: 'thistle', name: 'THISTLE NORTH', pos: { x: 106, y: 74 } },
   /*
    * The capital's own gun battery. Without it the two sides of the last watch
