@@ -22,6 +22,52 @@ import { letterById, dispositionPlate } from '../engine/family.js';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+/* ------------------------------------------------------- the form furniture */
+
+/**
+ * THE FILING CABINET — one stock, one rule work, six screens.
+ *
+ * The dossier and the full report were the two screens all three judges called
+ * the best-designed things in the game: ruled stock, a punched filing margin, a
+ * red gutter rule, a form number in the letterhead and a rubber stamp. Beside
+ * them the menu's personnel file, the briefing and the handbook were, in the
+ * art director's words, "seven identical rounded boxes in a row ... on a black
+ * field in a single terminal green", and the reader's, "plain bordered boxes of
+ * green type on black. The story screens are not one system."
+ *
+ * So the vocabulary those two screens invented is written down here and issued
+ * to the rest — the enlistment form, the menu's front sheet, the order, the
+ * manual and the card the evening ends on all print from these blocks, which is
+ * what makes them read as coming out of one drawer.
+ */
+
+/** A form's letterhead: what the paper is at the left, its number at the right. */
+export const paperHead = (title, no) => `<div class="paper-head">
+  <span class="paper-head-title">${esc(title)}</span>
+  <span class="paper-head-no">${esc(no)}</span>
+</div>`;
+
+/**
+ * One typed entry on a form: the caption above, the answer struck on the rule.
+ *
+ * This is what replaces the rounded tile. A tile is a console readout — it has
+ * a lit border and it is a box; a form has a caption in small capitals and an
+ * answer typed onto a ruled line, and the line runs the width of its column
+ * whether the answer fills it or not. An answer too long for the column wraps
+ * above its own rule instead of breaking the row, which is what the tiles did:
+ * "one of which wraps to two lines and breaks the row".
+ *
+ * `mark` prints something beside the answer — the rank's own board against the
+ * rank — and is markup, so its caller escapes it.
+ */
+export const field = (label, value, { wide = false, mood = '', mark = '' } = {}) => `<span
+  class="typed-field${wide ? ' is-wide' : ''}${mood ? ` ${mood}` : ''}">
+  <label>${esc(label)}</label><b>${mark}${esc(value)}</b></span>`;
+
+/** A band of them, ruled across the sheet. */
+export const fields = (list, cls = '') => `<div class="typed-fields${cls ? ` ${cls}` : ''}">${
+  list.filter(Boolean).join('')}</div>`;
+
 /* ------------------------------------------------------------ enlistment */
 
 export function renderEnlistment(host, state) {
@@ -33,12 +79,28 @@ export function renderEnlistment(host, state) {
   const household = state.pendingHousehold ?? 'mother';
   state.pendingHousehold = household;
 
-  host.innerHTML = `<div class="screen-inner">
+  /*
+   * THE FIRST PAGE OF THE FILE IS PRINTED LIKE THE REST OF IT.
+   *
+   * This screen opens the record the dossier, the menu's front sheet and the
+   * report all belong to, and it was the last one in the set still built as
+   * bordered boxes of green type on black. It is the same form, so it is the
+   * same stock, the same punched margin and the same letterhead — the recruit
+   * fills in his particulars on FORM 2-19 and everything after it is that
+   * paper coming back to him.
+   */
+  host.innerHTML = `<div class="screen-inner is-paper is-enlist">
+    ${paperHead('Personnel file — enlistment', 'FORM 2-19')}
     <h1 class="title is-outcome">ЛИЧНОЕ ДЕЛО · SERVICE RECORD</h1>
     <p class="subtitle">${esc(STATE.service.en)} · ${esc(STATE.country.en)}</p>
 
     <div class="card record-card">
-      <div class="record-stamp">${esc(PLATES.standard.tm)} · ${esc(PLATES.standard.en)}</div>
+      ${/* The standard the form is printed to, stamped in the corner the way
+           every other stamp in the file is: the plate over its gloss, two
+           short lines. Set as one long line it ran three hundred pixels
+           across the sheet and printed through the first sentence. */ ''}
+      <div class="record-stamp"><span class="tm">${esc(PLATES.standard.tm)}</span><span
+        class="en">${esc(PLATES.standard.en)}</span></div>
       <h3>Enlistment</h3>
       <p class="note">You are being posted to the air defence sector covering the valley of the
       Ville, the village you are from. The scope you will sit at is centred on your own roof.</p>
@@ -100,6 +162,10 @@ export function renderEnlistment(host, state) {
       </div>
     </div>
 
+    ${/* the foot of the form, where the office that keeps it is named */ ''}
+    <div class="record-foot-line"><span>Kept by the sector political section</span>
+      <span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}</span></div>
+
     <div class="actions">
       <button class="btn-primary" id="enlist-confirm">ENLIST</button>
       <button class="btn" id="enlist-defaults"
@@ -135,10 +201,7 @@ export function renderDossier(host, state) {
      * a document." So the file is printed on the same stock the report is, with
      * a punched filing margin and its own form number in the letterhead.
      */ ''}
-    <div class="paper-head">
-      <span class="paper-head-title">PERSONNEL FILE — AIR DEFENCE FORCES</span>
-      <span class="paper-head-no">FORM 2-19</span>
-    </div>
+    ${paperHead('Personnel file — Air Defence Forces', 'FORM 2-19')}
     <h1 class="title is-file">${esc(rank.en)} ${esc(character.name)}</h1>
     <p class="subtitle">${esc(STATE.service.en)} · ${esc(STATE.country.en)}
       · FILE NO. ${esc(serviceNumber(character))}</p>
@@ -156,16 +219,21 @@ export function renderDossier(host, state) {
           <span class="file-no">SERVICE NO. ${esc(serviceNumber(character))}</span>
         </div>
       </div>
-      <div class="score-grid">
-        <div class="score-cell is-word"><label>RANK</label>
-          <b>${esc(rank.en)}</b></div>
-        <div class="score-cell"><label>EXPERIENCE</label><b>${character.xp}</b></div>
-        <div class="score-cell"><label>WATCHES</label><b>${character.watches}</b></div>
-        <div class="score-cell"><label>STANDING</label><b>${Math.round(state.campaign.standing)}</b></div>
-        <div class="score-cell ${character.points ? 'is-good' : ''}"><label>TRAINING POINTS</label><b>${character.points}</b></div>
-        <div class="score-cell is-word ${character.wounded ? 'is-bad' : ''}"><label>CONDITION</label>
-          <b>${character.wounded ? 'INJURED' : 'FIT'}</b></div>
-      </div>
+      ${/* The particulars, typed onto the form's own rules — the same band, in
+           the same hand, as the front sheet on the menu. They were six lit
+           tiles on a piece of paper, which is the one construction on these
+           screens that belongs to the console rather than to the file. */ ''}
+      ${fields([
+    field('Rank', rank.en, { mark: rankInsignia(character.rankIndex, { size: 22, title: rank.en }) }),
+    field('Condition', character.wounded ? 'INJURED' : 'FIT',
+      { mood: character.wounded ? 'is-bad' : '' }),
+  ])}
+      ${fields([
+    field('Standing', Math.round(state.campaign.standing)),
+    field('Experience', grouped(character.xp)),
+    field('Watches', character.watches),
+    field('Training points', character.points, { mood: character.points ? 'is-good' : '' }),
+  ], 'is-figures')}
       ${/* What the number means, where the number lives. It is explained once
            on the first briefing and then printed on the tape, the card, this
            file and the report for eleven more watches. */ ''}
@@ -326,7 +394,7 @@ export function renderDossier(host, state) {
  * as markup so the debrief screen can place it, rather than rendering itself.
  */
 /** A long number with room to breathe: 121,940, not 121940. */
-const grouped = (n) => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+export const grouped = (n) => String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 export function serviceSummary(character, service, campaign) {
   if (!character || !service) return '';

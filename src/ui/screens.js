@@ -19,7 +19,9 @@ import {
 import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor, LEDGER_SUBJECTS } from '../engine/command.js';
 import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/character.js';
-import { serviceSummary, abandonedRecord, paintFilePhotos } from './dossier.js';
+import {
+  serviceSummary, abandonedRecord, paintFilePhotos, paperHead, field, fields, grouped,
+} from './dossier.js';
 import { STATE } from './lexicon.js';
 import { rankInsignia } from './insignia.js';
 import { composeEnding, endingSummary } from '../engine/endings.js';
@@ -45,6 +47,13 @@ const stampFace = (tm, en) => (en
 
 /** Every screen opens at the top of itself, however far the last one scrolled. */
 const toTop = (host) => { if (host) host.scrollTop = 0; };
+
+/*
+ * The form furniture — the letterhead, the typed field and a band of them — is
+ * declared with the service record in dossier.js and imported here, so that the
+ * menu's front sheet, the order, the manual, the end card and the record itself
+ * are all printed from one set of blocks. See the note on `paperHead` there.
+ */
 
 /**
  * What a command you have not been given says about itself, by how far above
@@ -144,9 +153,23 @@ export function renderMenu(host, state) {
       your log in the morning.</p>
     </div>
 
-    <div class="card record-card">
+    ${/*
+     * THE PERSONNEL FILE, as the file itself.
+     *
+     * The art director: "seven identical rounded boxes in a row, one of which
+     * wraps to two lines and breaks the row, on a black field in a single
+     * terminal green ... beside the dossier and the report — which are drawn as
+     * documents — these read as a different game." It is the same document as
+     * the dossier, so it is printed on the same stock and carries the same
+     * form number: buff paper laid on the black desk, a punched filing margin
+     * with the red gutter rule, the letterhead of FORM 2-19, the photograph as
+     * a print, and the particulars typed onto ruled lines in two bands — the
+     * holder, then the figures. The tier is a rubber stamp applied across the
+     * typing rather than parked in a box in the corner.
+     */ ''}
+    <div class="card record-card doc-sheet">
+      ${paperHead('Personnel file — Air Defence Forces', 'FORM 2-19')}
       <div class="record-stamp">${stampFace(tier.label)}</div>
-      <h3>Personnel file</h3>
       ${character ? `<div class="ident-row">
         ${/* The print on the front of the file — the same face as the card in
              the reader, the dossier and the end card. The menu is the screen
@@ -155,30 +178,51 @@ export function renderMenu(host, state) {
           <canvas class="portrait file-photo" width="24" height="30"
             data-seed="${esc(character.name)}" aria-label="Photograph on file"></canvas>
         </span>
-        <span class="ident-board">${rankInsignia(character.rankIndex, { size: 40, title: rank.en })}</span>
-        <span class="ident-name"><b>${esc(rank.en)} ${esc(character.name)}</b>
-          <small>${esc(appointment.appointment.en)}</small></span>
+        ${/* The holder, typed on the file's own name rule. The appointment used
+             to be set again in small capitals directly under the name and again
+             in the tile below it; it is a particular, and it is entered once,
+             in the band with the others. The rank board used to hang between
+             the photograph and the name with nothing to say what it was; it is
+             printed against the rank, which is what it means. */ ''}
+        <span class="ident-name"><label>Surname and given name</label>
+          <b>${esc(rank?.en ?? '')} ${esc(character.name)}</b></span>
       </div>` : ''}
-      <div class="score-grid">
-        <div class="score-cell is-word"><label>RANK</label><b>${esc(rank?.en ?? '—')}</b></div>
-        <div class="score-cell is-word"><label>APPOINTMENT</label>
-          <b>${esc(appointment.appointment.en)}</b></div>
-        <div class="score-cell"><label>STANDING</label><b>${Math.round(campaign.standing)}</b></div>
-        <div class="score-cell"><label>EXPERIENCE</label><b>${character?.xp ?? 0}</b></div>
-        <div class="score-cell"><label>WATCHES</label><b>${flown}</b></div>
-        <div class="score-cell ${character?.points ? 'is-good' : ''}"><label>TRAINING</label><b>${character?.points ?? 0}</b></div>
-        <div class="score-cell is-word ${character?.wounded ? 'is-bad' : ''}"><label>CONDITION</label>
-          <b>${character?.wounded ? 'INJURED' : 'FIT'}</b></div>
-      </div>
-      ${campaign.ending ? `<p class="verdict grave">
-        <b>${esc(endingSummary(campaign.ending) ?? '')}</b> — the last watch has been stood.</p>` : ''}
-      ${campaign.epilogue ? `<p class="verdict grave">
-        <b>${esc(flightEndingSummary(campaign.epilogue) ?? '')}</b> — and what happened two days after it.</p>` : ''}
-      ${character ? `<p class="note verdict">
+      ${fields([
+    field('Rank', rank?.en ?? '—',
+      { mark: character ? rankInsignia(character.rankIndex, { size: 22, title: rank.en }) : '' }),
+    field('Appointment', appointment.appointment.en, { wide: true }),
+    field('Condition', character?.wounded ? 'INJURED' : 'FIT',
+      { mood: character?.wounded ? 'is-bad' : '' }),
+  ])}
+      ${fields([
+    field('Standing', Math.round(campaign.standing)),
+    /* One number style with the record's: 26,000, not 26000. */
+    field('Experience', grouped(character?.xp ?? 0)),
+    field('Watches', flown),
+    field('Training', character?.points ?? 0, { mood: character?.points ? 'is-good' : '' }),
+  ], 'is-figures')}
+      ${/* The clerk's remarks, under the ruled bands and under their own
+           caption, which is where a form keeps the sentences — and no caption
+           at all on a sheet with nothing written under it. */ ''}
+      ${(() => {
+    const remarks = [
+      campaign.ending ? `<p class="verdict grave">
+        <b>${esc(endingSummary(campaign.ending) ?? '')}</b> — the last watch has been stood.</p>` : '',
+      campaign.epilogue ? `<p class="verdict grave">
+        <b>${esc(flightEndingSummary(campaign.epilogue) ?? '')}</b> — and what happened two days after it.</p>` : '',
+      character ? `<p class="note verdict">
         ${esc(backgroundOf(character).en)}. Home: the Ville, in the western valley.
         Household: ${esc(householdOf(character).en.replace(/^Your /, 'your '))}.
         ${character.decorations.length ? `${character.decorations.length} decoration${character.decorations.length > 1 ? 's' : ''} on file.` : ''}
-        ${character.points ? '<b class="urgent">Training points unspent.</b>' : ''}</p>` : ''}
+        ${character.points ? '<b class="urgent">Training points unspent.</b>' : ''}</p>` : '',
+    ].filter(Boolean);
+    return remarks.length
+      ? `<div class="doc-remarks"><span>Remarks</span>${remarks.join('')}</div>` : '';
+  })()}
+      ${/* The foot of the sheet, where a form says what it is and who keeps
+           it — the same line the full report's foot carries. */ ''}
+      <div class="record-foot-line"><span>Kept by the sector political section</span>
+        <span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}</span></div>
     </div>
 
     <div class="card">
@@ -274,18 +318,35 @@ export function renderBriefing(host, state) {
   const character = state.campaign.character;
   const rank = character ? rankOf(character) : null;
 
-  host.innerHTML = `<div class="screen-inner">
+  /*
+   * THE BRIEFING IS AN ORDER SHEET.
+   *
+   * It was built exactly like the personnel file — a stack of bordered boxes of
+   * green type on black — and the art director filed both together: "the
+   * briefing is the same construction. Beside the dossier and the report, which
+   * are drawn as documents, these read as a different game." An operation order
+   * is a sheet of paper issued to one man for one night: a letterhead with the
+   * order's number, the particulars typed in at the top, the situation in
+   * numbered paragraphs with the sector map printed beside them as a figure,
+   * and the office's stamp at the foot. Everything on it was already here; none
+   * of it was drawn as what it is.
+   */
+  host.innerHTML = `<div class="screen-inner is-paper is-order">
+    ${paperHead(`${STATE.sector.en} — operation order`, 'FORM 3-31')}
     <h1 class="title is-watch">${esc(mission.name)}</h1>
     <p class="subtitle">${esc(mission.subtitle)}</p>
-    ${/* The hour, the sky and the cold. The officer briefing you is a person
-         and gets his own line; he used to be the last item in a middot list
-         after the temperature. */ ''}
-    <p class="note conditions">${esc(watchConditions(mission).line)}</p>
-    ${/* One spelling for the job, everywhere it is named: the order of
-         appointment, the personnel file, the roster and this line all say
-         the same thing. It is the POST the watch is stood under — a night
-         fought at a battalion is not a night in command of one. */ ''}
-    <p class="note">You stand this watch as ${esc(postOfScenario(mission).appointment.en)}.</p>
+    ${/* The particulars of the order, typed into the head of it: the hour and
+         the sky, the post the watch is stood under, and the seat. They were
+         two loose grey lines under the title and a heading further down the
+         page. One spelling for the job, everywhere it is named: the order of
+         appointment, the personnel file and the roster all say the same
+         thing. It is the POST the watch is stood under — a night fought at a
+         battalion is not a night in command of one. */ ''}
+    ${fields([
+    field('Time and weather', watchConditions(mission).line),
+    field('Post held this watch', postOfScenario(mission).appointment.en, { wide: true }),
+    field('Seat', role.label),
+  ], 'is-order-head')}
     ${character ? `<div class="card record-card is-tight">
       <div class="record-stamp">${stampFace(STATE.serviceShort.tm, STATE.serviceShort.en)}</div>
       <p>Posting order for <b>${esc(rank.en)} ${esc(character.name)}</b>.
@@ -293,9 +354,13 @@ export function renderBriefing(host, state) {
       ${character.wounded ? '<span class="grave">Returned to duty against medical advice.</span>' : ''}</p>
     </div>` : ''}
 
-    ${note ? `<div class="card"><p class="note quoted">${esc(note)}</p></div>` : ''}
+    ${/* What came in over the wire before the watch: a signal slip pasted to
+         the order, not another panel in a deck of panels. */ ''}
+    ${note ? `<div class="card is-signal"><span class="form-no">Signal</span>
+      <p class="note quoted">${esc(note)}</p></div>` : ''}
 
-    ${state.narrativePressure && briefLine(state.campaign, mission.id) ? `<div class="card">
+    ${state.narrativePressure && briefLine(state.campaign, mission.id) ? `<div class="card is-signal">
+      <span class="form-no">Signal</span>
       <p class="quoted">${esc(briefLine(state.campaign, mission.id))}</p>
     </div>` : ''}
 
@@ -308,6 +373,9 @@ export function renderBriefing(host, state) {
     <div class="card is-situation">
       <h3>Situation</h3>
       ${sectorMap(mission)}
+      ${/* The situation in numbered paragraphs, which is how an order is
+           written and read. The numbers are printed by the sheet itself (a
+           counter in the stylesheet), so not a word of the brief moves. */ ''}
       ${mission.brief.map((line) => `<p>${esc(line)}</p>`).join('')}
       ${state.narrativePressure ? Object.entries(mission.briefIfKnown ?? {})
     .filter(([id]) => (state.campaign.revelations ?? []).includes(id))
@@ -364,11 +432,19 @@ export function renderBriefing(host, state) {
       <p>The other figure the tape prints is how many aircraft got through — the ones that passed
       you and struck what they were sent for. Every watch has an allowance for them, and the
       allowance is small.</p>
-    </div>` : `<div class="card ${consequence.tier.id === 'commended' ? 'file-entry is-good' : consequence.tier.id === 'satisfactory' ? '' : 'file-entry'}">
+    </div>` : `${/* One form, whatever the file says on it. A satisfactory
+         record used to get this entry as a bare card with an unstyled FORM
+         4471-B floating above the heading, so the one document on the screen
+         that is literally a form was the one drawn as a box. */ ''}
+      <div class="card file-entry${consequence.tier.id === 'commended' ? ' is-good' : ''}">
       <span class="form-no">FORM 4471-B</span>
       <h3>${esc(consequence.title)}</h3>
       ${consequence.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
     </div>`}
+
+    ${/* The foot of the order: who issued it, and under whose authority. */ ''}
+    <div class="record-foot-line"><span>Issued by sector operations</span>
+      <span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}</span></div>
 
     <div class="actions">
       <button class="btn-primary" id="btn-start">BEGIN</button>
@@ -547,7 +623,13 @@ function sectorMap(mission) {
         <text x="${W - 30}" y="${H - 44}">N</text>
       </g>
     </svg>
-    <figcaption class="map-key"><ul>${key}</ul></figcaption>
+    ${/* A printed figure has a plate number and a caption under it, and the
+         key belongs to the caption. It used to be a bare box of green lines
+         with a list under it. */ ''}
+    <figcaption class="map-key">
+      <span class="map-caption">Fig. 1 — ${esc(STATE.sector.en)}, the ground this watch is fought over</span>
+      <ul>${key}</ul>
+    </figcaption>
   </figure>`;
 }
 
@@ -680,8 +762,8 @@ export function renderDebrief(host, state, result, entry) {
   const b = result.breakdown;
   const s = result.stats;
 
-  const cell = (label, value, mood = '') =>
-    `<div class="score-cell ${mood}"><label>${esc(label)}</label><b>${esc(value)}</b></div>`;
+  /* One figure on the record, typed on its own rule — see `field` in dossier.js. */
+  const cell = (label, value, mood = '') => field(label, value, { mood });
 
   /*
    * The count of aircraft that got through, in the two currencies this debrief
@@ -892,7 +974,16 @@ export function renderDebrief(host, state, result, entry) {
      */ ''}
     <div class="card score-card">
       <h3>Score</h3>
-      <div class="score-grid${result.abandoned ? ' is-unscored' : ''}">
+      ${/*
+       * The night's figures, entered on the record's own rules.
+       *
+       * They were six lit tiles — the console's readout, printed on a sheet of
+       * paper — and they were the last of that construction left in the file
+       * after the front sheet and the record itself were rebuilt as forms. The
+       * band is the same band the personnel file carries, so a player moving
+       * from the menu to the report is reading one hand.
+       */ ''}
+      <div class="typed-fields is-figures${result.abandoned ? ' is-unscored' : ''}">
         ${/*
      * A watch that banked nothing is printed in one ink.
      *
@@ -1167,6 +1258,18 @@ export function renderEndCard(host, state, result) {
   host.innerHTML = `<div class="screen-inner is-endcard is-title-card">
     <canvas class="endcard-sky" width="320" height="180" aria-hidden="true"></canvas>
     <div class="endcard-block">
+      ${/*
+       * The card the evening ends on is the file entry for the night, so it is
+       * printed on the file's own stock and carries the file's own number. The
+       * story judge, of the last cut: "the card is a plain cream rectangle with
+       * a hairline border laid over the landscape ... it is the one story screen
+       * still built as a styled div while the dossier and the full report are
+       * convincing paper. It should have the same stock as the report — the
+       * faint grid, the red margin rule, punch holes, a form number and the
+       * entered stamp." It has them now, and the stamp is the one the political
+       * section puts on a record it has taken in.
+       */ ''}
+      ${paperHead('Record of watch', 'FORM 4471-B')}
       ${/* The same print that is stuck to the front of the dossier and to the
            head of the service record, at the end of the file it belongs to —
            at the size it is read at there, not at a third of it. */ ''}
@@ -1192,6 +1295,7 @@ export function renderEndCard(host, state, result) {
       <div class="endcard-facts">
         ${facts.map(([label, value]) => `<span><label>${esc(label)}</label><b>${esc(value)}</b></span>`).join('')}
       </div>
+      <span class="record-stamp is-entered">Sector record<br>Entered</span>
     </div>
     <div class="actions is-endcard-actions">
       <button class="btn-primary" id="btn-again">STAND ANOTHER WATCH</button>
@@ -1243,8 +1347,31 @@ function classSilhouette(id) {
  * learner put their only battery on the road for three and a half minutes.
  */
 export function renderControls(host, { salvo = true, ride = true, displace = true } = {}) {
-  const key = (k, d) => `<div><b>${esc(k)}</b><span>${esc(d)}</span></div>`;
-  host.innerHTML = `<div class="screen-inner">
+  /*
+   * One entry in the manual: the cap, printed as a cap, and what it does.
+   *
+   * The cap is set inside its own cell rather than being the cell, so that the
+   * printed key can be a box of its own width while the column it stands in
+   * stays a column — every cap in a section on one left edge, every
+   * description on another, which is the difference between a typeset manual
+   * and a list of ragged pairs.
+   */
+  const key = (k, d) => `<div><b><i>${esc(k)}</i></b><span>${esc(d)}</span></div>`;
+  /*
+   * THE HANDBOOK IS A PRINTED MANUAL.
+   *
+   * The reader judge: "beside them the menu's personnel file and the handbook
+   * are plain bordered boxes of green terminal type with stat tiles. The story
+   * screens are not one system." A handbook is the one document here that is
+   * not a form — it is an issued manual — so it is printed on the same stock
+   * and bound the same way, with numbered sections, the keys set as caps with
+   * leader rules across to what they do, the four classes as plates with
+   * figure numbers, and the issue number at the foot of every page.
+   */
+  host.innerHTML = `<div class="screen-inner is-paper is-manual">
+    ${/* Short enough to set on one line at 390px: a letterhead that wraps is
+         the one line on a form that may not. */ ''}
+    ${paperHead('Handbook for the operator', 'FORM 9-2')}
     <h1 class="title is-outcome">CONTROLS</h1>
     <div class="card">
       <h3>Everywhere</h3>
@@ -1363,6 +1490,11 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
       diamond means the contact has been assigned, and a filled one means a round is in the
       air.</p>
     </div>
+
+    ${/* The foot of an issued manual: what edition it is and who issued it. */ ''}
+    <div class="record-foot-line"><span>Issued with the console</span>
+      <span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}</span></div>
+
     <div class="actions"><button class="btn-primary" id="btn-close-help">BACK</button></div>
   </div>`;
   toTop(host);

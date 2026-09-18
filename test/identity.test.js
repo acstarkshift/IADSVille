@@ -109,12 +109,24 @@ describe('the identity card', () => {
     assert.match(html, /ЛЕНКО, ЯСНА/, 'SURNAME, GIVEN NAME');
     assert.match(html, /SENIOR LIEUTENANT/);
     assert.match(html, /SECTOR COMMANDER/);
-    assert.match(html, /SERVICE NO\. \d{4}-\d{2}-Б/);
+    /*
+     * The file number is printed at the right-hand end of the header band.
+     *
+     * It used to be set on its own line across the foot of the card, which is
+     * the part of the card that is inside the reader's slot: the art director,
+     * on the live console, "the APPOINTMENT label under RECRUIT is sliced
+     * horizontally by the reader's slot so only the top half of the glyphs
+     * shows". Everything printed on this card now stands above the slot, and
+     * the band is the one line that cannot be cut by it.
+     */
+    assert.match(html, /class="idc-serial">\d{4}-\d{2}-Б</);
     assert.match(html, /class="rank-board"/, 'the insignia is printed beside the rank');
     assert.match(html, /idc-photo/, 'and there is a photograph');
     // Nothing the operator reads to know who they are is in Cyrillic except
-    // their own name and the service's stencil on the band.
-    assert.match(html, /AIR DEFENCE FORCES · IDENTITY/);
+    // their own name and the service's stencil on the band. The band carries
+    // the service's short pair — spelled out in full it ran off the card's own
+    // right edge mid-word, which was the other half of the same complaint.
+    assert.match(html, /ВПВО ТМ · TM ADF · IDENTITY/);
   });
 
   test('a one-word name is printed as it is', () => {

@@ -144,7 +144,8 @@ kbd {
  * toward the operator. It is laid out by the ticker's grid, so it takes the
  * middle column and the event log keeps its own; nothing is covered.
  */
-.reader { position: relative; width: 196px; height: 78px; flex: 0 0 auto; align-self: end; margin: 0 14px 6px 0; }
+/* Twenty pixels wider than it was, because the card in it is: see .idcard. */
+.reader { position: relative; width: 216px; height: 78px; flex: 0 0 auto; align-self: end; margin: 0 14px 6px 0; }
 .reader::after {
   /* the machined lip the reader is sunk into */
   content: ''; position: absolute; left: -10px; right: -10px; bottom: -6px; height: 12px;
@@ -185,7 +186,7 @@ kbd {
   border-radius: 1px; box-shadow: inset 0 1px 2px rgba(0, 0, 0, 1), 0 1px 0 rgba(255, 255, 255, .12);
 }
 .idcard {
-  position: absolute; left: 34px; top: 0; width: 130px; height: 54px; z-index: 1;
+  position: absolute; left: 38px; top: 0; width: 140px; height: 54px; z-index: 1;
   transform-origin: 50% 100%; transform: perspective(320px) rotateX(-24deg) rotate(-1.4deg);
   background: linear-gradient(120deg, #fbfaf6 0%, #f2f0e9 45%, #e7e4db 100%);
   color: #17191c; border-radius: 4px; overflow: hidden;
@@ -198,30 +199,65 @@ kbd {
   content: ''; position: absolute; inset: 0; pointer-events: none;
   background: linear-gradient(100deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, .5) 47%, rgba(255, 255, 255, 0) 60%);
 }
-.idc-seal { position: absolute; left: 34px; top: 8px; width: 40px; height: 40px; border-radius: 50%; border: 2px double rgba(40, 60, 120, .16); }
-.idc-seal::after { content: ''; position: absolute; inset: 8px; border-radius: 50%; border: 1px solid rgba(40, 60, 120, .16); }
+/*
+ * THE CARD'S PRINTING LIVES IN THE TOP 44 PIXELS.
+ *
+ * The reader's front face is drawn at y=46 and the card is 54 deep, so the last
+ * eight pixels of it are inside the machine. Every line below is measured to
+ * finish above that: the header band at 0–10, the name at 11–20, the two fields
+ * at 21–43, the photograph at 12–43, and nothing at all in the last ten pixels,
+ * which is what a card a third of the way into a slot looks like. The file
+ * number rides at the right end of the header, where it cannot be cut, instead
+ * of on a line at the bottom that the slot took the bottom half of.
+ */
+.idc-seal { position: absolute; left: 38px; top: 10px; width: 36px; height: 36px; border-radius: 50%; border: 2px double rgba(40, 60, 120, .16); }
+.idc-seal::after { content: ''; position: absolute; inset: 7px; border-radius: 50%; border: 1px solid rgba(40, 60, 120, .16); }
 .idc-band {
-  position: absolute; left: 0; right: 0; top: 0; height: 13px; background: #2a3a6a; color: #fff;
-  font-size: 5px; letter-spacing: .1em; display: flex; align-items: flex-end; gap: 4px; padding: 0 5px 2px;
+  position: absolute; left: 0; right: 0; top: 0; height: 10px; background: #2a3a6a; color: #fff;
+  font-size: 4.6px; letter-spacing: .07em; display: flex; align-items: center; gap: 3px; padding: 0 4px;
   white-space: nowrap; overflow: hidden;
 }
-.idc-emblem { width: 6px; height: 6px; border-radius: 50%; border: 1px solid #fff; box-sizing: border-box; margin-bottom: 1px; flex: 0 0 auto; }
-.idc-name { position: absolute; left: 6px; top: 15px; font-size: 8.5px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
-.idc-fields { position: absolute; left: 6px; top: 26px; display: flex; flex-direction: column; gap: 1.5px; }
-.idc-f { display: flex; flex-direction: column; line-height: 1; }
-.idc-f label { font-size: 4.5px; color: #7a7d84; letter-spacing: .06em; }
-.idc-f b { font-size: 6.5px; font-weight: 700; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
-.idc-f b .rank-board { width: 7px; height: 10px; }
-.idc-no { position: absolute; left: 6px; bottom: 3px; font-size: 5px; color: #4a4d55; letter-spacing: .06em; white-space: nowrap; }
-.idc-photo {
-  position: absolute; right: 6px; top: 16px; width: 26px; height: 32px;
-  image-rendering: pixelated; border: 1px solid rgba(0, 0, 0, .25); background: #888;
+/* the file number, at the end of the band the band has room for */
+.idc-serial { margin-left: auto; font-size: 4.4px; letter-spacing: .04em; opacity: .82; }
+.idc-emblem { width: 5px; height: 5px; border-radius: 50%; border: 1px solid #fff; box-sizing: border-box; flex: 0 0 auto; }
+.idc-name {
+  position: absolute; left: 6px; top: 11px; right: 40px;
+  font-size: 8px; font-weight: 700; letter-spacing: .03em; line-height: 9px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.idc-fields { position: absolute; left: 6px; top: 20.2px; right: 40px; display: flex; flex-direction: column; gap: 0; }
+.idc-f { display: flex; flex-direction: column; line-height: 1; min-width: 0; }
+.idc-f label { font-size: 4px; color: #7a7d84; letter-spacing: .06em; line-height: 4.2px; }
+/*
+ * A fixed line, not a line the board can stretch.
+ *
+ * The rank's own board is taller than the type beside it, and this row is a
+ * flex line: at its natural height the board made the RANK line nine pixels
+ * instead of seven and pushed APPOINTMENT down into the slot, which is the
+ * horizontal slice the art director measured.
+ */
+.idc-f b {
+  font-size: 6px; font-weight: 700; line-height: 6.8px; height: 6.8px;
+  display: flex; align-items: center; gap: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.idc-f b .rank-board { width: 4.7px; height: 6.8px; flex: 0 0 auto; }
+/*
+ * The photograph, mounted: a white border, a grey edge, a shadow under it and
+ * the dot screen every print in this game carries (see .file-photo).
+ */
+.idc-photo-mount {
+  position: absolute; right: 6px; top: 12px; width: 28px; height: 31px; line-height: 0;
+  border: 1px solid #fbfaf6; outline: 1px solid rgba(35, 38, 31, .45);
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, .45);
+  background: #cdc6b6;
+}
+.idc-photo { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
 /* A rank's board, wherever the rank is written on the paperwork. */
 .rank-board { display: inline-block; vertical-align: middle; }
 .rank-badge { display: inline-flex; align-items: center; gap: 7px; }
 .rank-badge b { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-bright); }
-h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-right: 4px; }
+h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-right: 4px; }
 .file-ident { display: flex; align-items: flex-start; gap: 18px; padding: 4px 190px 10px 0; }
 /*
  * The photograph on the file is a PRINT, stuck to a form: a white border, a
@@ -237,6 +273,28 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 }
 .file-ident-photo { position: relative; flex: 0 0 auto; line-height: 0; }
 .file-photo.is-small { width: 48px; height: 60px; border-width: 2px; }
+/*
+ * A PHOTOGRAPH, not a drawing.
+ *
+ * The reader judge, of the print on the identity card and on the file: "a flat
+ * five-colour cartoon on a plain grey square with no border, no screen and no
+ * shadow, pasted onto ruled paper that is otherwise drawn as a photographed
+ * object ... draw it as a photograph: a white border or corner mounts, a dot
+ * screen over the tones, a value range that sits inside the paper's light."
+ * So every print in the game — the file, the menu, the end card, the card in
+ * the reader — carries a screen of dots over the tones, and its own values are
+ * warmed and softened into the paper's light rather than sitting on it at full
+ * strength. The dots are two and a half pixels apart — about half the pitch of
+ * the portrait's own cells at file size, which is the coarse screen a service
+ * photograph is printed with rather than a texture over a drawing.
+ */
+.file-photo, .idc-photo { filter: sepia(.24) saturate(.86) contrast(.92) brightness(1.04); }
+.file-ident-photo::before, .idc-photo-mount::before {
+  content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background-image: radial-gradient(circle at 50% 50%, rgba(20, 18, 12, .2) 0 .5px, transparent .9px);
+  background-size: 2.5px 2.5px;
+  mix-blend-mode: multiply;
+}
 /*
  * A REGISTRY CORNER MARK, not a ring.
  *
@@ -1495,7 +1553,16 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
  * keep their ledger ruling, the reds become a stamp-pad red and the glow goes.
  * Nothing in the markup had to move for it.
  */
-.screen-inner.is-paper {
+/*
+ * ...and the same stock issued to a single card standing on a console screen.
+ *
+ * `.doc-sheet` is one sheet of the same paper laid on the black desk — the
+ * menu's personnel file is the front sheet of the dossier and is printed on it,
+ * punch holes, gutter rule, letterhead and all. It takes every declaration
+ * below and then shortens the margins, because it is a card and not a page.
+ */
+.screen-inner.is-paper,
+.doc-sheet {
   --bg: #ded3b8;
   --bg-panel: #e6ddc3;
   --bg-raised: #efe8d5;
@@ -1525,7 +1592,8 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
   margin: 0 auto 8px;
 }
 /* the filing margin, punched, with the red rule a form has down its gutter */
-.screen-inner.is-paper::before {
+.screen-inner.is-paper::before,
+.doc-sheet::before {
   content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 38px;
   border-right: 1px solid rgba(154, 43, 38, .5);
   background-image: radial-gradient(circle at 19px 24px, #c4b795 0 7px, transparent 8px);
@@ -1534,7 +1602,8 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 }
 /* the letterhead: the form's name at the left, its number at the right, over a
    double rule, which is how every piece of paper in this army starts */
-.screen-inner.is-paper .paper-head {
+.screen-inner.is-paper .paper-head,
+.doc-sheet .paper-head {
   display: flex; justify-content: space-between; gap: 16px; align-items: baseline;
   font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase; color: #6f6552;
   padding-bottom: 6px; margin-bottom: 16px;
@@ -1569,9 +1638,6 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
   border-top: 0; padding-left: 16px; padding-right: 16px;
   box-shadow: 0 4px 14px rgba(35, 38, 31, .28), inset 0 0 0 1px rgba(35, 38, 31, .26);
 }
-.screen-inner.is-paper .tile, .screen-inner.is-paper .score-grid > * {
-  background: rgba(244, 239, 226, .5); border-color: #a2957a;
-}
 /* a figure on paper is typed, not lit */
 .screen-inner.is-paper table.ledger td { border-bottom: 1px solid #c2b694; }
 .screen-inner.is-paper .ending-card { border-top-color: #6f6552; border-bottom-color: #6f6552; }
@@ -1583,6 +1649,11 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 @media (max-width: 560px) {
   .screen-inner.is-paper { padding: 16px 14px 24px 34px; }
   .screen-inner.is-paper::before { width: 22px; background-image: radial-gradient(circle at 11px 20px, #c4b795 0 5px, transparent 6px); background-size: 22px 150px; }
+  /* A letterhead is one line. It set at the desktop's size on a 390px sheet and
+     broke both halves — "SECTOR 4-B — OPERATION / ORDER" over "FORM 3-/31" —
+     which is the one line on the page that may not wrap. */
+  .screen-inner.is-paper .paper-head { font-size: 8px; letter-spacing: .12em; gap: 10px; }
+  .screen-inner.is-paper .paper-head-no { white-space: nowrap; }
 }
 /* The ground and the arithmetic are one band: two tables of a similar height,
    side by side, each hugging its own content rather than one stretching to
@@ -1593,15 +1664,13 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 .debrief-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr)); gap: 14px; align-items: start; }
 .debrief-cols > .card { margin-bottom: 14px; }
 /*
- * The score is a rack of six across the page.
- *
- * It used to be one column of a two-column band, so six cells wrapped 3+3 in
- * 420px — a rack that ran out — while the card beside it was four tight rows,
- * and the two never shared a baseline.
+ * The score is one band across the page, and it is typed on the record's own
+ * rules rather than racked in six lit tiles — see `.typed-fields` below, which
+ * is the band the personnel file and the service record also carry.
  */
-.score-card .score-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-@media (max-width: 1000px) { .score-card .score-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .score-card .score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.score-card .typed-fields.is-figures { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+@media (max-width: 1000px) { .score-card .typed-fields.is-figures { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .score-card .typed-fields.is-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 .title {
   font-size: clamp(28px, 6vw, 54px); letter-spacing: .28em; margin: 0 0 2px;
@@ -1657,10 +1726,6 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 .rank-progress { margin-top: 10px; }
 .crew-row.is-plain { border: 0; }
 .card.is-tight { padding: 9px 14px; }
-
-/* A score cell carrying a word rather than a figure, with an optional gloss. */
-.score-cell.is-word b { font-size: 12.5px; }
-.score-cell .sub { display: block; font-size: 9px; color: var(--ink-dim); }
 
 /* The file entry's own treatment is with the other documents, further down:
    it is a form, not a panel with a coloured edge. */
@@ -1849,28 +1914,6 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
 .btn-primary:focus-visible { outline: 2px solid var(--ink-bright); outline-offset: 2px; }
 .btn-primary:disabled { cursor: not-allowed; filter: grayscale(.9) brightness(.7); }
 
-.score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-.score-cell { border: 1px solid var(--edge); padding: 8px 10px; border-radius: var(--radius); }
-.score-cell label { display: block; font-size: 9.5px; letter-spacing: .14em; color: var(--ink-dim); }
-.score-cell b { font-size: 19px; color: var(--ink-bright); font-variant-numeric: tabular-nums; }
-.score-cell.is-bad b { color: var(--hostile); }
-.score-cell.is-good b { color: var(--good); }
-/*
- * A rack of figures that were never earned reads as WITHHELD.
- *
- * `var(--ink-dim)` is a dim phosphor green, which is the colour this screen
- * uses for a watch that went well — so six zeros under a headline in the
- * failure red were printed in the credit ink, and were also the same ink as
- * their own labels, so TOTAL 0 carried no tone at all. They take the failure
- * tone, muted: not a score, and not a success either.
- */
-.score-grid.is-unscored .score-cell b {
-  color: color-mix(in srgb, var(--hostile) 62%, var(--ink-dim));
-}
-.score-grid.is-unscored .score-cell {
-  border-style: dashed;
-  border-color: color-mix(in srgb, var(--hostile) 40%, var(--edge));
-}
 .score-withheld { margin: 10px 0 0; font-size: 11px; letter-spacing: .04em; }
 
 table.ledger { width: 100%; border-collapse: collapse; font-size: 11.5px; }
@@ -2496,6 +2539,10 @@ table.ledger .down { color: var(--hostile); }
 @media (max-width: 900px) {
   .record-stamp {
     position: static; transform: rotate(-2deg); align-self: flex-start;
+    /* and as wide as the impression, not as wide as the card: a static block
+       in a card that is not a flex container took the whole width, so the
+       stamp printed as a 700px-wide box with two words in the middle of it */
+    width: fit-content;
     margin: 8px 0 4px; font-size: 11px;
   }
 }
@@ -2520,7 +2567,6 @@ table.ledger .down { color: var(--hostile); }
 }
 .record-stamp .tm { display: block; }
 .record-stamp .en { display: block; font-size: 8.5px; opacity: .9; }
-.record-stamp + .score-grid { margin-top: 26px; }
 
 .field-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px; }
 .field { display: flex; flex-direction: column; gap: 3px; flex: 1 1 210px; }
@@ -2637,6 +2683,269 @@ table.ledger .down { color: var(--hostile); }
   font-size: 9px; letter-spacing: .16em; color: #4a4f48;
 }
 .file-entry.is-good h3 { border-bottom-color: #2f5a3a; }
+
+/* ===================================================================== */
+/*  THE FILING CABINET: one stock, one rule work, one type.              */
+/* ===================================================================== */
+/*
+ * The dossier and the full report were the two screens every judge called the
+ * best-designed things in the game — "ruled paper, a red margin rule, four
+ * punch holes down the left, FORM 4471-B and FORM 2-19 in the corner ... this
+ * is what the rest of the story screens should be built like". Beside them the
+ * menu's personnel file, the briefing and the handbook were, in three separate
+ * hands: "seven identical rounded boxes in a row ... on a black field in a
+ * single terminal green", "plain bordered boxes of green type on black",
+ * "styled divs beside a dossier and report drawn as paper".
+ *
+ * Everything below is that same paper issued to those three screens. There is
+ * one new object — the TYPED FIELD, a caption in small capitals over an answer
+ * struck onto a ruled line — because the thing those screens were made of, the
+ * lit rounded tile, is a console readout and belongs on the console.
+ */
+
+/* A single sheet of the stock, laid on the black desk as a card. */
+.card.doc-sheet {
+  position: relative; border: 0; border-radius: 0;
+  color: #23261f;
+  background-color: #ded3b8;
+  background-image:
+    repeating-linear-gradient(90deg, rgba(35, 38, 31, .035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(35, 38, 31, .028) 0 1px, transparent 1px 4px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(35, 38, 31, .3);
+  padding: 15px 24px 14px 56px;
+  margin-bottom: 16px;
+}
+/* a card's worth of punched margin: the holes on a shorter pitch */
+.card.doc-sheet::before {
+  background-image: radial-gradient(circle at 19px 20px, #c4b795 0 6px, transparent 7px);
+  background-size: 38px 92px; background-position: 0 24px;
+}
+.doc-sheet .paper-head { margin-bottom: 13px; }
+.doc-sheet > h3 { color: #43392a; border-bottom: 1px solid #c2b694; padding-bottom: 4px; }
+
+/*
+ * The holder's block: the print, the board, and the name typed on its own rule
+ * with the caption above it, as a form asks for it.
+ */
+.doc-sheet .ident-row { align-items: flex-start; gap: 18px; margin: 2px 0 6px; padding-right: 8px; }
+.doc-sheet .ident-name { flex: 1 1 auto; min-width: 0; gap: 0; }
+.doc-sheet .ident-name label {
+  display: block; font-size: 8.5px; letter-spacing: .2em; text-transform: uppercase;
+  color: #6f6552; padding-bottom: 2px;
+}
+.doc-sheet .ident-name b {
+  display: block; font-size: 21px; letter-spacing: .05em; color: #101309;
+  padding: 2px 2px 5px; border-bottom: 1px solid #a2957a;
+  text-shadow: .5px .5px 0 rgba(35, 38, 31, .16);
+}
+.doc-sheet .ident-board { align-self: flex-end; padding-bottom: 6px; }
+
+/*
+ * THE TYPED FIELD.
+ *
+ * A caption in small capitals, and the answer struck onto the rule under it.
+ * The rule runs the width of its column whether the answer fills it or not,
+ * which is what makes a band of them read as a form rather than as a row of
+ * tiles — and an answer too long for its column simply wraps above its own
+ * rule instead of breaking the row, which is what the tiles did.
+ */
+.typed-fields {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 9px 26px; margin: 10px 0 4px; align-items: end;
+}
+.typed-fields.is-figures { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+.typed-field { display: block; min-width: 0; }
+.typed-field.is-wide { grid-column: span 2; }
+.typed-field label {
+  display: block; font-size: 8.5px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--ink-dim); padding-bottom: 1px;
+}
+.typed-field b {
+  display: block; font-size: 14px; font-weight: 700; letter-spacing: .04em;
+  color: var(--ink-bright); line-height: 1.3;
+  padding: 1px 2px 4px; border-bottom: 1px solid var(--edge);
+  /* struck, not lit: a faint second impression under the type */
+  text-shadow: .5px .5px 0 rgba(35, 38, 31, .16);
+}
+.typed-fields.is-figures .typed-field b { font-variant-numeric: tabular-nums; font-size: 16px; }
+/* a mark printed against the answer — the rank's own board, beside the rank */
+.typed-field b .rank-board { vertical-align: -5px; margin-right: 8px; }
+.typed-field.is-bad b { color: var(--hostile); }
+.typed-field.is-good b { color: var(--good); }
+/*
+ * A band of figures that were never earned is entered in one ink, on a broken
+ * rule. Six zeros printed half in the credit green and half in the failure red
+ * read as a mixed result on a night that had no result at all.
+ */
+.typed-fields.is-unscored .typed-field b {
+  color: color-mix(in srgb, var(--hostile) 62%, var(--ink-dim));
+  border-bottom-style: dashed;
+  border-bottom-color: color-mix(in srgb, var(--hostile) 40%, var(--edge));
+}
+@media (max-width: 560px) {
+  .typed-fields { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 8px 16px; }
+  .typed-field.is-wide { grid-column: span 1; }
+}
+
+/* The clerk's remarks: the sentences a form keeps under the ruled bands. */
+.doc-remarks { margin-top: 14px; border-top: 1px solid var(--edge); padding-top: 8px; }
+.doc-remarks > span {
+  display: block; font-size: 8.5px; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--ink-dim); padding-bottom: 4px;
+}
+.doc-remarks p { margin: 0 0 6px; line-height: 1.6; }
+.doc-remarks p:last-child { margin-bottom: 0; }
+.doc-sheet .record-foot-line { margin-top: 12px; padding-top: 8px; border-top: 1px solid #a2957a; color: #6f6552; }
+
+/*
+ * The stamp on a sheet is applied ACROSS the typing.
+ *
+ * The art director asked for exactly this: "the SATISFACTORY stamp printed
+ * across the type rather than parked in a corner box." It lands over the right
+ * end of the holder's block, where it crosses the name rule and the first band
+ * of fields; the type runs on under it because the ink is applied after the
+ * typing, not instead of it.
+ */
+.card.doc-sheet > .record-stamp {
+  top: 52px; right: 22px;
+  font-size: 15px; letter-spacing: .2em; padding: 6px 16px;
+  transform: rotate(-6.5deg); opacity: .82;
+  color: color-mix(in srgb, #9a2b26 78%, #6b5a52);
+}
+@media (max-width: 900px) {
+  /* a stamp is the width of the stamp, not the width of the page */
+  .card.doc-sheet > .record-stamp {
+    position: static; transform: rotate(-2deg); font-size: 12px;
+    width: fit-content; margin: 6px 0 2px;
+  }
+  .card.doc-sheet { padding: 13px 14px 12px 34px; }
+  /* a letterhead never breaks its own line: it sets smaller instead */
+  .doc-sheet .paper-head { font-size: 8px; letter-spacing: .12em; gap: 10px; }
+  .doc-sheet .paper-head-no { white-space: nowrap; }
+  .card.doc-sheet::before { width: 22px; background-size: 22px 76px;
+    background-image: radial-gradient(circle at 11px 18px, #c4b795 0 5px, transparent 6px); }
+  .doc-sheet .ident-name b { font-size: 17px; }
+}
+
+/* ------------------------------------------------ the order (the briefing) */
+
+/*
+ * An operation order: one sheet, issued to one man for one night. The
+ * particulars typed into the head of it, the situation in numbered paragraphs
+ * with the map printed beside them as a figure, the signals that came in before
+ * the watch pasted on as slips, and the file's own form at the foot.
+ */
+.is-order .typed-fields.is-order-head {
+  margin: 4px 0 18px; padding-bottom: 2px;
+}
+/* the signal slip: buff, pasted a little crooked, with its own heading */
+.screen-inner.is-paper .card.is-signal {
+  position: relative; border-top: 0; max-width: 640px;
+  padding: 11px 18px 12px 20px;
+  background: #cdbf9c; color: #2b2f1f;
+  box-shadow: 3px 3px 0 rgba(10, 13, 10, .26), inset 0 0 0 1px rgba(35, 38, 31, .3);
+  transform: rotate(-.35deg);
+}
+.screen-inner.is-paper .card.is-signal p { color: #2b2f1f; margin-bottom: 0; }
+/* the slip's own docket, across the head of it, over a rule */
+.screen-inner.is-paper .card.is-signal .form-no {
+  display: block; position: static; padding-bottom: 5px; margin-bottom: 7px;
+  border-bottom: 1px solid rgba(35, 38, 31, .3);
+  font-size: 8.5px; letter-spacing: .24em; text-transform: uppercase; color: #5b5443;
+}
+.screen-inner.is-paper .card .form-no {
+  position: absolute; right: 16px; top: 11px;
+  font-size: 8.5px; letter-spacing: .2em; text-transform: uppercase; color: #6f6552;
+}
+/* the situation, in numbered paragraphs, which is how an order is written */
+.is-order .card.is-situation { counter-reset: para; }
+.is-order .card.is-situation > p { position: relative; padding-left: 28px; }
+.is-order .card.is-situation > p::before {
+  counter-increment: para; content: counter(para) '.';
+  position: absolute; left: 0; top: 0; width: 20px; text-align: right;
+  color: var(--ink-dim); font-weight: 700;
+}
+/* the map, printed: ink on the same stock, not a lit scope */
+.screen-inner.is-paper .sector-map svg { border: 1px solid #6f6552; background: #e6ddc3; }
+.screen-inner.is-paper .map-ground { fill: #e6ddc3; }
+.screen-inner.is-paper .map-grid line { stroke: rgba(111, 101, 82, .45); }
+.screen-inner.is-paper .sector-map text { stroke: #e6ddc3; stroke-width: 2.6px; }
+.screen-inner.is-paper .map-axis circle { fill: #e6ddc3; }
+.screen-inner.is-paper .map-key-mark { fill: #23261f; stroke: #e6ddc3; stroke-width: 2.4px; }
+.screen-inner.is-paper .map-reach { fill: rgba(44, 86, 55, .07); stroke: rgba(44, 86, 55, .5); }
+.screen-inner.is-paper .map-reach.is-own { fill: rgba(123, 74, 24, .09); stroke: #7b4a18; }
+.screen-inner.is-paper .map-key li.is-own b, .screen-inner.is-paper .map-key li.is-own { color: #2c5637; }
+/* a printed figure is captioned under its plate, and the key belongs to it */
+.map-caption {
+  display: block; font-size: 9px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ink-dim); padding: 6px 0 2px; border-bottom: 1px solid var(--edge);
+  margin-bottom: 6px;
+}
+.screen-inner.is-paper .map-key ul { color: #4a4438; }
+
+/* ---------------------------------------------- the manual (the handbook) */
+
+/*
+ * An issued manual: numbered sections, the caps printed as caps with what they
+ * do ruled across from them, and the four classes as plates with figure
+ * numbers under them.
+ */
+.is-manual { counter-reset: section; }
+.is-manual .card > h3 { counter-increment: section; }
+.is-manual .card > h3::before { content: counter(section) '. '; color: var(--ink-dim); }
+/*
+ * The key list, typeset: every cap in a section on one left edge and every
+ * description on another. Each pair used to be its own little grid, so the
+ * column was as wide as that row's own cap and the descriptions began at six
+ * different indents down one page. `display: contents` hands the caps and the
+ * descriptions to ONE grid, which is what lines them up.
+ */
+.is-manual .keys {
+  display: grid; gap: 0 18px;
+  grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr);
+}
+.is-manual .keys > div { display: contents; }
+.is-manual .keys b, .is-manual .keys span {
+  padding: 4px 0; border-bottom: 1px dotted color-mix(in srgb, var(--edge) 75%, transparent);
+}
+.is-manual .keys b i {
+  font-style: normal; display: inline-block;
+  font-size: 11px; color: #101309; letter-spacing: .04em;
+  border: 1px solid #6f6552; background: #efe8d5; padding: 1px 6px 2px;
+  box-shadow: 1px 1px 0 rgba(35, 38, 31, .3);
+}
+.is-manual .keys span { color: #3c3a30; }
+@media (max-width: 1040px) {
+  .is-manual .keys { grid-template-columns: max-content minmax(0, 1fr); }
+}
+/* On a phone the cap goes above what it does: one column sized to the longest
+   entry — "Right-click a contact" — left the descriptions a 40-character
+   trench to wrap in. */
+@media (max-width: 620px) {
+  .is-manual .keys { grid-template-columns: minmax(0, 1fr); }
+  .is-manual .keys b { border-bottom: 0; padding: 6px 0 0; }
+  .is-manual .keys span { padding: 2px 0 5px; }
+}
+.is-manual .classes { counter-reset: plate; }
+.is-manual .class-row { counter-increment: plate; border-bottom: 1px solid var(--edge); padding: 12px 0; }
+/* The plate is a box round the figure, so the row's first column has to be as
+   wide as the box and not as wide as the drawing inside it — at 72px and 64px
+   the border and the vehicle's ground line printed across the description. */
+.is-manual .class-row { grid-template-columns: 82px minmax(0, 1.1fr) minmax(0, 1fr); }
+@media (max-width: 700px) { .is-manual .class-row { grid-template-columns: 82px minmax(0, 1fr); } }
+.is-manual .class-art {
+  border: 1px solid #6f6552; background: #efe8d5; padding: 5px 7px 3px;
+  box-shadow: 1px 1px 0 rgba(35, 38, 31, .22);
+  align-self: start;
+}
+.is-manual .class-art::after {
+  content: 'Fig. ' counter(plate); display: block; padding-top: 3px;
+  font-size: 8px; letter-spacing: .18em; text-transform: uppercase; color: #6f6552; text-align: center;
+}
+.is-manual .class-art rect, .is-manual .class-art circle { fill: #23261f; }
+.is-manual .class-art line { stroke: #6f6552; }
+.is-manual .reach-bar { background: #efe8d5; border-color: #8d938a; }
+.is-manual .reach-bar i { background: #7b4a18; opacity: .85; }
 
 /* The last watch's outcome: a black field with margin, and no card at all. */
 /* The ending is not another panel in the deck: it is set on the black field,
@@ -3064,6 +3373,16 @@ table.ledger .down { color: var(--hostile); }
 .scene.is-stacked[data-kind="printout"] .scene-body { flex: 0 0 auto; overflow: visible; }
 /* the drawn chevron carries the prompt on the paper scenes at every width */
 .scene.is-stacked[data-kind="printout"] .scene-prompt { bottom: 4px; right: 12px; color: transparent; }
+/*
+ * Except on a phone's letter and file page, where there is no board and no
+ * machine front to print a chevron on and the last cut printed it on the wall
+ * of the room: "the '▸ NEXT' prompt is drawn inside the picture, over the wall
+ * panelling in the middle of the frame, level with the hands, where it reads
+ * as a stray label sitting on the wall". It goes back in the DOM, under the
+ * sheet it advances, beside SKIP.
+ */
+.scene.is-stacked[data-kind="quarters"] .scene-prompt,
+.scene.is-stacked[data-kind="folder"] .scene-prompt { color: #9fb3a0; }
 .scene.is-stacked[data-kind="printout"] .scene-skip { bottom: auto; top: 12px; right: 14px; left: auto; }
 .scene.is-stacked[data-kind="folder"] .scene-text, .scene.is-stacked[data-kind="quarters"] .scene-text { line-height: 1.5; }
 .scene.is-stacked[data-kind="folder"] .scene-body p, .scene.is-stacked[data-kind="quarters"] .scene-body p { margin-bottom: 10px; }
@@ -3163,18 +3482,46 @@ table.ledger .down { color: var(--hostile); }
  */
 .is-title-card .endcard-block {
   position: relative; text-align: center;
-  width: min(680px, calc(100% - 32px)); margin: 0 auto;
-  padding: 34px 44px 30px;
+  width: min(700px, calc(100% - 32px)); margin: 0 auto;
+  /* the foot is deep enough for the stamp to land on clear stock rather than
+     across the figures — a stamp goes on the paper, not through a word */
+  padding: 20px 40px 52px 68px;
   background:
+    repeating-linear-gradient(90deg, rgba(35, 38, 31, .035) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(35, 38, 31, .028) 0 1px, transparent 1px 4px),
     linear-gradient(180deg, rgba(244, 239, 226, .05), rgba(111, 101, 82, .14)),
     #ded3b8;
   border: 1px solid #23261f;
   box-shadow: 0 10px 30px rgba(6, 8, 6, .62), 0 2px 0 rgba(6, 8, 6, .4);
 }
-/* the rule printed inside the card's edge, the way a form is bordered */
+/* the punched filing margin, as on every other sheet in the drawer */
 .is-title-card .endcard-block::before {
-  content: ''; position: absolute; inset: 6px; border: 1px solid #a2957a;
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 42px;
+  border-right: 1px solid rgba(154, 43, 38, .5);
+  background-image: radial-gradient(circle at 21px 26px, #c4b795 0 7px, transparent 8px);
+  background-size: 42px 118px; background-repeat: repeat-y; background-position: 0 14px;
   pointer-events: none;
+}
+/* the letterhead, ranged across the sheet rather than centred with the type */
+.is-title-card .endcard-block .paper-head {
+  display: flex; justify-content: space-between; gap: 16px; align-items: baseline;
+  font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: #6f6552;
+  padding-bottom: 5px; margin-bottom: 16px; border-bottom: 3px double #6f6552;
+  text-align: left;
+}
+/* the section's own stamp, applied across the foot of the record */
+.is-title-card .endcard-block > .record-stamp.is-entered {
+  position: absolute; top: auto; bottom: 8px; right: 30px;
+  font-size: 10.5px; letter-spacing: .16em; line-height: 1.3;
+  transform: rotate(-7deg);
+}
+@media (max-width: 760px) {
+  .is-title-card .endcard-block { padding: 16px 20px 22px 44px; }
+  .is-title-card .endcard-block::before { width: 28px; background-size: 28px 104px;
+    background-image: radial-gradient(circle at 14px 22px, #c4b795 0 5px, transparent 6px); }
+  .is-title-card .endcard-block > .record-stamp.is-entered {
+    position: static; width: fit-content; margin: 14px auto 0; transform: rotate(-3deg);
+  }
 }
 .is-title-card .endcard-block > * { position: relative; }
 .endcard-tm {
@@ -3207,6 +3554,31 @@ table.ledger .down { color: var(--hostile); }
 .endcard-facts label { font-size: 9px; letter-spacing: .18em; color: #6f6552; }
 .endcard-facts b { font-size: 15px; color: #101309; letter-spacing: .06em; }
 .is-endcard-actions { justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 26px; }
+/*
+ * THE BUTTONS UNDER THE CARD TAKE THEIR COLOUR FROM THE CARD.
+ *
+ * The art director: "the primary button, STAND ANOTHER WATCH, is solid mint
+ * green: the brightest and coolest thing on a warm red screen about losing the
+ * sector ... take the button's colour from the card, not from the menu's
+ * green." So the primary is the card's own stock with the card's ink on it and
+ * the card's shadow under it, and the rest are outlined in the same buff. On a
+ * dusk valley or a burning one, nothing on the screen is a display colour.
+ */
+.is-endcard-actions .btn-primary {
+  background: #ded3b8; color: #23261f; border: 1px solid #23261f;
+  box-shadow: 0 4px 14px rgba(6, 8, 6, .55);
+}
+.is-endcard-actions .btn-primary:hover { background: #f4efe2; filter: none; }
+.is-endcard-actions .btn,
+.is-endcard-actions .action-pair.is-quiet .btn {
+  color: #ded3b8; border-color: rgba(222, 211, 184, .55);
+  background: rgba(10, 13, 10, .42);
+}
+.is-endcard-actions .action-pair.is-quiet .btn {
+  color: rgba(222, 211, 184, .72); border-color: rgba(222, 211, 184, .34);
+}
+.is-endcard-actions .btn:hover,
+.is-endcard-actions .action-pair.is-quiet .btn:hover { color: #f4efe2; border-color: #ded3b8; }
 .action-pair { display: flex; gap: 8px; }
 .action-pair.is-quiet .btn { color: var(--ink-dim); border-color: color-mix(in srgb, var(--edge) 70%, transparent); }
 .action-pair.is-quiet .btn:hover { color: var(--ink); border-color: var(--edge); }
@@ -3258,7 +3630,17 @@ table.ledger .down { color: var(--hostile); }
  * really are and each raid axis on its real bearing, numbered to match the
  * paragraphs beside it.
  */
-.card.is-situation { display: grid; grid-template-columns: minmax(320px, 480px) 1fr; gap: 22px; align-items: start; }
+/*
+ * ROW-GAP ZERO, and the paragraphs carry their own leading.
+ *
+ * The map spans `2 / span 99` so that however many paragraphs the brief runs
+ * to, the figure stands beside all of them — and a 22px gap on BOTH axes then
+ * charged the card for ninety-eight gaps between ninety-eight empty rows. On
+ * Economy of Force that was 2,150 pixels of blank panel under the situation,
+ * measured on the briefing at 1600x950: three screens of nothing between the
+ * map and the seat below it.
+ */
+.card.is-situation { display: grid; grid-template-columns: minmax(320px, 480px) 1fr; gap: 0 22px; align-items: start; }
 .card.is-situation h3 { grid-column: 1 / -1; }
 .card.is-situation p { grid-column: 2; margin-bottom: 10px; }
 .sector-map { grid-column: 1; grid-row: 2 / span 99; margin: 0; }

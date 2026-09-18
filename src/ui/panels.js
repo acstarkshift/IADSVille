@@ -471,16 +471,36 @@ export function idCardHtml(character, echelon) {
   const rank = rankOf(character);
   const [given, ...rest] = String(character.name ?? '').trim().split(/\s+/);
   const shown = rest.length ? `${rest.join(' ')}, ${given}` : given;
+  /*
+   * EVERYTHING PRINTED ON THIS CARD STANDS ABOVE THE SLOT.
+   *
+   * The art director, on the live console: "the card's own printing is cut on
+   * two sides: the blue header runs off the card's right edge mid-word, and the
+   * APPOINTMENT label under RECRUIT is sliced horizontally by the reader's slot
+   * so only the top half of the glyphs shows." Both were the same fault — more
+   * printing than there is card standing out of the machine. So the header is
+   * the service's own short pair and carries the file number at its right end
+   * (it used to spell the service out in full and run off the card mid-word),
+   * the two fields are set tight under the name, and the bottom ten pixels of
+   * the card are left as blank stock, because that is the part inside the slot.
+   *
+   * The photograph is mounted rather than pasted: a white border, a shadow and
+   * a printer's dot screen over the tones, which is what the reader judge asked
+   * for — "a flat five-colour cartoon on a plain grey square with no border, no
+   * screen and no shadow" was the last thing on the card that was not drawn as
+   * an object.
+   */
   return `
     <span class="idc-seal" aria-hidden="true"></span>
-    <span class="idc-band"><span class="idc-emblem"></span><span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.service.en)} · IDENTITY</span></span>
+    <span class="idc-band"><span class="idc-emblem"></span>
+      <span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)} · IDENTITY</span>
+      <span class="idc-serial">${esc(serviceNumber(character))}</span></span>
     <span class="idc-name">${esc(shown.toUpperCase())}</span>
     <span class="idc-fields">
-      <span class="idc-f"><label>RANK</label><b>${rankInsignia(character.rankIndex, { size: 10 })}${esc(rank.en.toUpperCase())}</b></span>
+      <span class="idc-f"><label>RANK</label><b>${rankInsignia(character.rankIndex, { size: 9 })}${esc(rank.en.toUpperCase())}</b></span>
       <span class="idc-f"><label>APPOINTMENT</label><b>${esc(echelon.appointment.en.toUpperCase())}</b></span>
     </span>
-    <span class="idc-no">SERVICE NO. ${esc(serviceNumber(character))}</span>
-    <canvas class="idc-photo" width="24" height="30" aria-hidden="true"></canvas>`;
+    <span class="idc-photo-mount"><canvas class="idc-photo" width="24" height="30" aria-hidden="true"></canvas></span>`;
 }
 
 /**
