@@ -27,11 +27,11 @@ import { Audio } from './audio.js';
 import {
   renderTopbar, renderTrackList, renderFlightStrip, renderFormations, renderBatteries, renderCrewConsole,
   renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, renderActionBar, stampLegends,
-  clearPanelCache, RANGE_SCALES, batteryOrder, rackBatteries,
+  clearPanelCache, RANGE_SCALES, batteryOrder, rackBatteries, isPhoneConsole,
 } from './panels.js';
 import { CONTROLS, POSTURE_CYCLE, legend } from './lexicon.js';
 import { SPEED_BY_KEY, digitPressed } from './keymap.js';
-import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS } from './tutorial.js';
+import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, stepText } from './tutorial.js';
 import { renderMenu, renderBriefing, renderDebrief, renderEndCard, renderControls } from './screens.js';
 import { scenesFor, openingScenes, ScenePlayer } from './scenes.js';
 import { ContextMenu } from './contextmenu.js';
@@ -978,13 +978,24 @@ function renderTutorial() {
     return;
   }
   const step = steps[ui.tutorialStep];
-  if (ui.tutorialRendered === step.id) return;
-  ui.tutorialRendered = step.id;
+  /*
+   * The same lesson, in the words of the console it is being read on.
+   *
+   * Some of these cards name where to look or which key to press, and below
+   * 900px neither is there — no right-hand panel, no AIR PICTURE list, no
+   * Shift+1 and no Y/N for a thumb. The keyed cache carries the console with
+   * it, so a window dragged across the breakpoint mid-lesson rewrites the card
+   * rather than leaving the other machine's instructions up.
+   */
+  const phone = isPhoneConsole();
+  const key = `${step.id}${phone ? '/phone' : ''}`;
+  if (ui.tutorialRendered === key) return;
+  ui.tutorialRendered = key;
   els.tutorialCard.hidden = false;
   els.tutorialCard.innerHTML = `
     <button class="tut-skip" id="tut-skip" title="Dismiss the tutorial">×</button>
     <span class="tut-step">${ui.tutorialStep + 1} / ${steps.length}</span>
-    <b>${step.en}</b>`;
+    <b>${stepText(step, phone)}</b>`;
   els.tutorialCard.querySelector('#tut-skip').onclick = () => {
     ui.tutorialStep = -1;
     els.tutorialCard.hidden = true;

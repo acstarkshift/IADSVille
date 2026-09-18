@@ -23,7 +23,9 @@ import {
 import { RADAR_TYPES, SAM_TYPES } from '../src/engine/config.js';
 import { planGeography } from '../src/ui/console.js';
 import { seatPicture } from '../src/ui/panels.js';
-import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, radarNamesIn } from '../src/ui/tutorial.js';
+import {
+  NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, radarNamesIn, stepText, stepTexts,
+} from '../src/ui/tutorial.js';
 
 const watch = (id, opts = {}) => new World(scenarioById(id), { role: 'net', seed: 5, ...opts });
 
@@ -63,14 +65,39 @@ describe('plain English on and under the scope', () => {
 
   test('every tutorial card is a sentence a first-timer can act on', () => {
     for (const step of [...NET_TUTORIAL_STEPS, ...CREW_TUTORIAL_STEPS]) {
-      assert.ok(/[.!]$/.test(step.en), `${step.id} should end as a sentence: "${step.en}"`);
-      for (const jargon of ['designate', 'paint', 'firing solution', 'channel on it', 'TRACKS list', 'set is cold']) {
-        assert.ok(!step.en.toLowerCase().includes(jargon.toLowerCase()),
-          `${step.id} still says "${jargon}": "${step.en}"`);
+      // Both wordings: a card that names a phone's controls is still a card,
+      // and it is held to the same English as the one on the desk.
+      for (const text of stepTexts(step)) {
+        assert.ok(/[.!]$/.test(text), `${step.id} should end as a sentence: "${text}"`);
+        for (const jargon of ['designate', 'paint', 'firing solution', 'channel on it', 'TRACKS list', 'set is cold']) {
+          assert.ok(!text.toLowerCase().includes(jargon.toLowerCase()),
+            `${step.id} still says "${jargon}": "${text}"`);
+        }
+        assert.ok(!/[Ѐ-ӿ]/.test(text), `${step.id} is English`);
       }
       // The card is the console speaking; it speaks English only.
       assert.equal(step.tm, undefined, `${step.id} carries no stencil line`);
-      assert.ok(!/[Ѐ-ӿ]/.test(step.en), `${step.id} is English`);
+    }
+  });
+
+  /*
+   * The phone card names the phone's own hardware.
+   *
+   * The lesson used to send the player to "the top of the right-hand panel",
+   * to "its row in the AIR PICTURE list" and to Shift+1 — none of which is
+   * drawn below 900px, where the rack is under the picture and the verbs are
+   * on the thumb rail. A card that names a control that is not there is worse
+   * than one that names none, so no phone wording may name the desktop's.
+   */
+  test('no phone card sends a thumb to a panel or a key that is not there', () => {
+    const absent = ['right-hand panel', 'AIR PICTURE list', 'list on the left',
+      'Shift+', 'press Y', 'press N ', 'right-click', 'drag '];
+    for (const step of [...NET_TUTORIAL_STEPS, ...CREW_TUTORIAL_STEPS]) {
+      const text = stepText(step, true);
+      for (const gone of absent) {
+        assert.ok(!text.toLowerCase().includes(gone.toLowerCase()),
+          `the phone card for ${step.id} says "${gone}": "${text}"`);
+      }
     }
   });
 });

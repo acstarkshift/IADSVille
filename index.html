@@ -105,8 +105,19 @@
         <canvas id="scope" aria-label="Radar display"></canvas>
         <div class="scope-overlay" id="scope-overlay"></div>
         <div class="scope-legend" id="scope-legend"></div>
-        <div class="tutorial-card" id="tutorial-card" hidden></div>
       </div>
+      <!--
+        The lesson card is mounted in the BEZEL, not inside the tube.
+
+        On a desktop it is absolutely positioned over the top-left of the glass
+        and nothing about it has changed — the offsets below are the same
+        pixels, measured from the bezel instead of from the tube. On a phone it
+        comes out of the picture altogether and takes a strip of its own under
+        the tube: the player's report was that the scope was 23% of the screen
+        with a tutorial card sitting on top of it, and a card over the picture
+        on a 390px screen is the picture.
+      -->
+      <div class="tutorial-card" id="tutorial-card" hidden></div>
       <div class="scope-side" id="scope-side"></div>
     </section>
 

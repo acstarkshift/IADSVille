@@ -76,6 +76,23 @@ function paint(host, html) {
 }
 
 /**
+ * Which piece of hardware the stylesheet is drawing — asked of the stylesheet.
+ *
+ * Below 900px this is not the desktop console made smaller, it is a phone
+ * console, and the panels have to know: a battery card that is right at
+ * 1600px — lamps, rails, an envelope, four lines of teaching copy and five
+ * caps — is on 390px of glass the reason a player wrote in to say the game
+ * had become unplayable. The breakpoint itself lives in exactly one place,
+ * `--console` in hud.css, and is read back here rather than copied, the same
+ * way `renderActionBar` asks the box whether it is being drawn instead of
+ * testing a width of its own.
+ */
+export function isPhoneConsole() {
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue('--console').trim() === 'phone';
+}
+
+/**
  * Forget what is on the panels, so the next paint is unconditional.
  *
  * Called when a watch starts: two different watches could in principle
@@ -163,7 +180,7 @@ function lamp(entry, lit, { colour = '', blinking = false, caption = null,
  * one below it, which is the exact failure a lever exists to prevent.
  */
 function switch2(up, down, on, {
-  act, site, radar, disabled = false, key = '', extra = '', note = '',
+  act, site, radar, disabled = false, key = '', extra = '', note = '', name = '',
 } = {}) {
   const attrs = [
     act ? `data-act="${act}"` : '',
@@ -174,10 +191,24 @@ function switch2(up, down, on, {
   const pos = (entry, live) => `<span class="sw-pos ${live ? 'is-on' : ''}">${esc(entry.en)}</span>`;
   // The tooltip says where the lever is and what one click will do, in the
   // order a person reads a switch: the state, then the other position.
-  const title = `${on ? up.en : down.en} — ${(on ? up : down).hint ?? ''}`
+  const title = `${name ? `${name} — ` : ''}${on ? up.en : down.en} — ${(on ? up : down).hint ?? ''}`
     + ` Click to switch to ${on ? down.en : up.en}.${note ? ` ${note}` : ''}`;
+  /*
+   * `name` engraves the set on the switch itself.
+   *
+   * Every other emissions switch on the console stands beside the thing it
+   * switches — on that set's rack row, on that battery's card — so the name
+   * to its left IS the label. The rail's copy stands on its own at the foot
+   * of a phone, drawn identically to the rack's, and a player looking at two
+   * identical levers on one screen has nothing to tell them apart with: which
+   * one is WIDE EYE and which is BASTION. So the rail's carries the set's
+   * name across the top of its own body, in the same place in both
+   * orientations. Only the rail passes it; every switch that already sits
+   * beside its own name is unchanged. See `renderActionBar`.
+   */
   return `<button class="sw ${extra}" aria-pressed="${on}" ${attrs}
       title="${esc(title)}">
+    ${name ? `<span class="sw-name">${esc(name)}</span>` : ''}
     <span class="sw-body"><span class="sw-lever"></span></span>
     <span class="sw-legends">${pos(up, on)}${pos(down, !on)}</span>
     ${keycap(key)}
@@ -1113,7 +1144,29 @@ export function rackBatteries(world, ui) {
 }
 
 /**
- * The rest of the net, as one line each, above the seat.
+ * Which set the thumb rail is already carrying the emissions switch for.
+ *
+ * The rail carries exactly one radiate switch — the crewed battery's in the
+ * cabin, the first live surveillance set on the net — and it is the copy a
+ * thumb can always reach, because the rail never scrolls. The rack's copy of
+ * that same switch is therefore a duplicate, and on a phone the player found
+ * both of them on one screen: "a duplicate radiate switch". The rack drops
+ * the one the rail already has and keeps every other, so a second surveillance
+ * set is never stranded without a control.
+ *
+ * This reads the rail's own rule rather than restating it — see
+ * `renderActionBar`, which picks its set exactly this way.
+ */
+function railSwitchFor(world, ui) {
+  const crewed = ui?.view === 'crew' ? world.siteById.get(world.control.crewedBatteryId) : null;
+  const radar = crewed ? world.radarsOf(crewed).find((r) => r.alive)
+    : world.radars.filter((r) => !r.siteId && r.alive)[0];
+  if (!radar) return {};
+  return crewed ? { siteId: crewed.id } : { radarId: radar.id };
+}
+
+/**
+ * The net, as one line each: name, state, rounds, and the one control you use.
  *
  * In the cabin the rack is reference material — what else is on the air, and
  * whether any of it is being shot at — and reference material rendered as full
@@ -1126,23 +1179,44 @@ export function rackBatteries(world, ui) {
  * So: uniform strips, one row per set, on one pitch. A cut between strips is a
  * cut between rows and never through a line of text, every unit on the net is
  * legible at a glance, and the emissions switch — the one control on this
- * panel a watch cannot be played without — is still on every one of them.
+ * panel a watch cannot be played without — is on every one of them.
+ *
+ * This is also the phone's whole weapons rack, in both seats. The full card —
+ * a bilingual nomenclature plate, three lamps, eight round-lamps, an envelope,
+ * a store count, four lines of teaching copy and five caps — is a desktop
+ * instrument; four of them stacked on 390px of glass is what the player was
+ * looking at when they wrote in. What a battery is FOR is in the handbook and
+ * in a contact's own menu, both of which open on a tap.
+ *
+ * `dropRailed` is the phone's rule: the set whose switch is already on the
+ * thumb rail does not also take a row here. Its switch would be the second
+ * copy of one control, and a row without it is a readout — a name, a state
+ * and a range — on the one console with no room for readouts. Everything that
+ * row was carrying is already somewhere a thumb can see: the lever on the
+ * rail is the state, the master ARM lamp in the status strip counts down the
+ * anti-radiation round for EVERY set, and the scope draws the set itself. On
+ * a phone the rack is 42px a row and a directive can cut it to one: that row
+ * has to be a battery you can hand a contact to, not a radar you cannot.
  */
-function crewRack(world, ui, caps) {
+function rackStrips(world, ui, caps, { selectable = false, dropRailed = false } = {}) {
+  const onRail = railSwitchFor(world, ui);
   const rows = [];
   for (const radar of world.radars.filter((r) => !r.siteId)) {
+    if (dropRailed && onRail.radarId === radar.id) continue;
     rows.push({
       key: `data-radar="${radar.id}"`,
       name: radar.label,
       dead: !radar.alive,
+      selected: false,
       armEtaS: radar.alive ? armTimeToImpact(world, radar) : Infinity,
       figure: radar.alive ? `${radar.rangeKm} km` : STATUS.destroyed.en,
       exposure: caps.exposure && radar.alive ? radar.exposure ?? 0 : null,
-      control: switch2(CONTROLS.radiate, CONTROLS.silence, !!radar.on,
-        { act: 'emcon-radar', radar: radar.id, disabled: !radar.alive }),
+      control: switch2(CONTROLS.radiate, CONTROLS.silence,
+        !!radar.on, { act: 'emcon-radar', radar: radar.id, disabled: !radar.alive }),
     });
   }
   for (const site of rackBatteries(world, ui)) {
+    if (dropRailed && onRail.siteId === site.id) continue;
     const sets = world.radarsOf(site);
     const radar = sets.find((r) => r.alive) ?? world.radarById.get(site.radarId);
     const armEtaS = Math.min(...sets.filter((r) => r.alive)
@@ -1151,16 +1225,21 @@ function crewRack(world, ui, caps) {
       key: `data-site="${site.id}"`,
       name: site.name,
       dead: !site.alive,
+      // On the phone the rack is also how the operator picks which battery the
+      // rail's ASSIGN cap will hand the contact to, so the row says which one
+      // it is pointed at. Nothing else about the strip changes.
+      selected: selectable && ui.selectedSiteId === site.id,
       armEtaS,
       figure: site.alive
         ? `${site.readyRounds}/${railsOf(site)} · ${site.engagements.length} ENG`
         : STATUS.destroyed.en,
       exposure: caps.exposure && radar?.alive ? radar.exposure ?? 0 : null,
-      control: switch2(CONTROLS.radiate, CONTROLS.silence, !!radar?.on,
-        { act: 'emcon', site: site.id, disabled: !site.alive || !radar?.alive }),
+      control: switch2(CONTROLS.radiate, CONTROLS.silence,
+        !!radar?.on, { act: 'emcon', site: site.id, disabled: !site.alive || !radar?.alive }),
     });
   }
-  return rows.map((r) => `<div class="rack-strip ${r.dead ? 'is-dead' : ''}" ${r.key}>
+  return rows.map((r) => `<div class="${['rack-strip', r.dead ? 'is-dead' : '',
+    r.selected ? 'is-selected' : ''].filter(Boolean).join(' ')}" ${r.key}>
     <span class="rs-name">${esc(r.name)}</span>
     ${Number.isFinite(r.armEtaS)
     ? `<span class="rs-arm" title="Anti-radiation round tracking this set"
@@ -1173,14 +1252,185 @@ function crewRack(world, ui, caps) {
   </div>`).join('')
     // A list says when it has come to an end, rather than trailing off into
     // painted steel and leaving the player wondering what is under the fold.
-    + `<div class="rack-empty">${rows.length === 1 ? 'NOTHING ELSE ON THIS NET'
+    // `<= 1` and not `=== 1`: on a phone the rail can take the only set on a
+    // one-battery net off this list altogether, and an empty rack that said
+    // END OF THE NET would be a list announcing the end of nothing.
+    + `<div class="rack-empty">${rows.length <= 1 ? 'NOTHING ELSE ON THIS NET'
       : 'END OF THE NET'}</div>`;
+}
+
+/**
+ * Close the log on a whole line, so none of them is drawn in half.
+ *
+ * The box is shortened by whatever it is over a whole line and the same amount
+ * is put back as margin, so the box the console reads ends on a line while the
+ * dock it sits in is exactly as tall as it was. It has to be MARGIN and not
+ * padding: overflow is clipped at the padding edge, so a padded box shows the
+ * overflowing line inside its own padding — measured at 844x390, a third line
+ * of a directive sliced through the middle of its letters, which is the fault
+ * this exists to prevent.
+ *
+ * Measured rather than computed, because the two orientations arrive at the
+ * log's height by different roads: in portrait it is 42px plus the rack's
+ * leftover, and in landscape the log is the give in its own column and takes
+ * whatever the rack and the dock left. Asking the box how tall it actually is
+ * covers both. Neither can chase its own tail: in portrait the height written
+ * back is the one just measured, and in landscape flex-grow sizes the box from
+ * the column and ignores it.
+ *
+ * Called on the phone only; `clear` puts the box back the way the stylesheet
+ * left it, for a window dragged back onto a desk.
+ */
+function fitLogToLines(log, clear = false) {
+  if (!log) return;
+  if (clear) {
+    if (log.style.marginBottom || log.style.height) {
+      log.style.marginBottom = '';
+      log.style.height = '';
+    }
+    return;
+  }
+  log.style.marginBottom = '';
+  log.style.height = '';
+  const cs = getComputedStyle(log);
+  const line = parseFloat(cs.lineHeight) || 16;
+  // The rect, not clientHeight: a box 57.7px tall reports 57, and a whole line
+  // worked out from a rounded height is a whole line short by the rounding.
+  const box = log.getBoundingClientRect().height;
+  /*
+   * Measured to where the box actually CUTS, which is its padding edge and not
+   * its text: overflow is clipped at the padding box, so five pixels of bottom
+   * padding is five pixels of the next line showing under the last one. What
+   * has to land on a line boundary is the whole depth from the first line's
+   * top to that cut.
+   */
+  const depth = box - (parseFloat(cs.paddingTop) || 0);
+  const over = depth > 0 ? depth % line : 0;
+  // Half a pixel is rounding, not a sliced line; and the half-pixel floor
+  // keeps sub-pixel layout from putting a hair of the next line back.
+  if (over > 0.5) {
+    const target = Math.floor((box - over) * 2) / 2;
+    log.style.height = `${target}px`;
+    log.style.marginBottom = `${box - target}px`;
+  }
 }
 
 export function renderBatteries(world, ui, els) {
   // One answer for what this watch's console carries, shared with the key map
   // and the handbook. See consoleCaps().
   const caps = consoleCaps(world.scenario);
+  /*
+   * On a phone the rack is strips in both seats.
+   *
+   * The cards below are a desktop instrument: each one carries a bilingual
+   * nomenclature plate, three lamps, a row of round-lamps, a store count, an
+   * envelope, four lines of teaching copy about what the class is for, and
+   * five caps. Four of them stacked under a 198px scope is what the player was
+   * holding when they reported the phone unplayable. A battery on a phone is a
+   * row — its name, its state, its rounds, and the one control you use — and
+   * what it is FOR is in the handbook and in a contact's own menu.
+   */
+  if (isPhoneConsole()) {
+    const cabin = ui.view === 'crew';
+    paint(els.batteryList, rackStrips(world, ui, caps,
+      { selectable: !cabin, dropRailed: true }));
+    /*
+     * The cut lands between strips, never through one — and leaves no gap.
+     *
+     * The rack gives up the command net's height while a directive is up, and
+     * a directive is not a whole number of rows tall — so the fold fell
+     * straight through BASTION, 8/8 · 0 ENG and half of its switch. The window
+     * is therefore closed at the last row boundary that fits, which leaves a
+     * remainder of up to one row.
+     *
+     * That remainder used to be painted steel at the foot of the panel: a
+     * 26px strip of empty grey between the last set on the rack and the
+     * directive banner, carrying nothing, on the screen that has the least
+     * room to spare. Where there is somewhere to put it, the panel closes on
+     * the row too and it is handed to the log — `--rack-slack`, which the
+     * phone stylesheet adds to the log's height — and the arithmetic cancels a
+     * second time: the panel shrinks to its rows, the dock grows by exactly
+     * what the panel gave up, and the tube above is the same 399px whether a
+     * directive is up or not. The log is the right place for it: it is the one
+     * box on this console that is better for being taller, and unlike the
+     * banner its height is not what the rack is measured against, so nothing
+     * here can chase its own tail.
+     *
+     * In landscape there is nowhere to put it — the column's height is the
+     * picture's and the dock is already exactly as tall as its contents — so
+     * the stylesheet says so with --rack-gives and the panel keeps its
+     * remainder. The window is still closed on a row either way; the fold is
+     * what must never fall through a set's name.
+     *
+     * Boundaries, not a multiple of the pitch: the END OF THE NET line is the
+     * list's last child and is not a row tall, and a sub-pixel shortfall
+     * against 4 x 42 would otherwise throw a whole row away.
+     *
+     * Only on the net seat: in the cabin the list is one block above a console
+     * and the whole column scrolls instead.
+     */
+    const list = els.batteryList;
+    const panel = list.parentElement;
+    const shell = els.shell ?? document.getElementById('shell');
+    // Back to the height the stylesheet asks for, then measured, then closed:
+    // every pass starts from the sheet's own answer, so nothing accumulates.
+    panel.style.height = '';
+    list.style.maxHeight = '';
+    let slack = 0;
+    // Whether anything on this console can take what the rack closes off; the
+    // stylesheet answers, the way it answers --console. See .panel-right.
+    const givesToLog = getComputedStyle(document.documentElement)
+      .getPropertyValue('--rack-gives').trim() === 'log';
+    if (!cabin) {
+      const free = list.clientHeight;
+      const full = panel.offsetHeight;
+      // Measured against the list's own top rather than by offsetTop, which
+      // is counted from whatever the nearest positioned ancestor happens to
+      // be — here the panel, which put every row hundreds of pixels down the
+      // page and made the walk below stop on the first one.
+      const top = list.getBoundingClientRect().top - list.scrollTop;
+      let cut = 0;
+      for (const row of list.children) {
+        const bottom = Math.round(row.getBoundingClientRect().bottom - top);
+        if (bottom > free + 1) break;
+        cut = bottom;
+      }
+      // Never nothing: a window too short for even one row still shows one,
+      // and scrolls.
+      if (!cut) cut = list.firstElementChild?.offsetHeight ?? free;
+      if (cut < free) {
+        list.style.maxHeight = `${cut}px`;
+        if (givesToLog) {
+          slack = free - cut;
+          panel.style.height = `${full - slack}px`;
+        }
+      }
+    }
+    if (shell && shell.dataset.rackSlack !== String(slack)) {
+      shell.dataset.rackSlack = String(slack);
+      shell.style.setProperty('--rack-slack', `${slack}px`);
+    }
+    // And the log ends on a whole line, the way the rack ends on a whole row:
+    // the rack's leftover is not a whole number of lines of type, and handing
+    // it to the log's height sliced a sentence through the middle of its
+    // letters — the same fault one box down. See fitLogToLines.
+    fitLogToLines(els.eventLog);
+    // The rack head's key hint is furniture for a keyboard, and the phone
+    // stylesheet does not draw it: there is nothing else to say up there.
+    return;
+  }
+  // Back on a desktop the list is sized by the column, not by a row pitch, and
+  // the log is ninety pixels of scrollback rather than the rack's leftovers —
+  // both cleared here so a window dragged across the breakpoint does not carry
+  // the phone's arithmetic onto the desk.
+  if (els.batteryList.style.maxHeight) els.batteryList.style.maxHeight = '';
+  if (els.batteryList.parentElement?.style.height) els.batteryList.parentElement.style.height = '';
+  fitLogToLines(els.eventLog, true);
+  const deskShell = els.shell ?? document.getElementById('shell');
+  if (deskShell && deskShell.dataset.rackSlack !== '0') {
+    deskShell.dataset.rackSlack = '0';
+    deskShell.style.setProperty('--rack-slack', '0px');
+  }
   /*
    * The rack is the OTHER batteries.
    *
@@ -1407,7 +1657,7 @@ export function renderBatteries(world, ui, els) {
     </div>`;
   }).join('');
 
-  paint(els.batteryList, ui.view === 'crew' ? crewRack(world, ui, caps) : surveillance + units);
+  paint(els.batteryList, ui.view === 'crew' ? rackStrips(world, ui, caps) : surveillance + units);
 
   /*
    * Which card the keyboard is pointed at, said at the head of the rack.
@@ -2163,9 +2413,20 @@ export function renderActionBar(world, ui, els, cabin) {
   const radar = crewed ? world.radarsOf(crewed).find((r) => r.alive)
     : world.radars.filter((r) => !r.siteId && r.alive)[0];
   if (radar) {
+    /*
+     * And it says whose emissions it is.
+     *
+     * This lever and the ones on the rack are the same switch drawn the same
+     * way, and on a phone two or three of them are on the glass at once — the
+     * rail's, and one on every rack row. The rack's stand beside their own
+     * names; this one stood beside nothing, so nothing on the screen said
+     * which set it was for. The name is the one the rack would have used: the
+     * battery in the cabin, where the switch acts on the post the operator is
+     * sitting in, and the surveillance set on the net.
+     */
     caps.push(switch2(CONTROLS.radiate, CONTROLS.silence, !!radar.on, crewed
-      ? { act: 'emcon', site: crewed.id, disabled: !crewed.alive }
-      : { act: 'emcon-radar', radar: radar.id }));
+      ? { act: 'emcon', site: crewed.id, disabled: !crewed.alive, name: crewed.name }
+      : { act: 'emcon-radar', radar: radar.id, name: radar.label }));
   }
 
   /*
@@ -2207,7 +2468,20 @@ export function renderEventLog(world, els, state) {
   els.eventLog.insertAdjacentHTML('beforeend', html);
 
   while (els.eventLog.children.length > 120) els.eventLog.firstElementChild.remove();
-  els.eventLog.scrollTop = els.eventLog.scrollHeight;
+  /*
+   * A desk reads the scrollback; a phone reads the newest line from its start.
+   *
+   * On a desk the log is ninety-odd pixels of history and the newest line
+   * belongs at the bottom of it. On a phone it is two lines, and scrolling to
+   * the bottom put the player in the MIDDLE of a sentence with its beginning
+   * out of sight and no timestamp to mark where it began: measured at 844x390,
+   * the box read "CAPS AT THE TOP SPEED THE CLOCK UP; IT STAYS AT 1x UNTIL YOU
+   * PRESS ONE." — the tail of one message, which reads as two run together.
+   * The phone stylesheet draws only the newest line (see .event-log below
+   * 900px), and it is anchored to its own first word, so what the console says
+   * always starts with its clock and its first word.
+   */
+  els.eventLog.scrollTop = isPhoneConsole() ? 0 : els.eventLog.scrollHeight;
 }
 
 /* ---------------------------------------------------------- command net */
