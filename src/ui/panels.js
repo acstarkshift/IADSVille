@@ -1233,8 +1233,21 @@ function railSwitchFor(world, ui) {
  * anti-radiation round for EVERY set, and the scope draws the set itself. On
  * a phone the rack is 42px a row and a directive can cut it to one: that row
  * has to be a battery you can hand a contact to, not a radar you cannot.
+ *
+ * `onlyWorkable` is the other half of the same rule, and the radar operator's
+ * seat is why. `commandable` answers no for every battery on the board from
+ * that post — he gives no orders to a battery, the launch officer does — and
+ * `operate` refuses the click as well, so the rack's emissions switches there
+ * were three levers a thumb could throw all night with nothing happening and
+ * no reason printed. The desktop card draws that state as a disabled switch,
+ * which is the right answer on a desk with room for it; on 390px a control
+ * that can never be worked is not made smaller, it is not drawn. What the row
+ * is FOR at the set is what the officer is doing with what you gave him —
+ * rounds on the rails and engagements running — and that stays.
  */
-function rackStrips(world, ui, caps, { selectable = false, dropRailed = false } = {}) {
+function rackStrips(world, ui, caps, {
+  selectable = false, dropRailed = false, onlyWorkable = false,
+} = {}) {
   const onRail = railSwitchFor(world, ui);
   const rows = [];
   for (const radar of world.radars.filter((r) => !r.siteId)) {
@@ -1270,8 +1283,9 @@ function rackStrips(world, ui, caps, { selectable = false, dropRailed = false } 
         ? `${site.readyRounds}/${railsOf(site)} · ${site.engagements.length} ENG`
         : STATUS.destroyed.en,
       exposure: caps.exposure && radar?.alive ? radar.exposure ?? 0 : null,
-      control: switch2(CONTROLS.radiate, CONTROLS.silence,
-        !!radar?.on, { act: 'emcon', site: site.id, disabled: !site.alive || !radar?.alive }),
+      control: onlyWorkable && !world.commandable(site.id) ? ''
+        : switch2(CONTROLS.radiate, CONTROLS.silence, !!radar?.on,
+          { act: 'emcon', site: site.id, disabled: !site.alive || !radar?.alive }),
     });
   }
   return rows.map((r) => `<div class="${['rack-strip', r.dead ? 'is-dead' : '',
@@ -1368,8 +1382,20 @@ export function renderBatteries(world, ui, els) {
    */
   if (isPhoneConsole()) {
     const cabin = ui.view === 'crew';
+    /*
+     * At the set the rack is a board, not a panel.
+     *
+     * Its rows are not selectable, because the selection exists to say which
+     * battery the rail's ASSIGN will hand the contact to and this seat has no
+     * ASSIGN: what it has is HAND OVER, and the officer picks the battery. A
+     * row lit as "picked" would be promising the operator a choice the post
+     * does not give him. What the rows are for here is the answer coming back
+     * — rounds on the rails, engagements running — which is how a thumb sees
+     * that the hand-over landed.
+     */
+    const atTheSet = world.control.role === 'radar';
     paint(els.batteryList, rackStrips(world, ui, caps,
-      { selectable: !cabin, dropRailed: true }));
+      { selectable: !cabin && !atTheSet, dropRailed: true, onlyWorkable: true }));
     /*
      * The cut lands between strips, never through one — and leaves no gap.
      *
@@ -2388,6 +2414,29 @@ export function renderActionBar(world, ui, els, cabin) {
     ? track.hostility.toUpperCase() : String(track.classification).toUpperCase()}`
     : 'NO CONTACT SELECTED';
 
+  /*
+   * AT THE SET THE RAIL ALSO CARRIES THE CONTACT'S FIGURES.
+   *
+   * The radar operator's whole job is to read a contact and say it out loud:
+   * the lesson card is "the row fills in as the set keeps looking at it —
+   * bearing, range, height, and then what it is", and the hand-over itself
+   * reads those three numbers onto the radio. On a desktop they are in the
+   * AIR PICTURE row. A phone does not draw that column, so on the seat that is
+   * now the FIRST one any new player ever sits at, the phone was asking them
+   * to report a contact they could not read — and to believe a lesson card
+   * about a row that was not there.
+   *
+   * They go beside the selection, on the line the rail already prints, in the
+   * same words and the same rounding as the row and the radio call: bearing to
+   * three figures, range in whole kilometres, height to the nearest hundred
+   * metres. One line, fixed height, so the caps under it do not move.
+   */
+  const figures = track && world.control.role === 'radar'
+    ? `${String(Math.round(bearing(world.centre, track.pos))).padStart(3, '0')}° · `
+      + `${Math.round(dist(world.centre, track.pos))} km · `
+      + `${(Math.round(track.altM / 100) * 100).toLocaleString('en-GB')} m`
+    : '';
+
   const caps = [];
   // Live only when there is a row on this seat's list to step to — the
   // cabin's list fills later than the sector's, and a cap that lights before
@@ -2496,7 +2545,8 @@ export function renderActionBar(world, ui, els, cabin) {
     caps.push(press(entry, { act: 'seat', extra: 'pb-seat', title: entry.hint }));
   }
 
-  paint(host, `<div class="ab-aim"><label>SELECTED</label><b>${esc(aimed)}</b></div>
+  paint(host, `<div class="ab-aim"><label>SELECTED</label><b>${esc(aimed)}</b>${
+    figures ? `<span class="ab-figures">${esc(figures)}</span>` : ''}</div>
     <div class="ab-caps">${caps.join('')}</div>`);
 }
 

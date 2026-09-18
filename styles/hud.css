@@ -2304,6 +2304,18 @@ table.ledger .down { color: var(--hostile); }
     font-size: 11px; letter-spacing: .05em; color: var(--engrave);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
+  /*
+   * The set's own readout: bearing, range and height of the contact the rail
+   * is pointed at, at the end of the line the rail already prints. It is only
+   * drawn at the radar seat, where a phone has nowhere else to show them —
+   * see `renderActionBar`. Pushed to the right end so the contact's name keeps
+   * the left, and never wrapped, so the caps under it never move.
+   */
+  .ab-figures {
+    margin-left: auto; flex: 0 0 auto;
+    font-size: 9.5px; letter-spacing: .04em; color: var(--ink-dim);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
   .ab-caps { display: flex; align-items: stretch; gap: 7px; flex: 1 1 100%; min-width: 0; }
   /* Thumb-sized, and all one size: 44px is the floor a finger hits reliably,
      and these are the caps a watch cannot be played without. */
@@ -2430,6 +2442,11 @@ table.ledger .down { color: var(--hostile); }
    * legible legend; two to a row is both.
    */
   .action-bar { padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px)); gap: 4px 6px; }
+  /* 292px of column, a contact's name and its three figures: the caption is
+     what gives way, because a line that reads "T-002 HOSTILE  351° · 151 km ·
+     7,600 m" does not need to be told it is the selection — and with the
+     caption there it was the word HOSTILE that got the ellipsis instead. */
+  .ab-aim:has(.ab-figures) label { display: none; }
   .ab-aim { flex: 1 1 100%; }
   .ab-caps { flex-wrap: wrap; gap: 5px 6px; }
   .ab-caps > * { flex: 1 1 40%; min-height: 44px; }

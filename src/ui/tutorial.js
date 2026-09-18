@@ -87,10 +87,13 @@ export const RADAR_TUTORIAL_STEPS = [
     id: 'hold',
     en: 'The row fills in as the set keeps looking at it: bearing, range, height, and then '
       + 'what it is. A contact you have only seen once is not a contact you can report.',
-    // No row: the phone shows what the set has made of the contact on the
-    // scope itself and beside SELECTED on the rail.
-    phone: 'The contact fills in as the set keeps looking at it: bearing, range, height, and '
-      + 'then what it is. One you have only seen once is not one you can report.',
+    // No row: the phone prints the same three figures, in the same words and
+    // the same rounding, on the bar at the foot of the screen. It names the
+    // bar and not the word SELECTED above them, because on a phone turned
+    // sideways that caption gives up its width to the figures themselves.
+    phone: 'The contact fills in on the bar at the bottom as the set keeps looking: bearing, '
+      + 'range, height, and then what it is. One you have only seen once is not one you '
+      + 'can report.',
     done: (w, u, sinceS) => [...w.tracks.values()]
       .some((t) => t.quality >= 0.55 && t.hostility === 'hostile') || sinceS > 120,
   },
