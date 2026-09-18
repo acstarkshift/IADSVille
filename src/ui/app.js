@@ -29,12 +29,13 @@ import {
   renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, renderActionBar, stampLegends,
   clearPanelCache, RANGE_SCALES, batteryOrder, rackBatteries,
 } from './panels.js';
-import { CONTROLS, POSTURE_CYCLE, legend } from './lexicon.js';
+import { CONTROLS, POSTURE_CYCLE, STATE, legend, pairHtml } from './lexicon.js';
 import { SPEED_BY_KEY, digitPressed } from './keymap.js';
 import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, RADAR_TUTORIAL_STEPS } from './tutorial.js';
 import { renderMenu, renderBriefing, renderDebrief, renderEndCard, renderControls } from './screens.js';
 import { scenesFor, openingScenes, ScenePlayer } from './scenes.js';
 import { ContextMenu } from './contextmenu.js';
+import { drawCrest } from './crest.js';
 import { renderEnlistment, renderDossier } from './dossier.js';
 import { learnSkill } from '../engine/character.js';
 
@@ -171,6 +172,14 @@ function boot() {
   // The fixed legends on the page come out of the lexicon, not out of the
   // markup, so the panel and the nomenclature table cannot disagree.
   stampLegends(document);
+  /*
+   * The crest in the desk lip's left corner: painted once and never again. It
+   * reads nothing from the world and nothing from the theme, because a
+   * national device is the same object in every cabin and at every hour.
+   */
+  drawCrest(document.getElementById('crest-canvas'));
+  const crestPlate = document.getElementById('crest-plate');
+  if (crestPlate) crestPlate.innerHTML = pairHtml(STATE.country);
   // Exposed for the headless smoke and integration tests, and genuinely handy
   // when debugging a campaign state by hand.
   window.__state = state;

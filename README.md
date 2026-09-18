@@ -1009,6 +1009,21 @@ arm's length. Two languages stacked inside a 45-pixel switch was four lines of
 None of it is decoration either: the switch you throw to go dark is the same
 decision the whole game is built on, and it should feel like throwing a switch.
 
+One thing on the console is decoration, and it is the only one. The desk lip's
+left corner — the ticker's first column, as wide as the track panel above it —
+carried nothing at any desktop width, so the national crest is cast into it,
+with the country's name on the plate beside it. The device is the one flying on
+the pole in the political section's office: a sunburst in sunrise gold with a
+red heart, on a red field. It is drawn by code at 32×36 pixels and magnified two
+whole steps, out of the same palette table as the cutscenes, and
+`test/palette.test.js` holds it to that table and to whole-pixel primitives the
+way it holds the scenes. It is the one surface that does not take the echelon's
+metal or the hour's light, because a national device is the same object in a
+battalion cabin at dawn and in the national command at midnight. Below 900
+pixels it folds away with the card reader and the rest of the desk furniture: a
+phone is short of room for the radar picture, and a crest tells the operator
+nothing they need during a watch.
+
 A switch carries **both** of its positions, engraved beside the lever and never
 moving: up is RADIATE, down is SILENCE, one click throws it, and the position
 the lever is standing in is a lit window rather than a colour — colour alone did

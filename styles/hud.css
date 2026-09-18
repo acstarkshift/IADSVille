@@ -1358,9 +1358,37 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
   display: grid; grid-template-columns: minmax(210px, 300px) auto minmax(0, 1fr);
   align-items: end;
 }
+.ticker > .desk-crest { grid-column: 1; grid-row: 1; }
 .ticker > #card-reader { grid-column: 2; grid-row: 1; }
 .ticker > .event-log { grid-column: 3; grid-row: 1; }
 .ticker > .action-bar { grid-column: 1 / -1; grid-row: 2; }
+
+/*
+ * The crest in the desk lip's left corner, and the plate that names it.
+ *
+ * That column is as wide as the track panel above it and had nothing in it at
+ * any desktop width — the one blank corner of the console. The casting is
+ * drawn by `drawCrest()` at 32x36 logical pixels and magnified by two whole
+ * steps, so it is pixel art at the same scale discipline as the cutscenes:
+ * `pixelated` is what keeps it from being resampled into mush by the browser.
+ *
+ * It aligns its base with the card reader's rather than its middle, because
+ * both are objects standing on the same lip and a shared baseline is what says
+ * so. The plate is the stencil-over-gloss form every other legend uses.
+ */
+.desk-crest {
+  display: flex; align-items: center; gap: 11px;
+  min-width: 0; padding: 0 8px 6px 16px;
+}
+.crest-cut {
+  flex: 0 0 auto; width: 64px; height: 72px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .5));
+}
+.crest-plate { min-width: 0; overflow: hidden; }
+.crest-plate .lg { align-items: flex-start; text-align: left; }
+.crest-plate .lg b { font-size: 10px; letter-spacing: .09em; white-space: nowrap; }
+.crest-plate .lg i { font-size: 8px; letter-spacing: .15em; white-space: nowrap; }
 
 /*
  * The command net floats above the ticker rather than sitting in it.
@@ -1899,6 +1927,16 @@ table.ledger .down { color: var(--hostile); }
  * picture keeps the room it needs; and the bar at the bottom is the console.
  */
 @media (max-width: 900px) {
+  /*
+   * The crest comes off the phone entirely.
+   *
+   * The player, asking for it: "Don't do this on mobile as it'll waste too
+   * much screen space." They are right — it is a hundred and eighty pixels of
+   * a screen that is short of room for the radar picture, and it tells the
+   * operator nothing they need during a watch. It stays on every width that
+   * has a desk lip to cast it into, exactly as it is.
+   */
+  .desk-crest { display: none; }
   /*
    * The topbar goes to two rows: what the watch IS on top, what you can do to
    * the clock underneath. At 390px the works plate, the identity card and the
