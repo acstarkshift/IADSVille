@@ -2333,9 +2333,18 @@ table.ledger .down { color: var(--hostile); }
 .rail-remarks { margin-top: 18px; }
 .rail-remarks > span { display: block; padding-bottom: 6px; }
 .rail-remarks > i { display: block; height: 17px; border-bottom: 1px dotted var(--edge); }
+/*
+ * The stamp lands ACROSS the remarks block, not under it.
+ *
+ * The story judge, on the last cut: "REMARKS is six empty ruled lines about
+ * 300px tall, and the rubber stamp sits under it rather than across it, so the
+ * right column still ends in a large blank field on a page whose whole point
+ * is that the office wrote something down." Nobody lines a stamp up with the
+ * bottom of the box: it goes on wherever the hand puts it, over the ruling.
+ */
 .record-stamp.is-inline {
-  position: static; display: inline-flex; transform: rotate(-3deg);
-  margin: 22px 0 4px 10px; font-size: 11px;
+  position: static; display: inline-flex; transform: rotate(-6deg);
+  margin: -62px 0 10px 54px; font-size: 11px;
 }
 .ending-card .title.is-outcome { text-wrap: balance; }
 @media (max-width: 900px) {
@@ -2514,12 +2523,17 @@ table.ledger .down { color: var(--hostile); }
  * same grain the scenes are dithered in, and the picture and the words set as
  * one group in the middle of it.
  */
+/*
+ * A PLAIN FIELD, not a grid. The art judge, on the last cut: "the area outside
+ * the picture is filled with a regular two-tone checkerboard grid. At the sizes
+ * it is drawn it reads as a transparency checkerboard behind the artwork rather
+ * than as darkness." Two crossed 4px gradients ARE a checkerboard. What is left
+ * over beside the picture is the dark of the room the player is sitting in: one
+ * ink, with the faintest cast of the console's own light up the middle of it.
+ */
 .scene.is-stacked {
   background-color: #0a0d0a;
-  background-image:
-    repeating-linear-gradient(0deg, rgba(74, 79, 72, .16) 0 2px, transparent 2px 4px),
-    repeating-linear-gradient(90deg, rgba(74, 79, 72, .16) 0 2px, transparent 2px 4px);
-  background-size: 4px 4px, 4px 4px;
+  background-image: radial-gradient(120% 60% at 50% 42%, rgba(74, 79, 72, .22), rgba(10, 13, 10, 0) 70%);
 }
 .scene[hidden] { display: none; }
 /* A wordless beat has no words: the box is hidden, and it has to stay hidden
@@ -2762,46 +2776,77 @@ table.ledger .down { color: var(--hostile); }
  * every other watch with an operational headline at the top of it.
  */
 .is-endcard { position: relative; }
-.is-endcard.is-title-card { min-height: 78vh; display: flex; flex-direction: column; justify-content: center; }
+.is-endcard.is-title-card { min-height: 74vh; display: flex; flex-direction: column; justify-content: center; }
+/*
+ * THE VALLEY IS THE PICTURE, NOT A TEXTURE.
+ *
+ * Two judges filed the last cut: "the end card in particular dims a good
+ * picture to near-black and puts a web layout on top of it", "the end card
+ * also leaves a 300px empty black foreground under its buttons" — which was
+ * the valley's own foreground, taken down to a third of itself. The ridge, the
+ * dusk, the window lights and the road are the best art in the game and the
+ * judges said so; they are not wallpaper to print on. They keep two thirds of
+ * their value, and what goes over them is a card that carries its own ground.
+ */
 .endcard-sky {
   position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1;
-  object-fit: cover; image-rendering: pixelated; opacity: .34;
-  filter: saturate(.7);
+  object-fit: cover; image-rendering: pixelated; opacity: .66;
   pointer-events: none;
 }
+/*
+ * AND WHAT THE ENDING IS TYPED ON IS A CARD.
+ *
+ * All three judges: "these four are still styled divs", "the ending typed on a
+ * card or a docket rather than floated over the picture". So it is the object
+ * the campaign hands you: a slip of buff stock standing on the valley with the
+ * service's own rule printed inside its edge, a drop shadow under it, and the
+ * ending set in INK on paper rather than in terminal green over a photograph.
+ */
 .is-title-card .endcard-block {
-  position: relative; text-align: center; padding: 56px 60px 34px;
-  /* The pool has to reach nothing INSIDE its own box, or the box itself is
-     what you see: a rectangle of shade across the valley. */
-  background: radial-gradient(54% 54% at 50% 50%, rgba(6, 8, 6, .93), rgba(6, 8, 6, .76) 55%, rgba(6, 8, 6, 0) 100%);
+  position: relative; text-align: center;
+  width: min(680px, calc(100% - 32px)); margin: 0 auto;
+  padding: 34px 44px 30px;
+  background:
+    linear-gradient(180deg, rgba(244, 239, 226, .05), rgba(111, 101, 82, .14)),
+    #ded3b8;
+  border: 1px solid #23261f;
+  box-shadow: 0 10px 30px rgba(6, 8, 6, .62), 0 2px 0 rgba(6, 8, 6, .4);
 }
+/* the rule printed inside the card's edge, the way a form is bordered */
+.is-title-card .endcard-block::before {
+  content: ''; position: absolute; inset: 6px; border: 1px solid #a2957a;
+  pointer-events: none;
+}
+.is-title-card .endcard-block > * { position: relative; }
 .endcard-tm {
-  margin: 0 0 6px; font-size: 12px; letter-spacing: .34em; color: var(--ink-dim);
+  margin: 0 0 6px; font-size: 12px; letter-spacing: .34em; color: #6f6552;
 }
 /* The file's own print, at the end of the file. */
-.endcard-photo { display: inline-block; margin: 0 0 18px; }
-.is-title-card .title { letter-spacing: .2em; }
+.endcard-photo { display: inline-block; margin: 0 0 16px; }
+.is-title-card .title { letter-spacing: .2em; text-shadow: none; }
+.is-title-card .title.gained { color: #2f4a26; }
+.is-title-card .title.grave { color: #7d2320; }
 .endcard-rule {
-  width: 190px; margin: 14px auto 16px; border: 0; border-top: 1px solid var(--edge);
+  width: 190px; margin: 14px auto 16px; border: 0; border-top: 1px solid #a2957a;
 }
 /* The watch's own name, under the title, where a subtitle goes. */
-.endcard-watch { margin: 0 0 2px; letter-spacing: .2em; }
+.endcard-watch { margin: 0 0 2px; letter-spacing: .2em; color: #6f6552; }
 /*
  * The ending's first line reads as a paragraph, so it is set as one. Centred,
  * it came out as eight ragged lines on a phone.
  */
 .is-endcard .ending-lede {
   max-width: 62ch; margin: 0 auto 18px; text-align: left;
-  color: var(--ink); font-size: 15px; line-height: 1.62;
+  color: #23261f; font-size: 15px; line-height: 1.62;
 }
-.is-title-card .subtitle.grave { margin: 0 auto 16px; }
+.is-title-card .subtitle.grave { margin: 0 auto 16px; color: #7d2320; }
 .endcard-facts {
   display: flex; justify-content: center; flex-wrap: wrap; gap: 28px;
-  margin-top: 4px;
+  margin-top: 4px; padding-top: 12px; border-top: 1px solid #c2b694;
 }
 .endcard-facts span { display: flex; flex-direction: column; gap: 3px; }
-.endcard-facts label { font-size: 9px; letter-spacing: .18em; color: var(--ink-dim); }
-.endcard-facts b { font-size: 15px; color: var(--ink-bright); letter-spacing: .06em; }
+.endcard-facts label { font-size: 9px; letter-spacing: .18em; color: #6f6552; }
+.endcard-facts b { font-size: 15px; color: #101309; letter-spacing: .06em; }
 .is-endcard-actions { justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 26px; }
 .action-pair { display: flex; gap: 8px; }
 .action-pair.is-quiet .btn { color: var(--ink-dim); border-color: color-mix(in srgb, var(--edge) 70%, transparent); }

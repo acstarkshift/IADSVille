@@ -830,8 +830,10 @@ export function renderDebrief(host, state, result, entry) {
             <div class="rail-row"><span>In the file</span><b>${Math.round(state.campaign.standing)}</b></div>
             <div class="rail-row"><span>Entered by</span><b>Sector political section</b></div>
             <div class="rail-remarks">
+              ${/* Five rules, not seven: the block was three hundred pixels of
+                   empty paper and the stamp sat under all of it. */ ''}
               <span>Remarks</span>
-              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i></i><i></i><i></i><i></i>
             </div>
             <span class="record-stamp is-inline">Sector record<br>Entered</span>
           </aside>
