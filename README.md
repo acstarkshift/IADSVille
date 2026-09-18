@@ -7,10 +7,13 @@ a pilot and not a gun, but the person reading the scope. The job is triage:
 sixteen contacts, four batteries, ninety seconds, and a command that reads your
 log afterwards.
 
-The campaign is a promotion. You begin commanding a battalion, four batteries in
-one valley, every one of them yours to point personally. You end commanding the
-air defence of a country. The equipment never changes. What changes is the kind
-of decision you are making — and every promotion takes something away.
+The campaign is a promotion, and it starts at the bottom of one. You begin at a
+radar set with one switch and no authority to shoot anything: you hold the
+picture and you hand each contact to the officer who fires it. Then a cabin and
+a launcher of your own, then a battalion's worth of batteries to point, and you
+end commanding the air defence of a country. The equipment never changes. What
+changes is the kind of decision you are making — and every promotion takes
+something away.
 
 You are also from the Ville. It is the village at the centre of the first scope
 you sit at, and your family is still in it. That is not set dressing; it is the
@@ -86,16 +89,31 @@ follow the orders you acknowledged. Accept the expenditure freeze and no
 battery on free will defend the hospital for you. Quiet insubordination
 requires the pen.
 
-## The four appointments
+## The six posts
 
-| | Appointment | You decide | It costs you |
+The ladder runs from a set to a country. The first two rungs are not commands at
+all: they are the seats you learn the war in, and the seat a watch offers is the
+rung it sits on. A post opens when every watch at the post below it has been
+stood — on progress, not on marks — and the rank is gazetted on the same order.
+
+| | Post | You decide | It costs you |
 |---|---|---|---|
-| **ДИВИЗИОН** | Battalion Commander | Which battery shoots this track | — |
+| **РАСЧЁТ РЛС** | Radar Operator | What is out there, and who you tell about it | — |
+| **РАСЧЁТ КАБИНЫ** | Missile Operator | Which of the things you can reach is worth a round | The man beside you who did the shooting |
+| **ДИВИЗИОН** | Battalion Commander | Which battery shoots this track | The console. You point batteries now |
 | **СЕКТОР** | Sector Commander | Which tracks are worth a round at all | The illusion that you can answer everything |
-| **ОКРУГ ПВО** | District Commander | *Which sector you are standing in* | The console. You never sit in a launcher again |
+| **ОКРУГ ПВО** | District Commander | *Which sector you are standing in* | The console again, and for good |
 | **ГЛАВНЫЙ ШТАБ ПВО** | Chief of Air Defence | *Which region is allowed to be defended* | Everything else |
 
-The mechanism is the number of subordinate commands you may hold under your own
+At the radar set the only control that answers to you is the set's own switch:
+there is no launch cap on that console, and the launch officer at the next desk
+will not fire at a contact you have not called to him. Measured over sixteen
+seeds of the teaching watch, an operator who calls the picture holds all sixteen
+and an operator who watches in silence holds none of them, with nothing fired by
+anybody on either side of that line.
+
+Above the two operator posts the mechanism is the number of subordinate commands
+you may hold under your own
 hand at once. At battalion and sector level there is one formation and it is
 yours, so those watches play exactly as they always did — you assign every
 track, you set every battery's emissions state, you can take a console yourself.
@@ -392,15 +410,16 @@ console. The clock does not run until the boot ends: the console under the
 scenes is the real one, but the watch's phase is held until the operator is
 in the chair, and the smoke checks it.
 
-## Two seats
+## Four seats
 
-Both are the same simulation. What changes is which half of it you drive; the AI
-fills whichever seat you are not sitting in.
+All four are the same simulation. What changes is which part of it you drive;
+the AI fills whichever seats you are not sitting in.
 
 | Seat | You run | The feel |
 |---|---|---|
-| **Battle Manager** | The fused sector picture. Identify contacts, assign them to batteries, set weapons states, manage emissions across every radar you own. | Wide and cerebral. You will spend the whole watch deciding what to ignore. |
+| **Radar Operator** | One surveillance set. Switch it on, hold what it finds, read each contact to the launch officer beside you — and he fires, on what you called and on nothing else. | One verb, and everything that happens is downstream of it. |
 | **SAM Operator** | One battery. Your own radar's coverage, cues over the net — or your own call, which the net answers — and the acquire → lock → launch → guide loop by hand. | Tight and personal. The rounds come at *you*. |
+| **Battle Manager** | The fused sector picture. Identify contacts, assign them to batteries, set weapons states, manage emissions across every radar you own. | Wide and cerebral. You will spend the whole watch deciding what to ignore. |
 | **Commander** | Both — run the picture, and take a console yourself when a shot matters. | Delegate, then grab the one that counts. |
 
 **On your own authority.** The cabin can lock anything its battery can
@@ -431,11 +450,14 @@ ridge you cannot see over, your own battery named at the middle — and the plac
 the standing order is about is ringed on it exactly as the sector scope rings
 it, so the seat always knows where it is and what it is standing in front of.
 
-Which seats are available is decided by the appointment you hold. A battalion or
-sector commander may sit anywhere. A district commander may not: there is no
-console at that level, and losing it is part of what the promotion costs. At
-national command you keep one — your own headquarters battalion's — because on
-the last watch that battery is in the room you are sitting in.
+Which seat a watch offers is decided by the rung it sits on, and the rungs
+arrive in order. The two operator posts offer one seat each and it is the seat
+they are named after. A battalion commander has left the cabin and runs the net.
+A sector commander may take a console again, and on that watch it is a decision
+rather than a treat. A district commander may not: there is no console at that
+level, and losing it is part of what the promotion costs. At national command
+you keep one — your own headquarters battalion's — because on the last watch
+that battery is in the room you are sitting in.
 
 ## The four classes of air defence
 
@@ -652,47 +674,52 @@ Narrative pressure: off** keeps every mechanic and drops the file entries.
 
 ## Missions
 
-Eleven watches across four appointments, each teaching one thing and then never
-letting you forget it, and a twelfth that only some records ever see. Each names
-its own hardware, so the campaign visibly changes equipment as it escalates.
+Eleven watches, each teaching one thing and then never letting you forget it,
+and a twelfth that only some records ever see. Each names its own hardware, so
+the campaign visibly changes equipment as it escalates.
 
-**Act I — battalion command.** *A cathode-ray cabin, and four batteries in one
-valley that are all yours to point.*
+The acts below are the **formation** each watch is fought at, which is what
+decides how much of the map the scope reaches and how many commands one pair of
+hands may hold. The **seat** beside each watch is the rung of the ladder it sits
+on, and that is a different question: the first four watches are stood from
+somebody else's console, under an officer who is doing the commanding.
 
-| Watch | Teaches |
-|---|---|
-| First Light | Tracking, assignment, and that a radar has to radiate to see |
-| Low Riders | The radar horizon. Low contacts arrive close and stay close |
-| Solo Battery | The whole engagement loop from the seat, alone *(operator only)* |
+**Act I — fought at a battalion.** *A cathode-ray cabin, and four batteries in
+one valley — none of them yours yet.*
 
-**Act II — sector command.** *The same cabin and a bigger board: a sector and
-its radars answer to you, and every night brings more contacts than you have
-rounds.*
+| Watch | Seat | Teaches |
+|---|---|---|
+| First Light | Radar operator | Tracking, the hand-over, and that a radar has to radiate to see |
+| Low Riders | Radar operator | The radar horizon. Low contacts arrive close and stay close |
+| Solo Battery | SAM operator | The whole engagement loop from the seat, alone |
 
-| Watch | Teaches |
-|---|---|
-| Weasel Hour | Emissions control — blink to survive, and pay for it in guidance |
-| White Noise | Jamming, burnthrough, decoys, ammunition discipline |
-| Economy of Force | What the allocation is actually for |
-| Across the Line | What the schedule of defended places is really a schedule of |
-| Ville Under Fire | All of it, and then the centre goes down |
+**Act II — fought at a sector.** *The same cabin and a bigger board: a sector
+and its radars, and every night brings more contacts than there are rounds.*
+
+| Watch | Seat | Teaches |
+|---|---|---|
+| Weasel Hour | SAM operator | Emissions control — blink to survive, and pay for it in guidance |
+| White Noise | Battle manager | Jamming, burnthrough, decoys, ammunition discipline |
+| Economy of Force | Battle manager | What the allocation is actually for |
+| Across the Line | Battle manager | What the schedule of defended places is really a schedule of |
+| Ville Under Fire | Battle manager or commander | All of it, and then the centre goes down |
 
 **Act III — district command.** *Three hundred kilometres wide, and you may
 hold two of its four sectors under your own hand at a time. No console from
 here on.*
 
-| Watch | Teaches |
-|---|---|
-| Four Sectors | That a standing order given to somebody you cannot see is a real weapon, and usually the only one you have |
-| Reinforce the Capital | What a redeployment order costs, and who it is actually for |
+| Watch | Seat | Teaches |
+|---|---|---|
+| Four Sectors | Battle manager | That a standing order given to somebody you cannot see is a real weapon, and usually the only one you have |
+| Reinforce the Capital | Battle manager | What a redeployment order costs, and who it is actually for |
 
 **Act IV — national command.** *One seat runs the air defence of the whole
 country, with a reserve that will not cover two of anything at once.*
 
-| Watch | Teaches |
-|---|---|
-| The Two Cities | That the equipment was never the constraint |
-| The President's Flight | That the last decision was never about a building either *(sealed)* |
+| Watch | Seat | Teaches |
+|---|---|---|
+| The Two Cities | Battle manager or commander | That the equipment was never the constraint |
+| The President's Flight | Battle manager or commander | That the last decision was never about a building either *(sealed)* |
 
 ### The district
 
@@ -982,6 +1009,21 @@ arm's length. Two languages stacked inside a 45-pixel switch was four lines of
 None of it is decoration either: the switch you throw to go dark is the same
 decision the whole game is built on, and it should feel like throwing a switch.
 
+One thing on the console is decoration, and it is the only one. The desk lip's
+left corner — the ticker's first column, as wide as the track panel above it —
+carried nothing at any desktop width, so the national crest is cast into it,
+with the country's name on the plate beside it. The device is the one flying on
+the pole in the political section's office: a sunburst in sunrise gold with a
+red heart, on a red field. It is drawn by code at 32×36 pixels and magnified two
+whole steps, out of the same palette table as the cutscenes, and
+`test/palette.test.js` holds it to that table and to whole-pixel primitives the
+way it holds the scenes. It is the one surface that does not take the echelon's
+metal or the hour's light, because a national device is the same object in a
+battalion cabin at dawn and in the national command at midnight. Below 900
+pixels it folds away with the card reader and the rest of the desk furniture: a
+phone is short of room for the radar picture, and a crest tells the operator
+nothing they need during a watch.
+
 A switch carries **both** of its positions, engraved beside the lever and never
 moving: up is RADIATE, down is SILENCE, one click throws it, and the position
 the lever is standing in is a lit window rather than a colour — colour alone did
@@ -1081,7 +1123,7 @@ a few pixels or the panel moved under it. NEXT TARGET lights only when the
 seat's own list has a row to step to — the cabin's list is the battery's own
 picture and fills later than the sector's — so a live cap always does
 something when tapped; the switch on the rail is as wide as its engraved
-legends and never narrower. `tools/smoke.js` drives all three seats end to
+legends and never narrower. `tools/smoke.js` drives all four seats end to
 end with touch only, in portrait and landscape, with taps that roll between
 contact and release, and fails if a legend is clipped, a live cap selects
 nothing, or a round does not leave a rail.
@@ -1827,23 +1869,33 @@ A few decisions worth knowing about if you read the source:
     --seeds 16 --jobs 3 --md /tmp/campaign.md
   ```
 
-  | Watch | nothing | novice | competent | expert |
-  |---|--:|--:|--:|--:|
-  | First Light | 0% | 100% | 100% | 100% |
-  | Low Riders | 0% | 0-63% | 56-88% | 44-81% |
-  | Solo Battery | 0% | 75% | 81% | 88% |
-  | Weasel Hour | 0% | 6-75% | 75-81% | 56-94% |
-  | White Noise | 0% | 6-81% | 81-88% | 75-88% |
-  | Economy of Force | 0% | 31-88% | 69-81% | 63-75% |
-  | Across the Line | 0-6% | 31-69% | 69-81% | 69-81% |
-  | Ville Under Fire | 0-19% | 0-75% | 63-75% | 75-94% |
-  | Four Sectors | 0% | 31% | 75% | 94% |
-  | Reinforce the Capital | 6% | 100% | 69% | 94% |
-  | The Two Cities | 0% | 0-25% | 69-88% | 56-69% |
-  | The President's Flight | 6-38% | 31-38% | 56-75% | 63-81% |
+  | Watch | Seat | nothing | novice | competent | expert |
+  |---|---|--:|--:|--:|--:|
+  | First Light | radar | 0% | 100% | 100% | 100% |
+  | Low Riders | radar | 0% | 56% | 75% | 75% |
+  | Solo Battery | crew | 0% | 75% | 81% | 88% |
+  | Weasel Hour | crew | 0% | 75% | 81% | 56% |
+  | White Noise | net | 0% | 19% | 81% | 88% |
+  | Economy of Force | net | 0% | 50% | 69% | 69% |
+  | Across the Line | net | 0% | 63% | 81% | 69% |
+  | Ville Under Fire | net, both | 0% | 0-6% | 63-75% | 75-94% |
+  | Four Sectors | net | 0% | 31% | 75% | 94% |
+  | Reinforce the Capital | net | 6% | 100% | 69% | 94% |
+  | The Two Cities | net, both | 0% | 0-25% | 69-88% | 56-69% |
+  | The President's Flight | net, both | 6-38% | 31-38% | 56-75% | 63-81% |
 
-  (Ranges are across the seats each watch offers; Solo Battery has only the
-  cabin, and the last two only the net and both seats.)
+  (Where two seats are listed the figure is a range across them; eight of the
+  twelve watches offer one seat, because that is the rung they sit on. The
+  columns are single numbers on those eight for the first time — the ladder
+  took the other seats off them, and the seat that remains is the one the
+  staircase below is read at.)
+
+  The first column is the floor and it is not decoration. A spectator holds
+  nothing on eleven of the twelve, and at the radar set it holds nothing for a
+  reason peculiar to that rung: the launch officer beside the operator fires
+  at what he is handed, so an empty chair means no rounds are fired at all —
+  0 of 16 on both radar watches, zero rounds, and a mean of 5.3 arrivals
+  conceded on the teaching watch against the working operator's none.
 
 - **The campaign is a staircase, and this is it.** Competent play, each watch's
   own primary seat, the same sixteen seeds:
@@ -1916,15 +1968,20 @@ A few decisions worth knowing about if you read the source:
   interactive tutorial: five steps, a cut-down console of two controls, and a
   brief that says nothing is shooting back at you tonight. A teaching watch that
   fails a learner is a teaching watch that has failed. What it must do instead
-  is fail the *spectator*, and it does: a player who touches nothing holds none
-  of eight seeds on the net or from both seats and concedes five to six
-  aircraft, while a player who so much as brings a set up and assigns holds all
-  eight from every seat. The empty cabin is the exception at 6 of 8 — the
-  sector's own crews fight the watch around a silent battery.
+  is fail the *spectator*, and it does. The watch is now stood from the radar
+  set and from nowhere else, which sharpens that to a line: nothing fires at a
+  contact the operator has not called, so a player who touches nothing holds
+  none of sixteen seeds, concedes a mean of 5.3 aircraft and watches zero
+  rounds leave a rail, while a player who brings the set up and calls what it
+  paints holds all sixteen. (Measured before the ladder, when this watch
+  offered all three seats: the spectator held none of eight on the net or from
+  both, and 6 of 8 in the cabin, where the sector's own crews fought the watch
+  around a silent battery.)
 
   **The exemption covers the beginner too, and that half had never been
   written down.** The rule wants a novice losing two watches in five; on this
-  one a novice holds 100% on all three seats, and so does careful play. The
+  one a novice holds 100% at the set, and so does careful play — and so did
+  all three of the seats it used to offer. The
   only allowance that would deliver a beginner's failure here is one leaker,
   and one leaker is the setting this watch was explicitly moved OFF, because
   the most common way to concede it was spending ninety seconds reading the

@@ -15,7 +15,7 @@ import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { resolve, dirname } from 'node:path';
 import { SCENARIOS } from '../src/engine/scenarios.js';
-import { ECHELON_ORDER } from '../src/engine/echelon.js';
+import { postForScenario } from '../src/engine/echelon.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // Derived from the process id when not set, so two smoke runs started close
@@ -29,13 +29,18 @@ const ORIGIN = `http://127.0.0.1:${PORT}/`;
  *
  * The campaign is a promotion, so most of these watches are not on a fresh
  * record's roster at all. Each run seeds a service record that has stood
- * everything below the echelon it needs, which is also a check on the gating
+ * everything below the post it needs, which is also a check on the gating
  * itself: if the appointment logic breaks, these runs stop finding their button.
+ *
+ * One seat per watch, because that is now what a watch offers: the ladder runs
+ * set, cabin, net, command, and a watch below command has exactly one chair in
+ * it. The first two runs are therefore the two new rungs, and the third is the
+ * cabin's second night.
  */
 const RUNS = [
-  { mission: 'first-light', role: 'net', background: 'factory' },
+  { mission: 'first-light', role: 'radar', background: 'factory' },
   { mission: 'solo-battery', role: 'crew', background: 'border' },
-  { mission: 'weasel-hour', role: 'net', background: 'academy' },
+  { mission: 'weasel-hour', role: 'crew', background: 'academy' },
   { mission: 'economy-of-force', role: 'net', background: 'factory' },
   { mission: 'across-the-line', role: 'net', background: 'border' },
   { mission: 'ville-under-fire', role: 'both', background: 'penal' },
@@ -50,14 +55,22 @@ const RUNS = [
   },
 ];
 
-/** Every watch below this one's echelon, which is what its roster entry needs. */
+/**
+ * Every watch below this one's POST, which is what its roster entry needs.
+ *
+ * The post, not the formation it is fought at: the roster is gated on the rung
+ * of the ladder a watch sits on, and two of the sector's watches are now stood
+ * from a cabin rather than commanded. Seeding on the formation would leave the
+ * cabin's second night locked and the run would never find its button.
+ */
 function recordFor(missionId) {
   const scenario = SCENARIOS.find((s) => s.id === missionId);
-  const order = ECHELON_ORDER.find((e) => e.id === scenario.echelon).order;
+  const order = postForScenario(scenario).order;
   const completed = {};
   for (const other of SCENARIOS) {
-    const otherOrder = ECHELON_ORDER.find((e) => e.id === other.echelon).order;
-    if (otherOrder < order) completed[other.id] = { score: 1, tier: 'satisfactory', role: 'net' };
+    if (postForScenario(other).order < order) {
+      completed[other.id] = { score: 1, tier: 'satisfactory', role: other.roles[0] };
+    }
   }
   return completed;
 }
@@ -198,16 +211,24 @@ async function main() {
     /*
      * The contact's menu: a right click on a row lists the batteries, with a
      * live row for one that can take the contact, and Escape closes it.
+     *
+     * At the radar set the same menu answers a different question — the
+     * batteries are all listed and all refused, and the one live row is the
+     * launch officer — so it is driven from that seat too.
      */
-    if (detected && run.role === 'net') {
+    if (detected && (run.role === 'net' || run.role === 'radar')) {
       await page.click('#track-list li[data-track]', { button: 'right' });
       await wait(150);
       const menu = await page.evaluate(() => {
         const m = document.getElementById('context-menu');
         return { open: m && !m.hidden, rows: m?.querySelectorAll('.ctx-row').length ?? 0,
-          live: m?.querySelectorAll('.ctx-row.is-live').length ?? 0, why: m?.querySelectorAll('.ctx-why').length ?? 0 };
+          live: m?.querySelectorAll('.ctx-row.is-live').length ?? 0, why: m?.querySelectorAll('.ctx-why').length ?? 0,
+          control: m?.querySelector('.ctx-row[data-control="1"]') !== null };
       });
       if (!menu.open || menu.rows === 0) failures.push(`${run.mission}/${run.role}: right-click on a contact opened no menu`);
+      if (run.role === 'radar' && !menu.control) {
+        failures.push(`${run.mission}/${run.role}: the menu offers no launch officer to hand the contact to`);
+      }
       // And it stays on the glass: nothing of it past the tube's edges.
       const fit = await page.evaluate(() => {
         const m = document.getElementById('context-menu').getBoundingClientRect();
@@ -331,9 +352,13 @@ async function main() {
  * orientations, and fails if a control the watch needs is off screen, if a
  * tap that rolled a few pixels does not commit, or if no round leaves a rail.
  *
- * Three seats, because a launch is possible from three:
+ * FOUR seats, because the ladder has four rungs and a round leaves a rail on
+ * every one of them — on the first it is somebody else's hand that presses the
+ * button, which is the point of that rung and has to be true with a thumb too:
+ *   the set (First Light, radar) — NEXT TARGET, HAND OVER, and the launch
+ *   officer fires what the finger called;
  *   the cabin (Solo Battery, crew) — NEXT TARGET, LOCK, LAUNCH;
- *   the net (First Light, net) — NEXT TARGET, ASSIGN, and the battery fires;
+ *   the net (Economy of Force, net) — NEXT TARGET, ASSIGN, and the battery fires;
  *   the commander (Ville Under Fire, both) — the seat cap on the rail, which
  *   is the only way to a LAUNCH cap on a phone, where the topbar's seat
  *   toggle is not drawn; then the cabin's own NEXT TARGET, LOCK, LAUNCH,
@@ -346,8 +371,9 @@ async function touchRun(browser) {
     { name: 'landscape', viewport: { width: 844, height: 390 } },
   ];
   const runs = [
+    { mission: 'first-light', role: 'radar' },
     { mission: 'solo-battery', role: 'crew' },
-    { mission: 'first-light', role: 'net' },
+    { mission: 'economy-of-force', role: 'net' },
     { mission: 'ville-under-fire', role: 'both' },
   ];
   for (const seat of seats) {
@@ -496,7 +522,39 @@ async function touchRun(browser) {
         }
 
         let fired = 0;
-        if (run.role !== 'net') {
+        if (run.role === 'radar') {
+          /*
+           * The set's verb is a sentence, not a trigger: HAND OVER, and the
+           * launch officer puts a battery on it. The round that follows is
+           * the proof the hand-over was real — nothing on this watch is fired
+           * at a contact the operator has not called.
+           */
+          const report = await tapWhenLive('.ab-caps [data-act="report"]', 40000, rolledTap);
+          if (report !== 'ready') failures.push(`${label}: HAND OVER ${report}`);
+          await wait(600);
+          if (!await page.evaluate(() => (window.__world.stats.handovers ?? 0) > 0)) {
+            failures.push(`${label}: a rolled tap on HAND OVER called nothing`);
+          }
+          if (await page.evaluate(() => window.__world.control.role !== 'radar'
+            || window.__world.commandable(window.__world.sites[0].id))) {
+            failures.push(`${label}: the set was handed a battery to command`);
+          }
+          /*
+           * And then the watch is worked the way the post is worked: step to
+           * the next contact, call it, step again. One report is not a seat —
+           * the first thing on the board may be one of ours, or out of
+           * everybody's reach — and a round only flies when something worth a
+           * round has been named.
+           */
+          for (let i = 0; i < 60 && fired === 0; i++) {
+            await wait(700);
+            fired = await page.evaluate(() => window.__world.stats.roundsFired);
+            if (fired) break;
+            await tap('.ab-caps [data-act="step-target"]');
+            await tap('.ab-caps [data-act="report"]');
+          }
+          if (fired === 0) failures.push(`${label}: the launch officer fired nothing in 42 s`);
+        } else if (run.role !== 'net') {
           const lock = await tapWhenLive('.ab-caps [data-act="lock"]', 40000, rolledTap);
           if (lock === 'absent' || lock === 'off-screen') failures.push(`${label}: LOCK ${lock}`);
           await wait(400);
@@ -518,14 +576,22 @@ async function touchRun(browser) {
           }
           if (sawCap && fired === 0) failures.push(`${label}: no round left the rail by touch in 28 s`);
         } else {
-          // The net's launch is the assignment: hand the contact over and the
-          // battery fires it. A rolled tap, because that is the one that failed.
-          const assign = await tapWhenLive('.ab-caps [data-act="assign"]', 40000, rolledTap);
-          if (assign !== 'ready') failures.push(`${label}: ASSIGN ${assign}`);
-          await wait(600);
-          if (!await page.evaluate(() => window.__world.sites.some((s) => s.engagements.length))) {
-            failures.push(`${label}: a rolled tap on ASSIGN handed nothing over`);
+          /*
+           * The net's launch is the assignment: hand the contact over and the
+           * battery fires it. A rolled tap, because that is the one that
+           * failed — and the rail's cap names the battery the rack is
+           * highlighting, so a contact it cannot reach yet is refused. Step to
+           * the next one and call it again, which is what a thumb does.
+           */
+          let handed = false;
+          for (let i = 0; i < 20 && !handed; i++) {
+            const assign = await tapWhenLive('.ab-caps [data-act="assign"]', 40000, rolledTap);
+            if (assign !== 'ready') { failures.push(`${label}: ASSIGN ${assign}`); break; }
+            await wait(600);
+            handed = await page.evaluate(() => window.__world.sites.some((s) => s.engagements.length));
+            if (!handed) await tap('.ab-caps [data-act="step-target"]');
           }
+          if (!handed) failures.push(`${label}: a rolled tap on ASSIGN handed nothing over`);
           for (let i = 0; i < 60 && fired === 0; i++) {
             await wait(700);
             fired = await page.evaluate(() => window.__world.stats.roundsFired);

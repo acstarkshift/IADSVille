@@ -136,6 +136,24 @@
 
   <footer class="ticker">
     <!--
+      The national crest, cast into the desk lip at the operator's left hand.
+
+      The player: "The bottom left corner of the desktop page is wasted space.
+      Insert the crest of the nation you're defending. Don't do this on mobile
+      as it'll waste too much screen space." The ticker's first column is as
+      wide as the track panel above it and carried nothing at any desktop
+      width, so this is the corner they mean. drawCrest() in crest.js paints
+      the device — the sunburst the flag in the political section's office
+      carries — and the plate beside it names the country the watch is stood
+      for, which nothing else on the console does. Below 900px it folds away
+      with the card reader and the rest of the desk furniture.
+    -->
+    <div class="desk-crest" id="desk-crest">
+      <canvas class="crest-cut" id="crest-canvas" width="64" height="72"
+        role="img" aria-label="Arms of Trans Mordovia"></canvas>
+      <span class="crest-plate" id="crest-plate"></span>
+    </div>
+    <!--
       The card reader, and the operator's identity card standing out of it.
 
       The player: "the card/card reader on the user console should be put

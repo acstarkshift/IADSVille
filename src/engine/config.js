@@ -1149,8 +1149,21 @@ export const DIFFICULTY = {
 /** Weapons release states a battery can be held in. */
 export const WEAPON_STATES = ['hold', 'tight', 'free'];
 
+/**
+ * The four seats, in the order a career passes through them.
+ *
+ * The order is the ladder and the seat picker draws them in it, so a new
+ * player reads the campaign's shape off the first screen: the set, then the
+ * cabin, then the net, then command. Which of them a given watch offers is the
+ * business of that watch's POST (`src/engine/echelon.js`).
+ */
 export const ROLES = {
-  net: { id: 'net', label: 'BATTLE MANAGER', blurb: 'Run the picture. Assign the shooters.' },
+  radar: {
+    id: 'radar',
+    label: 'RADAR OPERATOR',
+    blurb: 'Work the set. Watch, acquire, report — the launch officer fires.',
+  },
   crew: { id: 'crew', label: 'SAM OPERATOR', blurb: 'Crew one battery. Acquire, launch, survive.' },
+  net: { id: 'net', label: 'BATTLE MANAGER', blurb: 'Run the picture. Assign the shooters.' },
   both: { id: 'both', label: 'COMMANDER', blurb: 'Run the picture and take a console yourself.' },
 };

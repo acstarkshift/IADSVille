@@ -25,6 +25,14 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, '..', 'src', 'ui', 'scenes.js'), 'utf8');
+/*
+ * The crest cast into the desk lip is pixel art drawn by code, exactly like
+ * the cutscenes, so it answers to the same table and the same primitives. It
+ * lives in its own file because it is furniture on the console rather than a
+ * scene, and a second file is precisely how a thirty-fourth colour would get
+ * into the game without anybody noticing.
+ */
+const crest = readFileSync(join(here, '..', 'src', 'ui', 'crest.js'), 'utf8');
 
 /** The table, as the file itself declares it — seven ramps and five accents. */
 const PALETTE = new Set([
@@ -82,6 +90,45 @@ describe('nothing on the pixel canvas is anti-aliased', () => {
     }
     // and the colon, which the hour on the panel counter needs
     assert.match(source, /':': '\d{5}'/);
+  });
+});
+
+describe('the crest is cast from the same palette as the scenes', () => {
+  test('every ink in crest.js is in the table', () => {
+    const found = crest.match(/#[0-9a-fA-F]{6}\b/g) ?? [];
+    const strays = [...new Set(found.map((c) => c.toLowerCase()))].filter((c) => !PALETTE.has(c));
+    assert.deepEqual(strays, [], `ink outside the palette table: ${strays.join(', ')}`);
+  });
+
+  test('each ink is declared once and used by name after that', () => {
+    const found = (crest.match(/#[0-9a-fA-F]{6}\b/g) ?? []).map((c) => c.toLowerCase());
+    const counts = new Map();
+    for (const c of found) counts.set(c, (counts.get(c) ?? 0) + 1);
+    const repeated = [...counts].filter(([, n]) => n > 1).map(([c, n]) => `${c} x${n}`);
+    assert.deepEqual(repeated, [], `literal repeated instead of named: ${repeated.join(', ')}`);
+  });
+
+  test('the device is the one on the flag in the office', () => {
+    // The office draws its flag from RED with a DAWN block on it; the crest
+    // has to use the same two inks or the country has two flags.
+    assert.ok(crest.includes("'#9a2b26'"), 'the crest field is not the flag red');
+    assert.ok(crest.includes("'#e8a86a'"), 'the crest device is not the flag gold');
+    assert.match(source, /px\(ctx, wallX\(9\), 16, 14, 44, .*RED/,
+      'the office flag no longer flies the red field the crest copies');
+  });
+
+  for (const primitive of ['arc(', 'ellipse(', 'lineTo(', 'moveTo(', 'stroke(', 'fillText(', 'beginPath(']) {
+    test(`no ${primitive.replace('(', '')} on the crest either`, () => {
+      assert.equal(crest.includes(`.${primitive}`), false,
+        `${primitive} on the crest canvas: it is magnified two whole steps and would fringe`);
+    });
+  }
+
+  test('it is magnified by a whole number of steps', () => {
+    assert.match(crest, /CREST_SCALE = \d+;/);
+    const scale = Number(crest.match(/CREST_SCALE = (\d+);/)[1]);
+    assert.equal(scale, Math.round(scale));
+    assert.ok(scale >= 2, 'a crest drawn at 1x is not pixel art, it is small');
   });
 });
 

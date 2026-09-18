@@ -39,6 +39,14 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
  */
 export function menuRowsFor(world, track) {
   if (!world || !track) return [];
+  /*
+   * At the radar set there is exactly one live row and it is not a battery.
+   * The batteries stay on the list — where they are, what they reach, what is
+   * on their rails — because that is the reference a person calling a picture
+   * actually wants; every one of them says "not under your command", which is
+   * `commandable`'s answer and the truth. The row that acts is the officer.
+   */
+  const atTheSet = world.control?.role === 'radar';
   const rows = world.sites.map((site) => {
     const type = SAM_TYPES[site.type];
     const already = site.engagements.some((e) => e.trackId === track.id);
@@ -67,11 +75,40 @@ export function menuRowsFor(world, track) {
   });
   const order = (r) => (r.already ? 0 : r.can ? 1 : 2);
   const soon = (r) => (r.toRangeS === null ? 1e6 : r.toRangeS === Infinity ? 1e9 : r.toRangeS);
-  return rows.sort((a, b) => order(a) - order(b) || soon(a) - soon(b) || (b.pk ?? 0) - (a.pk ?? 0));
+  rows.sort((a, b) => order(a) - order(b) || soon(a) - soon(b) || (b.pk ?? 0) - (a.pk ?? 0));
+  if (!atTheSet) return rows;
+  const passed = track.reportedAtS !== null && track.reportedAtS !== undefined;
+  return [{
+    control: true,
+    siteId: '',
+    name: 'CONTROL',
+    nomenclature: 'LAUNCH OFFICER',
+    already: false,
+    mine: true,
+    can: !passed,
+    reason: passed ? 'already passed to him' : null,
+    rangeKm: 0,
+    reachKm: 0,
+    toRangeS: null,
+    rails: 0,
+    store: 0,
+    channelsFree: 0,
+    pk: null,
+  }, ...rows];
 }
 
 /** The words on a row, so the menu and a test read the same thing. */
 export function rowText(row) {
+  if (row.control) {
+    return {
+      when: row.can ? 'NOT YET CALLED' : 'CALLED',
+      range: 'AT THE NEXT DESK',
+      rounds: 'he decides which battery',
+      pk: '—',
+      command: 'he fires, you do not',
+      note: row.can ? 'Pick to hand it over.' : 'He already has this one.',
+    };
+  }
   const when = row.already ? 'ON IT'
     : row.toRangeS === 0 ? 'IN RANGE'
       : row.toRangeS === null ? 'NO COURSE YET'
@@ -108,8 +145,9 @@ export class ContextMenu {
       const already = row.dataset.already === 'true';
       const site = row.dataset.site;
       const track = this.trackId;
+      const control = row.dataset.control === '1';
       this.close();
-      this.onPick(site, track, already);
+      this.onPick(site, track, already, control);
     });
   }
 
@@ -123,12 +161,13 @@ export class ContextMenu {
       ? String(track.classification).toUpperCase() : String(track.hostility).toUpperCase();
     this.host.innerHTML = `
       <div class="ctx-head"><b>${esc(track.tn)}</b> · ${esc(kind)} · ${Math.round(track.altM).toLocaleString('en-US')} m
-        <span class="ctx-hint">Pick a battery. Esc closes.</span></div>
+        <span class="ctx-hint">${world.control?.role === 'radar'
+    ? 'Hand it to CONTROL. Esc closes.' : 'Pick a battery. Esc closes.'}</span></div>
       ${rows.map((r) => {
     const t = rowText(r);
     const live = r.can || r.already;
     return `<button type="button" role="menuitem" class="ctx-row ${live ? 'is-live' : 'is-dead'} ${r.already ? 'is-on' : ''}"
-        data-site="${esc(r.siteId)}" data-already="${r.already}" ${live ? '' : 'disabled'}
+        data-site="${esc(r.siteId)}" data-already="${r.already}" ${r.control ? 'data-control="1"' : ''} ${live ? '' : 'disabled'}
         title="${esc(t.note)}">
         <span class="ctx-name"><b>${esc(r.name)}</b><i>${esc(r.nomenclature)}</i></span>
         <span class="ctx-when">${esc(t.when)}</span>

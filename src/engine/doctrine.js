@@ -618,6 +618,64 @@ export function spanLimit(formation) {
   return formation.commander?.span ?? Infinity;
 }
 
+/**
+ * THE LAUNCH OFFICER BESIDE THE RADAR OPERATOR.
+ *
+ * On the first rung the player works a set and does not shoot; the officer at
+ * the next desk does that, on what he is handed. He is this same function —
+ * the formation's own commander — with three things made true about him, and
+ * all three are facts about a man with a plotting board rather than dials on a
+ * difficulty slider:
+ *
+ *   HE HAS NO TUBE. He fires what he is handed and nothing else: a contact
+ *   with no `reportedAtS` on it is a contact he has never been told about, and
+ *   his batteries sit on their standing order while it flies over them. That
+ *   is the post in one line, and it is what makes the seat a job rather than a
+ *   switch — measured on the teaching watch, an operator who reports the
+ *   picture holds it on eight seeds of eight and one who watches in silence
+ *   holds none of them, with six weapons arriving.
+ *
+ *   (A crew on WEAPONS FREE still self-engages what comes into its own ring,
+ *   because that is what free means and it is written elsewhere. Standing
+ *   orders are the other half of this: the officer is the reason a battalion
+ *   on TIGHT does anything at all.)
+ *
+ *   HE PAIRS BY THE RULER. The nearest battery that can legally take it — not
+ *   the sector's own `engagementValue` arithmetic, which is a battle
+ *   manager's reading of a shootlist and is the rung above him.
+ *
+ *   HE WORKS HIS BOARD AT A PERSON'S PACE. One pass every three seconds.
+ *
+ * Those last two are not invented: they are, to the letter, the COMPETENT
+ * battle manager that `tools/playtest.mjs` measures every net watch in the
+ * campaign with. That is deliberate and it is the only way the two rungs can
+ * be compared at all — the difference between standing at the set and standing
+ * on the net is then exactly the one thing it is supposed to be, which is who
+ * has the picture, and not who is better at pairing.
+ *
+ * Measured, sixteen seeds, competently played, Low Riders: 56% held with him
+ * pairing by value on a one-second loop, 69% by the ruler, 75% by the ruler at
+ * a person's pace — against 75% for the same watch fought from the net seat
+ * before the ladder existed. The two rungs now sit on the same rate, which is
+ * what "the same job, one seat apart" has to mean.
+ *
+ * AND THE REASON HE IS NOT ALLOWED A FREE LOOK AT HIS OWN RINGS. He was, for
+ * one revision: anything already inside an envelope he could take without
+ * being told. Measured over eight seeds of Low Riders, that made the seat
+ * anti-rewarding — the operator who never touched a control scored 1244 and
+ * held six watches, the one who called the whole picture scored 1131 and held
+ * six — because on a saturated raid an early claim pins a two-channel battery
+ * on something that has not arrived yet. A seat whose spectator outscores its
+ * player is not a rung, and the fix is not to make reporting cleverer; it is
+ * that a launch officer with no tube genuinely cannot shoot at what nobody
+ * has called.
+ */
+const atTheSet = (world) => world.control.role === 'radar';
+
+/** How often an officer looks at his board: a machine loop, or a person's pass. */
+const THINK_PASS_S = 1.0;
+const LAUNCH_OFFICER_PASS_S = 3.0;
+
 function runFormationCommander(world, formation, dt) {
   if (!world.fusionOnline) return;      // no centre, no assignment
   if (world.t < formation.handoverUntilS) return;   // nobody has this one yet
@@ -641,7 +699,8 @@ function runFormationCommander(world, formation, dt) {
   const competence = formation.commander?.competence ?? 1;
   formation.thinkTimerS = (formation.thinkTimerS ?? 0) - dt;
   if (formation.thinkTimerS > 0) return;
-  formation.thinkTimerS = 1.0 + (1 - competence) * 5;
+  formation.thinkTimerS = (atTheSet(world) ? LAUNCH_OFFICER_PASS_S : THINK_PASS_S)
+    + (1 - competence) * 5;
 
   const sites = world.sitesOf(formation);
   if (!sites.length) return;
@@ -725,8 +784,17 @@ function runFormationCommander(world, formation, dt) {
       // battery's reach entitles it to plan ahead; a flat bar here was
       // measured to erase the district battalion's forward coverage.
       if (evaluation.timeToRangeS > claimHorizonS(site)) continue;
-      if (evaluation.value > bestValue) {
-        bestValue = evaluation.value;
+      /*
+       * What the launch officer cannot see for himself. Beyond his own rings
+       * he is working from what the set called to him; a contact nobody
+       * reported is one he will not plan a battery ahead for. See the note
+       * above this function.
+       */
+      if (atTheSet(world) && track.reportedAtS === null) continue;
+      // ...and he pairs with a ruler, not with the sector's own arithmetic.
+      const score = atTheSet(world) ? -dist(site.pos, track.pos) : evaluation.value;
+      if (score > bestValue) {
+        bestValue = score;
         best = { site, manual };
       }
     }
@@ -1008,7 +1076,13 @@ export function stepFireControl(world, dt) {
  * them.
  */
 export function runSurveillanceEmcon(world) {
-  if (world.control.netIsHuman) return;
+  /*
+   * `ownsSurveillance`, not `netIsHuman`. The radar operator is not on the net
+   * and commands no battery, and the sector's sets are the only thing they DO
+   * hold — an AI that kept blinking them would be reaching over the shoulder
+   * of the one seat whose whole subject is that switch.
+   */
+  if (world.control.ownsSurveillance) return;
   for (const radar of world.radars) {
     if (radar.siteId || !radar.alive) continue;
     const armEta = armTimeToImpact(world, radar);

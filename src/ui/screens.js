@@ -9,9 +9,13 @@
  * register that stays in good taste.
  */
 
-import { SCENARIOS, isUnlocked, appointmentOf, watchConditions } from '../engine/scenarios.js';
-import { ECHELON_ORDER, ECHELONS } from '../engine/echelon.js';
-import { DIFFICULTY, ROLES, SAM_TYPES, DEFENCE_CLASSES, ASSET_TYPES } from '../engine/config.js';
+import {
+  SCENARIOS, isUnlocked, appointmentOf, watchConditions, postOfScenario,
+} from '../engine/scenarios.js';
+import { POST_ORDER, appointingSignatory } from '../engine/echelon.js';
+import {
+  DIFFICULTY, ROLES, SAM_TYPES, DEFENCE_CLASSES, ASSET_TYPES, RADAR_TYPES,
+} from '../engine/config.js';
 import { consequenceFor, briefingNote } from '../engine/campaign.js';
 import { tierFor, LEDGER_SUBJECTS } from '../engine/command.js';
 import { rankOf, backgroundOf, householdOf, districtOf } from '../engine/character.js';
@@ -52,9 +56,11 @@ const toTop = (host) => { if (host) host.scrollTop = 0; };
  */
 const NOT_HELD = [
   '',
-  'Above your appointment. You will be given it when you are given it.',
-  'Two appointments above yours. You have not met the officer who holds it.',
-  'Three appointments above yours. It is held in Mostrograd.',
+  'The next rung. You will be given it when you are given it.',
+  'Two appointments above yours. You have not met the man who holds it.',
+  'Three appointments above yours. Nobody has told you who holds it.',
+  'Four appointments above yours. It is a name on a signature block.',
+  'Five appointments above yours. It is held in Mostrograd.',
 ];
 
 /* ------------------------------------------------------------- title */
@@ -88,7 +94,7 @@ export function renderMenu(host, state) {
        * the player held national command and already knew about it.
        */
       const held = sc.requiresEnding
-        || ECHELON_ORDER.find((e) => e.id === sc.echelon).order <= appointment.order;
+        || postOfScenario(sc).order <= appointment.order;
       return held
         ? `<button class="mission is-sealed" disabled>
             <b>▓▓▓▓▓▓▓▓ ▓▓▓▓▓▓</b>
@@ -102,9 +108,17 @@ export function renderMenu(host, state) {
          * it applies to, rather than eight times down one screen on a new
          * record, which is how it read as a wall of the same line.
          */
+        /*
+         * POST, not COMMAND. Eight of the twelve watches are now stood from a
+         * seat that commands nothing — a set and a cabin — and a recruit
+         * reading NOT YOUR COMMAND over Solo Battery was being told the wrong
+         * thing about the rung directly above him. One word covers the whole
+         * ladder, and it is the word the roster, the file and the LEAVE POST
+         * cap already use.
+         */
         : `<button class="mission is-sealed" disabled>
             <b>${esc(sc.name)}</b>
-            <div class="flags"><span class="pill tight">NOT YOUR COMMAND</span></div>
+            <div class="flags"><span class="pill tight">NOT YOUR POST</span></div>
           </button>`;
     }
     return `<button class="mission ${active ? 'is-active' : ''}" data-mission="${sc.id}">
@@ -172,15 +186,21 @@ export function renderMenu(host, state) {
       <p class="lede">
         You hold the appointment of <b class="urgent">${esc(appointment.appointment.en)}</b>.
         ${esc(appointment.blurb)}</p>
-      ${ECHELON_ORDER.map((echelon) => {
-    const watches = SCENARIOS.filter((sc) => sc.echelon === echelon.id);
+      ${/*
+         * The roster is the LADDER, one block a rung, from the set to the
+         * country. It used to be grouped by the size of the formation, which
+         * is a different question and put the first night of the war under a
+         * heading reading BATTALION COMMAND.
+         */ ''}
+      ${POST_ORDER.map((post) => {
+    const watches = SCENARIOS.filter((sc) => postOfScenario(sc).id === post.id);
     if (!watches.length) return '';
-    const reached = echelon.order <= appointment.order;
+    const reached = post.order <= appointment.order;
     return `<div class="act ${reached ? '' : 'is-locked'}">
           <div class="act-head">
-            <span class="lg"><b>${esc(echelon.heading)}</b></span>
-            <span>${reached ? esc(echelon.teaches) : esc(NOT_HELD[echelon.order - appointment.order]
-    ?? NOT_HELD[3])}</span>
+            <span class="lg"><b>${esc(post.heading)}</b></span>
+            <span>${reached ? esc(post.teaches) : esc(NOT_HELD[post.order - appointment.order]
+    ?? NOT_HELD[NOT_HELD.length - 1])}</span>
           </div>
           <div class="mission-grid">${watches.map(missionCard).join('')}</div>
         </div>`;
@@ -199,7 +219,9 @@ export function renderMenu(host, state) {
           </button>`;
   }).join('')}
       </div>
-      ${state.role !== 'net' ? `<div class="toggle-row">
+      ${/* Which cabin you are sitting in — a question only the two seats with
+           a launcher under them have. */ ''}
+      ${state.role === 'crew' || state.role === 'both' ? `<div class="toggle-row">
         <span>Battery:</span>
         <select id="battery-pick" class="btn">
           ${state.mission.sites.map((s) => `<option value="${s.id}" ${state.batteryId === s.id ? 'selected' : ''}>
@@ -245,7 +267,7 @@ export function renderBriefing(host, state) {
   const note = briefingNote(state.campaign,
     { narrativePressure: state.narrativePressure, missionId: mission.id });
   const role = ROLES[state.role];
-  const battery = state.role !== 'net'
+  const battery = state.role === 'crew' || state.role === 'both'
     ? mission.sites.find((s) => s.id === state.batteryId) ?? mission.sites[0]
     : null;
 
@@ -261,9 +283,9 @@ export function renderBriefing(host, state) {
     <p class="note conditions">${esc(watchConditions(mission).line)}</p>
     ${/* One spelling for the job, everywhere it is named: the order of
          appointment, the personnel file, the roster and this line all say
-         Sector Commander. This one used to lower-case it. */ ''}
-    <p class="note">You stand this watch as ${esc(ECHELONS[mission.echelon]?.appointment?.en
-    ?? String(mission.echelon ?? ''))}.</p>
+         the same thing. It is the POST the watch is stood under — a night
+         fought at a battalion is not a night in command of one. */ ''}
+    <p class="note">You stand this watch as ${esc(postOfScenario(mission).appointment.en)}.</p>
     ${character ? `<div class="card record-card is-tight">
       <div class="record-stamp">${stampFace(STATE.serviceShort.tm, STATE.serviceShort.en)}</div>
       <p>Posting order for <b>${esc(rank.en)} ${esc(character.name)}</b>.
@@ -296,6 +318,17 @@ export function renderBriefing(host, state) {
     <div class="card">
       <h3>Your seat — ${esc(role.label)}</h3>
       <p>${esc(role.blurb)}</p>
+      ${/*
+         * And at the set, what is under your hands instead of a launcher: the
+         * surveillance radars this watch fields, and the man who does the
+         * shooting. A seat that is defined by what it may NOT do has to say
+         * so on the paper before the watch, not discover it at the console.
+         */ ''}
+      ${state.role === 'radar' ? `<p class="note">You are on
+        <b>${esc((mission.radars ?? []).map((r) => RADAR_TYPES[r.type]?.label ?? 'SET')
+    .join(' and ') || 'the sector set')}</b>.
+        A launch officer beside you works the batteries; you switch the set, hold what it finds
+        and hand him each contact by name. He will not fire at anything you have not called.</p>` : ''}
       ${battery ? `<p class="note">You are crewing <b>${esc(battery.name)}</b> —
         ${esc(SAM_TYPES[battery.type].label)}, ${esc(DEFENCE_CLASSES[SAM_TYPES[battery.type].class].en.toLowerCase())}.
         ${SAM_TYPES[battery.type].minRangeKm}–${SAM_TYPES[battery.type].maxRangeKm} km,
@@ -416,7 +449,7 @@ function sectorMap(mission) {
    * The batteries are lettered on the map and named in the key under it.
    *
    * All three judges: "LANCE CAPITAL, HAMMER CAPITAL and THISTLE NORTH occupy
-   * the same forty pixels, and THISTLE VALLEY, LANCE VALLEY and HAMMER do the
+   * the same forty pixels, and THISTLE TOWN, LANCE WEST and HAMMER do the
    * same over THE VILLE ... a battery symbol is drawn straight through THISTLE
    * NORTH so the name renders as THIST and NORTH either side of a green
    * square." Six names cannot be printed inside twenty kilometres at this
@@ -804,9 +837,38 @@ export function renderDebrief(host, state, result, entry) {
     ${ending ? `
       <div class="card ending-card">
         <div class="record-head-line"><span>SECTOR RECORD · THE FINDING</span><span>${esc(state.mission.name)}</span></div>
-        <p class="subtitle is-lead">${esc(ending.title)}</p>
-        <h1 class="title is-outcome">${esc(ending.subtitle ?? ending.title)}</h1>
-        ${ending.lines.map((line) => `<p>${esc(line)}</p>`).join('')}
+        ${/*
+          * The finding fills the sheet.
+          *
+          * All three judges measured the same fault: "the epilogue card is
+          * left-aligned in a 580px column while the header rule, the SCORE
+          * tiles and the GROUND columns all run the full 1150px of the sheet",
+          * "a page designed as a form carries a blank right-hand third down
+          * its whole length", "the right half of the sheet is empty for the
+          * block's full height". Prose still wants a reading measure, so the
+          * page gets what a real record sheet has beside the prose: a ruled
+          * rail of particulars, the watch, the standing, the role and the
+          * service stamp. One block, two columns, no void.
+          */ ''}
+        <div class="record-body">
+          <div class="record-prose">
+            <p class="subtitle is-lead">${esc(ending.title)}</p>
+            <h1 class="title is-outcome">${esc(ending.subtitle ?? ending.title)}</h1>
+            ${ending.lines.map((line) => `<p>${esc(line)}</p>`).join('')}
+          </div>
+          <aside class="record-rail">
+            <div class="rail-row"><span>Watch</span><b>${esc(state.mission.name)}</b></div>
+            <div class="rail-row"><span>Seat</span><b>${esc(ROLES[result.role].label)}</b></div>
+            <div class="rail-row"><span>This watch</span><b>${Math.round(result.score)}</b></div>
+            <div class="rail-row"><span>In the file</span><b>${Math.round(state.campaign.standing)}</b></div>
+            <div class="rail-row"><span>Entered by</span><b>Sector political section</b></div>
+            <div class="rail-remarks">
+              <span>Remarks</span>
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <span class="record-stamp is-inline">Sector record<br>Entered</span>
+          </aside>
+        </div>
         <div class="record-foot-line"><span>${esc(ROLES[result.role].label)}</span><span>ВПВО ТМ · TM ADF</span></div>
       </div>
     ` : `
@@ -1008,8 +1070,9 @@ export function renderDebrief(host, state, result, entry) {
     ${entry?.appointment ? `<div class="card file-entry is-good">
       <span class="form-no">ORDER 12-4</span>
       <h3>The order appointing you</h3>
-      <p>By order of ${entry.appointment.echelon.id === 'national' ? 'the Ministry of Defence'
-    : 'the Chief of Air Defence'}, you are appointed
+      ${/* The same signatory the scene read out: a recruit is put on a set by
+           the orderly room, not appointed to one by the Chief of Air Defence. */ ''}
+      <p>By order of ${esc(appointingSignatory(entry.appointment.echelon))}, you are appointed
         <b>${esc(entry.appointment.echelon.appointment.en)}</b>.</p>
       ${entry.appointment.gazetted ? `<p>You are gazetted to
         ${esc(entry.appointment.gazetted.en)} on the same order.</p>` : ''}
@@ -1195,6 +1258,26 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
         ${key('M', 'the map of Trans Mordovia under the picture')}
         ${key('H', 'this screen')}
       </div>
+    </div>
+    ${/*
+       * The seats in the order a career passes through them, which is also the
+       * order a player needs them in. This page used to open on the battle
+       * manager and list LOCK under L — on the first night of the campaign,
+       * from a seat with no launcher, where L hands the contact to somebody
+       * else. A new player pressing H on their first watch found two jobs
+       * described and neither of them theirs.
+       */ ''}
+    <div class="card">
+      <h3>Radar operator</h3>
+      <div class="keys">
+        ${key('Click a contact', 'select it')}
+        ${key('L', 'read it to the launch officer — he answers on the radio and puts a battery on it')}
+        ${key('Right-click a contact', 'the officer at the top of the list, and under him every battery and what it reaches')}
+        ${key('`', 'switch every search radar on or off — the one switch this seat has')}
+      </div>
+      <p class="note">There is no launch cap on this console and there is not meant to be. You
+      switch the set, you hold what it finds and you call it; the officer at the next desk fires,
+      and he fires at nothing you have not called.</p>
     </div>
     <div class="card">
       <h3>Battle manager</h3>

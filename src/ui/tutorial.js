@@ -51,6 +51,71 @@ export function stepTexts(step) {
   return step.phone ? [step.en, step.phone] : [step.en];
 }
 
+/**
+ * The set's five, which is the first thing a new player will ever read.
+ *
+ * The shape is the other two seats': five cards, each cleared by doing the
+ * thing, each with a way out on a timer. What is different is the last verb —
+ * there is no launch cap on this console and there is not meant to be, so the
+ * fifth card is the one that says whose job the shooting is, and the fourth is
+ * the hand-over that makes it happen.
+ */
+export const RADAR_TUTORIAL_STEPS = [
+  {
+    id: 'radiate-set',
+    en: 'Your radar, WIDE EYE, is switched off, so the scope is blank. Find WIDE EYE at the '
+      + 'top of the right-hand panel and flip its switch up to RADIATE.',
+    // There is no right-hand panel on a phone. The set's switch is the lever
+    // on the bar at the foot of the screen, and that lever is engraved with
+    // the set's own name, so the card can send a thumb to it by name.
+    phone: 'Your radar, WIDE EYE, is switched off, so the scope is blank. Flip the switch '
+      + 'marked WIDE EYE on the bar at the bottom of the screen up to RADIATE.',
+    radars: ['WIDE EYE'],
+    done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > 120,
+  },
+  {
+    id: 'watch',
+    en: 'Contacts appear on the scope as the beam sweeps past them. Wait for one, then click '
+      + 'it on the scope, or its row in the AIR PICTURE list, to pick it.',
+    // The AIR PICTURE list is a desktop column; on a phone the picture is the
+    // list and NEXT TARGET walks it.
+    phone: 'Contacts appear on the scope as the beam sweeps past them. Wait for one, then '
+      + 'press it on the scope, or press NEXT TARGET, to pick it.',
+    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
+  },
+  {
+    id: 'hold',
+    en: 'The row fills in as the set keeps looking at it: bearing, range, height, and then '
+      + 'what it is. A contact you have only seen once is not a contact you can report.',
+    // No row: the phone shows what the set has made of the contact on the
+    // scope itself and beside SELECTED on the rail.
+    phone: 'The contact fills in as the set keeps looking at it: bearing, range, height, and '
+      + 'then what it is. One you have only seen once is not one you can report.',
+    done: (w, u, sinceS) => [...w.tracks.values()]
+      .some((t) => t.quality >= 0.55 && t.hostility === 'hostile') || sinceS > 120,
+  },
+  {
+    id: 'call',
+    en: 'Press HAND OVER, or L, to read the contact to the launch officer. He answers on the '
+      + 'radio and puts a battery on it. He will not fire at anything you have not called.',
+    // No keyboard, and the cap is on the rail at the foot of the screen.
+    phone: 'Press HAND OVER on the bar at the bottom to read the contact to the launch '
+      + 'officer. He answers on the radio and puts a battery on it. He will not fire at '
+      + 'anything you have not called.',
+    done: (w, u, sinceS) => (w.stats.handovers ?? 0) > 0 || sinceS > 120,
+  },
+  {
+    id: 'net-radar',
+    en: 'There is no launch button on this console tonight and there is not meant to be. '
+      + 'Keep the set turning, keep calling what you hold, and answer the net with Y or N.',
+    // The two caps are on the banner itself.
+    phone: 'There is no launch button on this console tonight and there is not meant to be. '
+      + 'Keep the set turning, keep calling what you hold, and answer the net with '
+      + 'ACKNOWLEDGE or REFUSE on the banner.',
+    done: (w, u, sinceS) => sinceS > 16,
+  },
+];
+
 /** The battle manager's five. */
 export const NET_TUTORIAL_STEPS = [
   {

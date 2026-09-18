@@ -1375,9 +1375,37 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
   display: grid; grid-template-columns: minmax(210px, 300px) auto minmax(0, 1fr);
   align-items: end;
 }
+.ticker > .desk-crest { grid-column: 1; grid-row: 1; }
 .ticker > #card-reader { grid-column: 2; grid-row: 1; }
 .ticker > .event-log { grid-column: 3; grid-row: 1; }
 .ticker > .action-bar { grid-column: 1 / -1; grid-row: 2; }
+
+/*
+ * The crest in the desk lip's left corner, and the plate that names it.
+ *
+ * That column is as wide as the track panel above it and had nothing in it at
+ * any desktop width — the one blank corner of the console. The casting is
+ * drawn by `drawCrest()` at 32x36 logical pixels and magnified by two whole
+ * steps, so it is pixel art at the same scale discipline as the cutscenes:
+ * `pixelated` is what keeps it from being resampled into mush by the browser.
+ *
+ * It aligns its base with the card reader's rather than its middle, because
+ * both are objects standing on the same lip and a shared baseline is what says
+ * so. The plate is the stencil-over-gloss form every other legend uses.
+ */
+.desk-crest {
+  display: flex; align-items: center; gap: 11px;
+  min-width: 0; padding: 0 8px 6px 16px;
+}
+.crest-cut {
+  flex: 0 0 auto; width: 64px; height: 72px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .5));
+}
+.crest-plate { min-width: 0; overflow: hidden; }
+.crest-plate .lg { align-items: flex-start; text-align: left; }
+.crest-plate .lg b { font-size: 10px; letter-spacing: .09em; white-space: nowrap; }
+.crest-plate .lg i { font-size: 8px; letter-spacing: .15em; white-space: nowrap; }
 
 /*
  * The command net floats above the ticker rather than sitting in it.
@@ -1521,6 +1549,17 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
   color: #43392a; letter-spacing: .2em; font-weight: 700;
   border-bottom: 1px solid #c2b694; padding-bottom: 4px;
 }
+/*
+ * ...except a heading knocked out of a red bar, which is printed white on the
+ * ink and not typed on the paper. The art judge: "dark olive-grey type on a
+ * brick-red field. At 1x the title of the campaign's biggest reveal is barely
+ * readable, while the red stamp two cards above it reads cleanly."
+ */
+.screen-inner.is-paper .revelation-card h3 {
+  color: #f4efe2; border-bottom: 0; padding-bottom: 8px;
+}
+.revelation-card h3 .tm { opacity: .9; }
+.revelation-card h3 .plate-sep { opacity: .7; }
 /* the printed panels the deck already had keep their own stock and sit ON the
    sheet, with an edge and a shadow so they read as something laid on it */
 .screen-inner.is-paper .letter-card,
@@ -1924,6 +1963,17 @@ table.ledger .down { color: var(--hostile); }
  * stays on the desktop console, which is unchanged.
  */
 @media (max-width: 900px) {
+  /*
+   * The crest comes off the phone entirely.
+   *
+   * The player, asking for it: "Don't do this on mobile as it'll waste too
+   * much screen space." They are right — it is a hundred and eighty pixels of
+   * a screen that is short of room for the radar picture, and it tells the
+   * operator nothing they need during a watch. It stays on every width that
+   * has a desk lip to cast it into, exactly as it is. This console does not
+   * draw the desk lip it stands on either — see the card reader below.
+   */
+  .desk-crest { display: none; }
   /*
    * The status strip. What the watch is on top, what you can do to the clock
    * underneath. At 390px the works plate, the identity card and the standing
@@ -2595,7 +2645,40 @@ table.ledger .down { color: var(--hostile); }
    * that is not the punched filing margin". A document has one left edge:
    * `auto` centred this block inside a page everything else was ranged left on.
    */
-  padding: 12px 0 14px; margin: 0 0 22px; max-width: 74ch;
+  padding: 12px 0 14px; margin: 0 0 22px; max-width: none;
+}
+/*
+ * The finding, across the sheet: the prose at a reading measure and a ruled
+ * rail of particulars beside it, so the page has one left edge, one right edge
+ * and nothing empty between them.
+ */
+.ending-card .record-body {
+  display: grid; grid-template-columns: minmax(0, 74ch) minmax(200px, 1fr);
+  gap: 34px; align-items: stretch;
+}
+.ending-card .record-prose { min-width: 0; }
+.record-rail {
+  border-left: 1px solid var(--edge); padding-left: 20px;
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim);
+}
+.record-rail .rail-row {
+  display: flex; justify-content: space-between; gap: 12px;
+  padding: 6px 0; border-bottom: 1px dotted var(--edge);
+}
+.record-rail .rail-row b { font-weight: 400; color: var(--ink); text-align: right; }
+/* A form's own remarks block: ruled lines nobody has written on, which is what
+   the right-hand column of a record sheet actually carries. */
+.rail-remarks { margin-top: 18px; }
+.rail-remarks > span { display: block; padding-bottom: 6px; }
+.rail-remarks > i { display: block; height: 17px; border-bottom: 1px dotted var(--edge); }
+.record-stamp.is-inline {
+  position: static; display: inline-flex; transform: rotate(-3deg);
+  margin: 22px 0 4px 10px; font-size: 11px;
+}
+.ending-card .title.is-outcome { text-wrap: balance; }
+@media (max-width: 900px) {
+  .ending-card .record-body { grid-template-columns: 1fr; gap: 16px; }
+  .record-rail { border-left: 0; padding-left: 0; border-top: 1px solid var(--edge); padding-top: 12px; }
 }
 /* the letterhead and the foot of the record, so the finding is a document */
 .record-head-line, .record-foot-line {
@@ -2889,13 +2972,24 @@ table.ledger .down { color: var(--hostile); }
    the same grey as the page ruling, with a rule through it. */
 .scene[data-kind="folder"] .scene-speaker { color: #43392a; font-weight: 700; }
 .scene[data-kind="quarters"] .scene-text { font-style: italic; font-size: calc(3.9px * var(--scene-scale, 3)); line-height: calc(4.5px * var(--scene-scale, 3)); color: #2b2f4a; }
-.scene[data-kind="printout"] .scene-prompt, .scene[data-kind="quarters"] .scene-prompt, .scene[data-kind="folder"] .scene-prompt { color: #6f6552; }
+/*
+ * On the three paper scenes the prompt is DRAWN, as a chevron on the picture —
+ * on the printer's front lip, on the folder's board, on the floor of the
+ * quarters — because printed over the sheet it is type on the paper, which is
+ * what the art judge measured: "the NEXT prompt is printed on the paper. On
+ * the tape it lands on the bottom-right corner across the perforation strip
+ * and the last banded row; on the transfer it lands on the document's ruled
+ * area beside TRANS 719." The span stays in the DOM, carrying the same text,
+ * because it is what assistive tech and the harnesses read to know a line has
+ * finished; it simply does not print over the picture.
+ */
+.scene[data-kind="printout"] .scene-prompt, .scene[data-kind="quarters"] .scene-prompt, .scene[data-kind="folder"] .scene-prompt { color: transparent; }
 /* The order of appointment is read across the desk front, in the spoken box —
    named here so a kind can never fall through to the default by accident. */
 .scene[data-kind="appointment"] .scene-text, .scene[data-kind="office"] .scene-text,
 .scene[data-kind="finding"] .scene-text, .scene[data-kind="ending"] .scene-text { background: #070a08; }
 /* A phone held upright: the words under the picture, on their own sheet. */
-.scene.is-stacked .scene-text { font-size: 14px; line-height: 1.45; padding: 12px 14px 24px; justify-content: flex-start; }
+.scene.is-stacked .scene-text { font-size: 15px; line-height: 1.5; padding: 13px 15px 26px; justify-content: flex-start; }
 .scene.is-stacked .scene-body { flex: 0 1 auto; }
 .scene.is-stacked .scene-speaker { font-size: 10px; margin-bottom: 6px; }
 .scene.is-stacked .scene-prompt { font-size: 11px; right: 14px; bottom: 8px; }
@@ -2937,7 +3031,8 @@ table.ledger .down { color: var(--hostile); }
   background-repeat: repeat-y, repeat-y;
 }
 .scene.is-stacked[data-kind="printout"] .scene-body { flex: 0 0 auto; overflow: visible; }
-.scene.is-stacked[data-kind="printout"] .scene-prompt { bottom: 4px; right: 12px; color: #6f6552; }
+/* the drawn chevron carries the prompt on the paper scenes at every width */
+.scene.is-stacked[data-kind="printout"] .scene-prompt { bottom: 4px; right: 12px; color: transparent; }
 .scene.is-stacked[data-kind="printout"] .scene-skip { bottom: auto; top: 12px; right: 14px; left: auto; }
 .scene.is-stacked[data-kind="folder"] .scene-text, .scene.is-stacked[data-kind="quarters"] .scene-text { line-height: 1.5; }
 .scene.is-stacked[data-kind="folder"] .scene-body p, .scene.is-stacked[data-kind="quarters"] .scene-body p { margin-bottom: 10px; }

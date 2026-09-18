@@ -24,7 +24,8 @@ import { RADAR_TYPES, SAM_TYPES } from '../src/engine/config.js';
 import { planGeography } from '../src/ui/console.js';
 import { seatPicture } from '../src/ui/panels.js';
 import {
-  NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, radarNamesIn, stepText, stepTexts,
+  NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, RADAR_TUTORIAL_STEPS, radarNamesIn,
+  stepText, stepTexts,
 } from '../src/ui/tutorial.js';
 
 const watch = (id, opts = {}) => new World(scenarioById(id), { role: 'net', seed: 5, ...opts });
@@ -64,7 +65,7 @@ describe('plain English on and under the scope', () => {
   });
 
   test('every tutorial card is a sentence a first-timer can act on', () => {
-    for (const step of [...NET_TUTORIAL_STEPS, ...CREW_TUTORIAL_STEPS]) {
+    for (const step of [...RADAR_TUTORIAL_STEPS, ...NET_TUTORIAL_STEPS, ...CREW_TUTORIAL_STEPS]) {
       // Both wordings: a card that names a phone's controls is still a card,
       // and it is held to the same English as the one on the desk.
       for (const text of stepTexts(step)) {
@@ -92,8 +93,13 @@ describe('plain English on and under the scope', () => {
   test('no phone card sends a thumb to a panel or a key that is not there', () => {
     const absent = ['right-hand panel', 'AIR PICTURE list', 'list on the left',
       'Shift+', 'press Y', 'press N ', 'right-click', 'drag '];
-    for (const step of [...NET_TUTORIAL_STEPS, ...CREW_TUTORIAL_STEPS]) {
+    for (const step of [...RADAR_TUTORIAL_STEPS, ...NET_TUTORIAL_STEPS, ...CREW_TUTORIAL_STEPS]) {
       const text = stepText(step, true);
+      // A keycap is a lone capital: "press HAND OVER, or L" is a desktop
+      // sentence, and the set's seat — the first one a new player ever sits
+      // at — is the one that had it.
+      assert.ok(!/\b(?:or|press|hit|key) [A-Z]\b/.test(text),
+        `the phone card for ${step.id} names a key: "${text}"`);
       for (const gone of absent) {
         assert.ok(!text.toLowerCase().includes(gone.toLowerCase()),
           `the phone card for ${step.id} says "${gone}": "${text}"`);
@@ -111,7 +117,7 @@ describe('one name for one radar', () => {
    */
   test('every radar a lesson names is a callsign a set actually carries', () => {
     const callsigns = Object.values(RADAR_TYPES).map((t) => t.label);
-    const named = radarNamesIn([...NET_TUTORIAL_STEPS, ...CREW_TUTORIAL_STEPS]);
+    const named = radarNamesIn([...RADAR_TUTORIAL_STEPS, ...NET_TUTORIAL_STEPS, ...CREW_TUTORIAL_STEPS]);
     assert.ok(named.includes('WIDE EYE'), 'the first lesson is about the surveillance set');
     for (const name of named) {
       assert.ok(callsigns.includes(name), `the tutorial says "${name}"; no radar is called that`);
@@ -187,7 +193,9 @@ describe('leaving the post', () => {
     }
     assert.deepEqual(Object.keys(campaign.completed), []);
     assert.equal(campaign.character.xp, 0);
-    assert.equal(campaign.appointment, 'battalion');
+    // A file that walked out of three watches is still a file that has never
+    // stood one: the record opens at the radar set and stays there.
+    assert.equal(campaign.appointment, 'radar');
   });
 
   test('abandoning the finale composes no ending at all', () => {
