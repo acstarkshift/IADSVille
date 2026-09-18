@@ -23,7 +23,7 @@ import {
 
 describe('the playtest harness', () => {
   test('the same seed twice is the same run, to the byte', () => {
-    const job = { mission: 'first-light', seat: 'net', policy: 'competent', seed: 'p1' };
+    const job = { mission: 'first-light', seat: 'radar', policy: 'competent', seed: 'p1' };
     const a = playRun({ ...job });
     const b = playRun({ ...job });
     assert.equal(JSON.stringify(a.run), JSON.stringify(b.run),
@@ -38,7 +38,7 @@ describe('the playtest harness', () => {
   test('the worker count cannot change the answer', async () => {
     const opts = {
       missions: ['first-light'],
-      seats: ['net'],
+      seats: ['radar'],
       policies: ['competent', 'nothing'],
       seeds: 2,
       seedBase: 1,
@@ -74,7 +74,7 @@ describe('the playtest harness', () => {
   test('on the teaching watch, competent beats nobody at all', () => {
     const seeds = ['p1', 'p2', 'p3'];
     const score = (policy) => seeds
-      .map((seed) => playRun({ mission: 'first-light', seat: 'net', policy, seed }).run.score)
+      .map((seed) => playRun({ mission: 'first-light', seat: 'radar', policy, seed }).run.score)
       .reduce((a, b) => a + b, 0);
     const competent = score('competent');
     const nothing = score('nothing');
@@ -99,8 +99,15 @@ describe('the playtest harness', () => {
    *     --seeds 8 --jobs 4 --md /tmp/playtest.md
    */
   test('every seat on every watch can be played to the end', async () => {
+    /*
+     * FIFTEEN, and it used to be twenty-eight, and the drop is the ladder.
+     * Every watch used to advertise every seat its formation had — the first
+     * night of the war offered all three — and a watch now offers only the
+     * seats the rung it sits on allows: one apiece for the eight watches below
+     * command, and the net-and-console pair for the four that are command.
+     */
     const combos = SCENARIOS.flatMap((s) => s.roles.map((role) => [s.id, role]));
-    assert.equal(combos.length, 28, 'the campaign offers 28 mission x seat combinations');
+    assert.equal(combos.length, 15, 'the campaign offers 15 mission x seat combinations');
 
     const result = await runMatrix({
       missions: SCENARIOS.map((s) => s.id),
@@ -111,7 +118,7 @@ describe('the playtest harness', () => {
       jobs: Math.max(2, Math.min(4, availableParallelism())),
       quiet: true,
     });
-    assert.equal(result.runs.length, 28);
+    assert.equal(result.runs.length, 15);
     for (const run of result.runs) {
       const where = `${run.mission}/${run.seat}`;
       assert.equal(run.capHit, false, `${where}: the watch never ended inside 40 000 ticks`);
@@ -138,7 +145,7 @@ describe('the playtest harness', () => {
       jobs: Math.max(2, Math.min(4, availableParallelism())),
       quiet: true,
     });
-    assert.equal(result.runs.length, 24, '(3 + 1 + 2) seats x 4 players');
+    assert.equal(result.runs.length, 16, '(1 + 1 + 2) seats x 4 players');
     for (const run of result.runs) {
       assert.equal(run.capHit, false, `${run.mission}/${run.seat}/${run.policy} ran away`);
     }
@@ -157,6 +164,80 @@ describe('the playtest harness', () => {
     for (const run of result.runs.filter((r) => r.policy === 'nothing')) {
       assert.equal(run.directives.accepted + run.directives.refused, 0,
         `${run.mission}/${run.seat}: the empty chair answered the command net`);
+    }
+  });
+
+  /*
+   * THE FIRST RUNG, AND THAT IT IS A JOB.
+   *
+   * The radar seat can be measured like every other seat because it has a
+   * scripted operator (`reportPass` in the harness), and these are the three
+   * properties that seat has to have: it does its own work inside the watch
+   * and in bounded time, the shooting follows from the work, and the shooting
+   * is somebody else's.
+   *
+   * ANCHORED TO SIXTEEN SEEDS A WATCH, competently played — the assertions
+   * below run four of them, which is what this file can afford, and the bounds
+   * they use are the full sixteen-seed envelope, reproduced with:
+   *
+   *   node tools/playtest.mjs --mission first-light,low-riders --seat radar \
+   *     --policy competent --seeds 16
+   *
+   *                first contact   first call   first round away   calls   held
+   *   First Light     23-39 s        47-62 s       74-122 s          6-7    16/16
+   *   Low Riders      16-27 s        20-38 s        56-95 s         28-39   12/16
+   *
+   * FIRST CALL is the seat's own clock and FIRST ROUND AWAY is the officer's
+   * answer to it, so the pair is the whole chain: the set up, something held
+   * firm on it, the contact read across, and a round off a rail.
+   *
+   * The tempo is craft and not decoration. On the same sixteen seeds the
+   * novice — who holds two contacts at a time and takes eight seconds to say
+   * either of them — calls first at 36-54 s on Low Riders against the
+   * competent operator's 20-38, and holds 9 of 16 where the competent operator
+   * holds 12.
+   *
+   * And the floor underneath all of them, an operator who touches nothing:
+   * 0 of 16 held on both watches, ZERO rounds fired by anybody, and a mean of
+   * 5.3 arrivals conceded on the teaching watch and 17.3 on the second. That
+   * gap IS the post. Nothing on either watch is fired at anything the set has
+   * not called.
+   */
+  const RADAR_BOUNDS = {
+    // mission: [calls at least, first call by, first round away by]
+    'first-light': [5, 75, 135],
+    'low-riders': [20, 50, 105],
+  };
+
+  test('the radar seat does its job inside the watch, and nothing shoots without it', () => {
+    for (const [mission, [calls, byCallS, byLaunchS]] of Object.entries(RADAR_BOUNDS)) {
+      for (const seed of ['p1', 'p2', 'p3', 'p4']) {
+        const called = playRun({ mission, seat: 'radar', policy: 'competent', seed }).run;
+        assert.ok(called.handovers >= calls,
+          `${mission}/${seed}: the operator called ${called.handovers} contacts`);
+        // The seat's own work, in bounded time: a cold set, a contact held
+        // firm on it, and the contact across to the officer.
+        assert.ok(called.firstHandoverS !== null && called.firstHandoverS <= byCallS,
+          `${mission}/${seed}: the first contact went across at ${called.firstHandoverS}s`);
+        assert.ok(called.firstLaunchS !== null && called.firstLaunchS <= byLaunchS,
+          `${mission}/${seed}: nothing left a rail until ${called.firstLaunchS}s`);
+        // And the shooting follows the calling, rather than happening beside
+        // it: the officer's first round is never ahead of the first report.
+        assert.ok(called.firstHandoverS <= called.firstLaunchS,
+          `${mission}/${seed}: a round went at ${called.firstLaunchS}s against a first call `
+          + `at ${called.firstHandoverS}s`);
+        assert.equal(called.capHit, false, `${mission}/${seed}: the watch never ended`);
+
+        const silent = playRun({ mission, seat: 'radar', policy: 'nothing', seed }).run;
+        assert.equal(silent.handovers, 0, 'the empty chair calls nothing');
+        assert.equal(silent.firstHandoverS, null, 'and its clock never starts');
+        assert.equal(silent.rounds, 0,
+          `${mission}/${seed}: the launch officer fired ${silent.rounds} rounds at contacts `
+          + 'nobody reported — the seat has to be the reason anything is engaged');
+        assert.ok(called.score > silent.score,
+          `${mission}/${seed}: working the set must beat watching it `
+          + `(${called.score} against ${silent.score})`);
+      }
     }
   });
 
@@ -221,12 +302,12 @@ describe('the playtest harness', () => {
      * half minutes off the air is the worse trade, and measured it cost this
      * model a watch in eight for nothing.
      */
-    const ducking = playRun({ mission: 'weasel-hour', seat: 'net', policy: 'expert', seed: 'p1' }).run;
+    const ducking = playRun({ mission: 'weasel-hour', seat: 'crew', policy: 'expert', seed: 'p1' }).run;
     assert.equal(ducking.displacements, 0,
       'an intact battery ducks a round rather than spending the night driving');
 
     // First Light has nothing shooting back at all. Nobody moves.
-    const quiet = playRun({ mission: 'first-light', seat: 'net', policy: 'expert', seed: 'p1' }).run;
+    const quiet = playRun({ mission: 'first-light', seat: 'radar', policy: 'expert', seed: 'p1' }).run;
     assert.equal(quiet.displacements, 0, 'and nobody displaces on a watch with no enemy fire');
   });
 
@@ -236,7 +317,7 @@ describe('the playtest harness', () => {
     const baseline = playRun({ mission: 'two-cities', seat: 'net', policy: 'competent', seed: 'p1' }).run;
     assert.equal(baseline.reserveReleased, 0, 'the competent model leaves it in the depot');
 
-    const sector = playRun({ mission: 'weasel-hour', seat: 'net', policy: 'expert', seed: 'p1' }).run;
+    const sector = playRun({ mission: 'weasel-hour', seat: 'crew', policy: 'expert', seed: 'p1' }).run;
     assert.equal(sector.reserveReleased, 0,
       'and nobody below national command has one to release');
   });
@@ -270,6 +351,20 @@ describe('the playtest harness', () => {
    * design property and not a fixture — a change that moves one watch by one
    * night out of sixteen has not broken the campaign's shape, and a change
    * that moves an act has.
+   *
+   * RE-MEASURED FOR THE LADDER, AND NOT RE-ANCHORED, BECAUSE NOTHING MOVED.
+   * `scenario.roles[0]` is the seat this reads each watch at, and the ladder
+   * changed it on three of the twelve. Sixteen seeds apiece, competently
+   * played, before and after:
+   *
+   *   First Light   net  16/16  ->  radar 16/16
+   *   Low Riders    net  12/16  ->  radar 12/16
+   *   Weasel Hour   net  13/16  ->  crew  13/16
+   *
+   * — with Solo Battery (crew both times, 13/16) as the control. The band and
+   * the staircase below therefore hold on the same numbers they held on
+   * before, which is the property the re-gating had to have: the rungs change
+   * who the player is, not how hard the night is.
    */
   test('the campaign gets harder act by act, and it is measured not asserted', async () => {
     const ACT = { battalion: 1, sector: 2, region: 3, national: 4 };

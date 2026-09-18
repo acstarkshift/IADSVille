@@ -31,7 +31,7 @@ import {
 } from './panels.js';
 import { CONTROLS, POSTURE_CYCLE, legend } from './lexicon.js';
 import { SPEED_BY_KEY, digitPressed } from './keymap.js';
-import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS } from './tutorial.js';
+import { NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, RADAR_TUTORIAL_STEPS } from './tutorial.js';
 import { renderMenu, renderBriefing, renderDebrief, renderEndCard, renderControls } from './screens.js';
 import { scenesFor, openingScenes, ScenePlayer } from './scenes.js';
 import { ContextMenu } from './contextmenu.js';
@@ -46,7 +46,7 @@ const state = {
   phase: 'menu',
   missionId: SCENARIOS[0].id,
   get mission() { return scenarioById(this.missionId); },
-  role: 'net',
+  role: 'radar',
   batteryId: null,
   difficulty: 'veteran',
   narrativePressure: true,
@@ -896,9 +896,20 @@ function updateLegend() {
    * trade talking to itself; the player's verdict on the line was that it
    * was garbage, and it was.
    */
+  /*
+   * And the set's own sentence, which is the first one a new player reads on
+   * a console. It cannot be the net's: the muscle memory the net line teaches
+   * — drag the contact onto a battery — is the one thing this seat may not do,
+   * and a beginner following it got a refusal in the ticker for their first
+   * minute of the war.
+   */
   // The strip under the tube reserves two lines at the narrowest reference
   // width, so each sentence is written to fit two lines at 1280 and no more.
-  els.scopeLegend.textContent = ui.hoverInfo ?? (ui.view === 'crew'
+  els.scopeLegend.textContent = ui.hoverInfo ?? (world?.control.role === 'radar'
+    ? 'Hover over anything to read what it is. Click a contact to pick it, then press L to read it '
+      + 'to the launch officer. He fires, and only at what you have called. Right-click a radar '
+      + 'symbol to switch it on or off.'
+    : ui.view === 'crew'
     ? 'Click a contact to make it your target. L locks your battery onto it, F launches a missile. '
       + 'A switches your radar on or off: off, the enemy cannot find you; on, you can see and shoot.'
     : 'Hover over anything to read what it is. Drag a contact onto a battery symbol (or press Shift '
@@ -957,6 +968,7 @@ function describeEntity(hit) {
  * against the names on the rack. Dismissable, and it never touches the sim.
  */
 function tutorialSteps() {
+  if (state.role === 'radar') return RADAR_TUTORIAL_STEPS;
   return state.role === 'crew' ? CREW_TUTORIAL_STEPS : NET_TUTORIAL_STEPS;
 }
 
@@ -1080,7 +1092,34 @@ function wireCanvasInput() {
   }, { passive: false });
 }
 
+/**
+ * Hand the selected contact to the launch officer. The radar seat's one verb
+ * that is not a switch — and the one the console has to teach, because the
+ * rest of the campaign's muscle memory is "drag it onto a battery".
+ */
+function handOverSelected(trackArg) {
+  const trackId = trackArg ?? ui.selectedTrackId;
+  if (!trackId) {
+    world?.logThrottled?.('reportNothing', 10, 'warn',
+      'NOTHING SELECTED — PICK A CONTACT FIRST, THEN CALL IT.');
+    return;
+  }
+  if (world.handOver(trackId)) audio.tick();
+}
+
 function assignSelected(siteId, trackArg) {
+  /*
+   * Not at the set. Shooting is not your job tonight, and the console says so
+   * in the same breath as it says whose job it is — a greyed button that eats
+   * the press teaches nothing.
+   */
+  if (world.control.role === 'radar') {
+    const site = world.siteById.get(siteId);
+    world.logThrottled('notYourCall', 15, 'warn',
+      `${site ? `${site.name} IS ` : 'THE BATTERIES ARE '}THE LAUNCH OFFICER'S. `
+      + 'HAND THE CONTACT OVER AND HE WILL TAKE IT.');
+    return;
+  }
   const trackId = trackArg ?? ui.selectedTrackId;
   if (!trackId) {
     // Shift+1 with nothing selected used to do nothing at all, which on the
@@ -1144,8 +1183,9 @@ function openContactMenu(trackId, x, y) {
   const track = world.tracks.get(trackId);
   if (!track || track.destroyed) return;
   contextMenu ??= new ContextMenu(els.contextMenu, {
-    onPick: (siteId, pickedTrackId) => {
-      assignSelected(siteId, pickedTrackId);
+    onPick: (siteId, pickedTrackId, already, control) => {
+      if (control) handOverSelected(pickedTrackId);
+      else assignSelected(siteId, pickedTrackId);
       ui.lastPanelAt = 0;
     },
     // Kept on the glass: the tube's rectangle, whichever seat is showing.
@@ -1526,6 +1566,8 @@ function runAction(act, siteId, radarId, formationId, stateArg, trackArg) {
      */
     case 'step-target': stepTrack(1); break;
     case 'assign': if (siteId) assignSelected(siteId); break;
+    /* The set's own verb: pass the contact to the man who fires. */
+    case 'report': handOverSelected(trackArg); break;
     // The rail's seat cap is the topbar's V, for a phone that draws no topbar
     // toggle; `toggleView` already refuses on a watch with one seat.
     case 'seat': toggleView(); break;
@@ -1763,6 +1805,13 @@ function wireGlobalInput() {
         }
         break;
       case 'l':
+        /*
+         * One key for "give this contact to whoever shoots it". In the cabin
+         * that is your own launcher and the verb is LOCK; at the set it is the
+         * officer at the next desk and the verb is HAND OVER. Both caps print
+         * the L.
+         */
+        if (world.control.role === 'radar') { handOverSelected(); break; }
         if (crewedId) {
           runAction('lock', crewedId, null, null, null,
             els.crewConsole.querySelector('[data-act="lock"]')?.dataset.track);

@@ -465,15 +465,15 @@ export function renderIdCard(world, els) {
   const card = els.idCard;
   const character = world.character;
   if (card) {
-    const key = character ? `${character.name}|${character.rankIndex}|${world.echelon.id}` : '';
+    const key = character ? `${character.name}|${character.rankIndex}|${world.post.id}` : '';
     if (card.dataset.key !== key) {
       card.dataset.key = key;
       card.hidden = !character;
       if (character) {
-        card.innerHTML = idCardHtml(character, world.echelon);
+        card.innerHTML = idCardHtml(character, world.post);
         const photo = card.querySelector('canvas');
         if (photo?.getContext) drawPortrait(photo.getContext('2d'), 0, 0, 24, 30, character.name);
-        card.title = `${rankOf(character).en} ${character.name} · ${world.echelon.appointment.en}`
+        card.title = `${rankOf(character).en} ${character.name} · ${world.post.appointment.en}`
           + ` · service no. ${serviceNumber(character)}`;
       }
     }
@@ -706,32 +706,65 @@ export function renderTrackList(world, ui, els) {
    * it would be worse — as a plain tail with the reason attached, and neither
    * the count nor the red header sees it.
    */
+  /*
+   * AT THE SET, "MINE" IS THE SECTOR'S — because `commandable` answers no for
+   * every battery on the board from that seat, and a picture built on that
+   * answer told the radar operator that four full batteries were 0 of 0 able
+   * to fire and that every contact on the tube was TOO FAR FOR ANY BATTERY OF
+   * YOURS. Neither sentence is true. The batteries are not his to order; they
+   * are eleven metres away with their racks full, and they are on his plot.
+   */
+  const atTheSet = world.control.role === 'radar';
   const mine = ui.view === 'crew' && world.control.crewedBatteryId
     ? world.sites.filter((s) => s.id === world.control.crewedBatteryId)
-    : world.sites.filter((s) => s.alive && world.commandable(s.id));
+    : atTheSet ? world.sites.filter((s) => s.alive)
+      : world.sites.filter((s) => s.alive && world.commandable(s.id));
   const answerable = (track) => answerableBy(world, mine, track);
 
+  const called = (track) => track.reportedAtS !== null && track.reportedAtS !== undefined;
   const unassigned = tracks.filter((t) => t.assignedTo.length === 0);
-  const unpaired = unassigned.filter(answerable);
+  const unpaired = atTheSet ? tracks.filter((t) => !called(t)) : unassigned.filter(answerable);
   const beyond = unassigned.filter((t) => !answerable(t));
   const sections = [];
-  /*
-   * The heads say it in words a first-timer reads: NOT ASSIGNED, and how
-   * many are waiting for a battery. UNPAIRED / 3 WITH NOBODY ON THEM /
-   * UNCOMMITTED was the board talking to itself.
-   */
-  if (unassigned.length || !tracks.length) {
-    sections.push(head('NOT ASSIGNED', unpaired.length
-      ? `${unpaired.length} WAITING FOR A BATTERY` : 'NONE WAITING',
+  if (atTheSet) {
+    /*
+     * The set's work list is not the sector's. The question this seat asks all
+     * night is which contacts the officer has not been told about yet, so the
+     * top of the board is what is still to report, and under it what has gone
+     * across and is waiting for him to put a battery on it. What he did put on
+     * them is the battery boards below, unchanged.
+     */
+    const waiting = unassigned.filter(called);
+    sections.push(head('NOT CALLED IN', unpaired.length
+      ? `${unpaired.length} STILL TO REPORT` : 'NOTHING TO REPORT',
     unpaired.some((t) => t.hostility === 'hostile') ? 'is-urgent' : ''));
     sections.push(unpaired.length
-      ? unpaired.map(rowFor).join('')
-      : `<li class="track-row is-empty" role="presentation"><span>—</span><span>${
-        ui.view === 'crew' ? 'nothing on your radar' : 'no contacts'}</span></li>`);
-  }
-  if (beyond.length) {
-    sections.push(head('OUT OF REACH', `${beyond.length} TOO FAR FOR ANY BATTERY OF YOURS`, 'is-idle'));
-    sections.push(beyond.map((t) => rowFor(t)).join(''));
+      ? unpaired.map((t) => rowFor(t)).join('')
+      : '<li class="track-row is-empty" role="presentation"><span>—</span><span>no contacts</span></li>');
+    if (waiting.length) {
+      sections.push(head('PASSED TO CONTROL',
+        `${waiting.length} WITH THE LAUNCH OFFICER`, 'is-idle'));
+      sections.push(waiting.map((t) => rowFor(t)).join(''));
+    }
+  } else {
+    /*
+     * The heads say it in words a first-timer reads: NOT ASSIGNED, and how
+     * many are waiting for a battery. UNPAIRED / 3 WITH NOBODY ON THEM /
+     * UNCOMMITTED was the board talking to itself.
+     */
+    if (unassigned.length || !tracks.length) {
+      sections.push(head('NOT ASSIGNED', unpaired.length
+        ? `${unpaired.length} WAITING FOR A BATTERY` : 'NONE WAITING',
+      unpaired.some((t) => t.hostility === 'hostile') ? 'is-urgent' : ''));
+      sections.push(unpaired.length
+        ? unpaired.map(rowFor).join('')
+        : `<li class="track-row is-empty" role="presentation"><span>—</span><span>${
+          ui.view === 'crew' ? 'nothing on your radar' : 'no contacts'}</span></li>`);
+    }
+    if (beyond.length) {
+      sections.push(head('OUT OF REACH', `${beyond.length} TOO FAR FOR ANY BATTERY OF YOURS`, 'is-idle'));
+      sections.push(beyond.map((t) => rowFor(t)).join(''));
+    }
   }
 
   // In the cabin the board is your own battery's; the net's other shootlists
@@ -761,7 +794,7 @@ export function renderTrackList(world, ui, els) {
 
   paint(els.trackList, sections.join(''));
 
-  renderBoardState(world, ui, els, { tracks, unpaired, mine });
+  renderBoardState(world, ui, els, { tracks, unpaired, mine, atTheSet });
   renderTrackDetail(world, ui, els);
 }
 
@@ -781,7 +814,7 @@ export function renderTrackList(world, ui, els) {
  * operator's seat sees its own battery and the cues sent to it, and pretending
  * otherwise would undo the isolation that seat is built around.
  */
-function renderBoardState(world, ui, els, { tracks, unpaired, mine }) {
+function renderBoardState(world, ui, els, { tracks, unpaired, mine, atTheSet = false }) {
   const host = els.boardState;
   if (!host) return;
 
@@ -800,7 +833,10 @@ function renderBoardState(world, ui, els, { tracks, unpaired, mine }) {
     <div class="bs-figures">
       ${figure('CONTACTS', tracks.length)}
       ${figure('HOSTILE', hostile, hostile ? 'is-bad' : '')}
-      ${figure('NOT ASSIGNED', unpaired.length, unpaired.length ? 'is-warn' : '')}
+      ${/* The one figure on this panel that is about the operator's own work,
+           and at the set the work is the calling, not the pairing. */ ''}
+      ${figure(atTheSet ? 'NOT CALLED' : 'NOT ASSIGNED', unpaired.length,
+    unpaired.length ? 'is-warn' : '')}
       ${figure('ASSIGNED', paired, paired ? 'is-good' : '')}
       ${figure('IN FLIGHT', roundsUp)}
       ${figure('CAN FIRE', `${armed.length}/${mine.length}`,
@@ -2135,6 +2171,20 @@ export function renderActionBar(world, ui, els, cabin) {
       act: 'fire', site: crewed.id, track: aim?.id, disabled: !status.canFire,
       extra: `pb-fire pb-rail${status.canFire ? ' is-armed' : ''}`,
       title: fireCapNote(crewed, status, unfit, !aim),
+    }));
+  } else if (world.control.role === 'radar') {
+    /*
+     * And the set's launch is a sentence on the radio. One cap, no battery to
+     * choose, and it goes dead once the officer has this one — a contact
+     * called twice is a contact the officer stops listening for.
+     */
+    const passed = !!track && track.reportedAtS !== null && track.reportedAtS !== undefined;
+    caps.push(press(CONTROLS.handOver, {
+      act: 'report', track: track?.id, disabled: !track || passed,
+      extra: passed ? 'pb-rail' : 'pb-fire pb-rail',
+      title: !track ? 'Pick a contact first'
+        : passed ? `${track.tn} has already gone to CONTROL`
+          : `Report ${track.tn} to CONTROL — he decides which battery takes it`,
     }));
   } else {
     /*

@@ -1,4 +1,4 @@
-import { reachedEchelon, withinAppointment } from './echelon.js';
+import { reachedPost, withinAppointment, postForScenario } from './echelon.js';
 import { AIR_TYPES } from './config.js';
 
 /**
@@ -341,7 +341,14 @@ export const SCENARIOS = [
     weather: 'clear',
     tempC: -3,
     echelon: 'battalion',
-    roles: ['net', 'crew', 'both'],
+    /*
+     * THE FIRST RUNG. The teaching watch used to offer all three seats and
+     * title a Recruit Battalion Commander; it is now the set, and only the
+     * set — one switch, one picture, one hand-over, and a launch officer who
+     * fires what you give him. See POSTS in echelon.js.
+     */
+    post: 'radar',
+    roles: ['radar'],
     seed: 'first-light-01',
     /*
      * Two, not one. On the teaching watch a single leaker was the difference
@@ -437,7 +444,7 @@ export const SCENARIOS = [
       { atS: 30,
         whileCold: true,
         text: 'THE RADIATE SWITCH IS ON THE RIGHT PANEL, UNDER WIDE EYE. THE BORDER POSTS CAN HEAR THEM COMING.',
-        insteadText: 'THE BORDER POSTS CAN HEAR THEM COMING. WHATEVER PAINTS, HAND IT TO A BATTERY THAT REACHES IT.' },
+        insteadText: 'THE BORDER POSTS CAN HEAR THEM COMING. WHATEVER PAINTS, CALL IT — NOTHING GETS SHOT AT UNTIL YOU DO.' },
       { atS: 22,
         whileOwnCold: true,
         text: 'YOUR OWN SET IS COLD. SECTOR CAN SEE THEM; YOU CANNOT SHOOT WHAT YOU ARE NOT HOLDING.',
@@ -461,10 +468,13 @@ export const SCENARIOS = [
     brief: [
       'Four Federation aircraft crossed the northern border at height, tracking south. They are'
         + ' not trying to hide.',
-      'Bring a radar up, sort the picture, and hand each track to a battery that can reach it.',
+      /* The verb is the set's, not the battalion's: on this rung the operator
+         reads contacts to the officer beside them and he picks the battery. */
+      'Bring a radar up, sort the picture, and read each track to the launch officer beside you.'
+        + ' He decides what takes it.',
       'Nothing is shooting back at you tonight. Enjoy that.',
     ],
-    teaches: 'You sort the picture and hand each contact to a battery that can reach it, and you'
+    teaches: 'You sort the picture and hand each contact to the officer who fires it, and you'
       + ' learn that a radar sees nothing while it is switched off.',
     assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power],
     sites: [SITES.bastion, SITES.lanceWest, SITES.thistleTown],
@@ -504,7 +514,10 @@ export const SCENARIOS = [
     weather: 'overcast',
     tempC: -1,
     echelon: 'battalion',
-    roles: ['net', 'crew', 'both'],
+    /* Still the set: this is the watch that teaches what a horizon is, and a
+     * horizon is a radar operator's subject before it is anybody else's. */
+    post: 'radar',
+    roles: ['radar'],
     seed: 'low-riders-04',
     /*
      * THREE, and the number moved because the count under it did.
@@ -608,7 +621,9 @@ export const SCENARIOS = [
       'The last lot came in at height. This one will not.',
       'A radar on a thirty-metre mast sees an aircraft flying at a hundred metres for about sixty'
         + ' kilometres, and not one metre further.',
-      'You will get very little warning, so put the short-range sections where it matters.',
+      /* Still the set. The short sections are somebody else's to place; what
+         this operator has is the seconds between painting one and calling it. */
+      'You will get very little warning, so call them the moment you are sure of them.',
     ],
     teaches: 'A radar cannot see through the horizon, so an aircraft flying low appears close and'
       + ' stays close.',
@@ -764,6 +779,8 @@ export const SCENARIOS = [
     weather: 'rain',
     tempC: 4,
     echelon: 'battalion',
+    /* The second rung, and the watch the rung was always named after. */
+    post: 'crew',
     roles: ['crew'],
     seed: 'solo-battery-09',
     /*
@@ -970,7 +987,10 @@ export const SCENARIOS = [
     weather: 'fog',
     tempC: -2,
     echelon: 'sector',
-    roles: ['net', 'crew', 'both'],
+    /* Second rung. The cabin's other lesson — the set has to be dark to keep
+     * you alive and lit to let you shoot — and it is fought from the cabin. */
+    post: 'crew',
+    roles: ['crew'],
     seed: 'weasel-hour-02',
     /*
      * THREE, against a raid of twenty-two, and both numbers moved together.
@@ -1175,7 +1195,10 @@ export const SCENARIOS = [
     weather: 'clear',
     tempC: -8,
     echelon: 'sector',
-    roles: ['net', 'crew', 'both'],
+    /* THE THIRD RUNG. From here you stop touching a console and start
+     * pointing batteries: the battalion is yours, and none of its cabins is. */
+    post: 'battalion',
+    roles: ['net'],
     seed: 'white-noise-07',
     /*
      * ONE, AND THE WAVE TABLE IS NOT TO BE GROWN. READ THIS BEFORE TOUCHING IT.
@@ -1319,7 +1342,8 @@ export const SCENARIOS = [
     weather: 'snow',
     tempC: -5,
     echelon: 'sector',
-    roles: ['net', 'crew', 'both'],
+    post: 'battalion',
+    roles: ['net'],
     seed: 'economy-08',
     /*
      * TWO, and the standard is about designated places only.
@@ -1450,7 +1474,8 @@ export const SCENARIOS = [
     weather: 'overcast',
     tempC: 1,
     echelon: 'sector',
-    roles: ['net', 'crew', 'both'],
+    post: 'battalion',
+    roles: ['net'],
     seed: 'across-11',
     /*
      * ONE, and the camp is not in the count.
@@ -1581,7 +1606,10 @@ export const SCENARIOS = [
     weather: 'snow',
     tempC: -9,
     echelon: 'sector',
-    roles: ['net', 'crew', 'both'],
+    /* THE FOURTH RUNG. The sector, and the first night you may take a console
+     * yourself again — which on this watch is a decision and not a treat. */
+    post: 'sector',
+    roles: ['net', 'both'],
     seed: 'ville-under-fire-11',
     /** The political section has an interest in tonight's scheduled transit. */
     civilOrder: true,
@@ -1741,6 +1769,7 @@ export const SCENARIOS = [
     weather: 'clear',
     tempC: 6,
     echelon: 'region',
+    post: 'region',
     roles: ['net'],
     seed: 'four-sectors-01',
     /*
@@ -1899,6 +1928,7 @@ export const SCENARIOS = [
     weather: 'rain',
     tempC: 3,
     echelon: 'region',
+    post: 'region',
     roles: ['net'],
     seed: 'reinforce-01',
     /*
@@ -2038,6 +2068,7 @@ export const SCENARIOS = [
     weather: 'clear',
     tempC: -11,
     echelon: 'national',
+    post: 'national',
     roles: ['net', 'both'],
     seed: 'two-cities-final',
     /*
@@ -2387,6 +2418,7 @@ export const SCENARIOS = [
     weather: 'fog',
     tempC: -4,
     echelon: 'national',
+    post: 'national',
     roles: ['net', 'both'],
     seed: 'presidents-flight-01',
     /*
@@ -2632,10 +2664,11 @@ export const isEpilogue = (scenario) => scenario?.id === EPILOGUE_ID;
 /**
  * Is this watch on the roster yet?
  *
- * Two gates. The first is the appointment: a battalion commander is not handed
- * a district, and the campaign is a promotion, so an echelon opens once every
- * watch below it has been stood — on progress, not on marks, because a service
- * that stopped promoting people for a bad night would have nobody left.
+ * Two gates. The first is the appointment: a radar operator is not handed a
+ * battery and a battalion commander is not handed a district, and the campaign
+ * is a promotion, so a post opens once every watch below it has been stood —
+ * on progress, not on marks, because a service that stopped promoting people
+ * for a bad night would have nobody left.
  *
  * The second gate applies to exactly one scenario and is about what you did
  * rather than how well you did it: the aircraft only leaves Demobodedovo in a
@@ -2660,10 +2693,16 @@ export function isUnlocked(scenario, campaign) {
 }
 
 /** The appointment this record currently holds. */
-export const appointmentOf = (campaign) => reachedEchelon(campaign, SCENARIOS);
+export const appointmentOf = (campaign) => reachedPost(campaign, SCENARIOS);
 
-/** Every watch fought at one echelon, in campaign order. */
-export const watchesAt = (echelonId) => SCENARIOS.filter((s) => s.echelon === echelonId);
+/** The post a watch is stood under — the rung of the ladder it sits on. */
+export const postOfScenario = (scenario) => postForScenario(scenario);
+
+/** Every watch stood under one post, in campaign order. */
+export const watchesAt = (postId) => SCENARIOS.filter((s) => postForScenario(s).id === postId);
+
+/** Every watch fought at one formation, in campaign order. */
+export const watchesFoughtAt = (echelonId) => SCENARIOS.filter((s) => s.echelon === echelonId);
 
 /** The watches a given campaign may actually select. */
 export const rosterFor = (campaign) => SCENARIOS.filter((s) => isUnlocked(s, campaign));

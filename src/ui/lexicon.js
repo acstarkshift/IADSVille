@@ -105,6 +105,15 @@ export const CONTROLS = {
    */
   nextTarget: { tm: 'СЛЕД. ЦЕЛЬ', en: 'NEXT TARGET', hint: 'step to the next contact on the board' },
   assign: { tm: 'НАЗНАЧИТЬ', en: 'ASSIGN', hint: 'hand the selected contact to the selected battery' },
+  /*
+   * And the radar set's version of the same verb, which does not name a
+   * battery because choosing one is not the operator's job: the contact goes
+   * to the launch officer and he decides what takes it.
+   */
+  handOver: {
+    tm: 'ДОЛОЖИТЬ', en: 'HAND OVER',
+    hint: 'report the selected contact to the launch officer, who fires on it',
+  },
   /* The two halves of the question the LEAVE POST cap now asks first. */
   abandon: { tm: 'ОСТАВИТЬ ПОСТ', en: 'ABANDON THE WATCH' },
   stay: { tm: 'ОСТАТЬСЯ', en: 'STAY AT THE POST' },

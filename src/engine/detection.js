@@ -305,6 +305,13 @@ function newTrack(world, plot, truth) {
     coasting: false,
     /** Set once the track has ever been firm, for the "it was here" ghost. */
     everFirm: false,
+    /**
+     * When the radar operator passed this one to the launch officer, or null.
+     * Read by `runFormationCommander` on the radar seat: a contact that has
+     * been reported is one he will plan a battery ahead for, and one that has
+     * not is one he will not see until it is inside somebody's ring.
+     */
+    reportedAtS: null,
   };
 }
 
@@ -352,6 +359,7 @@ export function rememberGhost(world, track) {
     hostility: track.hostility,
     idProgressS: track.idProgressS,
     truthId: track.truthId,
+    reportedAtS: track.reportedAtS ?? null,
   });
 }
 
@@ -420,6 +428,10 @@ function reacquire(world, plot, fused) {
     threat: 0,
     coasting: false,
     everFirm: false,
+    // A re-acquisition recovers the number and the identification work; it
+    // recovers the report with them, because the officer does not forget a
+    // contact he was told about while it was behind a hill.
+    reportedAtS: best.reportedAtS ?? null,
     reacquired: true,
   };
   world.tracks.set(track.id, track);

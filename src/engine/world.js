@@ -26,7 +26,9 @@ import {
 import { stepDetection, rememberGhost } from './detection.js';
 import { stepMissiles, inEnvelope, timeToInRangeS } from './weapons.js';
 import { stepAircraft, createAircraft } from './ai.js';
-import { scoreAllTracks, cannotEngageReason } from './threat.js';
+import {
+  scoreAllTracks, cannotEngageReason, engagementValue, claimHorizonS,
+} from './threat.js';
 import {
   stepEngagements, runAiBattleManager, runBatteryCrews, runAiEmcon, runSurveillanceEmcon,
   stepFireControl,
@@ -39,7 +41,7 @@ import {
   createCommandState, stepCommand, standingDelta, settleDirectives, answerDirective, tierFor,
 } from './command.js';
 import { composeEnding } from './endings.js';
-import { echelonForScenario } from './echelon.js';
+import { echelonForScenario, postForScenario } from './echelon.js';
 import { composeFlightEnding } from './epilogue.js';
 
 /** Minutes on a road, in seconds. The reserve is not an inventory screen. */
@@ -238,8 +240,18 @@ export class World {
 
     this.control = {
       role: options.role ?? 'net',
-      netIsHuman: options.role !== 'crew',
+      netIsHuman: options.role !== 'crew' && options.role !== 'radar',
       crewedBatteryId: null,
+      /**
+       * Whose hand is on the surveillance sets.
+       *
+       * The net and the commander own them because they own everything; the
+       * RADAR OPERATOR owns them and nothing else, which is the whole of that
+       * seat. Only the cabin leaves them to the AI's own emissions discipline
+       * (`runSurveillanceEmcon`), because a crew eleven metres away from one
+       * antenna is not switching the sector's.
+       */
+      ownsSurveillance: options.role !== 'crew',
     };
 
     /**
@@ -251,6 +263,12 @@ export class World {
      * mind about which fight is yours.
      */
     this.echelon = echelonForScenario(scenario);
+    /**
+     * And the post the player holds while standing it, which is a different
+     * question from the size of the formation — see echelon.js. The identity
+     * card in the console reads this, not the formation.
+     */
+    this.post = postForScenario(scenario);
     this.formations = [];
     this.formationById = new Map();
     this.reserve = {
@@ -783,6 +801,14 @@ export class World {
 
   /** May the operator give this battery an order at this moment? */
   commandable(siteId) {
+    /*
+     * NOT AT THE SET. A radar operator gives no orders to a battery — the
+     * launch officer does that, on what he is handed — and this is the one
+     * place that has to be true for the rest of the console to follow: the
+     * refusal on `assign`, the greyed caps on the rack, the contact menu's
+     * dead rows and the reason each of them prints all read this answer.
+     */
+    if (this.control.role === 'radar') return false;
     const formation = this.formationOf(siteId);
     if (!formation) return true;
     // Your own console is always your own console.
@@ -908,6 +934,7 @@ export class World {
   applyRole(role, batteryId) {
     this.control.role = role;
     this.control.netIsHuman = role === 'net' || role === 'both';
+    this.control.ownsSurveillance = role !== 'crew';
     if (role === 'crew' || role === 'both') {
       const preferred = batteryId ?? this.scenario.playerBatteryId;
       const site = this.siteById.get(preferred) ?? this.sites[0];
@@ -1584,6 +1611,77 @@ export class World {
     return true;
   }
 
+  /**
+   * THE RADAR OPERATOR'S ONE VERB THAT IS NOT A SWITCH: hand a contact to the
+   * launch officer.
+   *
+   * You do not shoot. He does, on what you give him, and until you give him
+   * something he will not reach beyond his own ring — `runFormationCommander`
+   * reads `reportedAtS` and will only plan ahead on a track that has been
+   * reported to him (see the note there). That is the whole trade of the post:
+   * an operator who calls the picture buys the sector the minute and a half
+   * between a contact going firm and a contact arriving, and an operator who
+   * watches in silence gives it away.
+   *
+   * The answer comes back on the radio, because a report nobody acknowledges
+   * is not a hand-over, it is a thing you said to a room. What he says is what
+   * he is actually going to do about it, computed with the same arithmetic he
+   * commands on.
+   */
+  handOver(trackId) {
+    const track = this.tracks.get(trackId);
+    if (!track || track.destroyed) return false;
+    const voice = this.netVoice(this.sites[0]?.formationId) ?? this.netCallsign ?? 'CONTROL';
+
+    if (track.reportedAtS !== null && track.reportedAtS !== undefined) {
+      this.logThrottled(`reported:${track.id}`, 12, 'info',
+        `${track.tn} ALREADY PASSED TO ${voice}.`, { trackId: track.id });
+      return false;
+    }
+    track.reportedAtS = this.t;
+    this.stats.handovers = (this.stats.handovers ?? 0) + 1;
+
+    const bearingDeg = Math.round(bearing(this.centre, track.pos));
+    const rangeKm = Math.round(dist(this.centre, track.pos));
+    this.log('comms', `YOU: ${track.tn}, BEARING ${String(bearingDeg).padStart(3, '0')}, `
+      + `${rangeKm} KILOMETRES, ${Math.round(track.altM / 100) * 100} METRES — PASSING TO ${voice}.`,
+    { trackId: track.id, urgent: true });
+
+    /*
+     * And his answer. Three, and each of them is a fact about a battery:
+     * something can take it now, something will be able to, or nothing on this
+     * net reaches it and the contact is yours to keep watching.
+     */
+    if (track.hostility === 'friendly') {
+      this.comms(voice, `${track.tn} IS OURS. LEAVE IT ON THE BOARD AND DO NOT CALL IT AGAIN.`,
+        { urgent: true, trackId: track.id });
+      return true;
+    }
+    let ready = null;
+    let coming = null;
+    for (const site of this.sites) {
+      if (!site.alive) continue;
+      const evaluation = engagementValue(this, site, track);
+      if (!evaluation) continue;
+      if (evaluation.inEnvelope) { ready = site; break; }
+      if (evaluation.timeToRangeS <= claimHorizonS(site)
+        && (!coming || evaluation.timeToRangeS < coming.s)) {
+        coming = { site, s: evaluation.timeToRangeS };
+      }
+    }
+    if (ready) {
+      this.comms(voice, `${track.tn} SEEN. ${ready.name} IS TAKING IT.`,
+        { urgent: true, trackId: track.id });
+    } else if (coming) {
+      this.comms(voice, `${track.tn} SEEN. ${coming.site.name} IN ${Math.ceil(coming.s)} SECONDS — `
+        + 'KEEP IT ON THE TUBE.', { urgent: true, trackId: track.id });
+    } else {
+      this.comms(voice, `${track.tn} SEEN. NOTHING OF OURS REACHES IT. HOLD IT AND SAY AGAIN IF IT TURNS.`,
+        { urgent: true, trackId: track.id });
+    }
+    return true;
+  }
+
   /** The operator's fire command for a manual engagement. */
   fire(siteId, trackId = null) {
     const site = this.siteById.get(siteId);
@@ -1858,17 +1956,29 @@ export class World {
   chatterHolds(line) {
     if (line.whileCold && this.radars.some((r) => !r.siteId && r.alive && r.on)) return false;
     if (line.whileOwnCold) {
-      const own = this.control.crewedBatteryId
-        ? this.radars.filter((r) => r.siteId === this.control.crewedBatteryId)
-        : [];
+      const own = this.radars.filter((r) => r.siteId === this.control.crewedBatteryId);
       if (!own.length || own.some((r) => r.alive && r.on)) return false;
     }
     return true;
   }
 
+  /**
+   * Is there anybody for this line to be said to?
+   *
+   * The cabin's lines need a cabin. From the net, and from the radar set,
+   * nobody is sitting in a battery — so neither sentence of the pair is true
+   * and the slot is not filled at all. It used to fall through to
+   * `insteadText`, which meant a seat with no launcher was told on the
+   * teaching watch that its set was up and the battalion was on the rails.
+   */
+  chatterApplies(line) {
+    return !(line.whileOwnCold && !this.control.crewedBatteryId);
+  }
+
   spawnDue() {
     while (this.pendingChatter.length && this.pendingChatter[0].atS <= this.t) {
       const line = this.pendingChatter.shift();
+      if (!this.chatterApplies(line)) continue;
       const holds = this.chatterHolds(line);
       const text = holds ? line.text : line.insteadText;
       if (!text) continue;
@@ -2050,7 +2160,13 @@ export class World {
       }
     }
 
-    if (!this.control.netIsHuman) return;
+    /*
+     * The unengaged warning goes to whoever can do something about it, and at
+     * the radar set that is exactly what the seat is for: a firm hostile
+     * tracking on a defended place that nobody has been told about is the one
+     * thing a radar operator exists to say out loud.
+     */
+    if (!this.control.netIsHuman && this.control.role !== 'radar') return;
     this._advisoryScanAtS = this._advisoryScanAtS ?? 0;
     if (this.t - this._advisoryScanAtS < 5) return;
     this._advisoryScanAtS = this.t;
@@ -2134,8 +2250,12 @@ export class World {
      */
     if (this.t - (this._lastActionAtS ?? 0) < COMMAND.lullReportS) return;
 
+    // At the set nothing is "mine" — `commandable` says so — but the lull is
+    // about what is on the plot in front of the operator, and the batteries
+    // are on it. The officer's are the ones the report will reach.
     const mine = this.sites.filter((s) => s.alive
-      && (s.id === this.control.crewedBatteryId || this.commandable(s.id)));
+      && (this.control.role === 'radar'
+        || s.id === this.control.crewedBatteryId || this.commandable(s.id)));
     /*
      * The contact worth talking about is the worst one NOBODY is on. A
      * contact some battery already holds is not work for the operator, and

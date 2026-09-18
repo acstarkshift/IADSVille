@@ -384,25 +384,33 @@ describe('what is said', () => {
   });
 
   test('a promotion is read as an order of appointment', () => {
-    // Stand the whole battalion act so the file reaches the sector.
+    /*
+     * Stand the two radar watches, which is what the first promotion in the
+     * game is now for: the order that moves a recruit off the set and into the
+     * cabin. It is the battalion's own paper, not the Chief of Air Defence's —
+     * nobody in Mostrograd appoints a man to a launcher — and it is the first
+     * order the player is ever handed, so it is the one that writes the
+     * service out in full.
+     */
     const campaign = enlisted();
-    for (const id of ['first-light', 'low-riders', 'solo-battery']) {
-      const { entry, state, result } = stood(id, { campaign, role: id === 'solo-battery' ? 'crew' : 'net' });
+    for (const id of ['first-light', 'low-riders']) {
+      const { entry, state, result } = stood(id, { campaign, role: 'radar' });
       if (entry.appointment) {
         const order = scenesFor(state, result, entry).find((s) => s.id === 'appointment');
         assert.ok(order, 'the order is read on its own');
         // One spelling for the job, here and on the briefing, the roster and
-        // the personnel file: Sector Commander, capitalised as a title.
+        // the personnel file: Missile Operator, capitalised as a title.
         assert.match(order.lines[0],
-          /^By order of the Chief of Air Defence, you are appointed Sector Commander\.$/);
+          /^By order of the battalion, you are appointed Missile Operator\.$/);
         assert.equal(order.kind, 'appointment', 'the promotion gets its own shot');
         // The first order the player is ever handed writes the service out.
         // The stamp on it, the stamp on the report and the plate on the card
         // are all the short form, and nothing had ever expanded it.
         assert.ok(order.lines.some((l) => /Air Defence Forces of Trans Mordovia/.test(l)),
           'the service is spelled out where its stamp first appears');
-        // And the sheet is signed by an office above the one it appoints to.
-        assert.equal(order.office, 'CHIEF OF AIR DEFENCE');
+        // And the sheet is signed by an office above the one it appoints to,
+        // which for a launcher crew is the orderly room down the track.
+        assert.equal(order.office, 'BATTALION ORDERLY ROOM');
 
         /*
          * The order knows what kind of night it was issued on. It used to read
@@ -428,7 +436,7 @@ describe('what is said', () => {
         return;
       }
     }
-    assert.fail('the battalion act should have ended in an appointment');
+    assert.fail('the two radar watches should have ended in an appointment');
   });
 });
 
