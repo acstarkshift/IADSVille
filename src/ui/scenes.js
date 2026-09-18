@@ -36,6 +36,7 @@ import { householdOf, districtOf } from '../engine/character.js';
 import { composeEnding } from '../engine/endings.js';
 import { composeFlightEnding } from '../engine/epilogue.js';
 import { ROLES } from '../engine/config.js';
+import { appointingOffice, appointingSignatory } from '../engine/echelon.js';
 import { portraitCells, portraitFeatures, skinRamp, FACE, PORTRAIT_W, PORTRAIT_H } from './portrait.js';
 
 export const SCENE_W = 320;
@@ -101,8 +102,7 @@ export function scenesFor(state, result, entry) {
        * Defence was signed by the post it was handing over — on the one beat
        * whose point is that nobody will say who held it before you.
        */
-      office: entry.appointment.echelon.id === 'national'
-        ? 'MINISTRY OF DEFENCE' : 'CHIEF OF AIR DEFENCE',
+      office: appointingOffice(entry.appointment.echelon),
       /** And the reference on it is the order's, not the file entry's form. */
       ref: 'ORDER 12-4',
     });
@@ -173,8 +173,7 @@ export function scenesFor(state, result, entry) {
        * Defence was signed by the post it was handing over — on the one beat
        * whose point is that nobody will say who held it before you.
        */
-      office: entry.appointment.echelon.id === 'national'
-        ? 'MINISTRY OF DEFENCE' : 'CHIEF OF AIR DEFENCE',
+      office: appointingOffice(entry.appointment.echelon),
       /** And the reference on it is the order's, not the file entry's form. */
       ref: 'ORDER 12-4',
     });
@@ -1127,16 +1126,14 @@ function countWords(n) {
 /**
  * The order of appointment, read out.
  *
- * Signed by the office above the one it appoints you to: the Chief of Air
- * Defence appoints battalion, sector and district commanders, and the ministry
- * appoints the Chief of Air Defence, who cannot appoint himself.
+ * Who signs it is `appointingSignatory` in echelon.js, which the file entry on
+ * the report reads too — the two screens print the same order and used to
+ * disagree about whose it was.
  */
 function appointmentLines(appointment, pressure, tierId = null, result = null) {
-  const signatory = appointment.echelon.id === 'national'
-    ? 'the Ministry of Defence'
-    : 'the Chief of Air Defence';
-  const lines = [`By order of ${signatory}, you are appointed`
-    + ` ${appointment.echelon.appointment.en}.`];
+  const post = appointment.echelon;
+  const lines = [`By order of ${appointingSignatory(post)}, you are appointed`
+    + ` ${post.appointment.en}.`];
   if (appointment.gazetted) {
     lines.push(`You are gazetted to ${appointment.gazetted.en} on the same order.`);
   }
@@ -1145,10 +1142,11 @@ function appointmentLines(appointment, pressure, tierId = null, result = null) {
    *
    * The stamp on the sheet, the stamp on the report and the plate on the
    * identity card are all the service in its short form, and nothing in the
-   * game had ever written the short form out. The sector appointment is always
-   * the first one, because the record starts at battalion.
+   * game had ever written the short form out. The order that moves a recruit
+   * from the set to the cabin is always the first one, because the record
+   * starts on the set.
    */
-  if (pressure && appointment.echelon.id === 'sector') {
+  if (pressure && post.id === 'crew') {
     lines.push('It is issued for the Air Defence Forces of Trans Mordovia, and the stamp at the'
       + ' foot of it says so in the short form.');
   }

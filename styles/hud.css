@@ -2,6 +2,20 @@
 
 * { box-sizing: border-box; }
 
+/*
+ * Which piece of hardware the stylesheet is drawing.
+ *
+ * Below 900px this is not the desktop console made smaller, it is a phone
+ * console; the panels have to know, because what a battery card is at 1600px
+ * (lamps, rails, an envelope, a paragraph of teaching copy and five caps) is
+ * not what it can be on 390 px of glass. The breakpoint is declared ONCE, here,
+ * and `isPhoneConsole()` in panels.js reads this back rather than carrying a
+ * second copy of the number in JavaScript — the same way the thumb rail asks
+ * the box whether it is being drawn instead of testing a width.
+ */
+:root { --console: desktop; }
+@media (max-width: 900px) { :root { --console: phone; } }
+
 html, body {
   height: 100%;
   margin: 0;
@@ -1250,7 +1264,10 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
   position: relative; min-width: 0; min-height: 0; overflow: hidden;
   padding-bottom: calc(12px + var(--net-h, 0px));
 }
-@media (max-width: 900px) { .scope-wrap { padding-bottom: calc(6px + var(--net-h, 0px)); } }
+/* The phone reserves nothing here: below 900px the banner is not an overlay
+   at all — it is a block in the dock under the picture, and the rack between
+   them gives up exactly its height, so the tube is the same size whether a
+   directive is up or not. See the phone console at the end of this file. */
 #scope { display: block; width: 100%; flex: 1 1 auto; min-height: 0; }
 /* Curved glass over the tube: a highlight across the top-left, nothing more. */
 .tube::after {
@@ -1358,9 +1375,37 @@ h3 .rank-board, .score-cell .rank-board, p .rank-board, td .rank-board { vertica
   display: grid; grid-template-columns: minmax(210px, 300px) auto minmax(0, 1fr);
   align-items: end;
 }
+.ticker > .desk-crest { grid-column: 1; grid-row: 1; }
 .ticker > #card-reader { grid-column: 2; grid-row: 1; }
 .ticker > .event-log { grid-column: 3; grid-row: 1; }
 .ticker > .action-bar { grid-column: 1 / -1; grid-row: 2; }
+
+/*
+ * The crest in the desk lip's left corner, and the plate that names it.
+ *
+ * That column is as wide as the track panel above it and had nothing in it at
+ * any desktop width — the one blank corner of the console. The casting is
+ * drawn by `drawCrest()` at 32x36 logical pixels and magnified by two whole
+ * steps, so it is pixel art at the same scale discipline as the cutscenes:
+ * `pixelated` is what keeps it from being resampled into mush by the browser.
+ *
+ * It aligns its base with the card reader's rather than its middle, because
+ * both are objects standing on the same lip and a shared baseline is what says
+ * so. The plate is the stencil-over-gloss form every other legend uses.
+ */
+.desk-crest {
+  display: flex; align-items: center; gap: 11px;
+  min-width: 0; padding: 0 8px 6px 16px;
+}
+.crest-cut {
+  flex: 0 0 auto; width: 64px; height: 72px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .5));
+}
+.crest-plate { min-width: 0; overflow: hidden; }
+.crest-plate .lg { align-items: flex-start; text-align: left; }
+.crest-plate .lg b { font-size: 10px; letter-spacing: .09em; white-space: nowrap; }
+.crest-plate .lg i { font-size: 8px; letter-spacing: .15em; white-space: nowrap; }
 
 /*
  * The command net floats above the ticker rather than sitting in it.
@@ -1892,49 +1937,55 @@ table.ledger .down { color: var(--hostile); }
 
 /*
  * Under 900px this is a different piece of hardware, and it is laid out as
- * one rather than as the desktop console with things falling off the edges.
+ * one — not the desktop console shrunk.
  *
- * The rules: no control the watch needs is off the screen or inside something
- * that scrolls; no key chips, because there is no keyboard to press; the
- * picture keeps the room it needs; and the bar at the bottom is the console.
+ * The player, holding a phone: "the mobile version of the game is now so
+ * cluttered that it's unusable". Measured on the net seat at 390x844, thirty
+ * seconds into First Light: 2,901 characters of text and 28 tappable controls
+ * on one screen, with the radar picture — the thing the game IS — 198px tall,
+ * 23% of the glass, and completely covered by a tutorial card. Below it, a
+ * stack of full battery cards carrying bilingual nomenclature plates and
+ * paragraphs of teaching copy, a decorative card reader, a second copy of the
+ * radiate switch and a ticker cut off by the bottom edge.
+ *
+ * So the phone console is four things and nothing else:
+ *
+ *   1. a thin status strip;
+ *   2. THE PICTURE, which takes every pixel the other three do not need and
+ *      which nothing is ever drawn on top of;
+ *   3. the net, as one 42px row per set — name, state, rounds, and the one
+ *      control you use — because what a battery is FOR belongs to the
+ *      handbook, not to the screen you fight the raid on;
+ *   4. the thumb rail, which never moves and never scrolls.
+ *
+ * Everything else — the air picture list, the works plates, the card reader,
+ * the class blurbs, the weapons posture caps, the subordinate commands —
+ * stays on the desktop console, which is unchanged.
  */
 @media (max-width: 900px) {
   /*
-   * The topbar goes to two rows: what the watch IS on top, what you can do to
-   * the clock underneath. At 390px the works plate, the identity card and the
-   * standing meter were being drawn on top of each other and cut off by the
-   * window — set dressing that belongs to a desk with room on it.
+   * The crest comes off the phone entirely.
+   *
+   * The player, asking for it: "Don't do this on mobile as it'll waste too
+   * much screen space." They are right — it is a hundred and eighty pixels of
+   * a screen that is short of room for the radar picture, and it tells the
+   * operator nothing they need during a watch. It stays on every width that
+   * has a desk lip to cast it into, exactly as it is. This console does not
+   * draw the desk lip it stands on either — see the card reader below.
+   */
+  .desk-crest { display: none; }
+  /*
+   * The status strip. What the watch is on top, what you can do to the clock
+   * underneath. At 390px the works plate, the identity card and the standing
+   * meter were being drawn on top of each other and cut off by the window —
+   * set dressing that belongs to a desk with room on it.
    */
   .topbar {
     grid-template-columns: minmax(0, 1fr);
-    gap: 3px; padding: 4px 8px;
+    gap: 2px; padding: 3px 8px;
   }
   .topbar-group:nth-child(2) { display: none; }
-  /*
-   * The desk furniture folds down rather than away.
-   *
-   * The reader judge: "the card reader and the standing identity card, which
-   * the opening beat is entirely built around, measure 0x0 at phone width —
-   * the object the player has just watched their own hand seat in the desk
-   * simply is not there when the watch starts." It is there now: the same
-   * reader and the same card, scaled to two thirds and set on the desk lip
-   * above the log, so the opening beat pays off at every width.
-   */
-  .ticker { display: block; }
-  /*
-   * And it gets its own strip of desk.
-   *
-   * The art judge, at 390: "the reader plate is clipped by the left edge of the
-   * screen and its top overlaps the bottom of the battery panel above it,
-   * hiding that panel's border and its lower rows." The machined lip it is sunk
-   * into runs ten pixels past the plate on both sides, so it needs a margin
-   * wider than that, and a clear row above it.
-   */
-  #card-reader {
-    transform: scale(.62); transform-origin: 0 100%;
-    height: 50px; width: 196px; margin: 12px 0 6px 18px;
-  }
-  .topbar-group.rack { justify-content: flex-end; gap: 5px; }
+  .topbar-group.rack { justify-content: flex-end; gap: 4px; }
   #unit-plate, #mission-name { display: none; }
   /*
    * The status row wraps rather than shortening anything. Everything on it is
@@ -1942,10 +1993,14 @@ table.ledger .down { color: var(--hostile); }
    * the bar to take a second line, not for the console to start speaking in
    * three-letter codes.
    */
-  .topbar-group:first-child { flex-wrap: wrap; }
+  .topbar-group:first-child { flex-wrap: wrap; gap: 2px 7px; }
   .topbar .readout label { display: inline; }
-  .topbar .lamp { font-size: 8.5px; }
-  .topbar .rack .pb { height: 26px; padding: 0 6px; }
+  .topbar .readout { font-size: 10px; }
+  .topbar .readout b { font-size: 13px; }
+  .topbar .lamp { font-size: 8px; }
+  .topbar .lamp-dome { width: 8px; height: 8px; }
+  .lamps { gap: 7px; }
+  .topbar .rack .pb { height: 24px; padding: 0 6px; }
   .topbar .rack .pb .lg b { font-size: 9.5px; white-space: nowrap; }
   /*
    * No keyboard, no key chips. Every cap on a phone loses the stencilled
@@ -1954,53 +2009,267 @@ table.ledger .down { color: var(--hostile); }
    */
   .kc, #rack-keys { display: none; }
   .pb:has(.kc), .pb:has(.kc-wide), .unit-controls .pb { padding-right: 8px; }
-  /*
-   * A directive is a paragraph and this is a phone: it stacks, it keeps its
-   * own answer buttons under it, and it is bounded — it wrapped to thirteen
-   * lines and took half the screen, and the panels reserved that height.
-   */
-  .command-net { flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 8px; }
-  .command-text { font-size: 11px; line-height: 1.4; max-height: 5.6em; overflow-y: auto; }
-  .command-actions { justify-content: space-between; }
 
-  .stage { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; }
+  /*
+   * The desk furniture does not come to the phone.
+   *
+   * The reader and the identity card standing out of it earn their hundred
+   * pixels on a desk and in the opening beat, where the player watches their
+   * own hand seat the card. On 844 px of phone they are a hundred pixels of
+   * picture spent on an ornament, directly above the only controls the watch
+   * cannot be played without. The opening beat still shows the reader at every
+   * width; the playing screen does not.
+   */
+  #card-reader { display: none; }
+  /*
+   * And neither do the subordinate commands. Four figures, two caps and a
+   * paragraph per formation is a commander's reference table; the batteries
+   * themselves are on the rack below it and the verbs are on the rail.
+   */
+  #formation-list { display: none; }
+
+  /* ---------------------------------------------------------- the picture */
+
+  .stage {
+    display: flex; flex-direction: column;
+    grid-template-columns: none; grid-template-rows: none;
+  }
   .panel-left { display: none; }
   /*
-   * Thirty per cent of the screen for the rack and the seat — of VISIBLE
-   * screen. The panel reserves the net banner's height as bottom padding like
-   * every other panel does, so on a phone a live directive ate the whole of
-   * the cabin out of the same thirty per cent and left a sliced card head. The
-   * reservation is added back on top of the cap, not taken out of it.
+   * The bezel stacks: the tube, then the lesson card under it. Nothing is
+   * ever drawn ON the picture at this width — see the tutorial card below.
    */
+  .scope-wrap {
+    flex: 1 1 auto; display: flex; flex-direction: column;
+    /* No reservation for the command net here: on a phone it is a block in
+       the dock and the rack pays for it, so the picture keeps its height
+       whether a directive is up or not. */
+    padding: 5px;
+  }
   /*
-   * On a phone the COLUMN scrolls, not the boxes inside it.
+   * Forty-five per cent of the screen, and everything left over.
    *
-   * Nested scrollers on 250 px of panel is how the cabin came to report a body
-   * 0 px tall against 247 px of content: the channel table, the target, the
-   * envelope, the kill estimate and the ELINT gauges were all unreachable, and
-   * the condition strip was sliced to six pixels of a thirteen-pixel line, cut
-   * straight through the words IN ACTION and ON THE AIR. The card is drawn at
-   * its natural height and the panel it is in scrolls, so every row of it can
-   * be reached by dragging the column — while LOCK, LAUNCH and the emissions
-   * switch stay on the thumb rail at the foot of the screen, out of the
-   * scroller entirely.
+   * This is the requirement the rebuild exists for: measured at 390x844 the
+   * tube is 388px, 46% of the glass, with a lesson card up and a directive on
+   * the dock. 45vh is the tube's SIZE and not a minimum, so that on a screen
+   * genuinely too short to hold a lesson card, a directive and a 45% picture
+   * at once — an old 320x568 handset on the teaching watch — what gives is the
+   * picture rather than the words, which would otherwise be cut off by the
+   * bezel. A quarter of the screen is the floor under that.
    */
+  .tube { flex: 1 1 45vh; min-height: 25vh; }
+  /* The tube's caption line is the rail's job here, and the tube needs every
+     pixel it has. */
+  .scope-legend { display: none; }
+
+  /*
+   * The lesson card comes off the glass.
+   *
+   * It is mounted in the bezel (see index.html), so at this width it simply
+   * stops being positioned and takes a strip of its own under the picture:
+   * full width, its own type size, and the tube shrinks by exactly its height
+   * rather than being covered by it.
+   *
+   * Selected through its parent because the desktop rule for this card is
+   * further down the sheet: the child combinator, not source order, is what
+   * holds the phone's version on top of it.
+   */
+  .scope-wrap > .tutorial-card {
+    /* Relative, not static: the dismiss cap is pinned to the card's own
+       corner, and a static card handed it to the bezel — a × floating in the
+       top-right of the picture, attached to nothing. */
+    position: relative; inset: auto; flex: 0 0 auto; order: 2;
+    max-width: none; margin-top: 5px;
+    padding: 7px 32px 7px 9px;
+    box-shadow: none;
+  }
+  .scope-wrap > .tutorial-card b { font-size: 11.5px; line-height: 1.35; }
+  .scope-wrap > .tutorial-card .tut-step { margin-bottom: 2px; }
+  .scope-wrap > .tutorial-card .tut-skip { width: 26px; height: 26px; top: 3px; right: 3px; }
+
+  /* ------------------------------------------------------------- the net */
+
+  /*
+   * One row per set, at a fixed height, and the column scrolls.
+   *
+   * The rack is the phone's shock absorber. A directive is a hundred pixels
+   * of banner and the picture may not pay for it, so the banner is drawn in
+   * the dock below (it is an overlay on a desktop; here it is a block) and
+   * this panel gives up EXACTLY the banner's own height while it is up. The
+   * arithmetic cancels: the dock grows by --net-h, the rack loses --net-h,
+   * and the tube above is the same number of pixels all watch — measured,
+   * 397px with a directive up and 397px without one. It is a CEILING rather
+   * than a content height for the same reason: a short net used to make the
+   * picture bigger and then take it away again the moment sector command
+   * called.
+   *
+   * Under that height the panel then closes on a whole row. It used to be
+   * drawn to its full height while the rows inside it were snapped to a
+   * boundary, which left 26px of empty painted steel between the last set on
+   * the rack and the directive banner — a grey strip carrying nothing, on the
+   * screen with the least room to spare. `renderBatteries` shortens the panel
+   * to the boundary and hands the remainder to the log as --rack-slack, so
+   * the dock grows by precisely what this panel gave up and the tube is still
+   * the same height all watch.
+   *
+   * The height stays a rigid `flex: 0 0` and is never a max-height the panel
+   * can shrink under: a shrinkable panel in this column is measured against a
+   * stage whose own height depends on the log, and the log is where the
+   * remainder goes — so the rack would be measuring itself against its own
+   * leftovers. Measured, it did: the log ran away to 135px inside a second.
+   * Rigid, the scope-wrap beside it absorbs every change and the rack's window
+   * depends on nothing but --net-h.
+   *
+   * --rack-gives names who takes the remainder, because only a console that
+   * has somewhere to put it may close the panel on a row. In this column the
+   * dock is below the rack and the log inside it can grow; in landscape the
+   * dock is already exactly as tall as its own contents and the column's
+   * height belongs to the picture, so there is nowhere for the remainder to
+   * go and the rack keeps it. `renderBatteries` reads this rather than
+   * testing an orientation of its own.
+   */
+  :root { --rack-gives: log; }
   .panel-right {
     border-left: none; border-top: 1px solid var(--edge);
-    max-height: calc(34vh + var(--net-h, 0px));
+    /* A fifth of the screen: four rows of net at 390x844, to the pixel, and
+       what is left over is the picture's. */
+    flex: 0 0 auto; height: max(0px, calc(20vh - var(--net-h, 0px))); min-height: 0;
+    /* Nothing floats over this panel here, so it reserves nothing. */
+    padding-bottom: 0;
     overflow-y: auto; scrollbar-width: thin;
     scrollbar-color: var(--metal-hi) var(--well);
   }
+  /*
+   * The rack loses its heading.
+   *
+   * WEAPONS over a column of named sets with switches on them is a label for
+   * something that cannot be mistaken for anything else, and its twenty-two
+   * pixels are half a row of the net — the difference, with a directive up,
+   * between showing one battery and showing two. The rack says where it ends
+   * in its own last line instead.
+   */
+  .panel-right > h2 { display: none; }
+  /*
+   * The net seat's rack is the scroller, not the column around it, so its
+   * window can be floored to the row pitch after the paint — see
+   * renderBatteries. In the cabin the list is one block above a console and
+   * the column scrolls instead, which is why this is scoped to the seat where
+   * the rack is the whole panel.
+   */
+  .battery-list:not(.is-secondary) {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: var(--metal-hi) var(--well);
+  }
+  /* A row is a finger's row: 42px, on one pitch, so a cut between rows can
+     never fall through a name. The pitch is declared here and read back by
+     the snapping code, so there is one number and not two. */
+  .battery-list { --rack-row: 42px; }
+  .rack-strip { height: var(--rack-row, 42px); gap: 7px; }
+  .rack-strip .rs-name { font-size: 11px; }
+  .rack-strip .rs-fig { font-size: 9.5px; }
+  .rack-strip.is-selected {
+    background: linear-gradient(180deg, rgba(255, 255, 255, .10), rgba(0, 0, 0, .05));
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .rack-empty { padding: 6px 8px; }
+
+  /*
+   * The cabin keeps its instruments and loses its reference material.
+   *
+   * On a phone the COLUMN scrolls, not the boxes inside it — nested scrollers
+   * on 250px of panel is how the seat came to report a body 0px tall against
+   * 247px of content, with the channel table, the target, the envelope and the
+   * kill estimate all unreachable. What goes altogether is what the seat does
+   * not need in order to be worked: the nomenclature plate, the works plate
+   * and the caution placard, the reach row and the scroll cue.
+   */
   .crew-console { flex: 0 0 auto; overflow: visible; }
   .crew-console .unit.cabin { height: auto; }
   .cabin-body { overflow: visible; max-height: none !important; }
   .cabin-commands { margin-top: 6px; }
-  .battery-list.is-secondary { max-height: none; }
-  .event-log { height: 52px; }
-  /* The tube's instruction line is the rail's job here, and the tube needs
-     every pixel it has. */
-  .scope-legend { display: none; }
-  .bezel { padding: 6px; }
+  .cabin-plates,
+  .cabin-more,
+  .cabin-body .crew-row.is-plain { display: none; }
+  /* In the cabin the rest of the net is reference above the seat: two strips
+     and its own last line, so the console the operator's hands are on is what
+     the column is actually holding. */
+  .battery-list.is-secondary {
+    max-height: calc(2 * var(--rack-row, 42px)); overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: var(--metal-hi) var(--well);
+  }
+
+  /*
+   * No prose on the playing screen, and no bilingual plates.
+   *
+   * A battery card's class blurb is four lines of teaching copy — "owns the
+   * approach and reaches the standoff aircraft nothing else can touch" — and
+   * it is the same four lines every night once it has been read. The plates
+   * are the console's stencilling, which is furniture on a screen this size.
+   * Both stay on the desktop console; here they belong to the handbook (HELP)
+   * and to a contact's own menu, which the player opens when they want them.
+   */
+  .unit-explain, .unit .is-plate { display: none; }
+
+  /* ------------------------------------------------------------ the dock */
+
+  /*
+   * The dock: a directive, the log, the rail. The bottom never moves.
+   *
+   * On a desktop the command net is an overlay pinned above the ticker,
+   * because a banner that grew the footer used to resize the tube and rescale
+   * the whole picture mid-watch. On a phone an overlay is worse: at 390px the
+   * banner is a hundred pixels tall and there is nothing under it but the rack
+   * it would bury. So here it is an ordinary block at the top of the dock —
+   * below the picture, over nothing — and the rack above gives up exactly its
+   * height (see .panel-right). The log and the rail keep their own fixed
+   * heights underneath it, so the verbs stay under the same thumb whether a
+   * directive is up or not.
+   */
+  .ticker {
+    display: flex; flex-direction: column; align-items: stretch;
+    grid-template-columns: none;
+  }
+  /*
+   * A directive is a paragraph and this is a phone: it stacks, it keeps its
+   * own answer caps under it, and it is bounded — it wrapped to thirteen lines
+   * and took half the screen.
+   */
+  .command-net {
+    position: static; order: 0; box-shadow: none;
+    flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 8px;
+  }
+  /*
+   * The log says one thing at a time here, and says it from the beginning.
+   *
+   * Two lines of a scrollback pinned to its bottom is not a shorter log, it is
+   * a log with no beginnings in it: at 844x390 the box read "CAPS AT THE TOP
+   * SPEED THE CLOCK UP; IT STAYS AT 1x UNTIL YOU PRESS ONE." — the tail of one
+   * sentence with its first half above the fold and no clock to mark where it
+   * started, which reads as two messages run together. So the phone draws the
+   * newest line only, and `renderEventLog` anchors it to its own first word.
+   * Its clock and its ▸ are the first thing in the box, and what follows is
+   * one message.
+   *
+   * --rack-slack is the rack's leftover (see .panel-right): the rack closes on
+   * a row boundary and this box takes the difference, so the dock grows by
+   * exactly what the rack gave up and the picture keeps its height.
+   */
+  .event-log {
+    order: 1; flex: 0 0 auto;
+    height: calc(42px + var(--rack-slack, 0px));
+    /* Whatever that leftover is worth short of a whole line is taken back off
+       this height and returned as margin, so the box ends on a line and the
+       dock is the same height either way: `fitLogToLines` in panels.js. */
+    padding: 5px 10px; line-height: 16px;
+    /* And when the console is saying more than the box holds, it says so the
+       way the rack does — the same shadow under the same kind of fold. */
+    box-shadow: inset 0 -14px 12px -12px rgba(0, 0, 0, .8);
+  }
+  .event-log > li:not(:last-child) { display: none; }
+  .action-bar { order: 2; }
+  .command-text { font-size: 11px; line-height: 1.4; max-height: 5.6em; overflow-y: auto; }
+  .command-actions { justify-content: space-between; }
+  .command-actions .pb { min-height: 34px; }
 
   /*
    * One cap per verb on a phone.
@@ -2009,9 +2278,9 @@ table.ledger .down { color: var(--hostile); }
    * the screen, where a finger can reach them without scrolling a panel. The
    * cabin's own copies of the same three were a second set of the same
    * controls in a different size and a different state — greyed in the console
-   * while live on the rail — and the pad they were in was tall enough that the
-   * rail sliced through its bottom row. The seat keeps the two verbs the rail
-   * does not carry.
+   * while live on the rail. The seat keeps the two verbs the rail does not
+   * carry. The rack's copy of the emissions switch for the set the RAIL is
+   * already carrying goes the same way: see `railSwitchFor` in panels.js.
    */
   .cabin-pad > #btn-fire,
   .cabin-pad > [data-act="lock"],
@@ -2034,6 +2303,18 @@ table.ledger .down { color: var(--hostile); }
   .ab-aim b {
     font-size: 11px; letter-spacing: .05em; color: var(--engrave);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  /*
+   * The set's own readout: bearing, range and height of the contact the rail
+   * is pointed at, at the end of the line the rail already prints. It is only
+   * drawn at the radar seat, where a phone has nowhere else to show them —
+   * see `renderActionBar`. Pushed to the right end so the contact's name keeps
+   * the left, and never wrapped, so the caps under it never move.
+   */
+  .ab-figures {
+    margin-left: auto; flex: 0 0 auto;
+    font-size: 9.5px; letter-spacing: .04em; color: var(--ink-dim);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
   }
   .ab-caps { display: flex; align-items: stretch; gap: 7px; flex: 1 1 100%; min-width: 0; }
   /* Thumb-sized, and all one size: 44px is the floor a finger hits reliably,
@@ -2070,34 +2351,108 @@ table.ledger .down { color: var(--hostile); }
    * are labelled permanently cannot lose the label. The verbs beside it
    * share what is left, and NEXT TARGET sets on two lines when it must.
    */
-  .ab-caps .sw { flex: 0 0 auto; padding: 3px 7px 3px 5px; gap: 5px; }
+  .ab-caps .sw { flex: 0 0 auto; padding: 3px 7px 3px 5px; gap: 0 5px; }
   .ab-caps .sw-pos { font-size: 9.5px; line-height: 13px; padding: 0 4px; }
   .ab-caps .sw-body { width: 13px; height: 21px; }
   .ab-caps .sw-lever { height: 9px; width: 6px; margin-left: -3px; }
   .ab-caps .sw[aria-pressed="true"] .sw-lever { top: 3px; }
   .ab-caps .sw[aria-pressed="false"] .sw-lever { top: 9px; }
+  /*
+   * The rail's switch wears the name of the set it switches.
+   *
+   * The rack's levers stand beside their own rows — BASTION, then its lever —
+   * and this one stands beside nothing, at the foot of a screen that is
+   * showing two or three identical levers at once. Engraved across the top of
+   * the switch, above its own body and legends, so it is in the same place
+   * whether the rail runs across the bottom in portrait or wraps two caps to a
+   * row in landscape. Only the rail's switch carries one; see `switch2`.
+   */
+  .ab-caps .sw-name {
+    grid-column: 1 / -1; grid-row: 1;
+    font-size: 8px; font-weight: 700; line-height: 11px; letter-spacing: .13em;
+    color: var(--engrave-dim); text-transform: uppercase;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+  }
+  .ab-caps .sw-body, .ab-caps .sw-legends { grid-row: 2; }
 }
+
 /*
- * Landscape on a phone is 390px of height for a topbar, a tube, a ticker and
- * the rail. The rack goes — every verb on it that the watch needs is on the
- * rail — the rail's readout moves back beside its caps, and the ticker keeps
- * two lines, because the ticker is how this game speaks.
+ * Landscape: the picture on the left, the console on the right.
+ *
+ * 844x390 is 390 pixels of height, which is not enough to stack a status
+ * strip, a picture, a rack, a log and a rail and leave anything for the thing
+ * the player is looking at. So the shell turns: the tube takes the whole left
+ * side under the status strip, and everything that is not the picture — the
+ * net, a directive, the rail, the log — goes into one 292px column on the
+ * right, where a thumb wrapped round the end of the phone already is.
+ *
+ * `display: contents` on the stage is what lets the tube and the rack be
+ * placed in different columns of the shell's own grid without the markup
+ * having to know which orientation it is in.
  */
-@media (max-width: 900px) and (max-height: 460px) {
-  .panel-right { display: none; }
-  .event-log { height: 34px; }
+@media (max-width: 900px) and (max-height: 560px) and (orientation: landscape) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr) 292px;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  .stage { display: contents; }
+  .topbar { grid-column: 1 / -1; grid-row: 1; }
+  .scope-wrap { grid-column: 1; grid-row: 2 / 4; }
+  /*
+   * The rack takes the slack in the right-hand column, which is the same job
+   * it does in portrait: the tube spans both rows, so a directive growing the
+   * dock below can only come out of the rack, never out of the picture.
+   *
+   * And here the dock keeps its OWN height — its row is sized to its content,
+   * not to what the rack left. It was the other way round for one revision,
+   * so that the rack could hand its leftover to the log the way portrait
+   * does; the commander's rail is five caps wrapped to three rows on this
+   * column, the dock no longer fit in what a fixed rack left it, and the seat
+   * cap that is the only way back to the net went off the bottom of the
+   * screen. The rack gives up whatever the dock needs, never the reverse.
+   */
+  .panel-right { grid-column: 2; grid-row: 2; height: auto; max-height: none; }
+  .ticker { grid-column: 2; grid-row: 3; border-left: 1px solid var(--metal-edge); }
+  /* Nothing here can take the rack's leftover — the column's height is the
+     picture's, and the dock is already exactly as tall as its own contents —
+     so the rack keeps it and the fold stays inside the panel. */
+  :root { --rack-gives: none; }
+
+  /* 390 pixels of height: the status strip is one line, and the mission's
+     name earns its place back because it is the only context left. */
   .topbar { grid-template-columns: minmax(0, 1fr) auto; }
   .topbar-group.rack { grid-column: 2; }
   .topbar-group:first-child { flex-wrap: nowrap; }
-  /* 390 pixels of height: the bar is one line, and the mission's name earns
-     its place back because it is the only context left. */
   .topbar .readout label { display: none; }
   #mission-name { display: inline; }
-  .action-bar { flex-wrap: nowrap; padding-top: 4px; padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)); }
-  .ab-aim { flex: 0 1 130px; flex-direction: column; align-items: flex-start; gap: 0; }
-  .ab-caps { flex: 1 1 auto; }
-  .ab-caps > * { min-height: 40px; }
+
+  /* The picture has the whole left side; it needs no floor here, it IS the
+     floor. */
+  .tube { min-height: 0; }
+  .scope-wrap > .tutorial-card b { font-size: 11px; }
+
+  /* The directive banner floats over the rack at the top of the right-hand
+     column — never over the tube, which is in the other column entirely. */
+  .command-text { max-height: 4.2em; }
+
+  .event-log { height: 37px; padding: 3px 8px; }
+  /*
+   * The rail wraps inside its column instead of running off the end of one.
+   * Five caps across 292px is 50px each, which is neither a thumb nor a
+   * legible legend; two to a row is both.
+   */
+  .action-bar { padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px)); gap: 4px 6px; }
+  /* 292px of column, a contact's name and its three figures: the caption is
+     what gives way, because a line that reads "T-002 HOSTILE  351° · 151 km ·
+     7,600 m" does not need to be told it is the selection — and with the
+     caption there it was the word HOSTILE that got the ellipsis instead. */
+  .ab-aim:has(.ab-figures) label { display: none; }
+  .ab-aim { flex: 1 1 100%; }
+  .ab-caps { flex-wrap: wrap; gap: 5px 6px; }
+  .ab-caps > * { flex: 1 1 40%; min-height: 44px; }
+  .ab-caps .pb-seat, .ab-caps .sw { flex: 1 1 40%; }
 }
+
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
 }
@@ -2382,9 +2737,13 @@ table.ledger .down { color: var(--hostile); }
 .tutorial-card {
   position: absolute;
   /* Clear of the tube's own two readouts, which the canvas draws at y=16 and
-     y=30: the card used to be laid straight over RANGE 140 KM. */
-  top: 42px;
-  left: 14px;
+     y=30: the card used to be laid straight over RANGE 140 KM. The card is
+     mounted in the bezel now rather than in the tube — so that a phone can
+     take it out of the picture entirely — and these are the bezel's 12px of
+     padding plus the same 42 and 14 as before, measured from the bezel's
+     padding box, which lands on the same pixel it always did. */
+  top: 54px;
+  left: 26px;
   max-width: 320px;
   padding: 10px 34px 10px 12px;
   background: var(--bg);

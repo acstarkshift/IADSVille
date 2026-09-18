@@ -19,7 +19,7 @@ import { createCharacter, recordWatch, characterModifiers, RANKS, rankIndexOf } 
 import { learn } from './revelations.js';
 import { emptyFamily, recordFamily, familyBriefingNote } from './family.js';
 import { SCENARIOS } from './scenarios.js';
-import { reachedEchelon, appointmentNote } from './echelon.js';
+import { reachedPost, appointmentNote } from './echelon.js';
 
 const KEY = 'iadsville.campaign.v1';
 
@@ -81,11 +81,15 @@ export function emptyCampaign(character = null) {
     /** The correspondence thread: what arrived, what is held, and the permit. */
     family: emptyFamily(),
     /**
-     * The command this record currently holds. It is derived from the watches
+     * The post this record currently holds. It is derived from the watches
      * stood, and stored so that being appointed can be an event with a date on
      * it rather than a number the menu recomputes silently.
+     *
+     * A new file opens at the radar set, which is where the campaign now
+     * starts. It used to open at 'battalion', so the first thing a Recruit
+     * read on their own personnel file was that they commanded a battalion.
      */
-    appointment: 'battalion',
+    appointment: 'radar',
   };
 }
 
@@ -244,30 +248,37 @@ export function recordMission(campaign, result) {
 }
 
 /**
- * Move the record up to whatever command the watches stood now justify.
+ * Move the record up to whatever post the watches stood now justify.
  *
  * The rank comes with the job. An officer appointed to a district is gazetted
  * to Major on the same order, which is how most people in this service find out
  * they have been promoted — and why nobody here believes a rank means anything
- * about the person holding it.
+ * about the person holding it. The two operator posts work the same way and
+ * have the same teeth: standing the radar watches is what makes you a Missile
+ * Operator, and a Junior Sergeant, on one piece of paper.
+ *
+ * The returned object still calls the post `echelon`, because six scenes, the
+ * order of appointment and the personnel file all read that field and a post
+ * is what they were always reading — the field named the ladder, and the
+ * ladder now starts two rungs lower.
  */
 export function appointTo(campaign) {
-  const echelon = reachedEchelon(campaign, SCENARIOS);
-  if (echelon.id === campaign.appointment) return null;
-  campaign.appointment = echelon.id;
+  const post = reachedPost(campaign, SCENARIOS);
+  if (post.id === campaign.appointment) return null;
+  campaign.appointment = post.id;
 
   let gazetted = null;
   if (campaign.character) {
-    const floor = rankIndexOf(echelon.rankFloor);
+    const floor = rankIndexOf(post.rankFloor);
     if (campaign.character.rankIndex < floor) {
       campaign.character.rankIndex = floor;
       gazetted = RANKS[floor];
       campaign.character.record.push({
-        kind: 'appointment', id: echelon.id, at: campaign.character.watches,
+        kind: 'appointment', id: post.id, at: campaign.character.watches,
       });
     }
   }
-  return { echelon, gazetted, note: appointmentNote(echelon) };
+  return { echelon: post, gazetted, note: appointmentNote(post) };
 }
 
 /** What the simulation should be handed for this campaign: supply plus the soldier. */

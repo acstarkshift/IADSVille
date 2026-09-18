@@ -22,9 +22,102 @@
  * A step that names a radar says so in `radars`, and the test holds that the
  * sentence really contains that name and that a set really carries it.
  *
- * @typedef {{ id: string, en: string, radars?: string[],
+ * `phone` is the same lesson for a console that is laid out differently.
+ * Some of these cards told the player where to look — "at the top of the
+ * right-hand panel", "its row in the AIR PICTURE list", "the list on the
+ * left" — or which key to hit — "Shift+1", "press Y to acknowledge". Below
+ * 900px none of those exist: there is no right-hand panel and no list (the
+ * rack is under the picture and the picture is the list), and there is no
+ * keyboard at all. A card that names a control that is not there is worse
+ * than one that names none, so those cards carry a second sentence and the
+ * rest are one sentence at every width. `stepText` picks; see
+ * `renderTutorial` in app.js.
+ *
+ * @typedef {{ id: string, en: string, phone?: string, radars?: string[],
  *   done: (w: any, u: any, sinceS: number) => boolean }} Step
  */
+
+/** The card as this console should say it. */
+export function stepText(step, phone) {
+  return (phone && step.phone) || step.en;
+}
+
+/**
+ * Every wording a lesson can be read in, so that a rule about the words is a
+ * rule about all of them: the phone card is the same lesson, and it is held to
+ * the same English as the desktop one. See the tests in console.test.js.
+ */
+export function stepTexts(step) {
+  return step.phone ? [step.en, step.phone] : [step.en];
+}
+
+/**
+ * The set's five, which is the first thing a new player will ever read.
+ *
+ * The shape is the other two seats': five cards, each cleared by doing the
+ * thing, each with a way out on a timer. What is different is the last verb —
+ * there is no launch cap on this console and there is not meant to be, so the
+ * fifth card is the one that says whose job the shooting is, and the fourth is
+ * the hand-over that makes it happen.
+ */
+export const RADAR_TUTORIAL_STEPS = [
+  {
+    id: 'radiate-set',
+    en: 'Your radar, WIDE EYE, is switched off, so the scope is blank. Find WIDE EYE at the '
+      + 'top of the right-hand panel and flip its switch up to RADIATE.',
+    // There is no right-hand panel on a phone. The set's switch is the lever
+    // on the bar at the foot of the screen, and that lever is engraved with
+    // the set's own name, so the card can send a thumb to it by name.
+    phone: 'Your radar, WIDE EYE, is switched off, so the scope is blank. Flip the switch '
+      + 'marked WIDE EYE on the bar at the bottom of the screen up to RADIATE.',
+    radars: ['WIDE EYE'],
+    done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > 120,
+  },
+  {
+    id: 'watch',
+    en: 'Contacts appear on the scope as the beam sweeps past them. Wait for one, then click '
+      + 'it on the scope, or its row in the AIR PICTURE list, to pick it.',
+    // The AIR PICTURE list is a desktop column; on a phone the picture is the
+    // list and NEXT TARGET walks it.
+    phone: 'Contacts appear on the scope as the beam sweeps past them. Wait for one, then '
+      + 'press it on the scope, or press NEXT TARGET, to pick it.',
+    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
+  },
+  {
+    id: 'hold',
+    en: 'The row fills in as the set keeps looking at it: bearing, range, height, and then '
+      + 'what it is. A contact you have only seen once is not a contact you can report.',
+    // No row: the phone prints the same three figures, in the same words and
+    // the same rounding, on the bar at the foot of the screen. It names the
+    // bar and not the word SELECTED above them, because on a phone turned
+    // sideways that caption gives up its width to the figures themselves.
+    phone: 'The contact fills in on the bar at the bottom as the set keeps looking: bearing, '
+      + 'range, height, and then what it is. One you have only seen once is not one you '
+      + 'can report.',
+    done: (w, u, sinceS) => [...w.tracks.values()]
+      .some((t) => t.quality >= 0.55 && t.hostility === 'hostile') || sinceS > 120,
+  },
+  {
+    id: 'call',
+    en: 'Press HAND OVER, or L, to read the contact to the launch officer. He answers on the '
+      + 'radio and puts a battery on it. He will not fire at anything you have not called.',
+    // No keyboard, and the cap is on the rail at the foot of the screen.
+    phone: 'Press HAND OVER on the bar at the bottom to read the contact to the launch '
+      + 'officer. He answers on the radio and puts a battery on it. He will not fire at '
+      + 'anything you have not called.',
+    done: (w, u, sinceS) => (w.stats.handovers ?? 0) > 0 || sinceS > 120,
+  },
+  {
+    id: 'net-radar',
+    en: 'There is no launch button on this console tonight and there is not meant to be. '
+      + 'Keep the set turning, keep calling what you hold, and answer the net with Y or N.',
+    // The two caps are on the banner itself.
+    phone: 'There is no launch button on this console tonight and there is not meant to be. '
+      + 'Keep the set turning, keep calling what you hold, and answer the net with '
+      + 'ACKNOWLEDGE or REFUSE on the banner.',
+    done: (w, u, sinceS) => sinceS > 16,
+  },
+];
 
 /** The battle manager's five. */
 export const NET_TUTORIAL_STEPS = [
@@ -32,6 +125,11 @@ export const NET_TUTORIAL_STEPS = [
     id: 'radiate',
     en: 'Your long-range radar, WIDE EYE, is switched off, so the scope is blank. '
       + 'Find WIDE EYE at the top of the right-hand panel and flip its switch up to RADIATE.',
+    // On a phone WIDE EYE's switch is the one on the bar at the foot of the
+    // screen: the rack below the picture shows the set and its state, and the
+    // rail carries its lever, because the rail is the part that never scrolls.
+    phone: 'Your long-range radar, WIDE EYE, is switched off, so the scope is blank. '
+      + 'Flip the RADIATE switch on the bar at the bottom of the screen.',
     radars: ['WIDE EYE'],
     done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > 120,
   },
@@ -39,12 +137,20 @@ export const NET_TUTORIAL_STEPS = [
     id: 'select',
     en: 'Contacts appear on the scope as the beam sweeps past them. '
       + 'Click a contact on the scope, or its row in the AIR PICTURE list, to pick it.',
+    // The AIR PICTURE list is a desktop column and is not drawn on a phone,
+    // where the picture itself is the list and NEXT TARGET walks it.
+    phone: 'Contacts appear on the scope as the beam sweeps past them. '
+      + 'Press one on the scope, or press NEXT TARGET, to pick it.',
     done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
   },
   {
     id: 'assign',
     en: 'Give it to a battery: drag the contact onto a battery symbol, or press Shift+1 '
       + 'for battery 1. The battery reports back on the log at the bottom.',
+    // Shift+1 is not a thing a thumb can do. On a phone the rack under the
+    // picture picks the battery and ASSIGN on the bar hands the contact over.
+    phone: 'Give it to a battery: press one on the rack below, then press ASSIGN. '
+      + 'It reports back on the log.',
     // Ninety seconds, not a hundred and fifty. A card that is still up when
     // the watch has moved on is furniture — and this one used to be
     // unclearable by the key it teaches, so it sat here for two and a half
@@ -60,6 +166,9 @@ export const NET_TUTORIAL_STEPS = [
   {
     id: 'net',
     en: 'When sector command calls, press Y to acknowledge or N to refuse. '
+      + 'Both go on your record. The rest of the watch is yours.',
+    // No keyboard: the two caps are on the banner itself.
+    phone: 'When sector command calls, press ACKNOWLEDGE or REFUSE on the banner. '
       + 'Both go on your record. The rest of the watch is yours.',
     done: (w, u, sinceS) => sinceS > 16,
   },
@@ -93,6 +202,10 @@ export const CREW_TUTORIAL_STEPS = [
     id: 'designate',
     en: 'Contacts appear as your beam sweeps past them. Click one on the scope, or its '
       + 'row in the list on the left, to make it your target.',
+    // "the list on the left" is a desktop column; the phone has the picture
+    // and the rail.
+    phone: 'Contacts appear as your beam sweeps past them. Press one on the scope, '
+      + 'or press NEXT TARGET, to make it your target.',
     done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
   },
   {
@@ -112,6 +225,9 @@ export const CREW_TUTORIAL_STEPS = [
     id: 'net-crew',
     en: 'When sector command calls, press Y to acknowledge or N to refuse. '
       + 'Both go on your record. The rest of the watch is yours.',
+    // No keyboard: the two caps are on the banner itself.
+    phone: 'When sector command calls, press ACKNOWLEDGE or REFUSE on the banner. '
+      + 'Both go on your record. The rest of the watch is yours.',
     done: (w, u, sinceS) => sinceS > 16,
   },
 ];
@@ -119,13 +235,17 @@ export const CREW_TUTORIAL_STEPS = [
 /**
  * Every radar callsign a lesson names, so a test can hold the tutorial and the
  * rack to one name. A step declares the sets it is about; a declared name
- * that is not in the step's own sentence is reported as an empty string, so
- * the test fails on the step rather than passing on a stale declaration.
+ * that is not in EVERY wording of that step is reported as an empty string, so
+ * the test fails on the step rather than passing on a stale declaration — a
+ * lesson that says WIDE EYE on a desktop and names nothing on a phone is two
+ * different lessons.
  */
 export function radarNamesIn(steps) {
   const names = new Set();
   for (const step of steps) {
-    for (const name of step.radars ?? []) names.add(step.en.includes(name) ? name : '');
+    for (const name of step.radars ?? []) {
+      names.add(stepTexts(step).every((t) => t.includes(name)) ? name : '');
+    }
   }
   return [...names];
 }

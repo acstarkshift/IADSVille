@@ -48,9 +48,18 @@ export function renderEnlistment(host, state) {
       <p class="note">Sector command keeps a file on you from today, and it is never closed. The
       file is kept by the political section — the part of the service that watches the service. It
       reads your log and your post, and it keeps what it reads.</p>
-      <p class="note">This sector is short of officers. You will be given a battalion on your first
-      night because you are the one who is sitting at the console, and the rank will be made to
-      catch up with the job afterwards.</p>
+      ${/*
+         * What the recruit is actually being posted to, which until the ladder
+         * existed this card got wrong: it promised a battalion on the first
+         * night, and the game then opened a Recruit's file at Battalion
+         * Commander. The last sentence survives unchanged because it is still
+         * true of every appointment above the two operator posts — the job
+         * carries the rank, in this service.
+         */ ''}
+      <p class="note">You start at a radar set. Switch it on, hold what it finds, and hand each
+      contact to the officer at the next desk; he is the one who fires. A launcher comes after
+      that, and the net after the launcher. This sector is short of officers, so the rank will be
+      made to catch up with the job afterwards.</p>
 
       <div class="field-row">
         <label class="field">

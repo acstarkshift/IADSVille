@@ -26,7 +26,7 @@ import { ENDINGS } from '../src/engine/endings.js';
 import { FLIGHT_ENDINGS } from '../src/engine/epilogue.js';
 import { REVELATIONS } from '../src/engine/revelations.js';
 import { LETTERS } from '../src/engine/family.js';
-import { ECHELONS } from '../src/engine/echelon.js';
+import { ECHELONS, POSTS } from '../src/engine/echelon.js';
 
 const CYRILLIC = /[Ѐ-ӿ]/;
 const hasCyrillic = (v) => typeof v === 'string' && CYRILLIC.test(v);
@@ -91,6 +91,23 @@ describe('the service record', () => {
       Object.fromEntries(Object.entries(ECHELONS).map(([id, e]) => [id, e.appointment])),
       'ECHELONS.appointment',
     );
+  });
+
+  /*
+   * And the two rungs below them, which are their own table. The four commands
+   * are spread into POSTS and so were already covered by the walk above; the
+   * radar set and the cabin are written out in echelon.js and nothing checked
+   * them, which is how the game's first two job titles came to be the only
+   * Cyrillic in it that no test read.
+   */
+  test('the six posts are paired, including the two that are not commands', () => {
+    assertPaired(POSTS, 'POSTS');
+    assertPaired(
+      Object.fromEntries(Object.entries(POSTS).map(([id, p]) => [id, p.appointment])),
+      'POSTS.appointment',
+    );
+    assert.equal(POSTS.radar.appointment.en, 'Radar Operator');
+    assert.equal(POSTS.crew.appointment.en, 'Missile Operator');
   });
 
   test('every subordinate command a scenario names carries both halves', () => {

@@ -17,9 +17,12 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
 import {
-  ECHELONS, ECHELON_ORDER, echelonOf, echelonForScenario, reachedEchelon, withinAppointment,
+  ECHELONS, ECHELON_ORDER, echelonOf, echelonForScenario,
+  POSTS, POST_ORDER, postOf, postForScenario, reachedPost, withinAppointment,
 } from '../src/engine/echelon.js';
-import { SCENARIOS, scenarioById, rosterFor, appointmentOf, watchesAt } from '../src/engine/scenarios.js';
+import {
+  SCENARIOS, scenarioById, rosterFor, appointmentOf, watchesAt, watchesFoughtAt,
+} from '../src/engine/scenarios.js';
 import { emptyCampaign, appointTo } from '../src/engine/campaign.js';
 import { createCharacter, RANKS, rankIndexOf } from '../src/engine/character.js';
 import { DIRECTIVES, issueDirective, answerDirective } from '../src/engine/command.js';
@@ -27,19 +30,62 @@ import { sortedTracks, engagementValue } from '../src/engine/threat.js';
 import { commanderWillEngage, spanLimit, spanLoad } from '../src/engine/doctrine.js';
 import { DETECTION } from '../src/engine/config.js';
 
-/** A record that has stood every watch at or below the given echelon. */
-function served(echelonId) {
+/** A record that has stood every watch at or below the given post. */
+function served(postId) {
   const campaign = emptyCampaign(createCharacter({ name: 'Тест' }));
-  const order = echelonOf(echelonId).order;
+  const order = postOf(postId).order;
   for (const scenario of SCENARIOS) {
-    if (echelonOf(scenario.echelon).order <= order) {
+    if (postForScenario(scenario).order <= order) {
       campaign.completed[scenario.id] = { score: 1, tier: 'satisfactory', role: 'net' };
     }
   }
   return campaign;
 }
 
-describe('the four appointments', () => {
+describe('the ladder', () => {
+  /*
+   * The player: "you should start as a Sam operator or radar operator then
+   * work up." Six posts, and the first two of them are not commands at all.
+   */
+  test('it starts at a radar set and ends at a country', () => {
+    assert.deepEqual(POST_ORDER.map((p) => p.id),
+      ['radar', 'crew', 'battalion', 'sector', 'region', 'national']);
+    assert.equal(POST_ORDER[0].appointment.en, 'Radar Operator');
+    assert.equal(POST_ORDER[POST_ORDER.length - 1].appointment.en, 'Chief of Air Defence');
+  });
+
+  test('a new file is an operator, not a battalion commander', () => {
+    const fresh = emptyCampaign(createCharacter({ name: 'Тест' }));
+    assert.equal(fresh.appointment, 'radar');
+    assert.equal(appointmentOf(fresh).appointment.en, 'Radar Operator');
+    assert.equal(RANKS[fresh.character.rankIndex].en, 'Recruit');
+    assert.equal(POSTS.radar.rankFloor, 'strelets',
+      'a recruit is a recruit at the post a recruit holds');
+  });
+
+  test('the seats arrive in order: the set, the cabin, the net, then command', () => {
+    assert.deepEqual(POSTS.radar.seats, ['radar']);
+    assert.deepEqual(POSTS.crew.seats, ['crew']);
+    assert.deepEqual(POSTS.battalion.seats, ['net']);
+    assert.ok(POSTS.sector.seats.includes('both'), 'command is the seat that gets a console back');
+    // And every post has watches to stand.
+    for (const post of POST_ORDER) {
+      assert.ok(watchesAt(post.id).length > 0, `${post.id} has nothing to stand`);
+    }
+  });
+
+  test('the campaign is climbed in order, watch by watch', () => {
+    let highest = -1;
+    for (const scenario of SCENARIOS) {
+      const order = postForScenario(scenario).order;
+      assert.ok(order >= highest,
+        `${scenario.id} sits at ${postForScenario(scenario).id}, below the watch before it`);
+      highest = Math.max(highest, order);
+    }
+  });
+});
+
+describe('the four commands', () => {
   test('they run from a battalion to a country, and each one takes something away', () => {
     assert.deepEqual(ECHELON_ORDER.map((e) => e.id), ['battalion', 'sector', 'region', 'national']);
     // The whole argument of the promotion, as a monotonic sequence.
@@ -64,66 +110,78 @@ describe('the four appointments', () => {
       assert.ok(ECHELONS[scenario.echelon], `${scenario.id} has no echelon`);
     }
     for (const echelon of ECHELON_ORDER) {
-      assert.ok(watchesAt(echelon.id).length > 0, `${echelon.id} has nothing to command`);
+      assert.ok(watchesFoughtAt(echelon.id).length > 0, `${echelon.id} has nothing to command`);
     }
   });
 
   test('the promotion costs you the console', () => {
     // You start able to sit in a launcher and you end unable to. That is not a
     // missing feature; it is the shape of the whole campaign.
-    assert.ok(ECHELONS.battalion.roles.includes('crew'));
-    assert.ok(!ECHELONS.region.roles.includes('crew'));
-    assert.deepEqual(ECHELONS.region.roles, ['net']);
-    assert.ok(!ECHELONS.national.roles.includes('crew'));
+    assert.ok(POSTS.crew.seats.includes('crew'));
+    assert.ok(!POSTS.battalion.seats.includes('crew'), 'the battle manager has left the cabin');
+    assert.ok(!POSTS.region.seats.includes('crew'));
+    assert.deepEqual(POSTS.region.seats, ['net']);
+    assert.ok(!POSTS.national.seats.includes('crew'));
   });
 
   test('no watch offers a seat its appointment does not have', () => {
     for (const scenario of SCENARIOS) {
-      const allowed = ECHELONS[scenario.echelon].roles;
+      const post = postForScenario(scenario);
+      assert.ok(scenario.roles.length > 0, `${scenario.id} offers no seat at all`);
       for (const role of scenario.roles) {
-        assert.ok(allowed.includes(role),
-          `${scenario.id} offers ${role}, which ${scenario.echelon} command does not have`);
+        assert.ok(post.seats.includes(role),
+          `${scenario.id} offers ${role}, which a ${post.appointment.en} does not have`);
       }
     }
   });
 
   test('the rank floors climb, and the appointment carries the rank', () => {
     let previous = -1;
-    for (const echelon of ECHELON_ORDER) {
-      const index = rankIndexOf(echelon.rankFloor);
-      assert.ok(index > previous, `${echelon.id} should outrank the appointment below it`);
+    for (const post of POST_ORDER) {
+      const index = rankIndexOf(post.rankFloor);
+      assert.ok(index > previous, `${post.id} should outrank the appointment below it`);
       previous = index;
     }
-    assert.equal(RANKS[rankIndexOf(ECHELONS.national.rankFloor)].en, 'Major General');
+    assert.equal(RANKS[rankIndexOf(POSTS.radar.rankFloor)].en, 'Recruit');
+    assert.equal(RANKS[rankIndexOf(POSTS.national.rankFloor)].en, 'Major General');
   });
 });
 
 describe('the roster', () => {
-  test('a new record is given a battalion and nothing else', () => {
+  test('a new record is given a radar set and nothing else', () => {
     const fresh = rosterFor(emptyCampaign());
     assert.ok(fresh.length > 0);
-    assert.ok(fresh.every((s) => s.echelon === 'battalion'));
-    assert.equal(appointmentOf(emptyCampaign()).id, 'battalion');
+    assert.ok(fresh.every((s) => postForScenario(s).id === 'radar'),
+      'the first night of the war is a radar watch and so is the second');
+    assert.ok(fresh.every((s) => s.roles.length === 1 && s.roles[0] === 'radar'),
+      'and the only seat either of them offers is the set');
+    assert.equal(appointmentOf(emptyCampaign()).id, 'radar');
   });
 
   test('standing every watch at one level opens the next', () => {
-    assert.equal(reachedEchelon(served('battalion'), SCENARIOS).id, 'sector');
-    assert.equal(reachedEchelon(served('sector'), SCENARIOS).id, 'region');
-    assert.equal(reachedEchelon(served('region'), SCENARIOS).id, 'national');
+    assert.equal(reachedPost(served('radar'), SCENARIOS).id, 'crew');
+    assert.equal(reachedPost(served('crew'), SCENARIOS).id, 'battalion');
+    assert.equal(reachedPost(served('battalion'), SCENARIOS).id, 'sector');
+    assert.equal(reachedPost(served('sector'), SCENARIOS).id, 'region');
+    assert.equal(reachedPost(served('region'), SCENARIOS).id, 'national');
   });
 
   test('progress opens it, not marks — a bad night is still a night stood', () => {
     const campaign = emptyCampaign(createCharacter({ name: 'Тест' }));
-    for (const scenario of watchesAt('battalion')) {
-      campaign.completed[scenario.id] = { score: -2000, tier: 'condemned', role: 'net' };
+    for (const scenario of watchesAt('radar')) {
+      campaign.completed[scenario.id] = { score: -2000, tier: 'condemned', role: 'radar' };
     }
-    assert.equal(reachedEchelon(campaign, SCENARIOS).id, 'sector');
+    assert.equal(reachedPost(campaign, SCENARIOS).id, 'crew');
   });
 
   test('one missing watch holds the appointment', () => {
-    const campaign = served('battalion');
-    delete campaign.completed[watchesAt('battalion')[0].id];
-    assert.equal(reachedEchelon(campaign, SCENARIOS).id, 'battalion');
+    const campaign = served('crew');
+    delete campaign.completed[watchesAt('crew')[0].id];
+    assert.equal(reachedPost(campaign, SCENARIOS).id, 'crew',
+      'the cabin is held until both of its watches have been stood');
+    const earlier = served('radar');
+    delete earlier.completed[watchesAt('radar')[0].id];
+    assert.equal(reachedPost(earlier, SCENARIOS).id, 'radar');
   });
 
   test('a watch above your appointment is not offered', () => {
@@ -132,13 +190,23 @@ describe('the roster', () => {
     assert.ok(withinAppointment(scenarioById('first-light'), campaign, SCENARIOS));
   });
 
+  test('the first promotion in the game is the one off the set', () => {
+    const campaign = served('radar');
+    campaign.appointment = 'radar';
+    const appointment = appointTo(campaign);
+    assert.equal(appointment.echelon.id, 'crew');
+    assert.equal(appointment.echelon.appointment.en, 'Missile Operator');
+    assert.equal(campaign.character.rankIndex, rankIndexOf(POSTS.crew.rankFloor));
+    assert.ok(appointment.note.length > 0, 'and the order says something concrete');
+  });
+
   test('being appointed gazettes the rank on the same order', () => {
     const campaign = served('sector');
     campaign.appointment = 'sector';
     const appointment = appointTo(campaign);
     assert.equal(appointment.echelon.id, 'region');
     assert.equal(campaign.appointment, 'region');
-    assert.equal(campaign.character.rankIndex, rankIndexOf(ECHELONS.region.rankFloor));
+    assert.equal(campaign.character.rankIndex, rankIndexOf(POSTS.region.rankFloor));
     assert.ok(appointment.note.length > 0);
     // And it is not handed out twice.
     assert.equal(appointTo(campaign), null);

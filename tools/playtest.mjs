@@ -299,7 +299,7 @@ const HOLE_S = 30;
 const FIRM = DETECTION.firmQuality;
 
 export const POLICY_ORDER = ['nothing', 'novice', 'competent', 'expert'];
-export const SEAT_ORDER = ['net', 'crew', 'both'];
+export const SEAT_ORDER = ['radar', 'crew', 'net', 'both'];
 const MISSION_ORDER = SCENARIOS.map((s) => s.id);
 
 /** Log kinds that count as the watch doing something to you, for dead-air. */
@@ -359,8 +359,32 @@ function ownSites(w, seat) {
     const site = w.siteById.get(w.control.crewedBatteryId);
     return site && site.alive ? [site] : [];
   }
+  /*
+   * At the radar set nothing answers to you — `commandable` says so, by
+   * design, and every refusal on that console reads it. What "yours" means
+   * for the measurement there is the sector your set is feeding: the shots
+   * the reports buy are the only product the seat has, so they are what the
+   * columns count.
+   */
+  if (seat === 'radar') return w.sites.filter((s) => s.alive);
   return w.sites.filter((s) => s.alive && w.commandable(s.id));
 }
+
+/**
+ * Why this battery cannot take this contact, with the one refusal the radar
+ * seat always earns taken out of the reading.
+ *
+ * `cannotEngageReason` answers 'not under your command' for every battery on
+ * the board from the set, which is true and is not what the engageable columns
+ * are asking. They ask whether the SECTOR had a shot.
+ */
+function blockedReason(w, seat, site, track) {
+  const reason = cannotEngageReason(w, site, track);
+  return seat === 'radar' && reason === 'not under your command' ? null : reason;
+}
+
+/** The seats that hold the net themselves, rather than being held by it. */
+const runsTheNet = (seat) => seat === 'net' || seat === 'both';
 
 /**
  * The emissions switches this seat actually has, grouped by the battery they
@@ -443,6 +467,36 @@ function answerAfter(ctx, delayS, chooser) {
   const reply = chooser ? chooser(pending.id) : 'accepted';
   ctx.w.answer(reply);
   ctx.act(`${reply.toUpperCase()} ${pending.id}`);
+}
+
+/**
+ * THE RADAR OPERATOR'S PASS: say what you are holding.
+ *
+ * The one verb that is not a switch. `handOver` is what the console's cap and
+ * the L key call, and the officer beside the set will not plan a battery ahead
+ * for a contact nobody has called to him (see `runFormationCommander`), so
+ * this pass is the seat's entire contribution to the shooting.
+ *
+ * You report what you HOLD, which is a different bar from what you would
+ * shoot: firm on the tube, not one of ours, and not a thing the board has
+ * already told you is a decoy. Whether it is worth a round is the officer's
+ * question, not the operator's, and the whole post is the discipline of not
+ * answering it.
+ *
+ * The craft on this rung is therefore tempo and nothing else, and it is the
+ * cadence the callers set: the competent operator scans the board every three
+ * seconds, the expert calls a contact on the tick it goes firm, and the novice
+ * holds two at a time and takes eight seconds to say either of them.
+ */
+function reportPass(ctx) {
+  const { w } = ctx;
+  for (const track of sortedTracks(w)) {
+    if (track.destroyed || track.reportedAtS !== null) continue;
+    if (track.quality < FIRM) continue;
+    if (track.classification === 'decoy') continue;
+    if (track.hostility === 'friendly') continue;
+    if (w.handOver(track.id)) ctx.act(`REPORTS ${track.tn}`);
+  }
 }
 
 /**
@@ -1073,7 +1127,7 @@ export const POLICIES = {
       mem.focus = (mem.focus ?? []).filter((f) => {
         const track = w.tracks.get(f.id);
         if (!track || track.destroyed) return false;
-        if (f.assigned) return track.assignedTo.length > 0;
+        if (f.assigned) return ctx.seat === 'radar' ? false : track.assignedTo.length > 0;
         // Patience is not infinite: a contact that will not become assignable
         // is eventually forgotten rather than fixated on for the whole watch.
         return w.t - f.noticedAtS <= 45;
@@ -1083,7 +1137,13 @@ export const POLICIES = {
         for (const track of sortedTracks(w)) {
           if (!shootable(track) || track.assignedTo.length > 0) continue;
           if (mem.focus.some((f) => f.id === track.id)) continue;
-          if (!ctx.own.some((s) => wellInside(s, track))) continue;
+          /*
+           * At the set the beginner notices a contact when it is firm and
+           * close, the same bar the other seats use — but "close" there is not
+           * about a battery's ring, because they have no battery. It is the
+           * thing being plainly there.
+           */
+          if (ctx.seat !== 'radar' && !ctx.own.some((s) => wellInside(s, track))) continue;
           mem.focus.push({ id: track.id, noticedAtS: w.t, assigned: false });
           ctx.act(`NOTICES ${track.tn}`);
           break;                                   // one new thing per tick
@@ -1093,6 +1153,18 @@ export const POLICIES = {
       for (const f of mem.focus) {
         if (f.assigned || w.t - f.noticedAtS < 8) continue;
         const track = w.tracks.get(f.id);
+        /*
+         * A beginner at the set says it eight seconds after noticing it, and
+         * then stops thinking about it — the hand-over IS the whole verb, so
+         * the focus slot clears the moment the officer has it.
+         */
+        if (ctx.seat === 'radar') {
+          if (w.handOver(track.id)) {
+            f.assigned = true;
+            ctx.act(`REPORTS ${track.tn}`);
+          }
+          continue;
+        }
         const site = ctx.own
           .filter((s) => wellInside(s, track) && !cannotEngageReason(w, s, track))
           .sort((a, b) => dist(a.pos, track.pos) - dist(b.pos, track.pos))[0];
@@ -1115,9 +1187,13 @@ export const POLICIES = {
       const { w, mem } = ctx;
       for (const group of ctx.groups) setGroup(ctx, group, armEtaFor(w, group) >= 18);
       answerAfter(ctx, 6);
-      if (ctx.seat !== 'crew' && w.t - (mem.lastPassS ?? -99) >= 3) {
+      if (runsTheNet(ctx.seat) && w.t - (mem.lastPassS ?? -99) >= 3) {
         mem.lastPassS = w.t;
         assignPass(ctx, {});
+      }
+      if (ctx.seat === 'radar' && w.t - (mem.lastCallS ?? -99) >= 3) {
+        mem.lastCallS = w.t;
+        reportPass(ctx);
       }
       if (ctx.crewed) crewLoop(ctx, 0);
     },
@@ -1133,8 +1209,9 @@ export const POLICIES = {
       // The corridor is claimed before the general pass, not after it: a
       // channel spent on the palace is a channel the fighters do not have to
       // get past, and this player has read the brief.
-      if (ctx.seat !== 'crew') guardTheCorridor(ctx);
-      if (ctx.seat !== 'crew' && w.t - (mem.lastPassS ?? -99) >= 3) {
+      if (runsTheNet(ctx.seat)) guardTheCorridor(ctx);
+      if (ctx.seat === 'radar') reportPass(ctx);
+      if (runsTheNet(ctx.seat) && w.t - (mem.lastPassS ?? -99) >= 3) {
         mem.lastPassS = w.t;
         assignPass(ctx, { greedy: true, salvo: true, holdCorridor: w.scenario.epilogue === true });
       }
@@ -1144,7 +1221,7 @@ export const POLICIES = {
         });
       }
       expertDisplace(ctx);
-      if (ctx.seat !== 'crew') {
+      if (runsTheNet(ctx.seat)) {
         standInTheMainEffort(ctx);
         leaveStandingOrders(ctx);
         commitTheReserve(ctx);
@@ -1600,6 +1677,9 @@ export function playRun(job) {
   const isOwn = (siteId) => {
     if (!siteId) return false;
     if (seat === 'crew') return siteId === w.control.crewedBatteryId;
+    // At the set every round the sector fires is a round the reports bought
+    // or failed to; there is no subset of the board that is "yours".
+    if (seat === 'radar') return true;
     return w.commandable(siteId);
   };
 
@@ -1645,6 +1725,13 @@ export function playRun(job) {
   let firstContactS = null;
   let firstLegalShotS = null;
   let firstInEnvelopeS = null;
+  /*
+   * And the radar post's own clock: the moment the operator first got a
+   * contact across to the launch officer. `firstLaunchS` beside it is the
+   * officer's answer, so the pair reads as the whole chain the seat is — the
+   * set up, something held firm, the call made, and a round off a rail.
+   */
+  let firstHandoverS = null;
   let blindS = 0;
   let ticks = 0;
   let capHit = false;
@@ -1664,7 +1751,7 @@ export function playRun(job) {
       if (track.destroyed || track.hostility !== 'hostile') continue;
       for (const site of own) {
         if (inEnvelope(site, track.pos, track.altM).ok) inEnv = true;
-        if (cannotEngageReason(w, site, track) === null) {
+        if (blockedReason(w, seat, site, track) === null) {
           engageable = true;
           opportunities.add(track.id);
         } else if (magazineIsTheOnlyLimit(w, site, track)) {
@@ -1682,6 +1769,7 @@ export function playRun(job) {
       return fc?.alive;
     })) blindS++;
     if (firstContactS === null && w.tracks.size > 0) firstContactS = w.t;
+    if (firstHandoverS === null && (w.stats.handovers ?? 0) > 0) firstHandoverS = w.t;
     if (firstLegalShotS === null && engageable) firstLegalShotS = w.t;
     if (firstInEnvelopeS === null && inEnv) firstInEnvelopeS = w.t;
     samples++;
@@ -1741,6 +1829,7 @@ export function playRun(job) {
     watchS: r1(watchS),
     capHit,
     firstContactS: r1(firstContactS),
+    firstHandoverS: r1(firstHandoverS),
     firstLegalShotS: r1(firstLegalShotS),
     firstInEnvelopeS: r1(firstInEnvelopeS),
     firstLaunchS: r1(firstLaunchS),
@@ -1754,6 +1843,8 @@ export function playRun(job) {
     reloadWaitShare: r3(samples ? reloadWaitS / samples : 0),
     blindShare: r3(samples ? blindS / samples : 0),
     displacements: outcome.stats.displacements ?? 0,
+    /** Contacts this seat passed to the launch officer. The radar post's work. */
+    handovers: w.stats.handovers ?? 0,
     reserveReleased: w.reserve?.released ?? 0,
     /*
      * The decapitation, which the harness could not see at all.
@@ -1955,10 +2046,11 @@ const mean = (xs) => {
   return clean.length ? clean.reduce((a, b) => a + b, 0) / clean.length : null;
 };
 
-const TIMINGS = ['watchS', 'firstContactS', 'firstLegalShotS', 'firstInEnvelopeS', 'firstLaunchS',
+const TIMINGS = ['watchS', 'firstContactS', 'firstHandoverS', 'firstLegalShotS', 'firstInEnvelopeS',
+  'firstLaunchS',
   'endAfterLastActionS', 'engageableShare', 'busyShare', 'magazineOnlyLimiterShare', 'reloadWaitShare',
   'blindShare', 'legalShotOpportunities', 'rounds', 'ownRounds', 'kills', 'leakers', 'assetsLost',
-  'displacements', 'reserveReleased'];
+  'displacements', 'handovers', 'reserveReleased'];
 
 export function aggregate(runs) {
   const cells = new Map();
@@ -2078,20 +2170,25 @@ export function toMarkdown(result, opts) {
   if (opts?.command) lines.push('');
   if (opts?.command) lines.push(`\`${opts.command}\``);
   lines.push('');
-  lines.push('| watch | seat | player | n | held | score | med | CV | 1st legal | 1st env | 1st away'
+  // `1st call` and `calls` are the radar post's own columns: when the set
+  // first got a contact across to the launch officer, and how many it
+  // called all night. They read — for every other seat, which hands nothing
+  // to anybody.
+  lines.push('| watch | seat | player | n | held | score | med | CV | 1st legal | 1st env | 1st call'
+    + ' | 1st away'
     + ' | eng% | busy% | mag% | wait% | blind% | holes | worst | dead end | rnds | kills | leak | lost'
-    + ' | disp | res | dir a/r/t |');
-  lines.push('|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|');
+    + ' | calls | disp | res | dir a/r/t |');
+  lines.push('|---|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|---|');
   for (const row of result.aggregates.cells) {
     lines.push(`| ${row.mission} | ${row.seat} | ${row.policy} | ${row.n}`
       + ` | ${pct(row.heldRate)} | ${cell(row.meanScore)} | ${cell(row.medianScore)}`
       + ` | ${cell(row.scoreCV)} | ${cell(row.firstLegalShotS)} | ${cell(row.firstInEnvelopeS)}`
-      + ` | ${cell(row.firstLaunchS)}`
+      + ` | ${cell(row.firstHandoverS)} | ${cell(row.firstLaunchS)}`
       + ` | ${pct(row.engageableShare)} | ${pct(row.busyShare)} | ${pct(row.magazineOnlyLimiterShare)}`
       + ` | ${pct(row.reloadWaitShare)} | ${pct(row.blindShare)}`
       + ` | ${cell(row.holeCount)} | ${cell(row.longestHoleS)} | ${cell(row.endAfterLastActionS)}`
       + ` | ${cell(row.rounds)} | ${cell(row.kills)} | ${cell(row.leakers)} | ${cell(row.assetsLost)}`
-      + ` | ${cell(row.displacements)} | ${cell(row.reserveReleased)}`
+      + ` | ${cell(row.handovers)} | ${cell(row.displacements)} | ${cell(row.reserveReleased)}`
       + ` | ${cell(row.directives.accepted)}/${cell(row.directives.refused)}/`
       + `${cell(row.directives.timedOut)} |`);
   }
