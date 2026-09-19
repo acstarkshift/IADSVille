@@ -241,6 +241,17 @@ export const REVELATIONS = {
         + ' the money was recovered by an office in Mostrograd that does not appear on the'
         + " ministry's establishment. Its address does appear: it is the point of origin on a"
         + ' freight movement order you have also read.',
+      /*
+       * The hook the district watch pulled — nothing forecast against Brasov
+       * for eleven months, its commander chosen by the political section, a
+       * standing order you will not be shown — paid, in the document that has
+       * the road on it.
+       */
+      'They crossed at Brasov. The road out of the Brasov depot is the only crossing on the'
+        + ' manifests, and the standing order the commander of that sector holds is a copy of the'
+        + ' schedule they left on: nothing is to be engaged over that road on a night it is in'
+        + ' use. Nothing has been forecast against Brasov for eleven months. Whoever has been'
+        + ' buying has been careful of the road.',
       'This is what the expenditure freeze was for. The freeze exists so that the magazines are'
         + ' never opened and counted while there is still somebody to count them in front of.',
       'The palace you were ordered to hold above your own village was paid for out of the rounds you'
@@ -266,7 +277,8 @@ export function knownRevelations(campaign) {
 export function standing(campaign) {
   const known = knownRevelations(campaign).map((r) => r.id);
   if (known.includes('buyer')) {
-    return 'You know where the rounds went, who signed for them, and what the freeze was protecting.';
+    return 'You know where the rounds went, who signed for them, what the freeze was protecting, and'
+      + ' why nothing was ever forecast against Brasov.';
   }
   if (known.includes('movement')) {
     return 'You know the household effects left the palace before the threat that justified guarding'

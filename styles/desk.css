@@ -60,6 +60,22 @@
 .desk-leave.is-next { border-color: #e8a86a; box-shadow: 0 0 14px rgba(255, 180, 60, .28); }
 
 /*
+ * The three replies, while he waits: laid above the box his last line is in,
+ * in the same idiom as the plates. They are speech, so they are set in
+ * sentence case, not stencilled.
+ */
+.desk-replies { position: absolute; z-index: 3; display: flex; flex-wrap: wrap; gap: 8px; pointer-events: auto; }
+.desk-replies[hidden] { display: none; }
+.desk-reply {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  background: rgba(8, 12, 9, .9); color: #e9efe4; border: 1px solid #6b7a6a; border-radius: 2px;
+  font: 12px var(--font-mono); padding: 7px 12px 7px 8px; text-align: left;
+}
+.desk-reply b { font-weight: 400; }
+.desk-reply:hover, .desk-reply:focus-visible { border-color: #e8a86a; outline: none; }
+.desk-reply:focus-visible .desk-key { border-color: #e8a86a; color: #e8a86a; }
+
+/*
  * A phone held upright: the picture at the top of the window, the paper as a
  * list under it — on the desk's own wood, so the plates lie on the desk rather
  * than floating in the dark — and STAND UP across the foot of the screen.
@@ -73,3 +89,5 @@
 }
 .scene.is-stacked .desk-item { position: static; max-width: none; width: 100%; box-sizing: border-box; }
 .scene.is-stacked .desk-leave { left: 8px; right: 8px; bottom: 12px; text-align: center; }
+.scene.is-stacked .desk-replies { flex-direction: column; }
+.scene.is-stacked .desk-reply { width: 100%; box-sizing: border-box; }

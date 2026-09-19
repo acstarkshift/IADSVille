@@ -13,12 +13,17 @@ import assert from 'node:assert/strict';
 
 import { World } from '../src/engine/world.js';
 import { scenarioById } from '../src/engine/scenarios.js';
+// (SCENARIOS is imported below with the story-watch checks.)
 import { emptyCampaign, enlist, recordMission, briefingNote } from '../src/engine/campaign.js';
-import { scenesFor, openingScenes, FAVOUR_BY_KIND, OFFICER } from '../src/ui/scenes.js';
+import { scenesFor, openingScenes, officeReply, FAVOUR_BY_KIND, OFFICER } from '../src/ui/scenes.js';
+import { deskFor } from '../src/ui/desk.js';
 import { DIRECTIVES } from '../src/engine/command.js';
 import { ENDINGS, readFinale, composeEnding } from '../src/engine/endings.js';
 import { FLIGHT_ENDINGS, readFlight } from '../src/engine/epilogue.js';
-import { createCharacter } from '../src/engine/character.js';
+import { createCharacter, HOUSEHOLDS } from '../src/engine/character.js';
+import { LETTERS, CALLS, callFor, recordFamily } from '../src/engine/family.js';
+import { REVELATIONS, standing, readFolder } from '../src/engine/revelations.js';
+import { SCENARIOS } from '../src/engine/scenarios.js';
 import { renderBriefing, renderMenu, issuingFormation } from '../src/ui/screens.js';
 
 function enlisted() {
@@ -300,5 +305,172 @@ describe('the chrome knows where the player is', () => {
 
   test('the officer is named on the plate and in the empty office', () => {
     assert.match(OFFICER.plate, /DOBREK/);
+  });
+});
+
+describe('the story watches have voices', () => {
+  test('eight to twelve scripted lines on each of the five, in the register of the radio', () => {
+    for (const id of ['economy-of-force', 'across-the-line', 'ville-under-fire', 'four-sectors', 'reinforce-the-capital']) {
+      const chatter = scenarioById(id).chatter ?? [];
+      assert.ok(chatter.length >= 8 && chatter.length <= 12, `${id} has ${chatter.length} lines`);
+      let last = -1;
+      for (const line of chatter) {
+        assert.ok(line.text && line.text === line.text.toUpperCase(), `${id}: the radio speaks in capitals`);
+        assert.match(line.text, /\.$/, `${id}: a finished sentence: "${line.text}"`);
+        assert.ok(line.atS > last, `${id}: in order`);
+        last = line.atS;
+      }
+      assert.ok(chatter.some((l) => !l.pressureOnly), `${id}: some of it is information, not colour`);
+    }
+    assert.ok(scenarioById('economy-of-force').chatter.some((l) => /HOSPITAL/.test(l.text)));
+    assert.ok(scenarioById('across-the-line').chatter.some((l) => /GORNA/.test(l.text)));
+    assert.ok(scenarioById('four-sectors').chatter.some((l) => /BRASOV/.test(l.text)));
+    assert.ok(scenarioById('reinforce-the-capital').chatter.some((l) => /COLUMN/.test(l.text)));
+  });
+});
+
+describe('the player may answer him', () => {
+  test('once in each office scene, after the log and before the file entry', () => {
+    const { state, result, entry } = stood('economy-of-force');
+    const scene = office(state, result, entry);
+    assert.ok(scene.ask, 'he waits');
+    assert.equal(scene.ask.replies.length, 3);
+    assert.deepEqual(scene.ask.replies.map((r) => r.id), ['nothing', 'agree', 'name']);
+    assert.equal(scene.ask.replies[2].label, 'The hospital.');
+    assert.ok(scene.ask.at >= 0 && scene.ask.at < scene.lines.length - 1, 'the ask is inside the scene');
+    // Before the file entry, which does not move for anything you say.
+    const entryAt = scene.lines.findIndex((l) => /Sector command|Your conduct|A discrepancy|You are referred/.test(l));
+    assert.ok(scene.ask.at < entryAt, `the ask (${scene.ask.at}) comes before the file entry (${entryAt})`);
+    // Costed on the net's scale: naming the thing costs a leaker, agreeing earns a little, silence is free.
+    assert.equal(scene.ask.replies[0].cost, 0);
+    assert.ok(scene.ask.replies[1].cost > 0 && scene.ask.replies[1].cost < 4);
+    assert.ok(scene.ask.replies[2].cost < 0 && scene.ask.replies[2].cost > -9);
+  });
+
+  test('his next line knows which you chose, and the file records it', () => {
+    const { state, result, entry } = stood('economy-of-force');
+    const scene = office(state, result, entry);
+    const named = officeReply(scene, 'name');
+    assert.match(named.lines[0], /^The hospital\./);
+    assert.deepEqual(named.lines.slice(1), scene.lines.slice(scene.ask.at + 1), 'the rest of the scene follows');
+    assert.equal(named.record.kind, 'said');
+    assert.equal(named.record.thing, 'the hospital');
+    assert.equal(named.record.id, 'economy-of-force');
+    assert.match(officeReply(scene, 'nothing').lines[0], /nothing to add/);
+    assert.match(officeReply(scene, 'agree').lines[0], /we agree/);
+    assert.ok(!/\?/.test(named.lines[0]), 'he does not argue back');
+  });
+
+  test('a watch with nothing moral in it still has something to name', () => {
+    const { state, result, entry } = stood('weasel-hour', { role: 'crew' });
+    const scene = office(state, result, entry);
+    assert.ok(scene.ask, 'he waits on a craft watch too');
+    assert.match(scene.ask.replies[2].label, /\.$/);
+  });
+
+  test('nobody is asked anything by a finding or an empty room', () => {
+    const { state, result, entry } = stood('economy-of-force');
+    assert.equal(office(state, { ...result, reason: 'site-lost' }, entry).ask, null);
+    const left = stood('first-light', { reason: 'aborted', seconds: 60 });
+    assert.equal(office(left.state, left.result, left.entry).ask, null);
+  });
+
+  test('and the next evening he quotes back what you named', () => {
+    const first = stood('economy-of-force');
+    const watches = first.campaign.character.watches;
+    first.campaign.character.record.push({ kind: 'said', id: 'economy-of-force', reply: 'name', thing: 'the hospital', cost: -3, at: watches });
+    const next = stood('across-the-line', { campaign: first.campaign });
+    const lines = office(next.state, next.result, next.entry).lines;
+    assert.ok(lines.some((l) => /you named the hospital/.test(l)), lines.join(' | '));
+    const later = stood('ville-under-fire', { campaign: first.campaign });
+    assert.ok(!office(later.state, later.result, later.entry).lines.some((l) => /you named the hospital/.test(l)),
+      'once, on the very next evening, and not again');
+  });
+});
+
+describe('the family thread reaches the end', () => {
+  test('a seventh letter, on the last watch, from a household that heard the column go', () => {
+    const letter = LETTERS.find((l) => l.id === 'column-south');
+    assert.ok(letter, 'the letter exists');
+    assert.equal(letter.after, 'two-cities');
+    for (const hh of Object.keys(HOUSEHOLDS)) {
+      const lines = letter.lines(hh, { name: 'Yasna Petrina', hit: false, permit: 'standing', watch: 11 });
+      assert.ok(lines.length >= 3 && lines.length <= 5, `${hh}: short`);
+      assert.match(lines.slice(1, -1).join(' '), /column|lorries|trailer/i, `${hh} heard it go`);
+    }
+    const campaign = enlisted();
+    campaign.history.push({ tier: 'satisfactory' });
+    const payload = recordFamily(campaign, { missionId: 'two-cities', stats: {} }, 'satisfactory');
+    assert.equal(payload?.id, 'column-south', 'it arrives with the finale');
+  });
+
+  test('the telephone call, after the three endings that promise one, in every household voice', () => {
+    // The endings that end on the telephone, and only those: the decision at
+    // the console, the departure from the order, and both cities held.
+    const finale = (villePct, palacePct, constraints = { palaceOrderAccepted: true }) => ({
+      missionId: 'two-cities', reason: 'raid-spent', finale: true,
+      assets: [
+        { type: 'town', label: 'THE VILLE', destroyed: villePct >= 100, damagePct: villePct, districtsHit: [] },
+        { type: 'palace', label: 'PRESIDENTIAL PALACE', destroyed: palacePct >= 100, damagePct: palacePct },
+      ],
+      stats: { civilianCasualties: 200, homeDistrictHit: false, roundsByCluster: { ville: 8, capital: 14 },
+        roundsAgainstOrder: 0, postOverrun: false, displacedToSurvive: false, playedOutS: 240 },
+      constraints,
+    });
+    const who = createCharacter({ name: 'Yasna Petrina', household: 'mother' });
+    const ending = (result) => composeEnding(result, who);
+    const onTelephone = (result) => ending(result).lines
+      .some((l) => /\b(?:your call|one call|the call)\b/i.test(l));
+    const defiant = finale(5, 90, { palaceOrderRefused: true });
+    assert.equal(ending(defiant).id, 'defiant');
+    assert.ok(onTelephone(defiant), 'the departure from the order ends on the call');
+    assert.equal(ending(finale(10, 10)).id, 'exemplary');
+    assert.ok(onTelephone(finale(10, 10)), 'both cities held ends on the call');
+    assert.equal(ending(finale(90, 5)).id, 'obedient');
+    assert.ok(!onTelephone(finale(90, 5)), 'the obedient ending permits none');
+    assert.ok(!onTelephone(finale(5, 90)), 'and the divided one promises none');
+    assert.deepEqual(Object.keys(CALLS).sort(), ['defiant', 'exemplary', 'judgement']);
+    for (const id of ['judgement', 'defiant', 'exemplary']) {
+      assert.ok(CALLS[id], `${id} promises a call`);
+      for (const hh of Object.keys(HOUSEHOLDS)) {
+        const lines = CALLS[id].lines(hh, { name: 'Yasna Petrina' });
+        assert.ok(lines.length >= 4 && lines.length <= 8, `${id}/${hh}: ${lines.length} lines`);
+        assert.match(lines[0], /Yasna/, `${id}/${hh} answers by name`);
+        for (const line of lines) assert.match(line, /[.!?]$/, `${id}/${hh}: "${line}"`);
+        assert.ok(!/[А-Яа-яЁё]/.test(lines.join(' ')), 'in Latin letters');
+      }
+    }
+    assert.match(CALLS.judgement.plate, /NOBODY LISTENING/);
+    assert.match(CALLS.defiant.plate, /MONITORED/);
+    assert.match(CALLS.exemplary.plate, /PERMITTED/);
+    const campaign = enlisted();
+    assert.equal(callFor('escorted', campaign), null, 'no call is promised by the escort');
+    assert.ok(callFor('judgement', campaign).lines.length >= 4);
+  });
+
+  test('the call plays after the ending, and the desk plays both on the way out', () => {
+    const { state, result, entry } = stood('presidents-flight', { seconds: 400 });
+    const r = { ...result, endingId: 'judgement', stats: { ...result.stats, vipDown: true, vipDownedBy: 'operator', vipRoundsFired: 1 } };
+    const scenes = scenesFor(state, r, entry);
+    const ids = scenes.map((s) => s.id);
+    assert.equal(ids.at(-2), 'ending');
+    assert.equal(ids.at(-1), 'call');
+    assert.equal(scenes.at(-1).kind, 'call');
+    assert.match(scenes.at(-1).speaker, /THE TELEPHONE/);
+    const { items, outro } = deskFor(state, r, entry);
+    assert.deepEqual(outro.map((s) => s.id), ['ending', 'call']);
+    assert.ok(!items.some((i) => i.id === 'call'));
+    const escorted = { ...result, endingId: 'escorted', stats: { ...result.stats, vipEscaped: true } };
+    assert.ok(!scenesFor(state, escorted, entry).some((s) => s.id === 'call'));
+  });
+});
+
+describe('the hook is paid', () => {
+  test('the transfer manifests say why nothing was ever forecast against Brasov', () => {
+    assert.ok(REVELATIONS.buyer.lines.some((l) => /Brasov/.test(l)));
+    const campaign = enlisted();
+    readFolder(campaign, 'buyer');
+    assert.match(standing(campaign), /Brasov/);
+    assert.ok(scenarioById('four-sectors').brief.some((l) => /Brasov/.test(l)), 'and the hook is still pulled');
   });
 });

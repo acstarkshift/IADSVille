@@ -106,14 +106,19 @@ describe('which scenes play', () => {
     assert.ok(folder.lines.length >= 3);
   });
 
-  test('the ending is the last scene of the last watch', () => {
+  test('the ending is the last scene of the last watch, unless it promises a call', () => {
     const { state, result, entry } = stood('two-cities', { seconds: 900 });
     assert.ok(result.finale, 'Two Cities is the finale');
     const scenes = scenesFor(state, result, entry);
-    assert.equal(scenes.at(-1).id, 'ending');
-    assert.equal(scenes.at(-1).kind, 'ending');
-    assert.ok(scenes.at(-1).lines.length >= 2);
-    assert.equal(typeof scenes.at(-1).held, 'boolean');
+    const ending = scenes.find((s) => s.id === 'ending');
+    assert.ok(ending, 'the ending plays');
+    assert.equal(ending.kind, 'ending');
+    assert.ok(ending.lines.length >= 2);
+    assert.equal(typeof ending.held, 'boolean');
+    // Nothing follows it but the household's end of the telephone call the
+    // ending itself has just promised.
+    const after = scenes.slice(scenes.indexOf(ending) + 1).map((s) => s.id);
+    assert.ok(after.every((id) => id === 'call'), `after the ending: ${after.join(', ')}`);
   });
 
   test('an abandoned watch is a short evening: the tape, and the section, and no post', () => {
@@ -127,7 +132,7 @@ describe('which scenes play', () => {
 
   test('an ending watch closes on the ending, with the document read before the office', () => {
     const { state, result, entry } = stood('two-cities', { seconds: 900 });
-    const ids = scenesFor(state, result, entry).map((s) => s.id);
+    const ids = scenesFor(state, result, entry).map((s) => s.id).filter((id) => id !== 'call');
     assert.equal(ids.at(-1), 'ending', 'the ending is the last thing said');
     // The folder is on the desk while you wait, not between the office and the
     // ending, where it answered a question the ending had already closed.

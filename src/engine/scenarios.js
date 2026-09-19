@@ -1384,6 +1384,31 @@ export const SCENARIOS = [
       'You have rounds. You will be told they are not yours to spend.',
     ],
     teaches: 'You find out what the ammunition allocation is actually for.',
+    /*
+     * Voices on the ground. The five watches that carry the whole story had
+     * no scripted traffic at all — the craft watches were alive with it — so
+     * on the night the hospital is struck off the schedule the only thing the
+     * net said about the hospital was the order. The lines marked
+     * pressureOnly are the colour; the rest is information about the raid.
+     */
+    chatter: [
+      { atS: 18, text: 'TOWN WARDEN REPORTS THE SIRENS SOUNDED AT TWENTY PAST. THE DISPENSARY QUEUE HAS BEEN MOVED INDOORS.' },
+      { atS: 40, text: 'LANCE WEST REPORTS THE KUBIN ROAD CLEAR AS FAR AS THE TWENTY-FIRST KILOMETRE. THE HOSPITAL IS ON THAT ROAD.' },
+      { atS: 70, pressureOnly: true,
+        text: 'SECTOR OPS: THE SCHEDULE OF DEFENDED PLACES FOR TONIGHT IS THE AIRBASE, THE POWER STATION AND THIS BUILDING. NOTHING HAS BEEN ADDED TO IT.' },
+      { atS: 92, pressureOnly: true,
+        text: 'THE DISTRICT HOSPITAL ASKS BY LANDLINE WHETHER IT IS COVERED. SECTOR HAS NOT ANSWERED THE LANDLINE.' },
+      { atS: 125, text: 'HAMMER REPORTS THE SNOW THICKENING OVER THE AIRBASE. VISUAL ON NOTHING.' },
+      { atS: 160, text: 'WIDE EYE HOLDS LOW CONTACTS ON THE KUBIN ROAD BEARING. THEY ARE UNDER THE HORIZON FOR EVERYTHING BUT LANCE WEST.' },
+      { atS: 185, pressureOnly: true,
+        text: 'THE HOSPITAL HAS RUNG AGAIN. THE SWITCHBOARD HAS BEEN TOLD TO LOG THE CALLS AND NOT PUT THEM THROUGH.' },
+      { atS: 230, text: 'TOWN WARDEN: THE DISPENSARY IS FULL AND THE SCHOOL IS BEING OPENED. THE ROAD TO THE HOSPITAL IS STILL OPEN.' },
+      { atS: 300, pressureOnly: true,
+        text: 'LOGISTICS ASKS FOR A ROUND COUNT BY BATTERY, IN WRITING, BEFORE THE END OF THE WATCH.' },
+      { atS: 345, text: 'HAMMER: FOUR LOW OUT OF THE EAST, UNDER EVERYTHING. NOTHING HAS EVER COME FROM THAT SIDE.' },
+      { atS: 420, pressureOnly: true, text: 'THE HOSPITAL HAS STOPPED RINGING.' },
+      { atS: 480, text: 'TOWN WARDEN REPORTS THE ALL-CLEAR IS NOT YET SOUNDED. THE QUEUE IS STILL INDOORS.' },
+    ],
     assets: [
       GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, HOSPITAL,
     ],
@@ -1524,6 +1549,25 @@ export const SCENARIOS = [
     ],
     teaches: 'You learn that the schedule of defended places lists installations and does not'
       + ' list people.',
+    /* The frontier post, the ridge, the crossing, and the fires at Gorna. */
+    chatter: [
+      { atS: 16, text: 'FRONTIER POST TWO REPORTS THE LINE QUIET. THE CAMP AT GORNA HAS LIT ITS FIRES EARLY; IT IS COLD ON THE RIDGE.' },
+      { atS: 55, text: 'LANCE WEST HAS THE KUBIN ROAD PACKAGE UNDER THE HORIZON. THEY ARE COMING IN LOW OVER THE POWER STATION.' },
+      { atS: 100, text: 'RIDGE POST REPORTS ENGINE NOISE THAT IS NOT TURNING FOR THE SECTOR. WHATEVER IT IS, IT IS GOING OVER THE RIDGE.' },
+      { atS: 140, text: 'WIDE EYE: ONE CONTACT, LOW AND STRAIGHT, TRACKING FOR THE BORDER. IT IS NOT AIMED AT ANYTHING OF OURS.' },
+      { atS: 175, pressureOnly: true,
+        text: 'FRONTIER POST TWO: THE FIRES AT GORNA ARE STILL LIT. THEY CAN BE SEEN FROM THE LINE.' },
+      { atS: 215, pressureOnly: true,
+        text: 'SECTOR OPS: THE SCHEDULE OF DEFENDED PLACES DOES NOT EXTEND PAST THE FRONTIER. IT NEVER HAS.' },
+      { atS: 260, text: 'THE CROSSING REPORTS FOUR AT HEIGHT COMING DOWN THE NORTH-EAST. THE BRIDGE GUARD IS IN ITS TRENCH.' },
+      { atS: 300, pressureOnly: true,
+        text: 'FRONTIER POST TWO ASKS WHETHER IT IS TO REPORT ANYTHING THAT COMES DOWN BEYOND THE LINE. SECTOR: NO.' },
+      { atS: 340, text: 'RIDGE POST: LOW PACKAGE OUT OF THE WEST FOR THE TOWN. THE WARDEN HAS BEEN TOLD.' },
+      { atS: 375, text: 'THE CROSSING: TWO ON THE DECK OUT OF THE SOUTH-EAST. NOTHING HAS COME FROM THAT SIDE ALL WATCH.' },
+      { atS: 445, text: 'WIDE EYE: A SECOND CONTACT ON THE SAME LINE AS THE FIRST, SAME HEIGHT, SAME COURSE. FOR THE BORDER.' },
+      { atS: 500, pressureOnly: true,
+        text: 'FRONTIER POST TWO HAS NOTHING FURTHER TO REPORT FROM THE LINE, AND HAS BEEN TOLD THAT IT IS NOT REQUIRED TO.' },
+    ],
     assets: [
       GROUND.town, GROUND.c2, GROUND.power, GROUND.bridge, CAMP,
     ],
@@ -1666,6 +1710,28 @@ export const SCENARIOS = [
     ],
     teaches: 'You fight the heaviest raid of the war, and then you fight it without the centre that'
       + ' holds your picture together.',
+    /*
+     * The town, on the night the town is the target: the warden, the crossing,
+     * the school, the mill, and a section commander whose own street is under
+     * the line. The only thing the net used to say about the Ville was the
+     * engine's automatic line about trunk lines.
+     */
+    chatter: [
+      { atS: 5, text: 'TOWN WARDEN REPORTS THE SIRENS SOUNDED AT HALF PAST THREE. THE MILL QUARTER IS THE LAST TO ANSWER; IT ALWAYS IS.' },
+      { atS: 28, text: 'THISTLE TOWN: THREE ON THE DECK OUT OF THE NORTH-WEST, FOR THE TOWN. THE SECTION COMMANDER REPORTS HIS OWN STREET IS UNDER THAT LINE.' },
+      { atS: 75, text: 'THE CROSSING REPORTS THE BRIDGE GUARD STOOD TO. THE RIVER ROAD IS EMPTY AND THE LAMPS ARE OUT.' },
+      { atS: 105, text: 'TOWN WARDEN: THE SCHOOL IS OPEN AND FILLING. THE CELLAR UNDER THE HIGH STREET IS FULL.' },
+      { atS: 145, text: 'WIDE EYE HOLDS A STREAM OUT OF THE NORTH THAT IS TOO TIDY TO BE AEROPLANES. COUNT NOTHING UNTIL IT TURNS.' },
+      { atS: 190, text: 'SECTOR OPS: THE CENTRE IS BEING TARGETED. IF THIS PICTURE STOPS, EVERY SET REPORTS FOR ITSELF AND NOBODY RECONCILES THEM.' },
+      { atS: 235, pressureOnly: true,
+        text: 'THE MILL REPORTS THE FIRE PICKETS ON THE ROOF. THEY CAN HEAR THE VALLEY FROM THERE.' },
+      { atS: 275, text: 'SEVEN LOW OUT OF THE NORTH-EAST UNDER EVERYTHING. THE DEPOT AND THE POWER STATION ARE ON THAT LINE, AND SO IS THE RIVER ROAD.' },
+      { atS: 330, pressureOnly: true,
+        text: 'TOWN WARDEN: THE GLAZIER HAS BEEN TOLD TO START A LIST. THE WARDEN DID NOT SAY WHICH STREETS.' },
+      { atS: 390, text: 'THE CROSSING REPORTS THE RIVER ROAD UNDER FIRE FROM THE AIR. IT IS NOT ASKING FOR ANYTHING; IT IS REPORTING.' },
+      { atS: 440, text: 'TOWN WARDEN: THE ALL-CLEAR HAS NOT SOUNDED, AND THE WARDEN WILL NOT SOUND IT ON THIS PICTURE.' },
+      { atS: 520, text: 'THE SCHOOL REPORTS EVERYBODY ACCOUNTED FOR WHO CAME TO IT. IT CANNOT SPEAK FOR ANYBODY WHO DID NOT.' },
+    ],
     assets: [
       GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, GROUND.depot, GROUND.bridge,
     ],
@@ -1845,6 +1911,30 @@ export const SCENARIOS = [
     ],
     teaches: 'You learn that an order left with somebody you cannot see is a weapon, and usually the'
       + ' only one you have.',
+    /*
+     * The three commanders you cannot reach, on their own radios, and Brasov
+     * not answering. Each speaks the way his file says he fights: Voloh has
+     * it and asks for nothing, Radu checks, Lenko reports, Strelnik comes up
+     * once, on the order he holds.
+     */
+    chatter: [
+      { atS: 12, text: 'DISTRICT NET CHECK. LOZAN ANSWERS. KUBIN ANSWERS, AFTER A MOMENT. THE VALLEY ANSWERS. BRASOV HAS ACKNOWLEDGED THE CHECK IN WRITING.' },
+      { atS: 45, text: 'MAJ. VOLOH, LOZAN: TWO FAST ON THE FRONTIER BEARING. HE HAS THEM AND HAS NOT ASKED FOR ANYTHING.' },
+      { atS: 95, text: 'MAJ. VOLOH, LOZAN: SIX AT HEIGHT FOR THE POWER STATION. HE IS ENGAGING ON HIS STANDING ORDER AND WILL REPORT WHEN HE HAS SOMETHING TO REPORT.' },
+      { atS: 140, text: 'CAPT. RADU, KUBIN: FIVE FOR THE DEPOT. HE REQUESTS CONFIRMATION OF HIS STANDING ORDER BEFORE HE ENGAGES. HE HAS IT. HE IS CHECKING.' },
+      { atS: 190, text: 'MAJ. LENKO, THE VALLEY: THREE FOR THE CROSSING. HE DOES NOT REQUEST ANYTHING.' },
+      { atS: 230, pressureOnly: true,
+        text: 'DISTRICT SIGNALS: BRASOV HAS NOT COME UP ON VOICE THIS WATCH. ITS TELEPRINTER IS ANSWERING.' },
+      { atS: 280, text: 'CAPT. RADU, KUBIN: FIVE LOW OUT OF THE WEST. HE REPORTS HIS CHANNELS FULL AND ASKS WHETHER THE DISTRICT IS COMING.' },
+      { atS: 335, text: 'MAJ. LENKO, THE VALLEY: FOUR ON THE DECK FOR THE TOWN. HE HAS THEM, AND HE ADDS THAT THE DISTRICT COMMANDER WILL KNOW THE GROUND.' },
+      { atS: 400, pressureOnly: true,
+        text: 'DISTRICT SIGNALS: THREE SECTORS REPORT ROUNDS REMAINING. THE FOURTH REPORTS NOTHING EXPENDED AND NOTHING FORECAST.' },
+      { atS: 470, pressureOnly: true,
+        text: 'DISTRICT SIGNALS: BRASOV STILL NOT ON VOICE. ITS COMMANDER IS RECORDED AS PRESENT.' },
+      { atS: 515, text: 'MAJ. STRELNIK, BRASOV: FOUR OUT OF THE SOUTH FOR THE DEPOT. HE IS ON VOICE FOR THE FIRST TIME TONIGHT, AND HE IS ENGAGING ON THE ORDER HE HOLDS.' },
+      { atS: 560, pressureOnly: true,
+        text: 'MAJ. STRELNIK, BRASOV, HAS CLOSED HIS NET AGAIN. HE REPORTS THE DEPOT ROAD UNTOUCHED, WHICH IS THE ONLY THING HE REPORTS.' },
+    ],
     assets: [
       DISTRICT_GROUND.villeTown, DISTRICT_GROUND.villeC2, DISTRICT_GROUND.villeBridge,
       DISTRICT_GROUND.kubinCity, DISTRICT_GROUND.kubinDepot,
@@ -1991,6 +2081,30 @@ export const SCENARIOS = [
       'There is a raid coming tonight regardless of what you do about the order.',
     ],
     teaches: 'You count what a redeployment order costs, and work out who it is for.',
+    /*
+     * The battalion before the order, the sectors that lean on it, the road
+     * south, and a column with an escort that nobody on the net was told the
+     * name of. None of these lines says which way the order was answered;
+     * the road control post reports what passes it either way.
+     */
+    chatter: [
+      { atS: 14, pressureOnly: true,
+        text: 'BASTION DISTRICT REPORTS FOUR ON THE RAILS AND THE MAGAZINE FULL. THE BATTALION COMMANDER ADDS THAT HIS TRANSPORT HAS BEEN TOLD TO STAND BY. HE DOES NOT KNOW WHY.' },
+      { atS: 50, text: 'CAPT. RADU, KUBIN: HE HAS THE FRONTIER BEARING AND NOTHING ON IT YET. HE ASKS WHETHER THE BATTALION IS STAYING.' },
+      { atS: 90, pressureOnly: true,
+        text: 'DISTRICT SIGNALS: A MOVEMENT ORDER IS IN THE DIRECTORATE\'S QUEUE FOR THIS DISTRICT. IT HAS NOT BEEN TRANSMITTED.' },
+      { atS: 130, text: 'MAJ. VOLOH, LOZAN: THE RAIN IS ON THE FRONTIER SIDE. HIS SETS ARE DEGRADED AND HE IS RELYING ON THE DISTRICT BATTALION FOR THE LONG LOOK.' },
+      { atS: 200, text: 'CAPT. RADU, KUBIN: FIVE LOW FOR THE DEPOT. HE REPORTS THAT WITHOUT THE BATTALION HIS SECTIONS REACH THE DEPOT AND NOT THE APPROACH TO IT.' },
+      { atS: 240, pressureOnly: true,
+        text: 'ROAD CONTROL, SOUTHERN HIGHWAY: THE ROAD TO THE CAPITAL IS REPORTED CLEAR OF TRAFFIC. NOBODY ASKED THE POST.' },
+      { atS: 290, text: 'MAJ. VOLOH, LOZAN: SIX ON THE DECK OUT OF THE NORTH. HE HAS THREE CHANNELS AND SIX CONTACTS, AND HE HAS SAID SO ONCE.' },
+      { atS: 330, text: 'DISTRICT SIGNALS: THE CAPITAL SECTOR REPORTS NO CONTACTS, NO ALERT AND NO CHANGE. IT HAS REPORTED THAT EVERY HOUR THIS WEEK.' },
+      { atS: 395, text: 'MAJ. LENKO, THE VALLEY: THREE FOR THE OPERATIONS CENTRE. HE HAS THEM.' },
+      { atS: 450, pressureOnly: true,
+        text: 'ROAD CONTROL, SOUTHERN HIGHWAY: A COLUMN WITH AN ESCORT PASSED THE CONTROL POINT SOUTHBOUND. THE POST WAS NOT TOLD WHOSE.' },
+      { atS: 515, text: 'MAJ. STRELNIK, BRASOV: THREE OUT OF THE SOUTH FOR THE CITY. HE IS ENGAGING, AND HE HAS ASKED FOR NOTHING, AND HE HAS BEEN GIVEN NOTHING.' },
+      { atS: 560, text: 'DISTRICT SIGNALS: THE DIRECTORATE ACKNOWLEDGES THE DISTRICT\'S RETURNS FOR TONIGHT. IT HAS ADDED NOTHING.' },
+    ],
     briefIfKnown: {
       ledger: ['You have seen the depot returns. You know how much is already sitting in the capital'
         + ' and how little of it has moved since the spring.'],

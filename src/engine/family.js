@@ -415,7 +415,258 @@ export const LETTERS = [
       },
     }),
   },
+
+  /**
+   * The seventh letter, on the last watch's own desk.
+   *
+   * The thread used to stop before the two watches that matter. This one is
+   * posted the night a column went south through the village with its lights
+   * off — the household does not know what it was, and the letter does not
+   * say, because on the night the depots are committed to the capital a
+   * column goes south whichever way the movement order was answered.
+   */
+  {
+    id: 'column-south',
+    after: 'two-cities',
+    tm: 'НОЧЬ, КОГДА КОЛОННА УШЛА',
+    title: 'THE NIGHT THE COLUMN WENT SOUTH',
+    lines: (hh, ctx) => letterOf(hh, ctx, {
+      mother: {
+        body: [
+          'A column went through the village at two in the morning with its lights off, going'
+            + ' south. I counted nine lorries and something long on a trailer, and then I stopped'
+            + ' counting and put the kettle on.',
+          'I have not asked anybody where it was going. I know where the road goes.',
+        ],
+        sign: 'All well here. Your mother, Ksenia.',
+      },
+      sister: {
+        body: [
+          'The children slept through the column going down the river road. I did not. Nine lorries'
+            + ' and something long on a trailer, and not one light between them.',
+          'The elder asked at breakfast why the soldiers had gone. I said they had been sent for. He'
+            + ' asked by whom, and I said I did not know, which is the first true thing I have said'
+            + ' to him about this war.',
+        ],
+        sign: 'Your sister, Nata. 1 of 1.',
+      },
+      grandmother: {
+        body: [
+          'A column went south in the night. I heard it from the cellar.',
+          'In the last war they moved the guns before the town was hit, not after. I am telling you'
+            + ' so that you know I know.',
+        ],
+        sign: 'Keep your boots dry. Vera.',
+      },
+      brother: {
+        body: [
+          'A column went through at two. I was on the mill roof with the pickets and we counted it'
+            + ' out: nine and the trailer. Nine and the trailer.',
+          'Nobody on the roof said where it was going. Everybody on the roof knew.',
+        ],
+        sign: 'Your brother, Ilya.',
+      },
+    }),
+  },
 ];
+
+/* ------------------------------------------------------------------ the call */
+
+/**
+ * The telephone, at the end.
+ *
+ * The traffic has been one-way and monitored for the whole campaign so that
+ * the call at the end means what it means — and then the ending reported the
+ * call in a subordinate clause and stopped. This is the household's end of
+ * it: their side only, in the voice their letters use, about eight lines.
+ * After a decision taken at the console the line is clear and nobody is on
+ * it but them; after a departure from the order it goes through from the
+ * crossing at first light and it is monitored, and everybody on it knows;
+ * after both cities held it is the one call that was permitted, with the
+ * whole house on the other end of it and the street in the kitchen.
+ */
+export const CALLS = {
+  judgement: {
+    id: 'judgement',
+    tm: 'ТЕЛЕФОН',
+    title: 'THE TELEPHONE',
+    plate: '0900 · TWENTY MINUTES · NOBODY LISTENING',
+    lines: (hh, ctx) => {
+      const first = firstName(ctx) || 'You';
+      return {
+        mother: [
+          `${first}. Yes. Wait, I am sitting down.`,
+          'The stove is drawing. I say that first because it is the thing you would ask, and now'
+            + ' you can ask the rest.',
+          'There are no clicks on the line. I know what the clicks were; I have known for a year.'
+            + ' There are none this morning.',
+          'Veselin\'s boy came home on Tuesday. His mother has not been impossible once. I did not'
+            + ' know I would mind that.',
+          'I took the photographs out of the drawer this morning. I had not decided to. They are'
+            + ' on the west wall, and the wall is holding them.',
+          'I am not going to ask what you did. I am going to ask when you are coming, and you are'
+            + ' going to say you do not know, and then I am going to ask again.',
+          'All well here. All well here. I will say it until you believe it, and then I will say'
+            + ' it once more.',
+        ],
+        sister: [
+          `${first}. It is you. Hold on, the younger one wants the receiver and she is not`
+            + ' getting it.',
+          'They are both here. The elder has been told to sit down and is not sitting down. Say'
+            + ' something so he can hear it is you.',
+          'The younger one drew you an aircraft this morning. It is flying up, off the top of the'
+            + ' page. I do not know what that means and I am not going to ask her.',
+          'The elder wants to know your rank. I have told him it does not matter this morning, and'
+            + ' he has told me it always matters. He is nine.',
+          'There is nobody on this line but us. I can hear that there is nobody. I have not heard'
+            + ' that in a year.',
+          'I am going to number this call one of one, and when you are home I am going to tell'
+            + ' you which sheet it was.',
+          'Nata. Both children. One of one.',
+        ],
+        grandmother: [
+          `${first}. Good.`,
+          'The line is clear. I have had a telephone through two wars and I know a clear line when'
+            + ' I hear one.',
+          'The cellar is stocked and the enamel box is by the door. Neither of them is needed'
+            + ' now. I will leave them where they are for a week.',
+          'I am not going to ask you anything. I have twenty minutes and I am going to use them'
+            + ' listening to you breathe.',
+          'Keep your boots dry. I mean it more than I have meant it before.',
+          'Vera. That is all.',
+        ],
+        brother: [
+          `Well, ${first}. Well. It is you.`,
+          'The pump is holding. The pump is holding; I am saying it twice because the line is'
+            + ' clear and I can.',
+          'Nobody is listening. I have said things down this line for a year with somebody'
+            + ' listening, and I do not know what to say down it now that nobody is.',
+          'The pickets on the mill roof asked this morning if it was one of ours. I said yes. I'
+            + ' said it twice.',
+          'I am not going to ask you what you did. I have worked it out from the roof, and I am'
+            + ' going to keep it there.',
+          'The board can keep its decision. I have a ladder to carry and a telephone that works,'
+            + ' and I am going to talk until it stops.',
+          'Ilya. Your brother. Ilya.',
+        ],
+      }[hh] ?? [];
+    },
+  },
+  defiant: {
+    id: 'defiant',
+    tm: 'ТЕЛЕФОН',
+    title: 'THE TELEPHONE',
+    plate: 'FIRST LIGHT · FROM THE CROSSING · MONITORED',
+    lines: (hh, ctx) => {
+      const first = firstName(ctx) || 'You';
+      return {
+        mother: [
+          `${first}. I can hear you. I can hear the other one too, and he can hear me say it.`,
+          'Everybody in the house is accounted for. That is what they told me to say, and it is'
+            + ' also true.',
+          'The stove is drawing. The photographs are on the wall. I am not going to say anything'
+            + ' else that somebody can write down.',
+          'I am going to stay on this line until it is taken off me, and you are going to stay on'
+            + ' it too.',
+          'All well here. Ksenia.',
+        ],
+        sister: [
+          `${first}. The children are here and they are both quiet, which they have never been.`,
+          'The house is standing. Everybody in it is accounted for. I will say that for whoever is'
+            + ' listening, and then I will say it for you.',
+          'The younger one drew nothing this morning. She wanted to hold the receiver instead.'
+            + ' She is holding it now.',
+          'I am not asking anything and you are not to answer anything. We are going to use the'
+            + ' minutes anyway.',
+          'Nata. Both children. And somebody else.',
+        ],
+        grandmother: [
+          `${first}.`,
+          'The house is standing and everybody in it is accounted for. Whoever is on this line can'
+            + ' write that down; it is true.',
+          'I have nothing to say that I want written down, so I am going to say nothing, and you'
+            + ' are going to listen to me say it.',
+          'Keep your boots dry. Vera.',
+        ],
+        brother: [
+          `${first}. It is Ilya. Everybody is here, everybody is here.`,
+          'Four houses below us are gone and ours is not. I am saying it for the man on the line'
+            + ' and I am saying it for you.',
+          'I am not asking what happens now. I am not asking. I know what a monitored line is for,'
+            + ' and it is not for that.',
+          'The pump is holding. The pump is holding. Ilya.',
+        ],
+      }[hh] ?? [];
+    },
+  },
+  exemplary: {
+    id: 'exemplary',
+    tm: 'ТЕЛЕФОН',
+    title: 'THE TELEPHONE',
+    plate: 'BY MORNING · ONE CALL · PERMITTED',
+    lines: (hh, ctx) => {
+      const first = firstName(ctx) || 'You';
+      return {
+        mother: [
+          `${first}. Yes. I have half the street in the kitchen and they can all hear me say it is`
+            + ' you.',
+          'We heard it. All of it, from the kitchen, with the stove drawing the whole time. I want'
+            + ' you to know that the valley heard it.',
+          'There is somebody on the line, and he can hear that the street is in my kitchen. I am'
+            + ' told to keep it short, and I was told politely, so I am going to be polite back and'
+            + ' then I am going to hand you round the room.',
+          'Veselin\'s wife wants the receiver. The glazier wants the receiver. The glazier says he'
+            + ' has not been asked to start a list and is not starting one.',
+          'The photographs are on the wall, and I am not taking them down again.',
+          'All well here. Everybody in this kitchen says all well here. Your mother, Ksenia.',
+        ],
+        sister: [
+          `${first}. Both of them are here and both of them are talking, so you will have to take`
+            + ' it in turns.',
+          'The younger one has drawn the valley, with the aircraft going the other way. She wants'
+            + ' you to know they went the other way.',
+          'The elder has stopped correcting people about your rank. He has started correcting'
+            + ' them about the valley, and I have let him.',
+          'There is somebody on the line. I am used to it, and this morning I do not mind him,'
+            + ' because there is nothing I would say to you this morning that I would not say in'
+            + ' front of him.',
+          'The house is standing and everybody in it is on this telephone. Nata. Both children,'
+            + ' at once.',
+        ],
+        grandmother: [
+          `${first}. I have the neighbours in. They are listening, and so is the line, and I do`
+            + ' not care about either.',
+          'We heard the guns from the cellar and I came up. I came up. I have not come up for one'
+            + ' of them since the last war.',
+          'The enamel box is going back on the shelf. The cellar can stay as it is; it is a'
+            + ' cellar.',
+          'Keep your boots dry. Vera. The neighbours say the same, and they are shouting it.',
+        ],
+        brother: [
+          `${first}. The whole picket is here. They came down off the roof when the line rang and`
+            + ' I have not had the receiver to myself since.',
+          'We watched it from the roof. Every man up there knows which battery that was, and not'
+            + ' one of them has said it out loud, and every one of them is going to say it later.',
+          'The pump is holding. The mill is standing. Four men are shouting at me to tell you'
+            + ' something, and I am telling you the pump is holding.',
+          'The board wrote to me on Monday. I have not opened it. I am on the pickets, and the'
+            + ' pickets held, and the board can read that in the returns like everybody else.',
+          'Your brother. Ilya. And the roof.',
+        ],
+      }[hh] ?? [];
+    },
+  },
+};
+
+/** The call an ending promises, as a scene's worth of lines, or null. */
+export function callFor(endingId, campaign) {
+  const call = CALLS[endingId];
+  const character = campaign?.character;
+  if (!call || !character) return null;
+  const lines = call.lines(character.household, { name: character.name });
+  if (!lines.length) return null;
+  return { id: call.id, tm: call.tm, title: call.title, plate: call.plate, lines };
+}
 
 export const letterById = (id) => LETTERS.find((l) => l.id === id) ?? null;
 
@@ -517,9 +768,17 @@ function recordOnFile(campaign, id, disposition) {
   });
 }
 
-function letterPayload(template, disposition, hh, ctx, family) {
+/**
+ * The one line of paperwork a concluded review owes, when it goes out on the
+ * docket of a released letter rather than on a sheet of its own.
+ */
+const PERMIT_DOCKET = 'The review of the residence permit is concluded. No action is taken, and'
+  + ' you have now been informed of it, as undertaken.';
+
+function letterPayload(template, disposition, hh, ctx, family, { closing = false } = {}) {
   const lines = template.lines(hh, ctx) ?? [];
-  const slip = dispositionNote(disposition);
+  const docket = dispositionNote(disposition);
+  const slip = closing && docket ? `${docket} ${PERMIT_DOCKET}` : docket;
   return {
     id: template.id,
     tm: template.tm,
@@ -623,11 +882,23 @@ export function recordFamily(campaign, result, tierId) {
   } else if (good && family.withheld.length) {
     const held = family.withheld.shift();
     const template = letterById(held.id);
-    const built = letterPayload(template, 'released', hh, ctx, family);
+    /*
+     * The section closes one file with one docket. If the review of the
+     * permit concluded while the post was still being held, the notice of it
+     * goes out clipped to the letter it was holding rather than waiting for
+     * a quiet evening of its own, which the last watches do not offer: the
+     * household writes on every one of them now.
+     */
+    const closing = !!family.permitNoticeDue;
+    const built = letterPayload(template, 'released', hh, ctx, family, { closing });
     family.delivered.push({
       id: held.id, at: watch, disposition: 'released', excerpt: built.body[0] ?? built.lines[0] ?? '',
     });
     recordOnFile(campaign, held.id, 'released');
+    if (closing) {
+      family.permitNoticeDue = false;
+      recordOnFile(campaign, 'permit', 'closed');
+    }
     payload = built;
   } else if (family.permitNoticeDue) {
     family.permitNoticeDue = false;
@@ -697,7 +968,8 @@ export function familyClause(family) {
   const parts = [];
   const held = family.withheld?.length ?? 0;
   if (held) {
-    parts.push(`${held === 1 ? 'One letter' : `${held} letters`} addressed to you`
+    const count = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven'][held] ?? String(held);
+    parts.push(`${count} ${held === 1 ? 'letter' : 'letters'} addressed to you`
       + ` ${held === 1 ? 'remains' : 'remain'} with the political section, to be forwarded when`
       + ' the assessment concludes.');
   }

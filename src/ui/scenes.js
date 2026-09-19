@@ -33,6 +33,7 @@ import { consequenceFor } from '../engine/campaign.js';
 import { tierFor, DIRECTIVES } from '../engine/command.js';
 import { wallClockString } from '../engine/math.js';
 import { householdOf, districtOf } from '../engine/character.js';
+import { callFor } from '../engine/family.js';
 import { composeEnding } from '../engine/endings.js';
 import { composeFlightEnding, flightEndingFor } from '../engine/epilogue.js';
 import { ROLES } from '../engine/config.js';
@@ -202,6 +203,8 @@ export function scenesFor(state, result, entry, { opened = null } = {}) {
    */
   const watches = Object.keys(campaign?.completed ?? {}).length;
   const struck = !!result.stats?.homeDistrictHit;
+  const script = nobodyIn ? null : commissarLines(result, consequence, pressure, missionId,
+    campaign, state.mission?.hour ?? null, folderRead);
   scenes.push(nobodyIn ? {
     id: 'commissar',
     kind: 'finding',
@@ -219,8 +222,14 @@ export function scenesFor(state, result, entry, { opened = null } = {}) {
     kind: written ? 'finding' : 'office',
     speaker: written ? 'A FINDING FROM THE POLITICAL SECTION'
       : pressure ? OFFICER.plate : 'SECTOR COMMAND',
-    lines: commissarLines(result, consequence, pressure, missionId, campaign,
-      state.mission?.hour ?? null, folderRead),
+    lines: script.lines,
+    /**
+     * Where he waits for an answer, and the three the player may give. The
+     * desk plays the scene to that line, offers the replies, and plays the
+     * rest with his next line knowing which was chosen (`officeReply`).
+     */
+    ask: script.askAt >= 0 ? askFor(missionId, result, script.askAt) : null,
+    missionId,
     tier: consequence.tier.id,
     /** Nobody is in the chair on this one: the section's account is on paper. */
     written,
@@ -317,9 +326,163 @@ export function scenesFor(state, result, entry, { opened = null } = {}) {
       lines: ending.lines,
       held: !!result.success,
     });
+    /*
+     * And the answer to a campaign of one-way, monitored post: the household's
+     * end of the telephone call the ending has just promised. Only on the
+     * endings that promise one — three of the eleven; it plays after the
+     * ending because it is the ending's own last sentence, heard.
+     */
+    const call = pressure ? callFor(ending.id, campaign) : null;
+    if (call) {
+      scenes.push({
+        id: 'call',
+        kind: 'call',
+        speaker: `${call.title} · ${call.plate}`,
+        lines: call.lines,
+        household: campaign?.character?.household ?? null,
+        held: !!result.success,
+      });
+    }
   }
 
   return scenes;
+}
+
+/* ------------------------------------------------------------------ the replies */
+
+/**
+ * The three things the player may say to him.
+ *
+ * He speaks about a hundred times across a campaign and his lines kept
+ * soliciting an answer — "I would rather hear your account of it before they
+ * ask for mine" — and the player never said a word. Once in each office
+ * scene, after he has read the log back and before he reads the file entry,
+ * he waits. The player may say nothing, agree with the log, or name the
+ * thing the night was about. Each costs or earns standing on the scale the
+ * net uses (a leaker is three; a refusal is nine), each is written on the
+ * file, and his next line knows which it was. He never argues and he never
+ * reacts: every reply is recorded, not answered.
+ */
+const NAMED = {
+  'economy-of-force': {
+    label: 'The hospital.',
+    thing: 'the hospital',
+    answer: 'The hospital. I have written the word down, and the time you said it. It is still not'
+      + ' on the schedule.',
+  },
+  'across-the-line': {
+    label: 'The camp at Gorna.',
+    thing: 'the camp at Gorna',
+    answer: 'Gorna is not a place this office has a file for. It has one for you, and the word is'
+      + ' in it now.',
+  },
+  'ville-under-fire': {
+    label: 'The transit had people on it.',
+    thing: 'the people on the transit',
+    answer: 'Passengers are the airline\'s business. I have written down that you counted them.',
+  },
+  'four-sectors': {
+    label: 'Brasov.',
+    thing: 'Brasov',
+    answer: 'Brasov is Major Strelnik\'s. I have written down that you asked about it, and I will'
+      + ' write down that I did not answer.',
+  },
+  'reinforce-the-capital': {
+    label: 'The battalion was the only thing that reached Kubin.',
+    thing: 'the battalion',
+    answer: 'Kubin is on the return either way. I have written down that you knew what the order'
+      + ' cost when you answered it.',
+  },
+  'two-cities': {
+    label: 'The valley.',
+    thing: 'the valley',
+    answer: 'The valley is not a designated defended place. You knew that when you said the word,'
+      + ' and so did I.',
+  },
+  'presidents-flight': {
+    label: 'The aircraft.',
+    thing: 'the aircraft',
+    answer: 'The aircraft is the ministry\'s. What you say about it in this room goes to the'
+      + ' ministry as well.',
+  },
+};
+
+/** On a watch with nothing moral in it, the thing to name is what the night cost. */
+function namedFallback(result) {
+  const lost = (result.assets ?? []).filter((a) => a.destroyed);
+  if (lost.length) {
+    const place = placeInSpeech(chiefLoss(lost));
+    return {
+      label: `${sentenceCase(place)}.`,
+      thing: place,
+      answer: 'It is on the loss return. I have written down that you named it before I did.',
+    };
+  }
+  if ((result.stats?.leakers ?? 0) > 0) {
+    return {
+      label: 'The ones that got through. I have the minutes.',
+      thing: 'the ones that got through',
+      answer: 'So do I. I have written down that you offered yours.',
+    };
+  }
+  return {
+    label: 'The tape.',
+    thing: 'the tape',
+    answer: 'I have read it. I have written down that you offered.',
+  };
+}
+
+const ANSWERS = {
+  nothing: 'Nothing. I will write that you had nothing to add, which is also an entry.',
+  agree: 'Then we agree. I have written that we agree, which is the entry the district prefers.',
+};
+
+/** The three replies, for this watch, and the line in the scene they follow. */
+export function askFor(missionId, result, at) {
+  const named = NAMED[missionId] ?? namedFallback(result ?? {});
+  return {
+    at,
+    replies: [
+      { id: 'nothing', label: 'Say nothing', cost: 0 },
+      { id: 'agree', label: 'It was as the log says.', cost: 1 },
+      { id: 'name', label: named.label, cost: -3, thing: named.thing, answer: named.answer },
+    ],
+  };
+}
+
+/**
+ * What he says next, and what the reply costs. The rest of the scene follows
+ * his answer unchanged; the file entry does not move for anything you say.
+ */
+export function officeReply(scene, replyId) {
+  const ask = scene.ask;
+  if (!ask) return { lines: scene.lines.slice(), cost: 0, record: null };
+  const reply = ask.replies.find((r) => r.id === replyId) ?? ask.replies[0];
+  const said = reply.answer ?? ANSWERS[reply.id];
+  return {
+    lines: [said, ...scene.lines.slice(ask.at + 1)],
+    cost: reply.cost ?? 0,
+    record: {
+      kind: 'said', id: scene.missionId ?? null, reply: reply.id, thing: reply.thing ?? null,
+      cost: reply.cost ?? 0,
+    },
+  };
+}
+
+/**
+ * What you said last time, said back. Only the thing you named, only on the
+ * very next evening, and only once: he is not keeping score out loud, he is
+ * letting you know the file is.
+ */
+function quoteBack(campaign, missionId) {
+  const character = campaign?.character;
+  if (!character?.record) return null;
+  const said = [...character.record].reverse()
+    .find((r) => r.kind === 'said' && r.reply === 'name' && r.thing);
+  if (!said || said.id === missionId) return null;
+  if (said.at !== (character.watches ?? 0) - 1) return null;
+  return `The last time you sat in that chair you named ${said.thing}. It is in the file, with the`
+    + ' date, and it has not been taken out.';
 }
 
 /**
@@ -1170,15 +1333,18 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
   if (result.abandoned) {
     const left = result.watchClock ? ` at ${result.watchClock}` : '';
     const run = minutesInWords(result.elapsedMin);
-    return [
-      `You left the post${left}${run ? `, ${run} into the watch` : ''}, with the raid still`
-        + ' running. The log was signed for you.',
-      'The file records an abandoned watch and nothing else, because nothing else was done.',
-      // About the roster, which is what leaving a post is about. It used to
-      // end on the sentence the condemned dismissal and the written finding
-      // also ended on, so three different nights closed on one line.
-      'You are on tomorrow\'s roster, in pencil. Somebody will go over it in ink before the watch.',
-    ];
+    return {
+      lines: [
+        `You left the post${left}${run ? `, ${run} into the watch` : ''}, with the raid still`
+          + ' running. The log was signed for you.',
+        'The file records an abandoned watch and nothing else, because nothing else was done.',
+        // About the roster, which is what leaving a post is about. It used to
+        // end on the sentence the condemned dismissal and the written finding
+        // also ended on, so three different nights closed on one line.
+        'You are on tomorrow\'s roster, in pencil. Somebody will go over it in ink before the watch.',
+      ],
+      askAt: -1,
+    };
   }
   // How many watches this file has behind it. Every rotation in the scene turns
   // on it, so the office does not open on one sentence for a whole campaign.
@@ -1194,12 +1360,14 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
    * is in the picture because it is his office and his signature.
    */
   if (pressure && result.reason === 'site-lost') {
-    return writtenFinding(result, consequence, campaign, hour, missionId);
+    return { lines: writtenFinding(result, consequence, campaign, hour, missionId), askAt: -1 };
   }
   const lines = [];
   // Whether he has already explained the two standings tonight, in which case
   // he does not then reconcile them in the next breath.
   let taught = false;
+  // The line after which he waits for an answer; none on a night he does not.
+  let askAt = -1;
   /*
    * The folder that was on the desk while you waited.
    *
@@ -1246,6 +1414,10 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
       lines.push('There are two standings on that tape. One is what tonight was worth and one is'
         + ' what your file has come to. The second is the one that travels with you.');
     }
+    // What you named last time, before he waits for what you will say this time.
+    const quoted = quoteBack(campaign, missionId);
+    if (quoted) lines.push(quoted);
+    askAt = lines.length - 1;
   }
   lines.push(...((pressure && consequence.spokenLines) || consequence.lines));
   if (pressure) {
@@ -1272,7 +1444,7 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
     condemned: 'You will be told where to report.',
   }[consequence.tier.id];
   if (pressure && dismissal) lines.push(dismissal);
-  return lines;
+  return { lines, askAt };
 }
 
 /**

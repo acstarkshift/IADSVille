@@ -26,9 +26,10 @@
  * been read it stands you up.
  */
 
-import { scenesFor, SCENE_W, SCENE_H, OFFICER } from './scenes.js';
+import { scenesFor, officeReply, SCENE_W, SCENE_H, OFFICER } from './scenes.js';
 import { consequenceFor } from '../engine/campaign.js';
 import { REVELATIONS, readFolder } from '../engine/revelations.js';
+import { COMMAND } from '../engine/config.js';
 
 /* ------------------------------------------------------------- what is on it */
 
@@ -47,11 +48,17 @@ export function deskFor(state, result, entry, { opened = [] } = {}) {
   const scenes = scenesFor(state, result, entry, { opened });
   const items = [];
   let ending = null;
+  // What plays on the way out: the ending, and the telephone call it promises.
+  const outro = [];
   for (const scene of scenes) {
-    if (scene.id === 'ending') { ending = scene; continue; }
+    if (scene.id === 'ending' || scene.id === 'call') {
+      if (scene.id === 'ending') ending = scene;
+      outro.push(scene);
+      continue;
+    }
     items.push(itemFor(scene, state, result, entry, items.length + 1));
   }
-  return { items, ending };
+  return { items, ending, outro };
 }
 
 /**
@@ -555,13 +562,41 @@ export class Desk {
     this.headEl = host.querySelector('.desk-head');
     this.itemsEl = host.querySelector('.desk-items');
     this.leaveBtn = host.querySelector('.desk-leave');
+    this.repliesEl = host.querySelector('.desk-replies');
     this.showing = false;
     this.result = null;
     this.items = [];
     this.opened = [];
     this.ending = null;
+    this.outro = [];
     this.endingSeen = false;
     this.onDone = null;
+    /** The office scene waiting on an answer, while it is. */
+    this.asking = null;
+
+    /*
+     * The keys while he waits: 1, 2 and 3 are the replies in the order they
+     * are offered; Enter and Space say nothing, which is what a player who
+     * is pressing Enter through the evening has been saying all along;
+     * Escape says nothing and puts the scene down.
+     */
+    this.onAskKey = (e) => {
+      if (!this.asking) return;
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.closest?.('button')) return;
+      if (e.key === 'Escape') { e.preventDefault(); this.answer('nothing', { skipRest: true }); return; }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.answer('nothing'); return; }
+      if (/^[1-3]$/.test(e.key)) {
+        const reply = this.asking.ask?.replies[Number(e.key) - 1];
+        if (reply) { e.preventDefault(); this.answer(reply.id); }
+      }
+    };
+    this.onAskResize = () => { if (this.asking) this.placeReplies(); };
+    if (this.repliesEl) {
+      this.repliesEl.addEventListener('click', (e) => {
+        const btn = e.target.closest?.('[data-reply]');
+        if (btn) this.answer(btn.dataset.reply);
+      });
+    }
 
     this.onKey = (e) => {
       if (!this.showing) return;
@@ -629,9 +664,10 @@ export class Desk {
   }
 
   build() {
-    const { items, ending } = deskFor(this.state, this.result, this.entry, { opened: this.opened });
+    const { items, ending, outro } = deskFor(this.state, this.result, this.entry, { opened: this.opened });
     this.items = items;
     this.ending = ending;
+    this.outro = outro;
   }
 
   /** What the lamp is on: the first thing not yet picked up. */
@@ -666,6 +702,7 @@ export class Desk {
     if (this.headEl) this.headEl.hidden = true;
     if (this.itemsEl) this.itemsEl.hidden = true;
     if (this.leaveBtn) this.leaveBtn.hidden = true;
+    if (this.repliesEl) this.repliesEl.hidden = true;
     if (this.skipBtn) this.skipBtn.hidden = false;
   }
 
@@ -691,13 +728,92 @@ export class Desk {
     const scene = this.items.find((i) => i.id === id)?.scene ?? item.scene;
     this.hide();
     if (this.skipBtn) this.skipBtn.textContent = 'PUT IT DOWN ▸▸';
+    const character = this.state?.campaign?.character ?? null;
+    /*
+     * The office, in two halves: up to the line he waits after, then the
+     * three replies, then the rest with his next line knowing which it was.
+     */
+    if (scene.ask && scene.ask.at >= 0 && scene.ask.at < scene.lines.length - 1) {
+      const first = { ...scene, lines: scene.lines.slice(0, scene.ask.at + 1), ask: null };
+      this.player.play([first], { character, onDone: () => this.askReply(scene) });
+      return;
+    }
     this.player.play([scene], {
+      character,
+      onDone: () => {
+        if (this.skipBtn) this.skipBtn.textContent = 'SKIP ▸▸';
+        this.show();
+      },
+    });
+  }
+
+  /**
+   * He waits. The last frame of the office stays on the canvas, his last line
+   * stays on the desk front, and the three replies stand above it.
+   */
+  askReply(scene) {
+    this.asking = scene;
+    this.host.hidden = false;
+    if (this.skipBtn) this.skipBtn.hidden = true;
+    if (this.repliesEl) {
+      this.repliesEl.hidden = false;
+      this.repliesEl.innerHTML = scene.ask.replies.map((r, i) => `<button type="button"
+          class="desk-reply" data-reply="${esc(r.id)}" title="${esc(r.label)} (${i + 1})">
+          <i class="desk-key">${i + 1}</i><b>${esc(r.label)}</b></button>`).join('');
+      this.placeReplies();
+      this.repliesEl.querySelector('[data-reply]')?.focus?.({ preventScroll: true });
+    }
+    window.addEventListener('keydown', this.onAskKey);
+    window.addEventListener('resize', this.onAskResize);
+  }
+
+  /** Above the box his line is in; under it on a phone, where there is room. */
+  placeReplies() {
+    const el = this.repliesEl;
+    const box = this.textBox?.getBoundingClientRect?.();
+    if (!el || !box || !box.height) return;
+    const host = this.host.getBoundingClientRect();
+    const stacked = this.host.classList.contains('is-stacked');
+    el.style.left = `${Math.round(box.left - host.left)}px`;
+    el.style.width = `${Math.round(box.width)}px`;
+    el.style.top = stacked
+      ? `${Math.round(box.bottom - host.top + 8)}px`
+      : `${Math.max(8, Math.round(box.top - host.top - el.offsetHeight - 8))}px`;
+  }
+
+  /**
+   * The reply: written on the file, charged or credited on the file's own
+   * standing, and answered by the rest of the scene.
+   */
+  answer(replyId, { skipRest = false } = {}) {
+    const scene = this.asking;
+    if (!scene) return;
+    this.asking = null;
+    window.removeEventListener('keydown', this.onAskKey);
+    window.removeEventListener('resize', this.onAskResize);
+    if (this.repliesEl) { this.repliesEl.hidden = true; this.repliesEl.innerHTML = ''; }
+    const { lines, cost, record } = officeReply(scene, replyId);
+    const campaign = this.state?.campaign;
+    if (campaign) {
+      if (cost && typeof campaign.standing === 'number') {
+        campaign.standing = Math.max(COMMAND.minStanding,
+          Math.min(COMMAND.maxStanding, campaign.standing + cost));
+      }
+      if (record && campaign.character?.record) {
+        campaign.character.record.push({ ...record, at: campaign.character.watches ?? 0 });
+      }
+      this.save?.();
+    }
+    this.audio?.tick?.();
+    if (this.skipBtn) { this.skipBtn.hidden = false; this.skipBtn.textContent = 'PUT IT DOWN ▸▸'; }
+    this.player.play([{ ...scene, lines, ask: null }], {
       character: this.state?.campaign?.character ?? null,
       onDone: () => {
         if (this.skipBtn) this.skipBtn.textContent = 'SKIP ▸▸';
         this.show();
       },
     });
+    if (skipRest) this.player.skipAll();
   }
 
   /**
@@ -709,9 +825,9 @@ export class Desk {
     this.hide();
     const done = this.onDone;
     if (this.skipBtn) this.skipBtn.textContent = 'SKIP ▸▸';
-    if (this.ending && !this.endingSeen) {
+    if (this.outro?.length && !this.endingSeen) {
       this.endingSeen = true;
-      this.player.play([this.ending], {
+      this.player.play(this.outro, {
         character: this.state?.campaign?.character ?? null,
         onDone: () => { this.host.hidden = true; done?.(); },
       });
