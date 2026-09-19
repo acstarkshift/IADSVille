@@ -33,6 +33,12 @@ const source = readFileSync(join(here, '..', 'src', 'ui', 'scenes.js'), 'utf8');
  * into the game without anybody noticing.
  */
 const crest = readFileSync(join(here, '..', 'src', 'ui', 'crest.js'), 'utf8');
+/*
+ * And the desk between watches, which is drawn by code in its own file for the
+ * same reason the crest is: it is the room the scenes are reached from, not a
+ * scene, and it answers to the same table.
+ */
+const desk = readFileSync(join(here, '..', 'src', 'ui', 'desk.js'), 'utf8');
 
 /** The table, as the file itself declares it — seven ramps and five accents. */
 const PALETTE = new Set([
@@ -129,6 +135,34 @@ describe('the crest is cast from the same palette as the scenes', () => {
     const scale = Number(crest.match(/CREST_SCALE = (\d+);/)[1]);
     assert.equal(scale, Math.round(scale));
     assert.ok(scale >= 2, 'a crest drawn at 1x is not pixel art, it is small');
+  });
+});
+
+describe('the desk is drawn from the same palette as the scenes', () => {
+  test('every ink in desk.js is in the table', () => {
+    const found = desk.match(/#[0-9a-fA-F]{6}\b/g) ?? [];
+    const strays = [...new Set(found.map((c) => c.toLowerCase()))].filter((c) => !PALETTE.has(c));
+    assert.deepEqual(strays, [], `ink outside the palette table: ${strays.join(', ')}`);
+  });
+
+  test('each ink is declared once and used by name after that', () => {
+    const found = (desk.match(/#[0-9a-fA-F]{6}\b/g) ?? []).map((c) => c.toLowerCase());
+    const counts = new Map();
+    for (const c of found) counts.set(c, (counts.get(c) ?? 0) + 1);
+    const repeated = [...counts].filter(([, n]) => n > 1).map(([c, n]) => `${c} x${n}`);
+    assert.deepEqual(repeated, [], `literal repeated instead of named: ${repeated.join(', ')}`);
+  });
+
+  for (const primitive of ['arc(', 'ellipse(', 'lineTo(', 'moveTo(', 'stroke(', 'fillText(', 'beginPath(']) {
+    test(`no ${primitive.replace('(', '')} on the desk either`, () => {
+      assert.equal(desk.includes(`.${primitive}`), false,
+        `${primitive} on the desk canvas: it is magnified in whole steps and would fringe`);
+    });
+  }
+
+  test('the lamp on the desk is dithered, not blended', () => {
+    assert.match(desk, /BAYER = \[\[0, 8, 2, 10\], \[12, 4, 14, 6\], \[3, 11, 1, 9\], \[15, 7, 13, 5\]\]/);
+    assert.ok((desk.match(/\b(dither|pool)\(/g) ?? []).length >= 3, 'the desk has a lamp on it');
   });
 });
 

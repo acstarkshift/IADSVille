@@ -16,7 +16,7 @@ import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
 import { scenarioById } from '../src/engine/scenarios.js';
 import { emptyCampaign, enlist, recordMission } from '../src/engine/campaign.js';
-import { scenesFor, standingsDisagree, DISMISSAL_CONSEQUENCE } from '../src/ui/scenes.js';
+import { scenesFor, standingsDisagree, DISMISSAL_CONSEQUENCE, OFFICER } from '../src/ui/scenes.js';
 import { SCENARIOS } from '../src/engine/scenarios.js';
 import { LETTERS } from '../src/engine/family.js';
 import { REVELATIONS } from '../src/engine/revelations.js';
@@ -195,7 +195,11 @@ describe('what is said', () => {
     result.ledger.push({ t: 200, delta: 4, charged: 4, reason: 'held fire on the encampment as ordered' });
     const office = scenesFor(state, result, entry).find((s) => s.id === 'commissar');
     assert.equal(office.kind, 'office');
-    assert.equal(office.speaker, 'THE POLITICAL SECTION');
+    // A rank and a surname on the plate, from the first evening: he is a man
+    // doing this, not a department with a face.
+    assert.equal(office.speaker, OFFICER.plate);
+    assert.match(OFFICER.plate, /^[A-Z]+\. [A-Z]+ · POLITICAL SECTION$/);
+    assert.ok(OFFICER.rank && OFFICER.surname && OFFICER.plate.includes(OFFICER.surname.toUpperCase()));
     // Spoken sentences, not the ledger's own lowercase fragment after a colon.
     const hospital = office.lines.findIndex((l) => /district hospital/.test(l));
     const camp = office.lines.findIndex((l) => /border/.test(l) && /in your favour/.test(l));

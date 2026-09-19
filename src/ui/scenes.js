@@ -34,13 +34,29 @@ import { tierFor } from '../engine/command.js';
 import { wallClockString } from '../engine/math.js';
 import { householdOf, districtOf } from '../engine/character.js';
 import { composeEnding } from '../engine/endings.js';
-import { composeFlightEnding } from '../engine/epilogue.js';
+import { composeFlightEnding, flightEndingFor } from '../engine/epilogue.js';
 import { ROLES } from '../engine/config.js';
 import { appointingOffice, appointingSignatory } from '../engine/echelon.js';
 import { portraitCells, portraitFeatures, skinRamp, FACE, PORTRAIT_W, PORTRAIT_H } from './portrait.js';
 
 export const SCENE_W = 320;
 export const SCENE_H = 180;
+
+/**
+ * The man across the desk.
+ *
+ * He was captioned THE POLITICAL SECTION for twelve evenings — a department
+ * with a face — while four subordinate commanders in the same game were named
+ * down to their competence. He has a rank and a surname on the plate from the
+ * first evening. He is exactly as cold as he was; a name makes the coldness
+ * something a person is choosing rather than an absence of writing.
+ */
+export const OFFICER = {
+  rank: 'Major',
+  short: 'Maj.',
+  surname: 'Dobrek',
+  plate: 'MAJ. DOBREK · POLITICAL SECTION',
+};
 
 /* ------------------------------------------------------------------ what plays */
 
@@ -52,7 +68,7 @@ export const SCENE_H = 180;
  * ending. With the narrative pressure switched off the office speaks in the
  * plain assessment's words and the letters and documents stay in the file.
  */
-export function scenesFor(state, result, entry) {
+export function scenesFor(state, result, entry, { opened = null } = {}) {
   const pressure = state.narrativePressure !== false;
   const campaign = state.campaign;
   const missionId = result.missionId ?? state.mission?.id ?? null;
@@ -81,6 +97,27 @@ export function scenesFor(state, result, entry) {
   const closing = !result.abandoned && (result.finale || result.epilogue);
 
   /*
+   * Whether the folder was open before the office.
+   *
+   * On the desk the player picks things up in any order, and `opened` is what
+   * they have picked up so far: the office is composed when they walk into
+   * it, and it knows whether the folder was open on the desk when they did.
+   * Without a desk (the tests, the report) the old rule stands: on a closing
+   * watch the document played before the office.
+   */
+  const folderRead = Array.isArray(opened)
+    ? opened.includes('revelation')
+    : closing && !!entry?.revelation;
+
+  /*
+   * A night the post was struck is a night the operator's own hand is not
+   * in an office. The order and the folder carry `bare` so the drawers can
+   * put them on a blotter with nobody in the room, or on a bed-table at the
+   * clearing station, the way the finding is drawn with nobody in the chair.
+   */
+  const bare = !result.abandoned && result.reason === 'site-lost';
+
+  /*
    * The promotion that ends the promotion arc is the one the last two watches
    * are about, and it used to be suppressed on exactly those watches and left
    * to a line in the full report behind a button. It plays: first, before the
@@ -105,6 +142,7 @@ export function scenesFor(state, result, entry) {
       office: appointingOffice(entry.appointment.echelon),
       /** And the reference on it is the order's, not the file entry's form. */
       ref: 'ORDER 12-4',
+      bare,
     });
   }
 
@@ -114,6 +152,8 @@ export function scenesFor(state, result, entry) {
       kind: 'folder',
       speaker: entry.revelation.title,
       lines: entry.revelation.lines,
+      /** Which document, so the desk can say whose folder it is and what opening it costs. */
+      revelationId: entry.revelation.id,
       /*
        * The document's own reference. The sheet used to print 4471-B at the
        * foot of every one of them, which is the number of the form the sector
@@ -123,6 +163,7 @@ export function scenesFor(state, result, entry) {
        * else.
        */
       ref: entry.revelation.ref ?? null,
+      bare,
     });
   }
 
@@ -138,24 +179,53 @@ export function scenesFor(state, result, entry) {
    * lamp and the same light — with nobody in it. See round5/STRUCTURE.md.
    */
   const written = pressure && !result.abandoned && result.reason === 'site-lost';
-  scenes.push({
+  /*
+   * And the one evening the office is empty.
+   *
+   * On the epilogue's two endings where the state stops answering — the
+   * aircraft brought down by this sector's own battery, the watch broken off
+   * with nothing left on the air — the ending says the political section has
+   * not been reached since five and the office has been open all morning with
+   * nobody in it. The evening then sat the man at his desk with the file
+   * open, had him say "Dismissed", and contradicted the last scene of the
+   * campaign ninety seconds before it played. On those two nights the room is
+   * drawn as the finding scene draws it, the same lamp and nobody in the
+   * chair, and what is said is what the duty clerk left on the blotter.
+   */
+  const nobodyIn = pressure && !written && !result.abandoned && result.epilogue
+    ? emptyOffice(result) : null;
+  /*
+   * Two facts the picture uses and the words do not: how many watches this
+   * file has behind it, which decides how much paper has piled up on the
+   * desk and whether it is snowing yet, and whether the Ville has been
+   * struck, after which one pane of his window is boarded.
+   */
+  const watches = Object.keys(campaign?.completed ?? {}).length;
+  const struck = !!result.stats?.homeDistrictHit;
+  scenes.push(nobodyIn ? {
+    id: 'commissar',
+    kind: 'finding',
+    speaker: 'THE POLITICAL SECTION · NOBODY IN',
+    lines: nobodyIn.lines,
+    tier: consequence.tier.id,
+    written: true,
+    /** The room, the lamp, nobody in the chair; and whether the door is locked. */
+    empty: true,
+    locked: nobodyIn.locked,
+    watches,
+    struck,
+  } : {
     id: 'commissar',
     kind: written ? 'finding' : 'office',
     speaker: written ? 'A FINDING FROM THE POLITICAL SECTION'
-      : pressure ? 'THE POLITICAL SECTION' : 'SECTOR COMMAND',
+      : pressure ? OFFICER.plate : 'SECTOR COMMAND',
     lines: commissarLines(result, consequence, pressure, missionId, campaign,
-      state.mission?.hour ?? null, closing && !!entry?.revelation),
+      state.mission?.hour ?? null, folderRead),
     tier: consequence.tier.id,
     /** Nobody is in the chair on this one: the section's account is on paper. */
     written,
-    /*
-     * Two facts the picture uses and the words do not: how many watches this
-     * file has behind it, which decides how much paper has piled up on the
-     * desk and whether it is snowing yet, and whether the Ville has been
-     * struck, after which one pane of his window is boarded.
-     */
-    watches: Object.keys(campaign?.completed ?? {}).length,
-    struck: !!result.stats?.homeDistrictHit,
+    watches,
+    struck,
   });
 
   if (entry?.appointment && !closing) {
@@ -176,6 +246,7 @@ export function scenesFor(state, result, entry) {
       office: appointingOffice(entry.appointment.echelon),
       /** And the reference on it is the order's, not the file entry's form. */
       ref: 'ORDER 12-4',
+      bare,
     });
   }
 
@@ -185,6 +256,8 @@ export function scenesFor(state, result, entry) {
       kind: 'folder',
       speaker: entry.revelation.title,
       lines: entry.revelation.lines,
+      /** Which document, so the desk can say whose folder it is and what opening it costs. */
+      revelationId: entry.revelation.id,
       /*
        * The document's own reference. The sheet used to print 4471-B at the
        * foot of every one of them, which is the number of the form the sector
@@ -194,6 +267,7 @@ export function scenesFor(state, result, entry) {
        * else.
        */
       ref: entry.revelation.ref ?? null,
+      bare,
     });
   }
 
@@ -246,6 +320,45 @@ export function scenesFor(state, result, entry) {
   }
 
   return scenes;
+}
+
+/**
+ * What the duty clerk left, on the two mornings nobody is in the office.
+ *
+ * Read off the ending the world has already decided, so this scene and the
+ * ending three minutes later cannot disagree about whether the man is at his
+ * desk. Null on the two endings where he is.
+ */
+function emptyOffice(result) {
+  let id = result.endingId ?? null;
+  if (!id && Array.isArray(result.assets)) {
+    try { id = flightEndingFor(result).id; } catch { id = null; }
+  }
+  if (id === 'judgement') {
+    return {
+      locked: false,
+      lines: [
+        'The section\'s door is open and the lamp is on. The chair is pushed back from the desk, and'
+          + ' nobody has sat in it since five.',
+        'There is a note on the blotter in the duty clerk\'s hand. The morning returns have gone to'
+          + ' your desk. The tape of tonight\'s watch is in the drawer, and nobody has signed for it.',
+        'Your file is in the same drawer. Tonight is not entered in it, and there is nobody here to'
+          + ' enter it.',
+      ],
+    };
+  }
+  if (id === 'unwatched') {
+    return {
+      locked: true,
+      lines: [
+        'The section\'s door is locked and the lamp is off. A chit is pinned to it in the duty'
+          + ` clerk's hand: ${OFFICER.rank} ${OFFICER.surname} is at the district, and returns are`
+          + ' to be left.',
+        'Yours are on the floor by the door with four others. Nobody has signed for any of them.',
+      ],
+    };
+  }
+  return null;
 }
 
 /**

@@ -15,7 +15,9 @@ import { World } from '../src/engine/world.js';
 import { scenarioById, SCENARIOS } from '../src/engine/scenarios.js';
 import { ASSET_TYPES, DEFENCE_CLASSES, SAM_TYPES, COMMAND } from '../src/engine/config.js';
 import { DIRECTIVES, issueDirective, answerDirective, settleDirectives } from '../src/engine/command.js';
-import { REVELATIONS, revelationAfter, learn, knownRevelations, standing } from '../src/engine/revelations.js';
+import {
+  REVELATIONS, revelationAfter, learn, readFolder, knownRevelations, standing,
+} from '../src/engine/revelations.js';
 import { emptyCampaign, enlist, recordMission } from '../src/engine/campaign.js';
 import { predictedTarget } from '../src/engine/threat.js';
 import { MAP } from '../src/engine/geography.js';
@@ -239,27 +241,63 @@ describe('the revelations', () => {
     }
   });
 
-  test('they are learned once each, on finishing the right watch', () => {
+  /*
+   * The document is handed over on finishing the watch, and it is learned
+   * when the player opens it. The file used to record it the moment the watch
+   * ended — before the folder was on the desk, let alone open — so the brief
+   * the next morning narrated an investigation nobody had performed.
+   */
+  test('they are handed over once each, on finishing the right watch, and learned when opened', () => {
     const campaign = emptyCampaign();
     assert.equal(learn(campaign, 'first-light'), null, 'most watches teach you nothing');
 
     const first = learn(campaign, 'economy-of-force');
     assert.equal(first.id, 'freeze');
-    assert.equal(learn(campaign, 'economy-of-force'), null, 'and never twice');
+    assert.deepEqual(campaign.revelations, [], 'handing the folder over records nothing');
+    assert.equal(learn(campaign, 'economy-of-force').id, 'freeze',
+      'a folder nobody has opened is still on the desk');
+
+    assert.equal(readFolder(campaign, 'freeze').id, 'freeze', 'opening it is what the file records');
     assert.deepEqual(campaign.revelations, ['freeze']);
+    assert.equal(learn(campaign, 'economy-of-force'), null, 'and never twice');
+    assert.equal(readFolder(campaign, 'freeze'), null);
+  });
+
+  /*
+   * A folder that is not yours costs the file something to open, on the
+   * scale of a radio check left unanswered, and the opening goes on the
+   * record; one that came addressed to you costs nothing.
+   */
+  test('opening a folder that is not yours is charged and written down', () => {
+    const campaign = emptyCampaign();
+    enlist(campaign, { name: 'Тест', background: 'factory' });
+    const before = campaign.standing;
+    readFolder(campaign, 'passenger');
+    assert.equal(campaign.standing, before, 'the district signals annex is yours to read');
+    readFolder(campaign, 'border');
+    assert.ok(campaign.standing < before, 'the sector target folder is not');
+    const entry = campaign.character.record.find((r) => r.kind === 'folder');
+    assert.equal(entry?.id, 'border', 'and the file says which folder');
+    assert.ok(Math.abs(campaign.standing - before) <= 4, 'on the scale of a radio check, not a refusal');
+    for (const r of Object.values(REVELATIONS)) {
+      assert.ok(r.desk?.plate && r.desk?.gist, `${r.id} lies on the desk with a plate on it`);
+      if (r.desk.yours === false) assert.ok(r.desk.cost < 0, `${r.id} is not yours, so it costs`);
+      assert.ok(!r.lines.some((l) => /you looked|you had a reason|before you had decided/i.test(l)),
+        `${r.id} narrates an act the player did not take`);
+    }
   });
 
   test('what the operator understands changes as they accumulate', () => {
     const campaign = emptyCampaign();
     assert.equal(standing(campaign), null, 'at the start there is nothing to know');
 
-    learn(campaign, 'economy-of-force');
+    readFolder(campaign, 'freeze');
     const early = standing(campaign);
-    learn(campaign, 'ville-under-fire');
+    readFolder(campaign, 'ledger');
     const later = standing(campaign);
-    learn(campaign, 'reinforce-the-capital');
+    readFolder(campaign, 'movement');
     const district = standing(campaign);
-    learn(campaign, 'two-cities');
+    readFolder(campaign, 'buyer');
     const final = standing(campaign);
 
     assert.notEqual(early, later);
@@ -278,6 +316,8 @@ describe('the revelations', () => {
       stats: { leakers: 1, kills: 5, assetsLost: 0 },
     });
     assert.equal(entry.revelation.id, 'freeze', 'the debrief is handed it to show');
+    assert.deepEqual(campaign.revelations, [], 'and the file learns it when the folder is opened');
+    readFolder(campaign, entry.revelation.id);
     assert.deepEqual(campaign.revelations, ['freeze']);
   });
 

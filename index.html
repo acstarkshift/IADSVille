@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="styles/theme.css">
 <link rel="stylesheet" href="styles/panel.css">
 <link rel="stylesheet" href="styles/hud.css">
+<link rel="stylesheet" href="styles/desk.css">
 </head>
 <body data-theme="crt-green">
 
@@ -257,6 +258,16 @@
     <span class="scene-prompt" aria-hidden="true"></span>
   </div>
   <button class="scene-skip" type="button" title="Skip (Esc)">SKIP ▸▸</button>
+  <!--
+    The desk between watches: the night's paper laid out to be picked up in
+    any order, and STAND UP. Filled by src/ui/desk.js on the same host, so a
+    thing picked up plays as the scene it always was; all three are hidden
+    while a scene is playing.
+  -->
+  <div class="desk-head" hidden><b>YOUR DESK</b>
+    <span>The night's paper is on it. Pick up what you want, in any order, and stand up when you are done.</span></div>
+  <div class="desk-items" hidden></div>
+  <button class="desk-leave" type="button" hidden title="Stand up (Esc)">STAND UP <em>Esc</em></button>
 </div>
 
 <script type="module" src="src/ui/app.js"></script>

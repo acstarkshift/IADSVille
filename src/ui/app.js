@@ -35,7 +35,8 @@ import {
   NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, RADAR_TUTORIAL_STEPS, stepText,
 } from './tutorial.js';
 import { renderMenu, renderBriefing, renderDebrief, renderEndCard, renderControls } from './screens.js';
-import { scenesFor, openingScenes, ScenePlayer } from './scenes.js';
+import { openingScenes, ScenePlayer } from './scenes.js';
+import { Desk } from './desk.js';
 import { ContextMenu } from './contextmenu.js';
 import { drawCrest } from './crest.js';
 import { renderEnlistment, renderDossier } from './dossier.js';
@@ -493,24 +494,28 @@ function endMission() {
 }
 
 /**
- * The evening: the scenes between watches, then the card they end on.
+ * The evening: the desk between watches, then the card the night ends on.
  *
  * The player asked for the summaries between watches to go — "cluttered and
  * overwhelming" — in favour of scenes: the printout in the operator's hands,
- * the political section, the letter from home. So a finished watch plays its
- * scenes first, and the page of tables the debrief used to be is behind one
- * button on the card at the end.
+ * the political section, the letter from home. Then they measured what a
+ * sequence of them cost (338 presses of Enter a campaign) and asked for a
+ * desk instead: the same scenes, laid out as the night's paper, picked up in
+ * any order or not at all. The desk plays each one through the same player;
+ * the page of tables the debrief used to be is still behind one button on
+ * the card at the end.
  */
 let scenePlayer = null;
+let desk = null;
 function playScenes(result, entry) {
   scenePlayer ??= new ScenePlayer(els.scene, { audio });
+  desk ??= new Desk(els.scene, {
+    player: scenePlayer, audio, save: () => saveCampaign(store, state.campaign),
+  });
   state.phase = 'scenes';
   els.shell.hidden = true;
   els.screen.hidden = true;
-  scenePlayer.play(scenesFor(state, result, entry), {
-    character: state.campaign.character,
-    onDone: () => endCard(result, entry),
-  });
+  desk.open(state, result, entry, { onDone: () => endCard(result, entry) });
 }
 
 function endCard(result, entry) {

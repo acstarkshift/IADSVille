@@ -1,0 +1,75 @@
+/*
+ * The desk between watches. See src/ui/desk.js.
+ *
+ * The picture is on the scene host's canvas, scaled the way every scene is.
+ * What this sheet styles is the paper's plates — one small stencilled label
+ * laid under each thing on the desk, naming it and saying what a glance at it
+ * tells you — and the one control that is always there, STAND UP. The plates
+ * are drawn in the same idiom as the scene's SKIP cap: a dark box, a light
+ * rule, the console's monospace, so they read as labels on the picture and
+ * not as a menu laid over it.
+ */
+.desk-head {
+  position: absolute; left: 16px; top: 14px; z-index: 2;
+  display: flex; flex-direction: column; gap: 3px; max-width: 440px;
+  font-family: var(--font-mono); color: #cfe3d0; pointer-events: none;
+}
+.desk-head b { font-size: 11px; letter-spacing: .18em; }
+.desk-head span { font-size: 11px; line-height: 1.4; color: #9fb3a0; }
+.desk-head[hidden], .desk-items[hidden], .desk-leave[hidden] { display: none; }
+
+.desk-items { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.desk-item {
+  position: absolute; pointer-events: auto; cursor: pointer; text-align: left;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "key plate stamp" "key gist gist";
+  column-gap: 8px; row-gap: 3px; align-items: center;
+  max-width: 250px; box-sizing: border-box; padding: 6px 10px 7px 8px;
+  background: rgba(8, 12, 9, .86); color: #cfe3d0; border: 1px solid #6b7a6a; border-radius: 2px;
+  font-family: var(--font-mono); font-size: 11px; line-height: 1.2;
+  box-shadow: 0 2px 0 rgba(10, 13, 10, .6);
+}
+.desk-item:hover, .desk-item:focus-visible { border-color: #cfe3d0; outline: none; }
+/* The lamp is on whatever is next: a warm rule, and the same warmth on its key. */
+.desk-item.is-next { border-color: #e8a86a; box-shadow: 0 0 0 1px #0a0d0a, 0 0 14px rgba(255, 180, 60, .28); }
+.desk-item.is-read { opacity: .58; }
+.desk-item.is-read:hover, .desk-item.is-read:focus-visible { opacity: .92; }
+.desk-key {
+  grid-area: key; font-style: normal; font-size: 10px; font-weight: 700;
+  width: 16px; height: 16px; display: inline-grid; place-items: center;
+  border: 1px solid #6b7a6a; border-radius: 2px; color: #9fb3a0;
+}
+.desk-item.is-next .desk-key { border-color: #e8a86a; color: #e8a86a; }
+/* A long name wraps inside its plate; the stamp keeps its own corner. */
+.desk-plate { grid-area: plate; min-width: 0; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.desk-stamp {
+  grid-area: stamp; justify-self: end; font-style: normal; font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+  color: #e8a86a; border: 1px solid rgba(232, 168, 106, .7); padding: 1px 4px; border-radius: 1px; white-space: nowrap;
+}
+.desk-gist { grid-area: gist; font-size: 10.5px; letter-spacing: .02em; color: #9fb3a0; line-height: 1.3; }
+
+.desk-leave {
+  position: absolute; right: 16px; bottom: 16px; z-index: 2; cursor: pointer;
+  background: rgba(8, 12, 9, .86); color: #cfe3d0; border: 1px solid #6b7a6a; border-radius: 2px;
+  font: 700 12px var(--font-mono); letter-spacing: .14em; padding: 9px 14px;
+}
+.desk-leave em {
+  font-style: normal; font-size: 9px; letter-spacing: .1em; color: #9fb3a0;
+  margin-left: 8px; border: 1px solid #6b7a6a; padding: 1px 4px; border-radius: 2px;
+}
+.desk-leave:hover, .desk-leave:focus-visible { border-color: #cfe3d0; outline: none; }
+.desk-leave.is-next { border-color: #e8a86a; box-shadow: 0 0 14px rgba(255, 180, 60, .28); }
+
+/*
+ * A phone held upright: the picture at the top of the window, the paper as a
+ * list under it — on the desk's own wood, so the plates lie on the desk rather
+ * than floating in the dark — and STAND UP across the foot of the screen.
+ */
+.scene.is-stacked .desk-head { position: static; padding: 8px 8px 0; max-width: none; }
+.scene.is-stacked .desk-items {
+  position: absolute; left: 8px; right: 8px; bottom: 66px; inset-inline: 8px;
+  display: flex; flex-direction: column; gap: 8px; overflow-y: auto;
+  padding: 10px 8px; box-sizing: border-box;
+  background: #4e3620; border-top: 1px solid #a3874f;
+}
+.scene.is-stacked .desk-item { position: static; max-width: none; width: 100%; box-sizing: border-box; }
+.scene.is-stacked .desk-leave { left: 8px; right: 8px; bottom: 12px; text-align: center; }

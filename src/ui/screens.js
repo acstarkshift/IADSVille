@@ -1184,7 +1184,11 @@ export function renderDebrief(host, state, result, entry) {
     ${/* The plate and the title, separated the way every other paired plate in
          the game separates them. The margin between them was a CSS margin, so
          the heading itself read as one run-on word. */ ''}
-    ${state.narrativePressure && entry?.revelation ? `<div class="card revelation-card">
+    ${/* Only once the folder has been opened on the desk: a document the
+         player left where it lay is not in the file, and the report is the
+         file. */ ''}
+    ${state.narrativePressure && entry?.revelation
+    && (state.campaign.revelations ?? []).includes(entry.revelation.id) ? `<div class="card revelation-card">
       <h3>${entry.revelation.tm ? `<span class="tm">${esc(entry.revelation.tm)}</span> <span class="plate-sep">·</span> ` : ''}${esc(entry.revelation.title)}</h3>
       ${entry.revelation.lines.map((l) => `<p>${esc(l)}</p>`).join('')}
       <span class="doc-stamp">SECTOR FILE</span>
@@ -1301,7 +1305,7 @@ export function renderEndCard(host, state, result) {
       <button class="btn-primary" id="btn-again">STAND ANOTHER WATCH</button>
       <span class="action-pair">
         <button class="btn" id="btn-report">THE FULL REPORT</button>
-        <button class="btn" id="btn-scenes">THE EVENING AGAIN</button>
+        <button class="btn" id="btn-scenes">BACK TO THE DESK</button>
       </span>
       <span class="action-pair is-quiet">
         <button class="btn" id="btn-replay">REPLAY THIS ONE</button>
