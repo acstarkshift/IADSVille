@@ -52,6 +52,26 @@ const PALETTE = new Set([
   '#7a4f6a', '#c07a5a', '#e8a86a', '#ffd08a',
   // the accents
   '#ffb43c', '#45e874', '#9a2b26', '#5aa9ff', '#0a0d0a',
+  /*
+   * AND THE LIGHT.
+   *
+   * The graphics reviewer, on the table above: "seven MATERIAL ramps and not
+   * one LIGHT ramp, so no drawer has a lit step of paper, wood, skin or steel
+   * to deposit; that is why the lamp cone has to be painted in the wall's own
+   * green, why it has to stop at the dado, and why the only shadow ink in the
+   * game is pure black and is therefore never used." Thirteen inks answer it,
+   * and not one of them was chosen by eye: the top of a ramp mixed 45% toward
+   * AMBER is what a warm lamp does to that material, the bottom mixed 45%
+   * toward INK is what its own shadow does, and the third step mixed 38%
+   * toward TUBE is what a cathode-ray tube does to a hand in front of it. The
+   * list is longer and it is still derived, still countable and still closed.
+   */
+  // warm-lit: SKIN, CLOTH, PAPER, WOOD, STEEL
+  '#f7c377', '#ae944b', '#f9d497', '#cc9b46', '#eaca90',
+  // shadowed: the same five
+  '#5b4332', '#192016', '#423d32', '#1c1710', '#181b16',
+  // and what the tube does to skin, paper and steel
+  '#abd28f', '#a4db9e', '#72b382',
 ]);
 
 describe('the scenes are drawn in one palette', () => {

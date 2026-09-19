@@ -2060,8 +2060,94 @@ const TUBE = '#45e874';
 const RED = '#9a2b26';
 /** The card reader's power lamp — this one colour and nowhere else. */
 const BLUE = '#5aa9ff';
-/** True black: slot mouths, outlines, contact shadows, the ground. */
+/** True black: slot mouths, outlines, and the ground. */
 const INK = '#0a0d0a';
+
+/**
+ * AND THE LIGHT, WHICH THE TABLE ABOVE DID NOT HAVE.
+ *
+ * Seven material ramps and not one light ramp. The graphics reviewer named it
+ * as the single root cause of four separate standing complaints, and the
+ * diagnosis is exactly right: no drawer had a lit step of paper, wood, skin or
+ * steel to put down, so nothing in this game could be lit BY anything.
+ *
+ * What that cost, in the reviewer's own measurements. A warm amber bulb threw
+ * sage-green light, because the only inks the cone had were the wall's, and it
+ * stopped dead on a diagonal above the desk — `lampCone`'s own comment says
+ * why: "a cone painted in the WALL's inks over the wood was half of why the
+ * beam read as a stain". A lit bulb hung directly over a sheet of paper in the
+ * quarters and the sheet was uniformly flat. A green cathode-ray tube thirty
+ * centimetres from the operator's face in a dark bunker put no green on his
+ * hands, on the desk lip or on the open log book — measured, the tube is 0.7%
+ * of that frame and 84% of the rest of it is three neutral greys. A town burned
+ * and the buildings beside it were the same navy as the buildings a kilometre
+ * away. And nothing in any room cast a contact shadow, because INK was
+ * documented as the palette's shadow colour and pure black on mid-value wood is
+ * too harsh to use, so no shadow was ever drawn at all.
+ *
+ * Thirteen inks, and every one of them derived from an ink already in the
+ * table by one recipe rather than chosen by eye: the top of a ramp mixed 45%
+ * toward AMBER for what a warm lamp does to it, the bottom mixed 45% toward INK
+ * for what its own shadow does, and the third step mixed 38% toward TUBE for
+ * what a cathode-ray tube does to a hand in front of it. The discipline the
+ * reviewer's KEEP list asks for survives: the list is still countable, still
+ * derived, and a light step may only ever be laid by a light SOURCE.
+ */
+const SKIN_LIT = '#f7c377';
+const SKIN_DARK = '#5b4332';
+const SKIN_TUBE = '#abd28f';
+const CLOTH_LIT = '#ae944b';
+const CLOTH_DARK = '#192016';
+const PAPER_LIT = '#f9d497';
+const PAPER_DARK = '#423d32';
+const PAPER_TUBE = '#a4db9e';
+const WOOD_LIT = '#cc9b46';
+const WOOD_DARK = '#1c1710';
+const STEEL_LIT = '#eaca90';
+const STEEL_DARK = '#181b16';
+const STEEL_TUBE = '#72b382';
+
+/**
+ * Keyed on the ramp itself rather than on its name, so a drawer that already
+ * holds a ramp can ask what light does to it without knowing what it is.
+ */
+const LIGHT_STEPS = new Map([
+  [SKIN, { lit: SKIN_LIT, dark: SKIN_DARK, tube: SKIN_TUBE }],
+  [CLOTH, { lit: CLOTH_LIT, dark: CLOTH_DARK, tube: STEEL_TUBE }],
+  [PAPER, { lit: PAPER_LIT, dark: PAPER_DARK, tube: PAPER_TUBE }],
+  [WOOD, { lit: WOOD_LIT, dark: WOOD_DARK, tube: STEEL_TUBE }],
+  [STEEL, { lit: STEEL_LIT, dark: STEEL_DARK, tube: STEEL_TUBE }],
+]);
+
+/**
+ * What a warm lamp does to this material, what its own shadow does to it, and
+ * what a cathode-ray tube does to it.
+ *
+ * A ramp with no light steps of its own — NIGHT and DAWN are lights rather
+ * than materials — falls back to the ends of itself, so these are always safe
+ * to call and never invent an ink.
+ */
+const lit = (ramp) => LIGHT_STEPS.get(ramp)?.lit ?? ramp[ramp.length - 1];
+const shadowOf = (ramp) => LIGHT_STEPS.get(ramp)?.dark ?? ramp[0];
+const tubeLit = (ramp) => LIGHT_STEPS.get(ramp)?.tube ?? ramp[2];
+
+/**
+ * The shadow an object sitting on a surface casts at its own foot.
+ *
+ * One row of the surface's own shadow step under the object's footprint, and
+ * one cell of it out at each side, laid BEFORE the object is drawn. Two rows
+ * under something heavy. Every object in every room used to meet its surface
+ * on a bare outline with nothing between, which the reviewer summed up as
+ * "objects read as stickers on a backdrop"; this is twenty calls and it is the
+ * whole of the fix.
+ */
+function contactShadow(ctx, x, y, w, surface, { rows = 1, spread = 1 } = {}) {
+  const ink = shadowOf(surface);
+  for (let r = 0; r < rows; r += 1) {
+    const inset = r * spread;
+    px(ctx, x - spread + inset, y + r, w + spread * 2 - inset * 2, 1, ink);
+  }
+}
 
 /* ---------------------------------------------------------------- the frame */
 
@@ -2890,9 +2976,26 @@ function handsBack(ctx, ramp, y, left, right, rim = null, shade = PAPER[1]) {
   handBack(ctx, ramp, left, y, 1, rim, { from: left - 8, shade, light: 1 });
   handBack(ctx, ramp, right, y, -1, rim, { from: right + 28, shade, light: -1 });
 }
-function handsFront(ctx, ramp, y, left, right) {
+function handsFront(ctx, ramp, y, left, right, { tube = 0 } = {}) {
   handFront(ctx, ramp, left, y, 1);
   handFront(ctx, ramp, right, y, -1);
+  /*
+   * And the tube on the backs of them.
+   *
+   * A green cathode-ray tube thirty centimetres from these hands used to put
+   * nothing on them at all — the reviewer measured the hands at the console as
+   * the same flat skin they are in the daylit office. The light comes from
+   * above and behind the near edge of the desk, so it catches the top of the
+   * knuckles and nothing else: two rows, dithered, in the green-lit step of
+   * this operator's own skin.
+   */
+  if (tube > 0) {
+    const lvl = Math.max(1, Math.round(6 * tube));
+    for (const hx of [left, right]) {
+      dither(ctx, hx + 2, y + 1, 18, 2, ramp[2], tubeLit(SKIN), lvl);
+      dither(ctx, hx + 4, y + 3, 14, 1, ramp[2], tubeLit(SKIN), Math.max(1, lvl - 2));
+    }
+  }
 }
 
 
@@ -3592,11 +3695,63 @@ function consoleRoom(ctx, t, opts = {}) {
       px(ctx, 304 + Math.round(Math.sin(i / 6) * 5), cy, 3, 1, S(STEEL, 0));
     }
   }
-  // the tube's own light, falling on the desk in front of it
+  /*
+   * THE TUBE LIGHTS THE ROOM.
+   *
+   * The reviewer: "A lit green CRT sits 30cm from the operator's face in a dark
+   * bunker and lights nothing. The hands are the same flat skin they are in the
+   * daylit office; the desk lip, the log book, the keyboard and the card reader
+   * have no green cast and no falloff. The one thing that would make the
+   * console beats feel like a place is missing." Measured, the tube was 0.7% of
+   * that frame and 84% of the rest of it was three neutral greys.
+   *
+   * It could not have done anything else: there was no green-lit step of steel
+   * or paper or skin in the palette to put down. There is now, and the falloff
+   * is a single mask applied once per surface — brightest on the row nearest
+   * the glass, gone by the near lip, and strongest in the columns the tube
+   * actually occupies.
+   */
   if (opts.live !== false && (opts.tube ?? 1) > 0) {
-    const lvl = Math.round(3 * (opts.tube ?? 1));
+    const glow = opts.tube ?? 1;
+    const lvl = Math.round(3 * glow);
     dither(ctx, 96, deskTop, 128, 3, STEEL[1], TUBE, lvl);
     dither(ctx, 110, deskTop + 3, 100, 5, STEEL[0], TUBE, Math.max(1, lvl - 1));
+    /*
+     * And the spill on everything between the glass and the operator: the desk
+     * running away to the panel, the near shelf, the lip, and whatever is
+     * standing on them. The band is widest at the back and narrows to the
+     * width of the tube by the time it reaches the hands, which is what light
+     * from a rectangle a foot wide does in a room this size.
+     */
+    const reach = lip - deskTop;
+    for (let i = 0; i < reach; i += 1) {
+      const y2 = deskTop + i;
+      const f = 1 - i / reach;                      // 1 at the glass, 0 at the lip
+      const level = Math.round(5 * f * f * glow);
+      if (level <= 0) continue;
+      const half = Math.round(58 + 40 * (1 - f));
+      const surface = y2 >= shelf ? step(STEEL, 1) : STEEL[0];
+      const core = Math.round(half * 0.55);
+      /*
+       * Light on grey metal LIFTS ITS VALUE first and carries its colour
+       * second: the spill is the steel's own next step over the whole pool,
+       * and only the rows nearest the glass take the green on top of that. A
+       * bright phosphor dithered straight on to a dark desk is not a wash, it
+       * is a field of green dots — which is the transparency-checker mistake
+       * this file has filed three times under another name.
+       */
+      dither(ctx, 160 - core, y2, core * 2, 1, surface, step(STEEL, 1), Math.min(14, level * 3));
+      const wing = Math.max(1, level);
+      dither(ctx, 160 - half, y2, half - core, 1, surface, step(STEEL, 1), wing);
+      dither(ctx, 160 + core, y2, half - core, 1, surface, step(STEEL, 1), wing);
+      if (f > 0.5) {
+        dither(ctx, 160 - core, y2, core * 2, 1, step(STEEL, 1), tubeLit(STEEL),
+          Math.max(1, Math.round(level * 0.8)));
+      }
+    }
+    // the near lip takes the last of it along its top edge, which is the edge
+    // the operator's own hands lie behind
+    dither(ctx, 108, lip, 104, 2, step(STEEL, 2), tubeLit(STEEL), Math.max(1, Math.round(2 * glow)));
   }
   // and the one thing in the room that says which seat this is — last, so the
   // desk's own furniture cannot be drawn over the top of it
@@ -4319,7 +4474,7 @@ function drawBoot(ctx, t, scene, character) {
     px(ctx, 0, dy, SCENE_W, 1, step(STEEL, 1 + room));
   }
   handsBack(ctx, skinOf(character), restRow(), HAND_L, HAND_R, room > 1 ? TUBE : null, STEEL[0]);
-  handsFront(ctx, skinOf(character), restRow(), HAND_L, HAND_R);
+  handsFront(ctx, skinOf(character), restRow(), HAND_L, HAND_R, { tube });
   if (t > 2.2) {
     // READY, printed low on the glass where a set's own legend goes — not in
     // a box in the middle of the picture, which read as a button on a diagram.
@@ -4901,6 +5056,7 @@ function drawOffice(ctx, t, {
    * ramp, with a dithered turn at each step, and the blotter's own cloth takes
    * the light along its near edge.
    */
+  contactShadow(ctx, 26, 114, 52, WOOD);
   px(ctx, 26, 100, 52, 14, S(WOOD, 0));
   px(ctx, 26, 100, 52, 1, S(WOOD, 1));
   for (let i = 0; i < 48; i++) {
@@ -4923,6 +5079,21 @@ function drawOffice(ctx, t, {
    */
   const pile = Math.min(30, 5 + watches * 2);
   const sheets = Math.max(2, Math.min(9, 2 + Math.floor(watches / 1.4)));
+  /*
+   * AND EVERYTHING IN THIS ROOM SITS ON SOMETHING NOW.
+   *
+   * The reviewer: "Nothing in the game sits on anything. The paper stack, the
+   * typewriter, the stamps, the file box, the lamp base, the stove, the bunk,
+   * the log book, the mug, the card reader, the commissar's forearms and the
+   * identity card all meet their surfaces on a bare outline with no occlusion
+   * and no cast shadow. Objects read as stickers on a backdrop." The reason
+   * was in the palette's own comment — INK was documented as the contact
+   * shadow ink, pure black on mid-value wood is too harsh to use, so no
+   * contact shadow was ever drawn. Every ramp has its own shadow step now and
+   * `contactShadow` lays one row of it under a footprint before the object
+   * goes down. Two rows under something heavy.
+   */
+  contactShadow(ctx, 232, 118, 28, WOOD, { rows: 2 });
   px(ctx, 232, 116 - pile, 28, pile + 2, INK);
   px(ctx, 233, 117 - pile, 26, pile, S(PAPER, 1));
   px(ctx, 233, 117 - pile, 26, 1, S(PAPER, 2));
@@ -4933,12 +5104,14 @@ function drawOffice(ctx, t, {
   // and the two folders that were there on the first evening
   for (let i = 0; i < 2; i++) {
     const fx = 196 + i * 11;
+    contactShadow(ctx, fx, 112 + i, 10, WOOD);
     px(ctx, fx, 100 - i, 10, 12 + i, INK);
     px(ctx, fx + 1, 101 - i, 8, 10 + i, S(PAPER, 1));
     px(ctx, fx + 1, 101 - i, 8, 1, S(PAPER, 2));
     px(ctx, fx + 1, 104 - i, 8, 1, S(PAPER, 0));
   }
   // the telephone, and its shadow thrown away from the lamp
+  contactShadow(ctx, 264, 112, 48, WOOD, { rows: 2 });
   px(ctx, 264, 94, 42, 18, INK);
   px(ctx, 266, 96, 38, 8, S(STEEL, 0));
   px(ctx, 266, 96, 38, 1, S(STEEL, 1));
@@ -5109,7 +5282,20 @@ function drawOffice(ctx, t, {
     // next step — a field of dots at half strength reads as grit on the desk
     const core = Math.max(0, Math.round(half * 0.55));
     dither(ctx, front - half, 116 + i, half - core, 1, S(WOOD, 1), S(WOOD, 2), lvl);
-    if (core > 0) px(ctx, front - core, 116 + i, core * 2, 1, S(WOOD, lvl > 10 ? 3 : 2));
+    /*
+     * And the core of it is the wood WARM rather than the wood one step up.
+     * This is the only surface in the room the bulb reaches directly, and
+     * until the palette had a lit step of wood in it there was nothing to
+     * paint that with — so the brightest thing in the office was the same
+     * colour the desk is in daylight.
+     */
+    if (core > 0) {
+      px(ctx, front - core, 116 + i, core * 2, 1, S(WOOD, lvl > 10 ? 3 : 2));
+      if (lvl > 9 && !hard) {
+        dither(ctx, front - Math.round(core * 0.7), 116 + i, Math.round(core * 1.4), 1,
+          S(WOOD, 3), lit(WOOD), Math.max(2, lvl - 6));
+      }
+    }
     dither(ctx, front + core, 116 + i, half - core, 1, S(WOOD, 1), S(WOOD, 2), lvl);
   }
 }
@@ -5270,7 +5456,9 @@ function deskLamp(ctx, x, y, turn, S, { off = false } = {}) {
   px(ctx, x - 1, y + 8, 5, 48, INK);
   px(ctx, x, y + 8, 3, 48, S(STEEL, 1));
   px(ctx, x, y + 8, 1, 48, S(STEEL, 2));
-  // the base plate, with a lip and a highlight along the front of it
+  // the base plate, with a lip and a highlight along the front of it — and the
+  // shadow it throws where it meets the desk, two rows, because it is heavy
+  contactShadow(ctx, x - 12, y + 59, 28, WOOD, { rows: 2 });
   px(ctx, x - 12, y + 52, 28, 7, INK);
   px(ctx, x - 11, y + 53, 26, 5, S(STEEL, 1));
   px(ctx, x - 11, y + 53, 26, 1, S(STEEL, 2));
@@ -5705,32 +5893,41 @@ function commissarLight(ctx, { tier, hard, S, gold, cells, back, bow = 0 }) {
  * puts a dithered cone of the wall's own ink back over the wall, brightest at
  * the shade and falling off with the square of the distance.
  */
-function lampCone(ctx, x, y, turn, fall, lean) {
-  // Turned at the papers the beam runs a long way down the wall; turned at the
-  // player the shade cuts it off short and what is lit is the desk in front of
-  // you, which the desk's own pool draws.
-  // it stops at the dado: below that is floor and desk, and a cone painted in
-  // the WALL's inks over the wood was half of why the beam read as a stain
-  const rows = Math.min(turn > 0 ? 40 : 58, 88 - y);
+function lampCone(ctx, x, y, turn, fall, lean, { deskTop = 96, bottom = 124 } = {}) {
   /*
-   * The cone puts the wall's OWN next step back on the wall, at 25, 50 and 75
-   * per cent through the length of it. The art judge: "build the lamp cone
-   * from ordered dither at 25/50/75 percent so it reads as light spilling, not
-   * as static." It never lays a colour on the wall that the wall could not
-   * have been.
+   * IT REACHES THE DESK NOW, AND IT IS WARM ALL THE WAY DOWN.
+   *
+   * This cone used to stop dead on a diagonal above the blotter, and the
+   * comment here said why: "it stops at the dado: below that is floor and desk,
+   * and a cone painted in the WALL's inks over the wood was half of why the
+   * beam read as a stain". That comment was diagnosing the real fault and then
+   * working round it — the cone was painted in the wall's inks because those
+   * were the only inks it had. A warm amber bulb throwing sage-green light and
+   * stopping in mid air were one defect with one cause, and the cause was that
+   * the palette had no light in it.
+   *
+   * So: every step it deposits is that surface's own ink mixed toward AMBER,
+   * the beam runs on over the dado and lands on the wood, and the bottom of it
+   * is a pool on the desk rather than a cut.
    */
+  const rows = Math.max(0, Math.min(turn > 0 ? 62 : 80, bottom - (y + 4)));
   for (let i = 0; i < rows; i++) {
     const half = 5 + Math.round(i * 0.62);
     const cx = x + Math.round(lean * i);
     const ry = y + 4 + i;
-    const under = 2 - Math.round(fall(cx, ry));
-    const lvl = Math.max(0, 12 - Math.round(i * 0.20));
+    // which surface the beam is falling on at this row: wall above the dado,
+    // desk below it, and the light belongs to whatever it lands on
+    const wall = ry < deskTop;
+    const surface = wall ? CLOTH : WOOD;
+    const under = wall ? 2 - Math.round(fall(cx, ry)) : 1;
+    const lvl = Math.max(0, 12 - Math.round(i * 0.14));
     if (lvl <= 0) continue;
-    dither(ctx, cx - half, ry, half * 2, 1, step(CLOTH, under), step(CLOTH, under + 1), lvl);
-    // the core of the beam, half the width and one step brighter again
+    dither(ctx, cx - half, ry, half * 2, 1, step(surface, under), step(surface, under + 1), lvl);
+    // the core of the beam, half the width, warm — the one place in the room
+    // that carries the colour of the bulb rather than the colour of the wall
     if (i > 2) {
       dither(ctx, cx - Math.round(half * 0.45), ry, Math.round(half * 0.9), 1,
-        step(CLOTH, under + 1), step(CLOTH, under + 2), Math.max(2, lvl - 2));
+        step(surface, under + 1), lit(surface), Math.max(2, lvl - 3));
     }
   }
   /*
@@ -6424,9 +6621,38 @@ function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = fals
   px(ctx, 155 + swing, 22, 10, 8, PAPER[3]);
   px(ctx, 157 + swing, 30, 6, 4, AMBER);
   px(ctx, 156 + swing, 21, 8, 1, STEEL[2]);
-  const pool = 140 + swing * 6;
-  dither(ctx, pool, 104, 80, 40, null, WOOD[1], 4);
-  dither(ctx, pool + 14, 104, 52, 22, null, WOOD[2], 3);
+  /*
+   * AND THE POOL IT THROWS, WHICH USED TO BE TWO RECTANGLES.
+   *
+   * The reviewer: "Directly above the letter hangs a lit bulb which casts
+   * nothing at all: no cone, no pool on the paper, no glow on the ceiling.
+   * There are two light sources in the room and neither one lights the object
+   * the scene is about." It is an ellipse now, warm, with a dithered falloff,
+   * and it runs from the wainscot down on to the near edge of whatever is
+   * being held up under it.
+   */
+  const pool = 180 + swing * 6;
+  for (let i = 0; i < 46; i += 1) {
+    const q = (i - 20) / 26;
+    const half = Math.round(58 * Math.sqrt(Math.max(0, 1 - q * q)));
+    if (half <= 2) continue;
+    const lvl = Math.max(1, Math.round(9 - Math.abs(q) * 7));
+    const ry = 102 + i;
+    if (ry >= FRAME_BOTTOM) break;
+    dither(ctx, pool - half, ry, half * 2, 1, WOOD[0], WOOD[1], lvl);
+    if (lvl > 5) {
+      dither(ctx, pool - Math.round(half * 0.5), ry, half, 1, WOOD[1], lit(WOOD), Math.max(1, lvl - 5));
+    }
+  }
+  // and the glow on the wall above it, which is what a bare bulb does — an
+  // ellipse round the flex, not a band across the top of the picture
+  for (let i = 0; i < 26; i += 1) {
+    const q = (i - 13) / 15;
+    const half = Math.round(30 * Math.sqrt(Math.max(0, 1 - q * q)));
+    if (half <= 1) continue;
+    dither(ctx, 160 + swing - half, 16 + i, half * 2, 1, CLOTH[0], CLOTH[1],
+      Math.max(1, Math.round(5 - Math.abs(q) * 4)));
+  }
   // the stove, with coals that breathe
   px(ctx, 4, 56, 36, 58, INK);
   px(ctx, 6, 58, 32, 54, STEEL[0]);
@@ -6439,8 +6665,28 @@ function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = fals
   px(ctx, 11, 75, 22, 12, coal % 2 ? DAWN[1] : WOOD[1]);
   px(ctx, 13, 77, 18, 8, coal > 2 ? AMBER : DAWN[2]);
   px(ctx, 16, 80, 12, 3, coal > 1 ? PAPER[3] : AMBER);
-  dither(ctx, 2, 106, 54, 16, null, DAWN[1], 3);
-  dither(ctx, 4, 106, 34, 8, null, AMBER, 2);
+  /*
+   * THE FIRELIGHT, WHICH USED TO BE A RECTANGLE.
+   *
+   * The reviewer: "The stove throws an orange dither patch on the floor with
+   * straight vertical edges and a straight bottom edge — a rectangle of
+   * firelight." It is a graded ellipse now, leaning out of the fire door,
+   * climbing the wainscot at its inner edge and reaching the near ground; the
+   * coals move it a little every few tenths of a second, so the room breathes
+   * with the fire rather than beside it.
+   */
+  const flick = coal > 2 ? 1 : 0;
+  for (let i = 0; i < 34; i += 1) {
+    const q = (i - 12) / 22;
+    const half = Math.round((30 + flick * 2) * Math.sqrt(Math.max(0, 1 - q * q)));
+    if (half <= 1) continue;
+    const ry = 100 + i;
+    if (ry >= FRAME_BOTTOM) break;
+    const lvl = Math.max(1, Math.round(5 - Math.abs(q) * 4) + flick);
+    dither(ctx, Math.max(0, 20 - half), ry, half + Math.min(20, half), 1, WOOD[0], WOOD[1], lvl * 2);
+    dither(ctx, Math.max(0, 20 - Math.round(half * 0.7)), ry, Math.round(half * 1.1), 1,
+      WOOD[1], lit(WOOD), lvl);
+  }
   // the bunk, and the enamel box kept by it
   px(ctx, 210, 56, 104, 66, INK);
   px(ctx, 212, 58, 100, 62, STEEL[0]);
@@ -6579,7 +6825,23 @@ function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = fals
   } else {
     // the letter, held low and to the left
     letterSheet(ctx, SX, SY, SW, SHEET_H);
-    dither(ctx, SX, SY, SW, 18, null, PAPER[3], 5);
+    /*
+     * AND THE BULB ON IT. The sheet is the subject of the scene and it used to
+     * be lit by nothing: the reviewer measured "a lit bulb directly over a
+     * sheet of paper, the sheet uniformly flat". The bulb hangs above and a
+     * little right of it, so the paper is warm at the top and under the flex,
+     * falls off across the fold, and is a step down at the bottom corners
+     * where the hands hold it.
+     */
+    const cx2 = SX + Math.round(SW * 0.56);
+    for (let i = 0; i < Math.min(34, SHEET_H); i += 1) {
+      const f = 1 - i / 34;
+      const half = Math.round(SW * (0.30 + 0.22 * (1 - f)));
+      const lvl = Math.max(1, Math.round(9 * f * f));
+      dither(ctx, Math.max(SX, cx2 - half), SY + i,
+        Math.min(SW, half * 2), 1, PAPER[3], lit(PAPER), lvl);
+    }
+    dither(ctx, SX, SY + SHEET_H - 14, SW, 14, PAPER[3], PAPER[2], 7);
   }
   /*
    * The two hands on the paper.
@@ -6859,6 +7121,8 @@ function endingBackdrop(g, held) {
     [126, 24, 17], [148, 11, 10], [157, 21, 22], [177, 13, 13], [188, 28, 15],
     [214, 12, 9], [224, 17, 18], [239, 24, 11], [262, 14, 14],
   ];
+  /** Where the quarter that is burning stands, for everything the fire lights. */
+  const FIRE_AT = 82;
   for (const [x, w, h] of town) {
     const base = 112;
     // Held, the town is a lit grey mass under the dawn. Lost, it is the same
@@ -6869,14 +7133,34 @@ function endingBackdrop(g, held) {
     px(g, x, base - h, w, 1, held && x > 150 ? DAWN[0] : held ? NIGHT[2] : NIGHT[1]);
     px(g, x + w - 1, base - h, 1, h, held ? NIGHT[2] : INK);
     if (!held) {
-      px(g, x, base - h, 1, h, x < 150 ? RED : NIGHT[1]);
-      dither(g, x + 1, base - h + 1, w - 2, h - 2, null, x < 150 ? RED : INK, x < 150 ? 4 : 3);
+      /*
+       * THE FIRE LIGHTS WHAT IS BESIDE IT.
+       *
+       * The reviewer: "A town is on fire and the fire illuminates nothing. The
+       * flames are flat shapes with a yellow core; the buildings immediately
+       * beside them are the same navy as the buildings a kilometre away." The
+       * arithmetic was a hard cut at x = 150 — lit or not lit, with nothing in
+       * between — so the ninth house was ablaze and the tenth was night. It
+       * falls off with distance from the fire now, on its near face, in
+       * concentric steps: the walls closest to it take the flame itself, the
+       * next take the red of it, and the far end of the town takes nothing,
+       * which is what makes the near end read as burning.
+       */
+      const glow = Math.max(0, 1 - Math.abs(x + w / 2 - FIRE_AT) / 128);
+      const near = glow > 0.62 ? DAWN[1] : glow > 0.3 ? RED : NIGHT[1];
+      px(g, x, base - h, 1, h, near);
+      if (glow > 0.08) {
+        dither(g, x + 1, base - h + 1, w - 2, h - 2, null, glow > 0.55 ? RED : INK,
+          Math.max(1, Math.round(glow * 7)));
+      }
     }
     px(g, x, base - 1, w, 1, INK);
     // a roof, for the houses that have one
     if (w > 12) {
+      const glow = held ? 0 : Math.max(0, 1 - Math.abs(x + w / 2 - FIRE_AT) / 128);
       px(g, x + 2, base - h - 2, w - 4, 2, held ? NIGHT[1] : NIGHT[0]);
-      px(g, x + 2, base - h - 2, w - 4, 1, held && x > 150 ? DAWN[0] : held ? NIGHT[1] : x < 150 ? DAWN[0] : NIGHT[1]);
+      px(g, x + 2, base - h - 2, w - 4, 1, held && x > 150 ? DAWN[0] : held ? NIGHT[1]
+        : glow > 0.55 ? DAWN[0] : glow > 0.25 ? RED : NIGHT[1]);
     }
   }
   // the church, taller than the rest, with its east face in the light
