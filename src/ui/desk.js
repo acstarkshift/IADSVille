@@ -767,7 +767,11 @@ export class Desk {
     window.addEventListener('resize', this.onAskResize);
   }
 
-  /** Above the box his line is in; under it on a phone, where there is room. */
+  /**
+   * Above the box his line is in. On a phone the box sits at the foot of the
+   * window, so under it is off the screen; the replies stand in the space
+   * between the picture and the box, unless for once there is room below.
+   */
   placeReplies() {
     const el = this.repliesEl;
     const box = this.textBox?.getBoundingClientRect?.();
@@ -776,9 +780,10 @@ export class Desk {
     const stacked = this.host.classList.contains('is-stacked');
     el.style.left = `${Math.round(box.left - host.left)}px`;
     el.style.width = `${Math.round(box.width)}px`;
-    el.style.top = stacked
-      ? `${Math.round(box.bottom - host.top + 8)}px`
-      : `${Math.max(8, Math.round(box.top - host.top - el.offsetHeight - 8))}px`;
+    const below = Math.round(box.bottom - host.top + 8);
+    const above = Math.max(8, Math.round(box.top - host.top - el.offsetHeight - 8));
+    const roomBelow = below + el.offsetHeight + 8 <= host.height;
+    el.style.top = `${stacked && roomBelow ? below : above}px`;
   }
 
   /**
@@ -846,9 +851,11 @@ export class Desk {
       return `<button type="button" class="${cls}" data-item="${esc(item.id)}"
           title="${esc(read ? 'Read it again' : 'Pick it up')} (${esc(item.key)})">
         <i class="desk-key">${esc(item.key)}</i>
-        <b class="desk-plate">${esc(item.plate)}</b>
-        ${item.stamp ? `<em class="desk-stamp">${esc(item.stamp)}</em>` : ''}
-        <small class="desk-gist">${esc(item.gist)}</small>
+        <span class="desk-paper">
+          <span class="desk-row"><b class="desk-plate">${esc(item.plate)}</b>${item.stamp
+            ? `<em class="desk-stamp">${esc(item.stamp)}</em>` : ''}</span>
+          <small class="desk-gist">${esc(item.gist)}</small>
+        </span>
       </button>`;
     }).join('');
     if (this.leaveBtn) {
