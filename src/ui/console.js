@@ -965,7 +965,7 @@ export class CrewConsole {
 
     // Rounds in flight, ours and theirs.
     for (const missile of world.missiles) {
-      if (!missile.alive || missile.tofS < 0) continue;
+      if (!missile.alive) continue;
       const relevant = missile.siteId === site.id
         || (missile.kind === 'arm' && world.radarsOf(site).some((r) => r.id === missile.targetId));
       if (!relevant) continue;
@@ -1321,7 +1321,7 @@ export class CrewConsole {
      * descending on this position in the hostile colour, with its own pulse.
      */
     for (const missile of world.missiles) {
-      if (!missile.alive || missile.tofS < 0) continue;
+      if (!missile.alive) continue;
       const arm = missile.kind === 'arm'
         && world.radarsOf(site).some((r) => r.id === missile.targetId);
       if (missile.siteId !== site.id && !arm) continue;

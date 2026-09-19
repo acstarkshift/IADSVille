@@ -10,7 +10,7 @@
 
 import { World } from '../engine/world.js';
 import { SCENARIOS, scenarioById, rosterFor, consoleCaps, watchConditions } from '../engine/scenarios.js';
-import { SIM, SAM_TYPES, DEFENCE_CLASSES, ASSET_TYPES } from '../engine/config.js';
+import { SIM, SAM_TYPES, DEFENCE_CLASSES, ASSET_TYPES, DIFFICULTY } from '../engine/config.js';
 import {
   loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign,
   missionModifiers, enlist,
@@ -89,11 +89,33 @@ let helpReturn = null;
 
 /* ------------------------------------------------------------ settings */
 
+/**
+ * The second save key, read by name rather than assigned wholesale.
+ *
+ * `saveSettings` writes five fields; this used to `Object.assign` whatever came
+ * back over the whole of `state`, with no allowlist. A settings blob containing
+ * `{"campaign":{"completed":{}}}` therefore replaced the campaign that had been
+ * loaded from the real save key one line earlier — the game dropped to the
+ * enlistment screen with nothing completed, and the next save wrote that
+ * emptiness over the genuine file. `{"speed":9999}` was accepted and carried
+ * into the watch; `{"difficulty":"impossible"}` was shown on the menu while
+ * the engine quietly played veteran, so the menu and the simulation disagreed
+ * about which difficulty was being played.
+ *
+ * Five fields, each checked against what it is allowed to be. Nothing else in
+ * that blob can reach `state`.
+ */
 function loadSettings() {
   try {
     const raw = store.get(SETTINGS_KEY);
     if (!raw) return;
-    Object.assign(state, JSON.parse(raw));
+    const saved = JSON.parse(raw);
+    if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return;
+    if (Object.keys(DIFFICULTY).includes(saved.difficulty)) state.difficulty = saved.difficulty;
+    if (typeof saved.narrativePressure === 'boolean') state.narrativePressure = saved.narrativePressure;
+    if (typeof saved.audio === 'boolean') state.audio = saved.audio;
+    if (SCENARIOS.some((s) => s.id === saved.missionId)) state.missionId = saved.missionId;
+    if (typeof saved.role === 'string') state.role = saved.role;
   } catch { /* defaults are fine */ }
 
   /*
@@ -240,7 +262,23 @@ function chooseBattery(id) {
 
 /* -------------------------------------------------------------- screens */
 
+/**
+ * Every screen is rendered into an empty element, and hiding one empties it.
+ *
+ * Screens used to be hidden and never cleared, so after one press of H the
+ * handbook's BACK button existed for the rest of the session and after one
+ * debrief so did REPLAY THIS ONE. Anything that looks a control up by id — a
+ * test, an automation, a screen reader walking the document, the next feature —
+ * found a stale one that was invisible but present. It cost two harness runs
+ * in the panel's own reproduction scripts.
+ */
+function hideScreen() {
+  els.screen.hidden = true;
+  els.screen.innerHTML = '';
+}
+
 function showScreen(render) {
+  els.screen.innerHTML = '';
   els.screen.hidden = false;
   els.shell.hidden = true;
   render(els.screen, state);
@@ -404,6 +442,20 @@ function startMission() {
 
   world = new World(state.mission, {
     role: state.role,
+    /*
+     * A different night every time it is stood, and the same night if it is
+     * stood again from the same file.
+     *
+     * The engine is genuinely, provably deterministic — bit for bit on a seed,
+     * across repeats and across another world built in between — and all of
+     * that determinism was being spent on making every play of a watch the
+     * identical raid: the same aircraft, the same routes, the same spawn times,
+     * the same first detection. REPLAY THIS ONE sits on the end card of every
+     * watch and replayed exactly what had just happened. The harness and the
+     * tests pass a seed explicitly and are untouched; the player gets one off
+     * the length of their own file, which is reproducible and theirs.
+     */
+    seed: `${state.mission.seed ?? state.mission.id}:${state.campaign.history.length}`,
     batteryId: state.batteryId,
     difficulty: state.difficulty,
     narrativePressure: state.narrativePressure,
@@ -439,7 +491,7 @@ function startMission() {
   els.abortAsk.hidden = true;
   ui.pressHeld = false;
   clearPanelCache(els);
-  els.screen.hidden = true;
+  hideScreen();
   els.shell.hidden = false;
   /*
    * The watch opens first person: the walk to the console, sitting, one
@@ -486,8 +538,30 @@ function playOpening() {
 function endMission() {
   contextMenu?.close();
   const result = world.outcome ?? world.result('aborted');
-  const entry = recordMission(state.campaign, result);
-  saveCampaign(store, state.campaign);
+  /*
+   * The watch was stood. Whatever the file does now, the player reaches the end
+   * of it.
+   *
+   * `recordMission` used to run here unguarded, and the frame loop has already
+   * put the world into `complete` by the time it does — so a save file with a
+   * field of the wrong type threw inside it and left the console frozen with
+   * no debrief, no end card, no evening and no way forward but a page reload.
+   * The file is validated on the way in now (see `migrate`), and this is the
+   * belt: a record that cannot be written is a record that is not written, and
+   * the evening still plays.
+   */
+  let entry = null;
+  try {
+    entry = recordMission(state.campaign, result);
+    saveCampaign(store, state.campaign);
+  } catch (err) {
+    console.error('the file could not be written for this watch', err);
+    entry = { missionId: result.missionId, role: result.role, score: result.score,
+      standing: state.campaign.standing, tier: 'satisfactory',
+      leakers: result.stats?.leakers ?? 0, kills: result.stats?.kills ?? 0,
+      assetsLost: result.stats?.assetsLost ?? 0, abandoned: !!result.abandoned,
+      service: null, revelation: null, appointment: null, letter: null };
+  }
   audio.stopArmWarning();
   playScenes(result, entry);
 }
@@ -506,7 +580,7 @@ function playScenes(result, entry) {
   scenePlayer ??= new ScenePlayer(els.scene, { audio });
   state.phase = 'scenes';
   els.shell.hidden = true;
-  els.screen.hidden = true;
+  hideScreen();
   scenePlayer.play(scenesFor(state, result, entry), {
     character: state.campaign.character,
     onDone: () => endCard(result, entry),
@@ -601,7 +675,16 @@ function frame(now) {
     steps++;
     if (world.phase === 'complete') break;
   }
-  if (steps > 1) world.plots = framePlots;
+  /*
+   * Kept on the UI, not written back onto the world. The render path used to
+   * assign this to `world.plots`, which made a field of the simulation a
+   * function of the browser's frame rate: at 30 fps and 4x it held four steps
+   * of echoes, and in node it held one. Nothing but the scope reads it today,
+   * so the bug was latent — but the world is written by the simulation and
+   * read by everything else, and the next thing to read it (a replay recorder,
+   * an ELINT model, a test) would have got a different answer in a browser.
+   */
+  ui.framePlots = steps > 1 ? framePlots : null;
 
   render(now, dtReal);
 
@@ -1408,7 +1491,7 @@ function wirePanelInput() {
 
   els.viewToggle.onclick = toggleView;
   document.getElementById('btn-help').onclick = () => showHelp(() => {
-    els.screen.hidden = true;
+    hideScreen();
     els.shell.hidden = false;
     state.phase = 'mission';
   });
@@ -1664,6 +1747,16 @@ function wireGlobalInput() {
       if (e.key === 'Enter' && state.phase === 'enlist') {
         els.screen.querySelector('#enlist-confirm')?.click();
       }
+      /*
+       * H opens the handbook and nothing closed it but a click on BACK — not
+       * Escape, not H again, not Enter. The handbook's own EVERYWHERE list
+       * says "H — this screen", which reads as a toggle, and a player who
+       * reaches it from the keyboard had to find the mouse to get out.
+       */
+      if (state.phase === 'help' && (e.key === 'Escape' || e.key.toLowerCase() === 'h')) {
+        e.preventDefault();
+        helpReturn?.();
+      }
       return;
     }
     /*
@@ -1678,6 +1771,26 @@ function wireGlobalInput() {
     if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
       e.preventDefault();
       openSelectedContactMenu();
+      return;
+    }
+
+    /*
+     * Escape is the key every player tries when they want out of something, and
+     * on the console — where the whole game is played — it did nothing at all.
+     * It skips the opening and it skips the evening, so it has already been
+     * taught to mean "get me out of this"; here it means the same thing, one
+     * layer at a time, most recent first. It deliberately does NOT open LEAVE
+     * POST: the one irreversible control on this console is not on a key a
+     * player presses to get out of a menu.
+     */
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (contextMenu?.open) { contextMenu.close(); return; }
+      if (ui.selectedTrackId || ui.selectedSiteId) {
+        ui.selectedTrackId = null;
+        ui.selectedSiteId = null;
+        return;
+      }
       return;
     }
 
@@ -1703,13 +1816,51 @@ function wireGlobalInput() {
     /*
      * Say once, quietly, that the verb is not on tonight's console.
      *
-     * One throttle key for all of them, not one per verb: pressing X, S and G
-     * in sequence printed three near-identical lines in a row, which reads as
-     * a stuck ticker rather than as a rule. The first one names the verb and
-     * states the rule; the rest of the half-minute is silence.
+     * Throttled per VERB, at half a minute each. It used to share one throttle
+     * key across all of them on the grounds that three near-identical lines in
+     * a row read as a stuck ticker — but what the rule is for is the same
+     * sentence twice, and these are three different sentences about three
+     * different caps. What the shared key actually did was print DISPLACE IS
+     * NOT FITTED when the player pressed X, and then say nothing at all when
+     * they pressed S: the only message on the screen named a verb they were
+     * not pressing, and the verb they were pressing was silent.
      */
-    const notFitted = (name) => world.logThrottled('notFitted', 30, 'info',
+    const notFitted = (name) => world.logThrottled(`notFitted:${name}`, 30, 'info',
       `${name} IS NOT FITTED TO TONIGHT'S CONSOLE — YOU FLY THIS WATCH ON THE CAPS YOU CAN SEE.`);
+
+    /*
+     * And the rule the caps have obeyed for several passes, finally written
+     * down for the keyboard: a key that is bound to a verb either acts or says
+     * why it cannot.
+     *
+     * Measured before this: all seven battery keys did nothing AND said
+     * nothing on a battery in a formation the player is not commanding —
+     * which is most of the board at district and above, and happens the moment
+     * a sector is handed back. Eight keys were silent at the radar set. A cap
+     * that eats a press reads as broken hardware; a key that eats a press
+     * reads as a broken game.
+     *
+     * Eight seconds, not thirty: a refusal is an answer to THIS press, and a
+     * player who presses again within a couple of seconds is asking whether
+     * the machine heard them.
+     */
+    const refuse = (key, text) => world.logThrottled(`refuse:${key}`, 8, 'info', text);
+
+    /** The battery a battery key acts on, or null and a sentence saying why. */
+    const batteryFor = () => {
+      if (site) return site;
+      if (world.control.role === 'radar') {
+        refuse('seat', 'THAT IS THE LAUNCH OFFICER\'S SWITCH. AT THIS SET YOUR SWITCH IS THE ONE MARKED `.');
+        return null;
+      }
+      if (!selected) {
+        refuse('nobattery', 'NO BATTERY SELECTED — CLICK A CARD, OR PRESS SHIFT AND ITS NUMBER.');
+        return null;
+      }
+      const held = world.formations.filter((f) => !f.hq && world.isDirect(f.id)).map((f) => f.name);
+      refuse('offnet', `${selected.name} IS NOT ON YOUR NET — YOU HOLD ${held.length ? held.join(', ') : 'NOTHING BUT YOUR OWN'}.`);
+      return null;
+    };
 
     /*
      * The number row: a speed on its own, a battery with shift, a formation
@@ -1731,7 +1882,16 @@ function wireGlobalInput() {
         const target = rackBatteries(world, ui)[n];
         if (target) {
           e.preventDefault();
-          ui.selectedSiteId = target.id;
+          /*
+           * Hand the contact over, and do NOT move the key focus with it. This
+           * used to set `ui.selectedSiteId` first, so Shift+2 permanently
+           * changed which battery every other key acted on, with no
+           * announcement — and it did so even when the assignment was refused,
+           * so a player who was told LANCE VILLE CANNOT TAKE T-001 was then
+           * silently switching LANCE VILLE's radar the next time they pressed
+           * A. The handbook names clicking a card as the way to move the
+           * focus; this is not that.
+           */
           assignSelected(target.id);
         }
       } else if (digit in SPEED_BY_KEY) {
@@ -1804,11 +1964,11 @@ function wireGlobalInput() {
        * free. Emissions is A, which is the only letter on this console that
        * takes a battery off the air, and it is printed on the switch.
        */
-      case 'q': if (site) runAction('weapons', site.id, null, null, 'hold'); break;
-      case 'w': if (site) runAction('weapons', site.id, null, null, 'tight'); break;
-      case 'e': if (site) runAction('weapons', site.id, null, null, 'free'); break;
+      case 'q': { const s = batteryFor(); if (s) runAction('weapons', s.id, null, null, 'hold'); break; }
+      case 'w': { const s = batteryFor(); if (s) runAction('weapons', s.id, null, null, 'tight'); break; }
+      case 'e': { const s = batteryFor(); if (s) runAction('weapons', s.id, null, null, 'free'); break; }
       case 'a': {
-        const target = ui.view === 'crew' ? world.siteById.get(crewedId) : site;
+        const target = ui.view === 'crew' ? world.siteById.get(crewedId) : batteryFor();
         if (target) runAction('emcon', target.id);
         break;
       }
@@ -1824,6 +1984,10 @@ function wireGlobalInput() {
         if (crewedId) {
           runAction('fire', crewedId, null, null, null,
             document.getElementById('btn-fire')?.dataset.track);
+        } else if (world.control.role === 'radar') {
+          refuse('seat', 'THERE IS NO LAUNCH BUTTON AT THIS SET. CALL THE CONTACT AND CONTROL WILL PUT SOMETHING ON IT.');
+        } else {
+          refuse('nocabin', 'YOU ARE NOT SITTING IN A BATTERY TONIGHT — THE CREWS FIRE ON YOUR ORDERS.');
         }
         break;
       case 'l':
@@ -1837,9 +2001,11 @@ function wireGlobalInput() {
         if (crewedId) {
           runAction('lock', crewedId, null, null, null,
             els.crewConsole.querySelector('[data-act="lock"]')?.dataset.track);
+        } else {
+          refuse('nocabin', 'NOTHING TO LOCK FROM THIS SEAT — GIVE THE CONTACT TO A BATTERY AND ITS CREW WILL LOCK IT.');
         }
         break;
-      case 'r': if (site) runAction('reload', site.id); break;
+      case 'r': { const s = batteryFor(); if (s) runAction('reload', s.id); break; }
       /*
        * S, G and X answer to the same predicate their caps do.
        *
@@ -1851,27 +2017,35 @@ function wireGlobalInput() {
        * A control the watch has removed is removed everywhere — and says so
        * once, so a stray press reads as a rule rather than as a dead key.
        */
-      case 'x':
+      case 'x': {
         if (!caps.displace) { notFitted('DISPLACE'); break; }
-        if (site) runAction('scoot', site.id);
+        const s = batteryFor(); if (s) runAction('scoot', s.id);
         break;
-      case 's':
+      }
+      case 's': {
         if (!caps.salvo) { notFitted('SALVO'); break; }
-        if (site) runAction('salvo', site.id);
+        const s = batteryFor(); if (s) runAction('salvo', s.id);
         break;
+      }
       case 'g': {
         // Ride the warning: hold the selected (or crewed) battery's emissions
         // through guidance with an ARM inbound. The one EMCON call the crew
         // will never make for itself.
         if (!caps.ride) { notFitted('RIDE'); break; }
-        const target = ui.view === 'crew' ? world.siteById.get(crewedId) : site;
+        const target = ui.view === 'crew' ? world.siteById.get(crewedId) : batteryFor();
         if (target) runAction('ride', target.id);
         break;
       }
-      case 'y': if (world.command.pending) world.answer('accepted'); break;
-      case 'n': if (world.command.pending) world.answer('refused'); break;
+      case 'y':
+        if (world.command.pending) world.answer('accepted');
+        else refuse('nocall', 'NOTHING TO ACKNOWLEDGE — THE NET IS NOT ASKING YOU ANYTHING.');
+        break;
+      case 'n':
+        if (world.command.pending) world.answer('refused');
+        else refuse('nocall', 'NOTHING TO REFUSE — THE NET IS NOT ASKING YOU ANYTHING.');
+        break;
       case 'm': ui.showMap = !ui.showMap; break;
-      case 'h': showHelp(() => { els.screen.hidden = true; els.shell.hidden = false; state.phase = 'mission'; }); break;
+      case 'h': showHelp(() => { hideScreen(); els.shell.hidden = false; state.phase = 'mission'; }); break;
       /*
        * The seat toggle is on V, and Tab belongs to the browser.
        *

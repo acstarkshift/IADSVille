@@ -34,6 +34,26 @@ export function closestApproachKm(p0, p1, q0, q1) {
   return len(add(r0, scale(dr, t)));
 }
 
+/**
+ * The run a shot taken now expects to fly: the ground distance from the rail to
+ * the point where the round and its target will meet.
+ *
+ * This is the one authoritative number the whole vertical profile is paced
+ * against, and it is computed once, at launch. Not the range to where the
+ * target is standing — a round fired head-on at a striker meets it well short
+ * of that, and a climb paced against the launch range arrives underneath.
+ */
+export function launchSolution(sitePos, target, missileSpeed) {
+  const vel = target.vel ?? (target.hdg != null && target.speed != null
+    ? scale(headingVec(target.hdg), target.speed) : null);
+  const meetAt = vel ? leadPoint(sitePos, target.pos, vel, missileSpeed) : { ...target.pos };
+  return { meetAt: { ...meetAt }, runKm: Math.max(dist(sitePos, meetAt), 0.1) };
+}
+
+/** Just the run, for the callers that only want the number. */
+export const launchRunKm = (sitePos, target, missileSpeed) =>
+  launchSolution(sitePos, target, missileSpeed).runKm;
+
 /** Is `pos` at `altM` a valid engagement for this site right now? */
 export function inEnvelope(site, pos, altM) {
   const type = SAM_TYPES[site.type];
@@ -201,6 +221,17 @@ export function createMissile(spec) {
     /** Height it came off the aircraft at, for the descent along its run. */
     launchAltM: spec.altM ?? 0,
     runKm: null,
+    /** Ground distance actually flown, which is what the climb is flown along. */
+    flownKm: 0,
+    /**
+     * Has anybody ever given this round an aim point?
+     *
+     * Until they have, `aimPos` is still the round's own launcher — which is
+     * why a round that has never been guided crawls around its own rail rather
+     * than flying on — and the flight tests read this so that they measure the
+     * salvo gap on rounds that are actually being steered.
+     */
+    hadSolution: false,
     /**
      * How much of the run is behind it, for the climb — see arcAltitude. Kept
      * on the round rather than recomputed because it is not allowed to go
@@ -233,8 +264,10 @@ function aimPointFor(world, missile) {
         return missile.aimPos; // fly on, blind
       }
       missile.unguidedS = 0;
+      missile.hadSolution = true;
       return leadPoint(missile.pos, target.pos, target.vel, missile.speed);
     }
+    missile.hadSolution = true;
     return leadPoint(missile.pos, target.pos, target.vel, missile.speed);
   }
 
@@ -254,6 +287,7 @@ function aimPointFor(world, missile) {
       return missile.aimPos;
     }
     missile.unguidedS = 0;
+    missile.hadSolution = true;
     return leadPoint(missile.pos, target.pos, scale(headingVec(target.hdg), target.speed), missile.speed);
   }
 
@@ -294,22 +328,44 @@ function aimPointFor(world, missile) {
  * sine bent so its top lands where the profile puts the apex; the sine is zero
  * at both ends, so the round leaves the rail on the line and arrives on it.
  *
- * The intercept itself is resolved in the horizontal plane, so nothing here
- * decides whether a round hits. This is what the operator sees, made true.
+ * The intercept reads this height as well as the ground plane — see
+ * `resolveIntercept` and ENGAGEMENT.verticalLethalMult — so what the operator
+ * is shown and what the night comes to are the same arithmetic.
  */
 function arcAltitude(world, missile, targetAlt) {
   const site = missile.siteId ? world.siteById.get(missile.siteId) : null;
   const profile = FLIGHT[SAM_TYPES[site?.type]?.class] ?? FLIGHT.short;
 
   /*
-   * The run is measured once, from where the round was when it first had a
-   * solution to where that solution pointed — and progress along it never goes
-   * backwards. A target that turns away extends the cruise; it does not haul
-   * the round back up into the climb it has already flown.
+   * The run is measured once, at launch, from the range the shot was taken at
+   * — `launchSalvo` stamps it — and progress along it never goes backwards. A
+   * target that turns away extends the cruise; it does not haul the round back
+   * up into the climb it has already flown.
+   *
+   * It used to be measured lazily here instead, from the round's own aim
+   * point, and that was wrong in one ordinary case with a spectacular result.
+   * A round that is unguided on its very first step — the mount still slewing,
+   * or the crew ducking an anti-radiation round, which is the trade the whole
+   * game is built on — has an aim point that is still its own launch position,
+   * so the run latched at one step of travel, a tenth of a kilometre. `arcF`
+   * was then pinned at zero for the rest of the flight and the round flew the
+   * whole engagement at rail height, twenty metres, under the horizon line the
+   * cabin's own indicator prints, at a target seven kilometres up. It happened
+   * to 3.8% of every round fired and those rounds still killed.
+   *
+   * So the run is stamped at launch, and progress along it is measured by the
+   * ground the round has actually covered rather than by how far it still is
+   * from an aim point that may be stale, may be its own launch position, or may
+   * have walked away from it. A round that has flown its run is at the height
+   * its target is at and cruises there; a round that has flown none of it is on
+   * the rail. Neither depends on anybody guiding it.
    */
-  const toGo = dist(missile.pos, missile.aimPos);
-  if (missile.runKm == null) missile.runKm = Math.max(toGo, 0.1);
-  missile.arcF = Math.max(missile.arcF ?? 0, clamp01(1 - toGo / missile.runKm));
+  if (missile.runKm == null) {
+    const toGo = dist(missile.pos, missile.aimPos);
+    if (missile.unguidedS > 0) return missile.altM;
+    missile.runKm = Math.max(toGo, 0.1);
+  }
+  missile.arcF = Math.max(missile.arcF ?? 0, clamp01(missile.flownKm / missile.runKm));
   const f = missile.arcF;
 
   const line = missile.launchAltM
@@ -358,6 +414,7 @@ function stepMissile(world, missile, dt) {
   const before = { ...missile.pos };
   const step = scale(headingVec(missile.hdg), missile.speed * dt);
   missile.pos = add(missile.pos, step);
+  missile.flownKm += missile.speed * dt;
   missile.tofS += dt;
 
   /*
@@ -424,6 +481,24 @@ function stepMissile(world, missile, dt) {
   resolveIntercept(world, missile, before);
 }
 
+/**
+ * How far off its target's height a round may be and still have its fuze see
+ * anything — and whether this round is inside that.
+ *
+ * The horizontal miss distance is computed along the two segments both objects
+ * flew this step, which is the right arithmetic for a closing geometry. The
+ * vertical one does not need that: a round and an aeroplane a kilometre apart
+ * in height at the closest point of approach were a kilometre apart the whole
+ * step. Returns null when the round is close enough, or the signed separation
+ * in metres when it is not.
+ */
+function verticalMiss(missile, targetAltM) {
+  const lethal = (missile.kind === 'arm' ? ARM.lethalRadiusKm : ENGAGEMENT.lethalRadiusKm)
+    * 1000 * ENGAGEMENT.verticalLethalMult;
+  const dz = (missile.altM ?? 0) - (targetAltM ?? 0);
+  return Math.abs(dz) > lethal ? dz : null;
+}
+
 /** Check for arrival and, if it arrived, roll for effect. */
 function resolveIntercept(world, missile, prevPos) {
   const lethal = missile.kind === 'arm' ? ARM.lethalRadiusKm : ENGAGEMENT.lethalRadiusKm;
@@ -434,6 +509,27 @@ function resolveIntercept(world, missile, prevPos) {
     const prevTarget = sub(target.pos, scale(target.vel, world.dt));
     const miss = closestApproachKm(prevPos, missile.pos, prevTarget, target.pos);
     if (miss > Math.max(lethal, 0.35)) return;
+
+    /*
+     * Over the ground, and not at the height. A steep close shot runs out of
+     * climb slope — FLIGHT.maxClimbSlope is honest and should stay — and
+     * arrives underneath the aeroplane it was fired at. It does not get to
+     * destroy it from there: the round goes past, and the cabin's height
+     * indicator, which drew both of them, is telling the truth about why.
+     */
+    const dz = verticalMiss(missile, target.altM);
+    if (dz != null) {
+      const site = world.siteById.get(missile.siteId);
+      world.killMissile(missile, 'passed by');
+      world.log('warn', `${missile.trackLabel ?? 'TRACK'} — MISS`, { trackId: missile.trackId });
+      if (site) {
+        world.comms(site.name, `NO JOY ON ${missile.trackLabel ?? 'THAT TRACK'} — WE WENT ${dz < 0 ? 'UNDER' : 'OVER'} IT.`,
+          { siteId: site.id, trackId: missile.trackId });
+      }
+      addEffect(world, { kind: 'puff', pos: { ...missile.pos }, durationS: 1.8 });
+      world.onMissileMiss(target, missile);
+      return;
+    }
 
     const site = world.siteById.get(missile.siteId);
     // An air-to-air round has no battery behind it and no envelope to be at the
@@ -478,6 +574,12 @@ function resolveIntercept(world, missile, prevPos) {
     const prevTarget = sub(target.pos, scale(headingVec(target.hdg), target.speed * world.dt));
     const miss = closestApproachKm(prevPos, missile.pos, prevTarget, target.pos);
     if (miss > Math.max(lethal, 0.35)) return;
+    if (verticalMiss(missile, target.altM) != null) {
+      world.killMissile(missile, 'passed by');
+      world.log('warn', `${missile.trackLabel ?? 'ROUND'} — MISS`, { trackId: missile.trackId });
+      addEffect(world, { kind: 'puff', pos: { ...missile.pos }, durationS: 1.8 });
+      return;
+    }
 
     const site = world.siteById.get(missile.siteId);
     world.killMissile(missile, 'detonated');
@@ -535,8 +637,60 @@ function resolveIntercept(world, missile, prevPos) {
   }
 }
 
+/**
+ * Let go of any round of a salvo whose turn on the rail has come.
+ *
+ * A salvo used to be two rounds created on the same step at the same point on
+ * the same heading, with the gap between them modelled as a negative
+ * time-of-flight counter. They therefore occupied the same pixel for the whole
+ * flight — measured over twenty-four watches, 225,003 samples of two rounds of
+ * one salvo alive together and not one of them separated on the ground by more
+ * than fifty metres — and both renderers skipped a round whose counter was
+ * still negative, so for two and a half seconds after every salvo the console
+ * was showing one round while two were in the air.
+ *
+ * Now the later rounds wait on the rail. The store was debited when the order
+ * was given, so a battery that is destroyed or displaces before its second
+ * round goes gets it back rather than firing it from a wreck.
+ */
+function releaseRailQueue(world) {
+  if (!world.railQueue?.length) return;
+  const held = [];
+  for (const entry of world.railQueue) {
+    if (world.t < entry.atS) { held.push(entry); continue; }
+    const site = world.siteById.get(entry.missile.siteId);
+    if (!site || !site.alive || site.scootRemainingS > 0) {
+      // Back on the rack: the rail never fired.
+      if (site) site.readyRounds++;
+      world.stats.roundsFired = Math.max(0, world.stats.roundsFired - 1);
+      continue;
+    }
+    const target = entry.targetKind === 'missile'
+      ? world.missiles.find((m) => m.id === entry.missile.targetId)
+      : world.aircraftById.get(entry.missile.targetId);
+    const missile = entry.missile;
+    missile.pos = { ...site.pos };
+    missile.aimPos = target && target.alive ? { ...target.pos } : { ...site.pos };
+    /*
+     * A round whose target died while it was waiting still leaves the rail —
+     * the order was given, the rail was committed and the store was debited at
+     * the order. It is written off on its first step as 'target gone', which is
+     * what it did before the gap was modelled, and the expenditure it cost is
+     * the expenditure a two-round salvo has always cost.
+     */
+    if (target && target.alive) {
+      missile.hdg = bearing(site.pos, target.pos);
+      missile.launchRangeKm = dist(site.pos, target.pos);
+      missile.runKm = Math.max(missile.launchRangeKm, 0.1);
+    }
+    world.missiles.push(missile);
+  }
+  world.railQueue = held;
+}
+
 /** Advance every round in flight. */
 export function stepMissiles(world, dt) {
+  releaseRailQueue(world);
   for (const missile of world.missiles) {
     if (missile.alive) stepMissile(world, missile, dt);
   }
@@ -575,10 +729,26 @@ export function launchSalvo(world, site, track, count, origin = null) {
     // The geometry the shot was TAKEN at, for the launch-discipline Pk term.
     // Intercept range alone forgives an edge launch against a closing target.
     missile.launchRangeKm = dist(site.pos, target.pos);
-    // Rounds of a salvo leave the rail a couple of seconds apart; modelling that
-    // as a small time-of-flight offset is enough for the display and the timing.
-    missile.tofS = -i * type.salvoGapS;
-    world.missiles.push(missile);
+    /*
+     * And the run the climb is flown along, stamped here rather than latched on
+     * the first step — see arcAltitude for what the lazy version cost. It is
+     * the distance to the INTERCEPT, not to where the target is standing now:
+     * a round fired head-on at a striker meets it well short of its launch
+     * range, and a climb paced against the launch range arrives underneath.
+     */
+    const solution = launchSolution(site.pos, target, type.missileSpeed);
+    missile.runKm = solution.runKm;
+    if (i === 0) {
+      world.missiles.push(missile);
+    } else {
+      // The second round of a salvo waits its turn on the rail, and leaves it
+      // as a second dot. See releaseRailQueue.
+      world.railQueue.push({
+        atS: world.t + i * type.salvoGapS,
+        targetKind: missile.targetKind,
+        missile,
+      });
+    }
     world.stats.roundsFired++;
     if (!track.engagedBy.includes(missile.id)) track.engagedBy.push(missile.id);
   }

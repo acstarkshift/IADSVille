@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   closestApproachKm, inEnvelope, timeToInRangeS, computeSamPk, computeArmPk,
+  createMissile, stepMissiles,
 } from '../src/engine/weapons.js';
 import { SAM_TYPES, ENGAGEMENT, ARM, DIFFICULTY } from '../src/engine/config.js';
 import { railLoadS, railsOf } from '../src/engine/doctrine.js';
@@ -179,5 +180,61 @@ describe('the ready rack', () => {
   test('battle damage slows the loaders and nothing else', () => {
     const hurt = { type: 'bastion', reloadMult: 1.4 };
     assert.ok(Math.abs(railLoadS(hurt) / railLoadS({ type: 'bastion' }) - 1.4) < 1e-9);
+  });
+});
+
+describe('the intercept is resolved in three dimensions', () => {
+  /*
+   * Measured before this: five per cent of all surface-to-air kills scored
+   * with the round drawn more than one lethal radius from the aeroplane in the
+   * VERTICAL, 1.5% more than a kilometre, worst case 6,380 m. The intercept
+   * read the ground plane alone and the flight profile was declared display
+   * truth, so the one instrument the missile seat is built around could be
+   * flatly contradicted by the outcome.
+   */
+  const bareWorld = () => ({
+    t: 0, dt: 0.1, missiles: [], effects: [],
+    aircraftById: new Map(), siteById: new Map(), radarById: new Map(), assetById: new Map(),
+    rng: { chance: () => true }, difficulty: {}, stats: {},
+    killMissile(m, why) { m.alive = false; m.why = why; },
+    killed: [],
+    killAircraft(a) { this.killed.push(a.id); },
+    log() {}, comms() {}, onMissileMiss() {}, markTracksDown() {},
+  });
+
+  const shootAt = (targetAltM, roundAltM) => {
+    const world = bareWorld();
+    const site = { id: 's1', type: 'bastion', alive: true, pos: { x: 0, y: 0 } };
+    const radar = { id: 'r1', pos: site.pos, state: 'radiating', alive: true };
+    const target = { id: 'a1', alive: true, type: 'striker', pos: { x: 0, y: 0.03 },
+      altM: targetAltM, vel: { x: 0, y: 0 }, evadingUntilS: -1, worldTimeS: 0 };
+    world.siteById.set(site.id, site);
+    world.radarById.set(radar.id, radar);
+    world.aircraftById.set(target.id, target);
+    const m = createMissile({ seq: 1, kind: 'sam', pos: { x: 0, y: 0 }, altM: roundAltM,
+      speed: 1.2, hdg: 0, targetKind: 'aircraft', targetId: target.id,
+      siteId: site.id, radarId: radar.id });
+    // Held at the height under test: this is about the fuze, not the climb.
+    m.runKm = 60;
+    m.arcF = 0;
+    world.missiles.push(m);
+    Object.defineProperty(m, 'altM', { get: () => roundAltM, set: () => {}, configurable: true });
+    world.t += world.dt;
+    stepMissiles(world, world.dt);
+    return world.killed.length > 0;
+  };
+
+  test('a round beside its target destroys it', () => {
+    assert.equal(shootAt(8000, 8000), true);
+  });
+
+  test('a round two vertical miles under its target does not', () => {
+    assert.equal(shootAt(8000, 20), false);
+  });
+
+  test('the gate is three lethal radii, and it is generous below that', () => {
+    const lethalM = ENGAGEMENT.lethalRadiusKm * 1000 * ENGAGEMENT.verticalLethalMult;
+    assert.equal(shootAt(8000, 8000 - lethalM * 0.9), true, 'inside the fuze');
+    assert.equal(shootAt(8000, 8000 - lethalM * 1.2), false, 'outside it');
   });
 });

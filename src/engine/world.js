@@ -146,6 +146,12 @@ export class World {
     this.radars = [];
     this.aircraft = [];
     this.missiles = [];
+    /**
+     * Rounds of a salvo whose turn on the rail has not come yet: ordered, and
+     * released by `releaseRailQueue` in weapons.js. They are not in the air, so
+     * nothing steps them, nothing draws them and nothing can be killed by them.
+     */
+    this.railQueue = [];
     this.tracks = new Map();
     /**
      * Numbers the sector has recently lost contact with, so a contact that

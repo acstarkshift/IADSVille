@@ -776,6 +776,25 @@ export const ENGAGEMENT = {
   unguidedGraceS: 5,
   /** Distance at which the round detonates, km. */
   lethalRadiusKm: 0.12,
+  /**
+   * And how many lethal radii the round is allowed to be off its target's
+   * HEIGHT and still detonate.
+   *
+   * The intercept used to be resolved on the ground plane alone, with the
+   * flight profile declared display truth so that it could not move the
+   * balance. What that bought was a round drawn on the deck destroying an
+   * aeroplane two vertical miles up — measured at five per cent of all kills,
+   * with a worst case of six thousand three hundred metres — while the cabin's
+   * range-height indicator drew both of them, honestly, in the same picture.
+   * The one instrument the missile seat is built around could be flatly
+   * contradicted by the outcome.
+   *
+   * Three radii is generous: it forgives the ordinary case where the round
+   * arrives a little under the target and the fuze is entitled to see it, and
+   * it refuses the steep close shot that runs out of climb slope and passes
+   * underneath. A round that passes under is a miss and says so.
+   */
+  verticalLethalMult: 3,
   /** Hard cap on a round's flight time, seconds. */
   maxFlightS: 220,
   /** Seconds a striker needs after being fired on before it can steady up again. */

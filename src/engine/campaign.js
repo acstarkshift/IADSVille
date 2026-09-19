@@ -23,6 +23,23 @@ import { reachedPost, appointmentNote } from './echelon.js';
 
 const KEY = 'iadsville.campaign.v1';
 
+/**
+ * The shape the file is written in.
+ *
+ * The key has said v1 since the beginning and nothing inside the payload ever
+ * did, so there was no version to check and no schema to check against. What
+ * that cost: a save whose `history` was a number, or whose `completed` was a
+ * string, loaded without a word of complaint, drew the menu, let a whole watch
+ * be played — and then threw inside `recordMission` at the end of it, with the
+ * frame loop already past the point of no return, so the console froze with no
+ * debrief, no end card and no way out but a page reload. The player lost the
+ * watch after standing it.
+ *
+ * Now every field is coerced against the table in `migrate` and a payload that
+ * cannot be made sense of is refused outright rather than half-loaded.
+ */
+export const SAVE_VERSION = 2;
+
 /** In-memory fallback so tests and headless runs never touch a browser API. */
 export function memoryStore() {
   const data = new Map();
@@ -101,30 +118,102 @@ export function enlist(campaign, { name, background, household }) {
   return campaign.character;
 }
 
+const isPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+const finite = (v, fallback, lo, hi) => (typeof v === 'number' && Number.isFinite(v)
+  ? Math.max(lo, Math.min(hi, v)) : fallback);
+
+const SCENARIO_IDS = new Set(SCENARIOS.map((s) => s.id));
+const ROLE_IDS = new Set(SCENARIOS.flatMap((s) => s.roles ?? []));
+const TIER_IDS = new Set([...COMMAND.tiers.map((t) => t.id), 'abandoned']);
+
+/**
+ * Read a saved file and give back something the rest of the game can hold.
+ *
+ * Every field is coerced against its declared type and dropped if it cannot be.
+ * The rule is: a field that makes no sense is replaced by the empty file's
+ * version of it, and a PAYLOAD that makes no sense — not an object at all —
+ * is refused, because half of somebody's campaign is worse than none of it.
+ *
+ * Returns null for a payload that cannot be read at all.
+ */
+export function migrate(parsed) {
+  if (!isPlainObject(parsed)) return null;
+  const base = emptyCampaign();
+  const out = { ...base };
+
+  // The character, and the family: both are merged field by field over a fresh
+  // one, so a record saved before either existed still opens.
+  if (isPlainObject(parsed.character) && typeof parsed.character.name === 'string') {
+    out.character = { ...createCharacter({ name: parsed.character.name }), ...parsed.character };
+  }
+  out.family = { ...emptyFamily(), ...(isPlainObject(parsed.family) ? parsed.family : {}) };
+
+  out.standing = finite(parsed.standing, base.standing, COMMAND.minStanding, COMMAND.maxStanding);
+  out.fileMarks = Math.round(finite(parsed.fileMarks, 0, 0, 999));
+  out.commendations = Math.round(finite(parsed.commendations, 0, 0, 999));
+
+  // The roster. Only watches that exist, only with a score, a known tier and a
+  // seat that watch actually offers.
+  out.completed = {};
+  if (isPlainObject(parsed.completed)) {
+    for (const [id, rec] of Object.entries(parsed.completed)) {
+      if (!SCENARIO_IDS.has(id) || !isPlainObject(rec)) continue;
+      out.completed[id] = {
+        score: finite(rec.score, 0, -1e6, 1e6),
+        tier: TIER_IDS.has(rec.tier) ? rec.tier : 'satisfactory',
+        role: ROLE_IDS.has(rec.role) ? rec.role : 'net',
+      };
+    }
+  }
+
+  out.history = Array.isArray(parsed.history)
+    ? parsed.history.filter(isPlainObject).map((e) => ({
+      ...e,
+      missionId: typeof e.missionId === 'string' ? e.missionId : '',
+      score: finite(e.score, 0, -1e6, 1e6),
+      standing: finite(e.standing, base.standing, COMMAND.minStanding, COMMAND.maxStanding),
+      tier: TIER_IDS.has(e.tier) ? e.tier : 'satisfactory',
+    }))
+    : [];
+
+  out.ending = typeof parsed.ending === 'string' ? parsed.ending : null;
+  out.epilogue = typeof parsed.epilogue === 'string' ? parsed.epilogue : null;
+  out.endingFacts = isPlainObject(parsed.endingFacts)
+    ? { palaceHeld: !!parsed.endingFacts.palaceHeld, villeHeld: !!parsed.endingFacts.villeHeld }
+    : null;
+  out.bestEndingFacts = isPlainObject(parsed.bestEndingFacts)
+    ? { palaceHeld: !!parsed.bestEndingFacts.palaceHeld, villeHeld: !!parsed.bestEndingFacts.villeHeld }
+    : null;
+  out.revelations = Array.isArray(parsed.revelations)
+    ? parsed.revelations.filter((r) => typeof r === 'string') : [];
+  out.appointment = typeof parsed.appointment === 'string' ? parsed.appointment : base.appointment;
+  out.version = SAVE_VERSION;
+  return out;
+}
+
 export function loadCampaign(store) {
   try {
     const raw = store.get(KEY);
     if (!raw) return emptyCampaign();
-    const parsed = JSON.parse(raw);
-    const campaign = { ...emptyCampaign(), ...parsed };
-    // A record saved before the service record existed still loads; the player
-    // is simply asked to enlist.
-    if (campaign.character) {
-      campaign.character = { ...createCharacter({ name: campaign.character.name }), ...campaign.character };
+    const migrated = migrate(JSON.parse(raw));
+    if (!migrated) {
+      const fresh = emptyCampaign();
+      fresh.loadFailed = true;
+      return fresh;
     }
-    // Saves from before the post existed still load: the top-level spread put a
-    // fresh family object in, and a partial one from a future save is filled
-    // out field by field the way the character is.
-    campaign.family = { ...emptyFamily(), ...(parsed.family ?? {}) };
-    return campaign;
+    return migrated;
   } catch {
-    return emptyCampaign();
+    const fresh = emptyCampaign();
+    fresh.loadFailed = true;
+    return fresh;
   }
 }
 
 export function saveCampaign(store, campaign) {
   try {
-    store.set(KEY, JSON.stringify(campaign));
+    // `loadFailed` is a fact about one read, not about the file.
+    const { loadFailed, ...payload } = campaign;
+    store.set(KEY, JSON.stringify({ ...payload, version: SAVE_VERSION }));
   } catch {
     /* A campaign that cannot be saved still plays. */
   }
@@ -208,6 +297,25 @@ export function recordMission(campaign, result) {
       palaceHeld: fraction('palace') < 0.75,
       villeHeld: fraction('town') < 0.35,
     };
+    /*
+     * And the best night ever stood, kept beside the last one.
+     *
+     * `completed` has always kept the player's best score and `endingFacts` was
+     * overwritten unconditionally, so the two halves of the file disagreed
+     * about what the player had done: win the finale, unlock The President's
+     * Flight, press REPLAY THIS ONE, have a bad night, and the twelfth watch
+     * of the campaign vanished from the menu with no explanation and no way
+     * back except winning the finale again. A button on the debrief does not
+     * get to delete content that has been earned.
+     *
+     * So the epilogue gate reads `bestEndingFacts` — what was standing on the
+     * best night — and the prose reads `endingFacts`, which is the night just
+     * stood. They are allowed to disagree, and the disagreement is honest.
+     */
+    const held = (f) => (f ? (f.palaceHeld ? 1 : 0) + (f.villeHeld ? 1 : 0) : -1);
+    if (held(campaign.endingFacts) > held(campaign.bestEndingFacts)) {
+      campaign.bestEndingFacts = { ...campaign.endingFacts };
+    }
   }
   if (result.epilogue && result.endingId) campaign.epilogue = result.endingId;
 
