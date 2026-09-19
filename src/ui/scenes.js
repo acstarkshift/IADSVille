@@ -1541,6 +1541,12 @@ export class ScenePlayer {
       case 'finding': return { x: 10, y: 140, w: 300, h: 34, anchor: 'bottom', max: 54 };
       // On the empty foreground, with the valley above it.
       case 'ending': return { x: 10, y: 126, w: 300, h: 48, anchor: 'bottom', max: 62 };
+      /*
+       * The call: across the wainscot under the bunk, in the columns the
+       * handset and its cord do not cross. Nothing is being read, so the words
+       * take the room's whole width below the hand.
+       */
+      case 'call': return { x: 10, y: 134, w: 188, h: 40, anchor: 'bottom', max: 58 };
       // Across the desk front only: the room behind him stays visible.
       default: return { x: 10, y: 140, w: 300, h: 34, anchor: 'bottom', max: 54 };
     }
@@ -1979,6 +1985,10 @@ export class ScenePlayer {
         struck: !!scene.struck,
         seed: 'THE POLITICAL SECTION',
         empty: scene.kind === 'finding',
+        // The epilogue's morning: an empty office on which nothing was
+        // entered, and on `unwatched` one that was never unlocked.
+        unentered: !!scene.empty,
+        locked: !!scene.locked,
         narrow: !!this.stacked,
         line: this.line,
         lines: scene.lines?.length ?? 1,
@@ -1993,16 +2003,21 @@ export class ScenePlayer {
         if (page !== this.page) { this.page = page; this.pageAt = t; }
         drawFolder(ctx, t, this.character, {
           line: this.line, page, pageAt: this.pageAt ?? 0, wide: !!this.stacked, ref: scene.ref,
-          waiting: this.waiting ?? 0,
+          waiting: this.waiting ?? 0, bare: !!scene.bare,
         });
         break;
       }
       case 'quarters': drawQuarters(ctx, t, this.character, { ...reading, wide: !!this.stacked, notice: !!scene.notice }); break;
+      /*
+       * The same room, and no paper in it: the telephone call the epilogue has
+       * been promising for twelve watches. See drawQuarters.
+       */
+      case 'call': drawQuarters(ctx, t, this.character, { ...reading, wide: !!this.stacked, call: true }); break;
       case 'ending': drawEnding(ctx, t, { held: scene.held }); break;
       case 'approach': drawApproach(ctx, t, scene); break;
-      case 'sit': drawSit(ctx, t, this.character); break;
-      case 'breath': drawBreath(ctx, t, this.character); break;
-      case 'card': drawCard(ctx, t, this.character); break;
+      case 'sit': drawSit(ctx, t, this.character, scene); break;
+      case 'breath': drawBreath(ctx, t, this.character, scene); break;
+      case 'card': drawCard(ctx, t, this.character, scene); break;
       case 'boot': drawBoot(ctx, t, scene, this.character); break;
       default: px(ctx, 0, 0, SCENE_W, SCENE_H, INK);
     }
@@ -3583,6 +3598,9 @@ function consoleRoom(ctx, t, opts = {}) {
     dither(ctx, 96, deskTop, 128, 3, STEEL[1], TUBE, lvl);
     dither(ctx, 110, deskTop + 3, 100, 5, STEEL[0], TUBE, Math.max(1, lvl - 1));
   }
+  // and the one thing in the room that says which seat this is — last, so the
+  // desk's own furniture cannot be drawn over the top of it
+  postMark(ctx, opts.post, shelf, lip);
 }
 
 /* ------------------------------------------------------------------ the opening */
@@ -3979,8 +3997,71 @@ function vignette(ctx, level) {
   }
 }
 
+/**
+ * One thing on the desk that says which seat this is.
+ *
+ * The narrative reviewer: "A recruit's first night at a radar set and the Chief
+ * of Air Defence's last morning in the capital sector begin with the identical
+ * sequence at the identical console. The promotion ladder is the spine of the
+ * campaign and the one recurring first-person moment in the game does not
+ * register it once." The beats are wordless, which is why this is cheap: the
+ * room changes, nothing is narrated, and the player's hands feel the rung.
+ *
+ * One object per rung, and only one, because five of these play before every
+ * watch and a busy room stops being a place and becomes a list.
+ */
+function postMark(ctx, post, shelf, lip) {
+  if (!post) return;
+  if (post === 'radar' || post === 'crew') {
+    /*
+     * The junior seats: somebody else's enamel mug, left on the shelf where
+     * the last watch left it, gone cold. You are not the first person in this
+     * chair tonight and the chair knows it.
+     */
+    const mx = 232;
+    const y = shelf + 6;
+    px(ctx, mx, y, 17, 15, INK);
+    px(ctx, mx + 1, y + 1, 15, 13, PAPER[2]);
+    px(ctx, mx + 1, y + 1, 15, 2, PAPER[3]);
+    px(ctx, mx + 1, y + 4, 15, 1, RED);
+    px(ctx, mx + 3, y + 7, 11, 5, WOOD[0]);           // what is left in it, cold
+    px(ctx, mx + 17, y + 4, 5, 8, INK);               // the handle
+    px(ctx, mx + 18, y + 5, 3, 6, PAPER[2]);
+    px(ctx, mx - 1, y + 15, 21, 1, STEEL[0]);         // where it sits
+    return;
+  }
+  if (post === 'battalion' || post === 'sector') {
+    /*
+     * A second chair, pushed in under the desk at your right hand. Somebody
+     * sits there on this rung, and on the nights they are not there the chair
+     * is still there.
+     */
+    const cx = SCENE_W - 74;
+    const top = lip + 8;
+    px(ctx, cx, top, 62, FRAME_BOTTOM - top, INK);
+    px(ctx, cx + 3, top + 3, 56, FRAME_BOTTOM - top - 3, step(CLOTH, 1));
+    px(ctx, cx + 3, top + 3, 56, 2, step(CLOTH, 2));
+    dither(ctx, cx + 3, top + 9, 56, 10, step(CLOTH, 1), step(CLOTH, 0), 6);
+    px(ctx, cx + 3, top + 3, 3, FRAME_BOTTOM - top - 3, step(CLOTH, 2));
+    return;
+  }
+  /*
+   * District and national: you do not come in here alone. An escort stands at
+   * the near end of the desk — a greatcoat and two buttons at the edge of the
+   * frame, close enough to read the log over your shoulder and far enough
+   * away to be able to say they were not reading it.
+   */
+  const ex = SCENE_W - 34;
+  const top = lip - 6;
+  px(ctx, ex, top, 40, FRAME_BOTTOM - top, INK);
+  px(ctx, ex + 3, top + 2, 36, FRAME_BOTTOM - top - 2, step(CLOTH, 1));
+  px(ctx, ex + 3, top + 2, 4, FRAME_BOTTOM - top - 2, step(CLOTH, 2));
+  dither(ctx, ex + 3, top + 2, 36, 10, step(CLOTH, 1), step(CLOTH, 0), 7);
+  for (let i = 0; i < 3; i++) px(ctx, ex + 13, top + 10 + i * 11, 4, 4, DAWN[1]);
+}
+
 /** Sitting down: the room rises, the chair arrives, the hands land on the desk. */
-function drawSit(ctx, t, character) {
+function drawSit(ctx, t, character, scene = null) {
   const p = clamp01(t / 1.6);
   const ease = 1 - Math.pow(1 - p, 3);
   const overshoot = p > 0.85 ? Math.round(3 * Math.sin((p - 0.85) / 0.15 * Math.PI)) : 0;
@@ -3991,7 +4072,7 @@ function drawSit(ctx, t, character) {
    * the breath.
    */
   const oy = Math.round(22 * (1 - ease)) + overshoot;
-  consoleRoom(ctx, t, { live: false, tube: 0, lamps: 0, oy });
+  consoleRoom(ctx, t, { live: false, tube: 0, lamps: 0, oy, post: scene?.post });
   // the chair's arm rests, coming in at the bottom corners
   const armY = Math.round(FRAME_BOTTOM - 26 * ease);
   px(ctx, -4, armY, 48, 30, INK);
@@ -4011,11 +4092,11 @@ function drawSit(ctx, t, character) {
 }
 
 /** One breath, in a room at three below: the body moves, the camera does not. */
-function drawBreath(ctx, t, character) {
+function drawBreath(ctx, t, character, scene = null) {
   const inhale = clamp01(t / 0.8);
   const out = clamp01((t - 1.0) / 1.0);
   const rise = Math.round(3 * inhale - 3 * out);
-  consoleRoom(ctx, t, { live: false, tube: 0, lamps: 0 });
+  consoleRoom(ctx, t, { live: false, tube: 0, lamps: 0, post: scene?.post });
   /*
    * No shoulders in the corners any more.
    *
@@ -4050,7 +4131,7 @@ function drawBreath(ctx, t, character) {
  * eases, the blue power lamp comes up at the halfway mark, and the room takes
  * a step up in light as it seats — the card is what turns the console on.
  */
-function drawCard(ctx, t, character) {
+function drawCard(ctx, t, character, scene = null) {
   const seated = t >= 1.6;
   const halfway = t >= 1.1;
   const settle = seated && t < 1.75 ? 1 : 0;
@@ -4058,7 +4139,7 @@ function drawCard(ctx, t, character) {
   // the power lamp does, rather than a wash being drawn over the top of it
   consoleRoom(ctx, t, {
     live: false, tube: 0, lamps: 0, power: halfway, cardIn: seated, showCard: false,
-    dim: halfway ? 0 : 1,
+    dim: halfway ? 0 : 1, post: scene?.post,
   });
   const ramp = skinOf(character);
   // The left hand never leaves the desk lip, at any point in this beat.
@@ -4212,7 +4293,7 @@ function drawBoot(ctx, t, scene, character) {
   const room = Math.max(0, Math.min(3, Math.floor(t / 0.4)));
   consoleRoom(ctx, t, {
     live: t > 0.3, tube, lamps, power: true, cardIn: true, net: t > 2.2,
-    cardSeed: character?.name ?? null,
+    cardSeed: character?.name ?? null, post: scene?.post,
   });
   const gx = 96;
   const gy = 6 + consoleDrop();
@@ -4459,6 +4540,22 @@ function drawPrintout(ctx, t, character, { line = 0, typed = 0, talking = false,
 function drawOffice(ctx, t, {
   talking, face, tier, watches = 0, struck = false, seed = '', empty = false,
   narrow = false, line = 0, lines = 1, since = 99, dismissing = false,
+  /*
+   * THE MORNING NOBODY CAME IN.
+   *
+   * `empty` is the ordinary empty office: the night the post was struck, the
+   * section wrote its finding and sent it, and the sheet is squared on the
+   * blotter with ENTERED stamped across it.
+   *
+   * `unentered` is a different morning and a worse one. On the epilogue's
+   * `judgement` and `unwatched` endings the state aircraft was lost and the
+   * ending says the political section has not been reached since 05:00 and the
+   * sector office has been open all morning with nobody in it. Nothing was
+   * entered, so there is no finding on the desk — a folded note the duty clerk
+   * left, and that is all. `locked` is the harder of the two: the office was
+   * not opened at all, so the lamp is off and the room is the window's.
+   */
+  unentered = false, locked = false,
 }) {
   const hard = tier === 'flagged' || tier === 'condemned';
   /*
@@ -4735,8 +4832,11 @@ function drawOffice(ctx, t, {
    * the cone was painted over the stem that holds the shade up. The light
    * leaves the shade's mouth, and the lamp is solid in front of it.
    */
-  lampCone(ctx, lampX, 54, lampAt, fall, lampLean);
-  deskLamp(ctx, lampX, 46, lampAt, (ramp, i) => step(ramp, i - Math.max(0, dim - 1)));
+  // Nobody turned it on. The lamp is still there and it is still the object
+  // the room is built round; it is simply not lit.
+  if (!locked) lampCone(ctx, lampX, 54, lampAt, fall, lampLean);
+  deskLamp(ctx, lampX, 46, lampAt, (ramp, i) => step(ramp, i - Math.max(0, dim - 1)),
+    { off: locked });
   // the man, behind the desk, lit from the lamp's side
   if (!empty) {
     // what is behind his shoulders, so the slope of them can be cut out of the
@@ -4855,7 +4955,33 @@ function drawOffice(ctx, t, {
    * stay true is the absence: no man, no hands, no shadow on the wall, the
    * lamp still burning, and one closed document where his forearms were.
    */
-  if (empty) {
+  if (empty && unentered) {
+    /*
+     * NOTHING WAS ENTERED.
+     *
+     * A folded note the duty clerk left on the blotter, squared the way a
+     * clerk squares a thing they were told to leave: one crease across it, two
+     * lines of somebody else's handwriting, no letterhead, no plate and no
+     * stamp. The ending says the office has not been reached since 05:00, and
+     * a signed finding stamped ENTERED would be the state doing its work on a
+     * morning the state did not come in.
+     */
+    const NX = Math.max(20, Math.min(SCENE_W - 76, pool + 42 - 28));
+    const NY = 92;
+    px(ctx, NX, NY, 58, 22, INK);
+    px(ctx, NX + 1, NY + 1, 56, 20, locked ? PAPER[1] : PAPER[2]);
+    // the crease, and the half of the sheet that is still folded standing a
+    // step darker than the half that has fallen open
+    px(ctx, NX + 1, NY + 10, 56, 1, PAPER[0]);
+    dither(ctx, NX + 1, NY + 11, 56, 10, locked ? PAPER[0] : PAPER[1], PAPER[1], 6);
+    for (let i = 0; i < 2; i++) {
+      for (let x = 0; x < [38, 26][i]; x++) {
+        px(ctx, NX + 6 + x, NY + 4 + i * 3 - Math.round(Math.sin(x / 3.2) * 1.2), 1, 1, NIGHT[0]);
+      }
+    }
+    // it casts the one shadow in the room, away from the window
+    px(ctx, NX + 2, NY + 22, 58, 2, S(WOOD, 0));
+  } else if (empty) {
     /*
      * The finding: signed, closed, squared on the blotter with its signature
      * block facing the camera. The reader, not the writer, is who this sheet
@@ -5138,7 +5264,7 @@ function framedPortrait(ctx, x, y, w, h, S, { capped = true } = {}) {
 }
 
 /** The desk lamp, and the pool it throws on the surface in front of it. */
-function deskLamp(ctx, x, y, turn, S) {
+function deskLamp(ctx, x, y, turn, S, { off = false } = {}) {
   const tilt = turn * 4;
   // the stem first, so the shade sits on top of a lamp that stands on the desk
   px(ctx, x - 1, y + 8, 5, 48, INK);
@@ -5166,7 +5292,13 @@ function deskLamp(ctx, x, y, turn, S) {
   px(ctx, x - 14 + tilt, y + 1, 28, 3, INK);
   px(ctx, x - 13 + tilt, y + 1, 26, 2, S(STEEL, 1));
   px(ctx, x - 13 + tilt, y + 1, 26, 1, S(STEEL, 2));
-  // the bulb in the mouth of it, and the heat off the filament
+  // the bulb in the mouth of it, and the heat off the filament — or a cold
+  // filament in a dark glass, on the morning nobody came in to switch it on
+  if (off) {
+    px(ctx, x - 5 + tilt, y + 3, 10, 3, STEEL[0]);
+    px(ctx, x - 3 + tilt, y + 3, 6, 2, STEEL[1]);
+    return;
+  }
   px(ctx, x - 5 + tilt, y + 3, 10, 3, AMBER);
   px(ctx, x - 3 + tilt, y + 3, 6, 2, DAWN[3]);
   px(ctx, x - 7 + tilt, y + 3, 2, 2, DAWN[1]);
@@ -5870,7 +6002,9 @@ function commissarHands(ctx, { S, gold, hard = false, dismiss = 0, turn = 0, clo
  */
 function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) {
   const land = clamp01(t / 0.8);
-  const ease = 1 - Math.pow(1 - land, 2);
+  // On a bare night nothing is landing: the paper was squared by somebody else
+  // and it is already lying there. See the note on `scene.bare` below.
+  const ease = scene?.bare ? 1 : 1 - Math.pow(1 - land, 2);
   px(ctx, 0, 0, SCENE_W, SCENE_H, WOOD[1]);
   px(ctx, 0, 0, SCENE_W, 8, WOOD[0]);
   for (let x = 0; x < SCENE_W; x += 26) px(ctx, x, 8, 1, SCENE_H - 8, WOOD[0]);
@@ -6020,9 +6154,27 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
    * near edge of it — the one piece of good news in the campaign, delivered by
    * a hand that has just put it there.
    */
-  const ramp = skinOf(character);
-  handBack(ctx, ramp, handX, handY, -1, null, { from: 288, shade: INK, light: -1 });
-  handFront(ctx, ramp, handX, handY, -1);
+  /*
+   * NOBODY IN THE ROOM, ON THE NIGHT THE POST WAS LOST.
+   *
+   * The last two panels both handed this one forward. On a closing watch that
+   * ended with the position overrun, this is the FIRST scene of the evening —
+   * so the first thing a player saw after being carried off their own post was
+   * their own whole uniformed hand taking a promotion in an office, two beats
+   * before the finding told them they were at a clearing station at Kubin and
+   * the people on the post are counted in the morning. The words were fixed
+   * last round and the picture was not.
+   *
+   * `scene.bare` is set by `scenesFor` when the watch ended `site-lost`. The
+   * order and the board are on the blotter, squared by somebody else, and
+   * there is no hand: the room is drawn empty, the way the `finding` scene
+   * already draws this same room on the one night the operator is not in it.
+   */
+  if (!scene?.bare) {
+    const ramp = skinOf(character);
+    handBack(ctx, ramp, handX, handY, -1, null, { from: 288, shade: INK, light: -1 });
+    handFront(ctx, ramp, handX, handY, -1);
+  }
 }
 
 /**
@@ -6032,7 +6184,7 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
  * longer than the page turns onto a second sheet rather than being clipped.
  */
 function drawFolder(ctx, t, character, {
-  line = 0, page = 0, pageAt = 0, wide = false, ref = null, waiting = 0,
+  line = 0, page = 0, pageAt = 0, wide = false, ref = null, waiting = 0, bare = false,
 } = {}) {
   /*
    * ON A PHONE THE SHEET RUNS OFF THE BOTTOM OF THE PICTURE.
@@ -6182,6 +6334,14 @@ function drawFolder(ctx, t, character, {
   // the hand tracks a little way down the sheet as the file is read, but never
   // so far up it that the forearm has to cross the picture to reach the wrist
   const fy = wide ? 128 : Math.min(132, 112 + (line % FOLDER_PAGE) * 5);
+  /*
+   * And nobody in the room on the night the post was lost. `scene.bare` is set
+   * by `scenesFor` when the watch ended `site-lost`: the file is open on the
+   * blotter with nobody reading it, because the operator is at the clearing
+   * station at Kubin and the picture must not say otherwise two beats before
+   * the finding does. Same conditional as the order of appointment above.
+   */
+  if (bare) return;
   const ramp = skinOf(character);
   handBack(ctx, ramp, wide ? 262 : 240, fy, -1, null, { from: wide ? 306 : 286, shade: PAPER[1] });
   handFront(ctx, ramp, wide ? 262 : 240, fy, -1);
@@ -6191,7 +6351,7 @@ function drawFolder(ctx, t, character, {
  * Quarters, at night: a bulb, a stove, a bunk, snow past a frosted window, and
  * a letter held low and to the left so the room stays legible around it.
  */
-function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = false, waiting = 0 } = {}) {
+function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = false, waiting = 0, call = false } = {}) {
   // On a phone the sheet is wide and stands low, and the words carry on down
   // the screen below it; at a desk it is held low-left with the room around it.
   /*
@@ -6322,6 +6482,87 @@ function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = fals
   if (wide) {
     handBack(ctx, ramp, hl, hy, 1, null, { from: hl - 22, rest: false, light: 1 });
     handBack(ctx, ramp, hr, hy, -1, null, { from: hr + 43, rest: false, light: -1 });
+  }
+  /*
+   * THE TWENTY-MINUTE TELEPHONE CALL.
+   *
+   * `family.js` says in its own header that the post is one-way and monitored
+   * all campaign long "so that the epilogue's twenty-minute unmonitored
+   * telephone call means what it means" — and the game then reported that call
+   * in a subordinate clause and ended. Six letters of setup and no payoff.
+   *
+   * It is a scene now, and it is this room without the paper in it: the same
+   * bunk, the same stove, the same snow at the window, and a handset off its
+   * cradle held up at the right of the frame with the cord running down out of
+   * it. Nothing is being read. The words are the household's, spoken.
+   */
+  if (call) {
+    /*
+     * The telephone stands where the letters used to be opened, and the
+     * handset is off it. Same room, same stove, same snow: what is different
+     * is that nothing is being read and nobody is reading it to anybody.
+     */
+    const TX = 44;
+    const TY = 120;
+    px(ctx, TX - 2, TY - 2, 52, 30, INK);
+    px(ctx, TX, TY, 48, 26, NIGHT[0]);
+    px(ctx, TX, TY, 48, 3, NIGHT[1]);
+    px(ctx, TX, TY + 23, 48, 3, INK);
+    // the sloped front with the dial on it
+    px(ctx, TX + 4, TY + 8, 40, 14, NIGHT[1]);
+    px(ctx, TX + 4, TY + 8, 40, 1, NIGHT[2]);
+    circlePx(ctx, TX + 24, TY + 15, 8, NIGHT[2]);
+    circlePx(ctx, TX + 24, TY + 15, 5, NIGHT[0]);
+    // the cradle, standing empty, which is the whole point of the picture
+    px(ctx, TX + 2, TY - 6, 8, 7, INK);
+    px(ctx, TX + 3, TY - 5, 6, 6, NIGHT[1]);
+    px(ctx, TX + 38, TY - 6, 8, 7, INK);
+    px(ctx, TX + 39, TY - 5, 6, 6, NIGHT[1]);
+
+    /*
+     * The handset, held up at the right of the frame with a whole hand round
+     * it and the forearm running off the bottom edge, the way every hand in
+     * this game is built. The earpiece stands above the fist and the
+     * mouthpiece below it, so it reads as a handset at an ear rather than as a
+     * dark bar behind a fist.
+     */
+    const hx = 198;
+    const top = 36;
+    const bot = 132;
+    px(ctx, hx - 2, top, 22, bot - top, INK);
+    px(ctx, hx, top + 2, 18, bot - top - 4, NIGHT[1]);
+    px(ctx, hx, top + 2, 4, bot - top - 4, NIGHT[2]);
+    // the two ends, wider than the shaft
+    px(ctx, hx - 7, top, 32, 16, INK);
+    px(ctx, hx - 5, top + 2, 28, 12, NIGHT[1]);
+    px(ctx, hx - 5, top + 2, 28, 1, NIGHT[2]);
+    px(ctx, hx - 7, bot - 16, 32, 16, INK);
+    px(ctx, hx - 5, bot - 14, 28, 12, NIGHT[1]);
+    for (let i = 0; i < 3; i++) px(ctx, hx - 1 + i * 7, bot - 9, 3, 3, INK);
+
+    /*
+     * The cord, from the mouthpiece across the room to the telephone: a sag,
+     * drawn as a curve with a coil in it, moving a little on the breath of the
+     * room the way the bulb above it does.
+     */
+    const x0 = hx + 4;
+    const y0 = bot - 2;
+    const x1 = TX + 48;
+    const y1 = TY + 4;
+    for (let i = 0; i <= 44; i++) {
+      const f = i / 44;
+      const cx = Math.round(x0 + (x1 - x0) * f);
+      const sag = Math.sin(f * Math.PI) * 26;
+      const cy = Math.round(y0 + (y1 - y0) * f + sag);
+      if (cy >= FRAME_BOTTOM - 1) continue;
+      px(ctx, cx, cy, 3, 2, INK);
+      if (i % 3 === 0) px(ctx, cx, cy - 2 + Math.round(Math.sin(t * 1.6 + i) * 1), 2, 2, NIGHT[0]);
+    }
+
+    handBack(ctx, ramp, hx - 6, 78, -1, null, { from: 300, shade: INK, light: -1 });
+    handFront(ctx, ramp, hx - 6, 78, -1);
+    if (!wide) promptMark(ctx, 300, 168, waiting, PAPER[2]);
+    return;
   }
   if (notice) {
     px(ctx, SX + 3, SY + 3, SW, SHEET_H, INK);
