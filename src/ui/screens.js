@@ -48,6 +48,83 @@ const stampFace = (tm, en) => (en
 /** Every screen opens at the top of itself, however far the last one scrolled. */
 const toTop = (host) => { if (host) host.scrollTop = 0; };
 
+/**
+ * Who issues the order, and what ground it is about.
+ *
+ * The letterhead was a constant: every brief in the game was headed SECTOR
+ * 4-B — OPERATION ORDER, including the two watches where the player commands a
+ * district of four sectors and the two fought at national command, one of
+ * which opens "You have been moved to the capital sector". The formation and
+ * the ground are read off the scenario now, and so is the foot of the sheet.
+ */
+export function issuingFormation(mission) {
+  if (mission?.epilogue) return 'CAPITAL SECTOR';
+  switch (mission?.echelon) {
+    case 'region': return 'DISTRICT COMMAND';
+    case 'national': return 'NATIONAL AIR DEFENCE COMMAND';
+    default: return STATE.sector.en;
+  }
+}
+export function groundOf(mission) {
+  if (mission?.epilogue) return 'THE CAPITAL SECTOR';
+  if (mission?.finale) return 'THE TWO CITIES';
+  return mission?.echelon === 'region' ? 'THE DISTRICT, FOUR SECTORS' : STATE.sector.en;
+}
+const issuedBy = (mission) => (mission?.epilogue ? 'Issued by the capital sector operations room'
+  : mission?.echelon === 'region' ? 'Issued by district operations'
+    : mission?.echelon === 'national' ? 'Issued by national command operations'
+      : 'Issued by sector operations');
+
+/**
+ * The formation the front sheet is headed with: the one the record's own
+ * appointment sits in, not the sector a recruit started in.
+ */
+function formationOfAppointment(appointment) {
+  switch (appointment?.id) {
+    case 'region': return 'DISTRICT COMMAND';
+    case 'national': return 'NATIONAL COMMAND';
+    default: return STATE.sector.en;
+  }
+}
+
+/**
+ * The front sheet's two paragraphs, by where the record has got to.
+ *
+ * They were fixed for the whole game: after the epilogue — Lieutenant
+ * General, Chief of Air Defence, the ministry packed into crates — the menu
+ * still called the player a conscript eleven kilometres from home. Three
+ * versions: the conscript's, a commander's once the post reaches sector, and a
+ * short flat one once the campaign has ended, because the last thing the
+ * player reads should not be the first thing they read.
+ */
+function frontSheet(campaign, appointment) {
+  if (campaign.epilogue || campaign.ending) {
+    return [
+      'The last watch has been stood. What the file says about it is printed below in the'
+        + ' file\'s own words, and the roster underneath is every night that led to it.',
+      'Any watch on the roster can be stood again. The file does not forget the first time.',
+    ];
+  }
+  if ((appointment?.order ?? 0) >= 3) {
+    return [
+      'You command the sector you were conscripted into. The valley is the same valley and the'
+        + ' village is still eleven kilometres from the console; what has changed is that the orders'
+        + ' come to you now, on the net, in the clear, and you answer them by name.',
+      'Your radars can only see while they are transmitting, and everything that can see you is'
+        + ' listening for exactly that. You have more contacts than rounds, and the file reads your'
+        + ' log in the morning.',
+    ];
+  }
+  return [
+    'You are an air defence conscript in the second year of a war with the Federation, across the'
+      + ' northern frontier. You sit eleven kilometres from the village you grew up in, and'
+      + ' tonight\'s raid is coming down your valley.',
+    'Your radars can only see while they are transmitting, and everything that can see you is'
+      + ' listening for exactly that. You have more contacts than rounds, and sector command reads'
+      + ' your log in the morning.',
+  ];
+}
+
 /*
  * The form furniture — the letterhead, the typed field and a band of them — is
  * declared with the service record in dossier.js and imported here, so that the
@@ -142,15 +219,10 @@ export function renderMenu(host, state) {
 
   host.innerHTML = `<div class="screen-inner">
     <h1 class="title">IADSVILLE</h1>
-    <p class="subtitle">${esc(STATE.country.en)} · ${esc(STATE.service.en)} · SECTOR 4-B</p>
+    <p class="subtitle">${esc(STATE.country.en)} · ${esc(STATE.service.en)} · ${esc(formationOfAppointment(appointment))}</p>
 
     <div class="card">
-      <p>You are an air defence conscript in the second year of a war with the Federation, across
-      the northern frontier. You sit eleven kilometres from the village you grew up in, and
-      tonight's raid is coming down your valley.</p>
-      <p>Your radars can only see while they are transmitting, and everything that can see you is
-      listening for exactly that. You have more contacts than rounds, and sector command reads
-      your log in the morning.</p>
+      ${frontSheet(campaign, appointment).map((p) => `<p>${esc(p)}</p>`).join('')}
     </div>
 
     ${/*
@@ -332,7 +404,7 @@ export function renderBriefing(host, state) {
    * of it was drawn as what it is.
    */
   host.innerHTML = `<div class="screen-inner is-paper is-order">
-    ${paperHead(`${STATE.sector.en} — operation order`, 'FORM 3-31')}
+    ${paperHead(`${issuingFormation(mission)} — operation order`, 'FORM 3-31')}
     <h1 class="title is-watch">${esc(mission.name)}</h1>
     <p class="subtitle">${esc(mission.subtitle)}</p>
     ${/* The particulars of the order, typed into the head of it: the hour and
@@ -443,7 +515,7 @@ export function renderBriefing(host, state) {
     </div>`}
 
     ${/* The foot of the order: who issued it, and under whose authority. */ ''}
-    <div class="record-foot-line"><span>Issued by sector operations</span>
+    <div class="record-foot-line"><span>${esc(issuedBy(mission))}</span>
       <span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}</span></div>
 
     <div class="actions">
@@ -627,7 +699,7 @@ function sectorMap(mission) {
          key belongs to the caption. It used to be a bare box of green lines
          with a list under it. */ ''}
     <figcaption class="map-key">
-      <span class="map-caption">Fig. 1 — ${esc(STATE.sector.en)}, the ground this watch is fought over</span>
+      <span class="map-caption">Fig. 1 — ${esc(groundOf(mission))}, the ground this watch is fought over</span>
       <ul>${key}</ul>
     </figcaption>
   </figure>`;

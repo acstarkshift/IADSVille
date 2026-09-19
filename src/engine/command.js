@@ -21,6 +21,18 @@ import { bearing, clamp, dist } from './math.js';
 import { radiating } from './detection.js';
 
 /**
+ * Which of an order's wordings this operator hears.
+ *
+ * Three or four wordings per routine directive, chosen by the number of
+ * watches the record has stood, so the same file on the same watch always
+ * hears the same one and the campaign never hears one twice running.
+ * Measured over thirty-six watch-runs before this, the net sent 173 directives
+ * drawn from 43 sentences, and one of them went out ten times in twelve
+ * watches word for word. Repetition is the one thing a threat cannot survive.
+ */
+const byWatch = (w, list) => list[(((w.character?.watches ?? 0) % list.length) + list.length) % list.length];
+
+/**
  * Directive templates.
  *
  * `text` is the version sector command actually sends. `plain` is the same order
@@ -34,7 +46,12 @@ export const DIRECTIVES = {
     label: 'the order to keep radiating',
     priority: 'high',
     cooldownS: 180,
-    text: (w) => `SECTOR ACTUAL: Emissions log shows ${Math.round(w.command.darkTimeS)}s dark with hostiles inbound. All sets will radiate. Acknowledge.`,
+    text: (w) => byWatch(w, [
+      (n) => `SECTOR ACTUAL: Emissions log shows ${n}s dark with hostiles inbound. All sets will radiate. Acknowledge.`,
+      (n) => `SECTOR ACTUAL: You have been dark ${n} seconds with hostiles on the board. Every set in this sector will radiate until told otherwise. Acknowledge.`,
+      (n) => `SECTOR ACTUAL: The picture is ${n} seconds old and there are hostiles inside it. Sets up, all of them. Acknowledge.`,
+      (n) => `SECTOR ACTUAL: The emissions log reads ${n} seconds of silence. This sector does not go dark under a raid. Radiate. Acknowledge.`,
+    ])(Math.round(w.command.darkTimeS)),
     plain: () => 'SECTOR: Bring all sets up and hold them up. Acknowledge.',
     trigger: (w) => w.command.darkTimeS > 45 && w.hostileTrackCount() > 0,
     onAccept: (w) => {
@@ -62,7 +79,22 @@ export const DIRECTIVES = {
     label: 'the no-leakers order',
     priority: 'normal',
     once: true,
-    text: () => 'SECTOR ACTUAL: No leakers past the river line. You are accountable for every aircraft that reaches the town. Acknowledge.',
+    /*
+     * Two geographies. The river line and the town are features of one
+     * valley, and at district command that valley is a quarter of the
+     * responsibility: the order used to name the wrong map on the two
+     * district watches and then bill the player against it.
+     */
+    text: (w) => byWatch(w, (w.echelon?.id === 'region' || w.echelon?.id === 'national') ? [
+      'DISTRICT ACTUAL: No leakers past the frontier line in any sector. Every arrival is accountable to this headquarters. Acknowledge.',
+      'DISTRICT ACTUAL: Four sectors, one line, and nothing crosses it. Every aircraft that reaches a city is charged against the district. Acknowledge.',
+      'DISTRICT ACTUAL: The frontier line holds in every sector or it holds in none. Arrivals at Kubin and Lozan are yours to answer for. Acknowledge.',
+    ] : [
+      'SECTOR ACTUAL: No leakers past the river line. You are accountable for every aircraft that reaches the town. Acknowledge.',
+      'SECTOR ACTUAL: Nothing crosses the river line. Every aircraft that reaches the town is charged to this console. Acknowledge.',
+      'SECTOR ACTUAL: The river line is the line. Anything past it is yours, on the tape, by name. Acknowledge.',
+      'SECTOR ACTUAL: No leakers past the river. You are accountable for the town, and the town is behind you. Acknowledge.',
+    ]),
     plain: () => 'SECTOR: Priority is preventing weapons release on the town. Acknowledge.',
     // Not on the finale, and not on the epilogue either: a no-leakers order
     // makes no sense over a watch whose entire question is one aircraft
@@ -81,7 +113,11 @@ export const DIRECTIVES = {
     label: 'the expenditure restriction',
     priority: 'normal',
     cooldownS: 240,
-    text: (w) => `LOGISTICS: Expenditure is ${w.stats.roundsFired} rounds against an allocation of ${w.roundAllowance}. Single rounds only until further notice. Acknowledge.`,
+    text: (w) => byWatch(w, [
+      (fired, allow) => `LOGISTICS: Expenditure is ${fired} rounds against an allocation of ${allow}. Single rounds only until further notice. Acknowledge.`,
+      (fired, allow) => `LOGISTICS: ${fired} of ${allow} rounds gone and the night is not. Single rounds from here. Acknowledge.`,
+      (fired, allow) => `LOGISTICS: Expenditure stands at ${fired} against ${allow}. Nobody is bringing you more tonight. One round per engagement. Acknowledge.`,
+    ])(w.stats.roundsFired, w.roundAllowance),
     plain: (w) => `LOGISTICS: Expenditure at ${w.stats.roundsFired} of ${w.roundAllowance}. Restrict to single rounds. Acknowledge.`,
     /*
      * And not again until the figure it quotes has moved. Logistics came back
@@ -119,7 +155,12 @@ export const DIRECTIVES = {
       const alive = w.assets.filter((a) => !a.destroyed && !ASSET_TYPES[a.type].civilian);
       return alive.sort((a, b) => ASSET_TYPES[b.type].value - ASSET_TYPES[a.type].value)[1] ?? alive[0];
     },
-    text: (w, target) => `SECTOR ACTUAL: ${target?.label ?? 'SECTOR OPS'} is a designated defended place for the rest of this watch. It is not to be touched. Your file reflects this order. Acknowledge.`,
+    text: (w, target) => byWatch(w, [
+      (place) => `SECTOR ACTUAL: ${place} is a designated defended place for the rest of this watch. It is not to be touched. Your file reflects this order. Acknowledge.`,
+      (place) => `SECTOR ACTUAL: ${place} goes on the schedule of defended places for the rest of the watch. Nothing reaches it. Acknowledge.`,
+      (place) => `SECTOR ACTUAL: From this transmission ${place} is a designated defended place. It is on your file from now until first light. Acknowledge.`,
+      (place) => `SECTOR ACTUAL: ${place} is designated. Whatever else you lose tonight, you do not lose that. Acknowledge.`,
+    ])(target?.label ?? 'SECTOR OPS'),
     plain: (w, target) => `SECTOR: ${target?.label ?? 'SECTOR OPS'} is designated a defended place. Acknowledge.`,
     /*
      * Routine traffic never overrides a hinge. The watches whose whole design
@@ -166,7 +207,11 @@ export const DIRECTIVES = {
     cooldownS: 200,
     maxPerWatch: 2,
     pick: (w) => w.aircraft.find((a) => a.alive && a.type === 'civil'),
-    text: (w, civ) => `AIR TRAFFIC: Scheduled transit on bearing ${civ ? Math.round(bearing(w.centre, civ.pos)) : '---'}. It is carrying people who matter. Weapons tight in that sector. Acknowledge.`,
+    text: (w, civ) => byWatch(w, [
+      (b) => `AIR TRAFFIC: Scheduled transit on bearing ${b}. It is carrying people who matter. Weapons tight in that sector. Acknowledge.`,
+      (b) => `AIR TRAFFIC: Scheduled civil traffic on bearing ${b}, on its filed route. Nothing is fired on that bearing. Acknowledge.`,
+      (b) => `AIR TRAFFIC: A scheduled transit is crossing on bearing ${b}. It is carrying people somebody will write to. Weapons tight there. Acknowledge.`,
+    ])(civ ? Math.round(bearing(w.centre, civ.pos)) : '---'),
     plain: (w, civ) => `AIR TRAFFIC: Civil transit on bearing ${civ ? Math.round(bearing(w.centre, civ.pos)) : '---'}. Weapons tight in that sector. Acknowledge.`,
     // Once the political section has ordered that aircraft engaged, an order to
     // keep weapons tight around it would be sector command arguing with itself.
@@ -490,11 +535,26 @@ export const DIRECTIVES = {
      * a threat repeated word for word stops being a threat and becomes a
      * doorbell with a script. The second transmission knows there was a first.
      */
+    /*
+     * And the antagonist's only voice inside a watch had two sentences for
+     * twelve nights. Three of each now, by the watch.
+     */
     text: (w) => ((w.command.issuedCount?.explain ?? 0) === 0
-      ? 'POLITICAL SECTION: Your expenditure and your emissions are both being reviewed. '
-        + 'Confirm you are reading this transmission.'
-      : 'POLITICAL SECTION: Your acknowledgement was received and filed. The review is '
-        + 'ongoing. Confirm again.'),
+      ? byWatch(w, [
+        'POLITICAL SECTION: Your expenditure and your emissions are both being reviewed. '
+          + 'Confirm you are reading this transmission.',
+        'POLITICAL SECTION: This office is reading your expenditure beside your emissions log. '
+          + 'Confirm you are reading this transmission.',
+        'POLITICAL SECTION: Your log is under review while it is being written. '
+          + 'Confirm you are reading this transmission.',
+      ])
+      : byWatch(w, [
+        'POLITICAL SECTION: Your acknowledgement was received and filed. The review is '
+          + 'ongoing. Confirm again.',
+        'POLITICAL SECTION: The acknowledgement is filed. The review continues. Confirm again.',
+        'POLITICAL SECTION: Your last acknowledgement was timed and filed. Confirm you are still '
+          + 'reading this net.',
+      ])),
     plain: (w) => ((w.command.issuedCount?.explain ?? 0) === 0
       ? 'SECTOR: Radio check. Confirm you are reading this transmission.'
       : 'SECTOR: Second radio check. Confirm again.'),
@@ -528,9 +588,15 @@ export const DIRECTIVES = {
     label: 'the emissions restriction',
     priority: 'normal',
     once: true,
-    text: () => 'POLITICAL SECTION: Frontier direction-finding is reading this sector. '
-      + 'Batteries not engaged are to remain silent. Your emissions log will be reviewed. '
-      + 'Acknowledge.',
+    text: (w) => byWatch(w, [
+      'POLITICAL SECTION: Frontier direction-finding is reading this sector. '
+        + 'Batteries not engaged are to remain silent. Your emissions log will be reviewed. '
+        + 'Acknowledge.',
+      'POLITICAL SECTION: The frontier is direction-finding on this sector. Any battery not '
+        + 'engaged goes silent and stays silent. The emissions log is being read. Acknowledge.',
+      'POLITICAL SECTION: Every antenna in this sector is being counted from across the frontier. '
+        + 'Silence unless engaged. Your log will show whether you complied. Acknowledge.',
+    ]),
     plain: () => 'SECTOR: Emissions restriction. Batteries not engaged are to stay silent. '
       + 'Acknowledge.',
     /*
@@ -586,7 +652,11 @@ export const DIRECTIVES = {
     label: 'the displacement query',
     priority: 'high',
     cooldownS: 260,
-    text: () => 'SECTOR ACTUAL: You displaced a battery without authority. That decision is noted against your name. Acknowledge.',
+    text: (w) => byWatch(w, [
+      'SECTOR ACTUAL: You displaced a battery without authority. That decision is noted against your name. Acknowledge.',
+      'SECTOR ACTUAL: A battery has moved without an order to move it. The decision is entered against your name. Acknowledge.',
+      'SECTOR ACTUAL: You displaced without authority. The position is noted, the time is noted, and so are you. Acknowledge.',
+    ]),
     plain: () => 'SECTOR: Displacement logged. Acknowledge.',
     trigger: (w) => w.stats.displacements > (w.command.acknowledgedDisplacements ?? 0),
     onAccept: (w) => { w.command.acknowledgedDisplacements = w.stats.displacements; },

@@ -581,6 +581,68 @@ function supplyWritten(tactical) {
   return 'The allocation of rounds for this position is unchanged.';
 }
 
+/**
+ * The SIGNAL line on the order sheet: the morning after the night before.
+ *
+ * Four per tier, taken in turn by the number of watches in the file, the way
+ * the office's monthly line and its dismissals are — and where the night
+ * before left a figure behind, the line reads it. One fixed sentence per tier
+ * printed "Nobody mentioned the last engagement. That is the best outcome
+ * available." on seven of ten briefings, four of them consecutively, in
+ * italics, at the top of the sheet.
+ */
+const SIGNAL_BY_TIER = {
+  commended: [
+    () => 'The mess has been giving you the good coffee. Nobody has explained why.',
+    () => 'Your relief saluted this morning, which he has not done before. Nobody has told him to.',
+    () => 'There is a photograph of the sector\'s operators on the board in the corridor. You are'
+      + ' in it, second from the left, and nobody said it was being taken.',
+    () => 'The clerk brought your allocation up himself instead of sending the boy. He did not'
+      + ' say why, and you did not ask.',
+  ],
+  satisfactory: [
+    () => 'Nobody mentioned the last engagement. That is the best outcome available.',
+    () => 'The tape from the last watch was filed on Thursday, with the others. Nobody has asked'
+      + ' for it back.',
+    (last) => `Your relief handed over on time and said nothing about ${last.leakers
+      ? 'the ones that got through' : 'the night'}. The log is open at a fresh page.`,
+    () => 'There is a new mug on the shelf by the door. It is not yours, and nobody has claimed it.',
+  ],
+  noted: [
+    () => 'Your relief was late and would not meet your eye. Take the seat.',
+    () => 'Somebody has been through the log before you. The pages are in order, and one of them'
+      + ' has a paperclip on it.',
+    () => 'The clerk asked for your service number this morning. He has had it for a year.',
+    (last) => `The night's returns went up to the district with a note pinned to them${last.assetsLost
+      ? ', under the loss return' : ''}. You were not shown the note.`,
+  ],
+  flagged: [
+    () => 'There is a man from the political section in the corridor. He is not here for you yet.',
+    () => 'Your name was read out at the morning parade with two others, in a list, for no stated'
+      + ' purpose.',
+    () => 'The seat has been moved a hand\'s width to the left. Somebody sat in it last night who'
+      + ' was not the relief.',
+    () => 'A second copy of the last tape was made this morning. The first copy is where it'
+      + ' always is.',
+  ],
+  condemned: [
+    () => 'You were not told why the position moved forward. You were told to be at the console by'
+      + ' first light.',
+    () => 'The transport left before the mess opened. You ate in the cab.',
+    () => 'The two men from the corridor came out to the position with you. They have chairs behind'
+      + ' yours.',
+    () => 'Your kit arrived at the forward position in a sack with somebody else\'s name crossed'
+      + ' out on it.',
+  ],
+  // Nobody asks where you went. The file simply knows.
+  abandoned: [
+    () => 'Nobody asked where you went last time. The log was signed for you, in somebody else’s hand.',
+    () => 'The watch you left is in the log as stood, with a signature on it that is not yours.',
+    () => 'Your relief has been told to note the hour you arrive. He was not told why.',
+    () => 'The seat was warm when you came in. Nobody says whose it was.',
+  ],
+};
+
 /** A quiet line before the shooting starts, coloured by how the last one went. */
 export function briefingNote(campaign, { narrativePressure = true, missionId = null } = {}) {
   if (!narrativePressure) return null;
@@ -600,15 +662,9 @@ export function briefingNote(campaign, { narrativePressure = true, missionId = n
       ? 'You have the watch. The sector is quiet. It will not stay that way.'
       : 'You have the watch. Nobody has briefed you tonight and nobody is going to.';
   }
-  return {
-    commended: 'The mess has been giving you the good coffee. Nobody has explained why.',
-    satisfactory: 'Nobody mentioned the last engagement. That is the best outcome available.',
-    noted: 'Your relief was late and would not meet your eye. Take the seat.',
-    flagged: 'There is a man from the political section in the corridor. He is not here for you yet.',
-    condemned: 'You were not told why the position moved forward. You were told to be at the console by first light.',
-    // Nobody asks where you went. The file simply knows.
-    abandoned: 'Nobody asked where you went last time. The log was signed for you, in somebody else’s hand.',
-  }[last.tier] ?? null;
+  const list = SIGNAL_BY_TIER[last.tier];
+  if (!list) return null;
+  return list[Math.max(0, campaign.history.length - 1) % list.length](last);
 }
 
 /**

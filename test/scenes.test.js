@@ -16,7 +16,9 @@ import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
 import { scenarioById } from '../src/engine/scenarios.js';
 import { emptyCampaign, enlist, recordMission } from '../src/engine/campaign.js';
-import { scenesFor, standingsDisagree, DISMISSAL_CONSEQUENCE, OFFICER } from '../src/ui/scenes.js';
+import {
+  scenesFor, standingsDisagree, DISMISSAL_CONSEQUENCE, OFFICER, FAVOUR_BY_KIND,
+} from '../src/ui/scenes.js';
 import { SCENARIOS } from '../src/engine/scenarios.js';
 import { LETTERS } from '../src/engine/family.js';
 import { REVELATIONS } from '../src/engine/revelations.js';
@@ -202,11 +204,14 @@ describe('what is said', () => {
     assert.ok(OFFICER.rank && OFFICER.surname && OFFICER.plate.includes(OFFICER.surname.toUpperCase()));
     // Spoken sentences, not the ledger's own lowercase fragment after a colon.
     const hospital = office.lines.findIndex((l) => /district hospital/.test(l));
-    const camp = office.lines.findIndex((l) => /border/.test(l) && /in your favour/.test(l));
+    // The favour is one of four sentences for that kind, taken by the watch,
+    // not one phrase locked to the kind for the campaign.
+    const campFavours = FAVOUR_BY_KIND['held-border'].map((f) => f({}));
+    const camp = office.lines.findIndex((l) => campFavours.includes(l));
     assert.ok(hospital >= 0, 'the hospital is read back');
     assert.match(office.lines[hospital], /^You put .* over the district hospital/);
-    assert.ok(camp >= 0, 'and so is the encampment');
-    assert.match(office.lines[camp], /in your favour/);
+    assert.ok(camp >= 0, `and so is the encampment: ${office.lines.join(' | ')}`);
+    assert.match(office.lines[camp], /border/);
     assert.ok(!office.lines.some((l) => l.startsWith('The log says')),
       'nobody says "The log says:" out loud');
     // The file entry comes after the log, and its supply line is a sentence
@@ -313,7 +318,11 @@ describe('what is said', () => {
       'the finding is drawn as a finding, not as an interview');
     assert.match(office.speaker, /FINDING/, `the plate says what it is: "${office.speaker}"`);
     assert.match(office.lines[0], /sent to you rather than read to you/);
-    assert.equal(office.lines.at(-1), 'You will be told where to report.');
+    // It closes on the paper, not on the condemned dismissal's own sentence,
+    // which three different nights used to end on.
+    assert.match(office.lines.at(-1), /This finding is signed/);
+    assert.ok(!office.lines.some((l) => /The post was struck at/.test(l)),
+      'the striking of the post is left to the ending, which needs it');
     assert.ok(!office.lines.some((l) => /^Dismissed\.$|^You may go\.$/.test(l)),
       'nobody is dismissed from a room they were never in');
     /*
