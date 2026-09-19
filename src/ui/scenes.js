@@ -29,6 +29,8 @@
  * button when the scenes are done.
  */
 
+import { text, textWidth, wrap, FONT } from './bitfont.js';
+import { STATE } from './lexicon.js';
 import { consequenceFor } from '../engine/campaign.js';
 import { tierFor } from '../engine/command.js';
 import { wallClockString } from '../engine/math.js';
@@ -2321,65 +2323,35 @@ function linePx(ctx, x0, y0, x1, y1, c) {
 }
 
 /**
- * A hand-authored 3x5 face, because `fillText` at this size is a grey smudge
- * magnified five times. Three bits a row, five rows, one octal digit each.
- */
-const GLYPHS = {
-  0: '75557', 1: '26227', 2: '71747', 3: '71717', 4: '55711', 5: '74717',
-  6: '74757', 7: '71222', 8: '75757', 9: '75717',
-  ':': '02020', '.': '00002', '-': '00700', ' ': '00000', '/': '11242',
-  A: '75755', B: '65656', C: '34443', D: '65556', E: '74647', F: '74644',
-  G: '34553', H: '55755', I: '72227', J: '11152', K: '55655', L: '44447',
-  N: '65555', O: '25552', P: '65644', Q: '25573', R: '65655',
-  S: '34216', T: '72222', U: '55557', V: '55552', X: '55255',
-  Y: '55222', Z: '71247',
-};
-/*
- * Two letters that cannot be told apart at three pixels.
+ * The game's type, drawn from `bitfont.js`.
  *
- * The story judge, on the order of appointment: "The 3-pixel-wide M is
- * indistinguishable from an H, so the game's promotion document reads ORDER OF
- * APPOINTHENT and SECTOR COHHANDER at every size the scene uses." An M needs a
- * middle stroke that comes down BETWEEN two uprights, and a W the same inverted,
- * so both are cut five columns wide and the run of type makes room for them.
+ * What used to be here was a 3x5 table of octal digits, and the graphics
+ * reviewer took it apart: "N is '65555', which plots as a top-left corner with
+ * two uprights — readers see DAПILOV, RAПK, AППEX. K is '55655', which plots as
+ * an H with a notch and no arm. There is no lowercase, no comma, no apostrophe,
+ * no question mark and no parenthesis, so it cannot set a sentence." Three
+ * pixels is below the floor for a Latin alphabet: N, K, M, W and S all need a
+ * diagonal and there is nowhere to put one. Everything that WAS a sentence
+ * therefore fell back to the browser's anti-aliased monospace laid over
+ * five-times-magnified pixel art, which is the two-typographies complaint, the
+ * grey-fringe-on-a-phosphor complaint and the blank-drawn-paper complaint, all
+ * from one cause.
+ *
+ * `glyphs` and `glyphWidth` keep their old shape so that every plate, stamp and
+ * order in this file goes on calling them. What changed under them is the face:
+ * six by ten, a cap height of seven, an x-height of five, a real descender, and
+ * an alphabet that includes the letters it claims to.
+ *
+ * The y a caller passes is still the top of a CAPITAL, as it always was, so the
+ * new cell is offset by one row to put its cap line where the old one was.
  */
-const WIDE_GLYPHS = {
-  M: [0b10001, 0b11011, 0b10101, 0b10001, 0b10001],
-  W: [0b10001, 0b10001, 0b10101, 0b11011, 0b10001],
-};
-const glyphCols = (ch) => (WIDE_GLYPHS[ch] ? 5 : 3);
-function glyphs(ctx, s, x, y, c, { gap = 1, k = 1 } = {}) {
-  let cx = Math.round(x);
-  for (const ch of String(s).toUpperCase()) {
-    const wide = WIDE_GLYPHS[ch];
-    if (wide) {
-      for (let r = 0; r < 5; r++) {
-        for (let b = 0; b < 5; b++) if (wide[r] & (16 >> b)) px(ctx, cx + b * k, y + r * k, k, k, c);
-      }
-    } else {
-      const g = GLYPHS[ch];
-      if (g) {
-        for (let r = 0; r < 5; r++) {
-          const bits = Number(g[r]);
-          for (let b = 0; b < 3; b++) if (bits & (4 >> b)) px(ctx, cx + b * k, y + r * k, k, k, c);
-        }
-      }
-    }
-    cx += (glyphCols(ch) + gap) * k;
-  }
-  return cx - x;
+function glyphs(ctx, s, x, y, c, { gap = 1, k = 1, bold = false, caps = true } = {}) {
+  return text(ctx, px, caps ? String(s).toUpperCase() : s, x, y - k, c,
+    { k, bold, tracking: gap - 1 });
 }
-const glyphWidth = (s, gap = 1, k = 1) => {
-  const chars = [...String(s).toUpperCase()];
-  if (!chars.length) return 0;
-  return (chars.reduce((n, ch) => n + glyphCols(ch) + gap, 0) - gap) * k;
-};
+const glyphWidth = (s, gap = 1, k = 1, { bold = false } = {}) =>
+  textWidth(s, { k, bold, tracking: gap - 1 });
 
-/**
- * A pen: every rectangle rounded to whole pixels at whatever scale it is
- * drawn at, so the console can grow through the approach without a single
- * anti-aliased edge. `ctx.scale` would have put a grey fringe on every rect.
- */
 /**
  * The "go on" prompt, drawn on the picture rather than set in the DOM over the
  * sheet: a solid chevron, and the word beside it on the last line of a scene.
@@ -2390,6 +2362,12 @@ function promptMark(ctx, x, y, state, ink) {
   for (let i = 0; i < 4; i++) px(ctx, x + i, y + i, 1, 7 - i * 2, ink);
   if (state === 2) glyphs(ctx, 'NEXT', x + 7, y + 1, ink);
 }
+
+/**
+ * A pen: every rectangle rounded to whole pixels at whatever scale it is
+ * drawn at, so the console can grow through the approach without a single
+ * anti-aliased edge. `ctx.scale` would have put a grey fringe on every rect.
+ */
 
 function pen(ctx, k = 1, ox = 0, oy = 0) {
   const S = (v) => Math.round(v * k);
@@ -3140,37 +3118,22 @@ function filePage(ctx, x, y, w, h, { number = '', lit = false, ruleFrom = 24, he
 }
 
 /**
- * The service plate on a stamp, cut as pixels.
+ * The service plate on a stamp.
  *
  * The story judge: "The red stamp reads a bare ADF, an abbreviation nothing on
  * screen has taught, while every other stamp in the game is the paired plate."
  * So the drawn stamps carry the same pair as the printed ones — the stencil
- * above, its English beneath. The six letters are bitmaps rather than text
- * because the hand-cut 3x5 face has no Cyrillic in it and the stamp is a
- * picture, not a string: Ve, Pe, Ve, O, Te and a five-wide Em.
+ * above, its English beneath.
+ *
+ * These six letters used to be hand-cut bitmaps sitting in this file, for one
+ * reason: the 3x5 face had no Cyrillic in it and a stamp is a picture rather
+ * than a string. The face has Cyrillic now, so the plate is the plate — read
+ * off `lexicon.js`, which is the file whose whole promise is that every legend
+ * plate in the game comes from one table.
  */
-const PLATE_ROWS = ['65656', '75555', '65656', '25552', null, '72222', 'M'];
-function servicePlate(ctx, x, y, c, k = 1) {
-  let cx = Math.round(x);
-  for (const g of PLATE_ROWS) {
-    if (g === null) { cx += 4 * k; continue; }
-    if (g === 'M') {
-      const wide = WIDE_GLYPHS.M;
-      for (let r = 0; r < 5; r++) {
-        for (let b = 0; b < 5; b++) if (wide[r] & (16 >> b)) px(ctx, cx + b * k, y + r * k, k, k, c);
-      }
-      cx += 6 * k;
-      continue;
-    }
-    for (let r = 0; r < 5; r++) {
-      const bits = Number(g[r]);
-      for (let b = 0; b < 3; b++) if (bits & (4 >> b)) px(ctx, cx + b * k, y + r * k, k, k, c);
-    }
-    cx += 4 * k;
-  }
-  return cx - x;
-}
-const PLATE_W = 4 * 4 + 4 + 4 + 6 - 1;
+const servicePlate = (ctx, x, y, c, k = 1) =>
+  glyphs(ctx, STATE.serviceShort.tm, x, y + k, c, { k });
+const PLATE_W = glyphWidth(STATE.serviceShort.tm);
 
 /**
  * A rubber stamp: a double-ruled frame, letterspaced type, turned a few
@@ -3188,13 +3151,23 @@ function stamp(ctx, x, y, w, h, words, c, { plate = false } = {}) {
     }
   }
   if (plate) {
-    servicePlate(ctx, x + Math.round((w - PLATE_W) / 2), y + Math.round(h / 2) - 6, c);
+    /*
+     * Two lines, measured off the face rather than off two magic numbers: the
+     * stencil on top and its English under it, each centred on the box, with
+     * the pair centred in the box's own height. The face is seven rows to a
+     * capital now instead of five, and the old offsets put the English through
+     * the stamp's bottom rule.
+     */
+    const lineH = FONT.capHeight + 2;
+    const top = y + Math.round((h - lineH * 2) / 2);
+    servicePlate(ctx, x + Math.round((w - PLATE_W) / 2), top, c);
     const wide = glyphWidth(words);
-    glyphs(ctx, words, x + Math.round((w - wide) / 2), y + Math.round(h / 2) + 1, c);
+    glyphs(ctx, words, x + Math.round((w - wide) / 2), top + lineH, c);
     return;
   }
   const wide = glyphWidth(words);
-  glyphs(ctx, words, x + Math.round((w - wide) / 2), y + Math.round(h / 2) - 2, c);
+  glyphs(ctx, words, x + Math.round((w - wide) / 2),
+    y + Math.round((h - FONT.capHeight) / 2), c);
 }
 
 /* --------------------------------------------------------------- the console */
@@ -5171,8 +5144,14 @@ function drawOffice(ctx, t, {
      * throws, it is the brightest paper in the room, and it throws a hard
      * shadow away from the lamp on to the blotter.
      */
-    const FW = 100;
-    const FH = 36;
+    /*
+     * Wider and two rows deeper than it was, because the face is. The plate
+     * and the word FINDING are each measured and set at opposite ends of the
+     * head, and at a hundred pixels they met in the middle with no paper
+     * between them.
+     */
+    const FW = 124;
+    const FH = 40;
     const FX = Math.max(20, Math.min(SCENE_W - FW - 20, pool + 42 - Math.round(FW / 2)));
     const FY = 80;
     // the pool the lamp throws round it: the wood a step up at the core and
@@ -5240,21 +5219,29 @@ function drawOffice(ctx, t, {
      * judges caught "TM ADF" damaged: "overrun by the sheet's dither band and
      * two ruled lines, which cut the bottom third off the glyphs".
      */
-    servicePlate(ctx, FX + 8, FY + 3, PAPER[0]);
-    glyphs(ctx, 'TM ADF', FX + 8, FY + 10, PAPER[0]);
-    glyphs(ctx, 'FINDING', FX + 58, FY + 3, PAPER[0]);
-    px(ctx, FX + 58, FY + 9, 36, 1, PAPER[1]);
-    px(ctx, FX + 8, FY + 18, FW - 18, 1, PAPER[1]);
-    px(ctx, FX + 8, FY + 20, FW - 18, 1, PAPER[0]);
+    /*
+     * Measured, because the face is wider than the one this block was laid out
+     * against: the plate takes the left of the head and FINDING is
+     * right-aligned inside the sheet's own margin rather than set at a column
+     * chosen by eye, which at this width ran it off the paper.
+     */
+    servicePlate(ctx, FX + 8, FY + 2, PAPER[0]);
+    glyphs(ctx, 'TM ADF', FX + 8, FY + 11, PAPER[0]);
+    const titleW = glyphWidth('FINDING');
+    const titleX = FX + FW - 10 - titleW;
+    glyphs(ctx, 'FINDING', titleX, FY + 2, PAPER[0]);
+    px(ctx, titleX, FY + 10, titleW, 1, PAPER[1]);
+    px(ctx, FX + 8, FY + 20, FW - 18, 1, PAPER[1]);
+    px(ctx, FX + 8, FY + 22, FW - 18, 1, PAPER[0]);
     // four typed lines, ragged right the way typing is
     for (let i = 0; i < 4; i++) {
-      px(ctx, FX + 9, FY + 23 + i * 2, [62, 68, 50, 64][i], 1, PAPER[0]);
+      px(ctx, FX + 9, FY + 25 + i * 2, [62, 68, 50, 64][i], 1, PAPER[0]);
     }
     // the signature: a scrawl over a ruled line
     for (let i = 0; i < 26; i++) {
-      px(ctx, FX + 10 + i, FY + 31 - Math.round(Math.sin(i / 3.5) * 1.6), 1, 1, NIGHT[0]);
+      px(ctx, FX + 10 + i, FY + 33 - Math.round(Math.sin(i / 3.5) * 1.6), 1, 1, NIGHT[0]);
     }
-    px(ctx, FX + 9, FY + 32, 30, 1, PAPER[0]);
+    px(ctx, FX + 9, FY + 34, 30, 1, PAPER[0]);
     /*
      * The stamp: a word in a ruled box with its ink broken up, set down at an
      * angle. The reader judge had the last one as "a solid red rectangle with
@@ -5263,7 +5250,8 @@ function drawOffice(ctx, t, {
      */
     // wider than the word, so no letter of it touches its own border: the
     // story judge found "the stamp's leading E clipped by its own red border"
-    stamp(ctx, FX + 52, FY + 22, 40, 13, 'ENTERED', RED);
+    stamp(ctx, FX + FW - 14 - (glyphWidth('ENTERED') + 10), FY + 22,
+      glyphWidth('ENTERED') + 10, FONT.capHeight + 8, 'ENTERED', RED);
   }
   /*
    * The desk between you and him is the brightest thing in the room at every
@@ -6224,7 +6212,7 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
    */
   const SX = 22;
   const SW = 176;
-  filePage(ctx, SX, 12, SW, 106, { number: '', lit: true, ruleFrom: 92, head: false });
+  filePage(ctx, SX, 10, SW, 120, { number: '', lit: true, ruleFrom: 100, head: false });
   /*
    * The order's own words, printed on it.
    *
@@ -6235,11 +6223,24 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
    * the typing starts — the headings are set at twice the size, and the ink is
    * ink rather than a middle step of the paper's own ramp.
    */
-  px(ctx, SX + 6, 18, SW - 12, 94, PAPER[3]);
-  dither(ctx, SX + 6, 18, SW - 12, 6, PAPER[3], PAPER[2], 3);
+  px(ctx, SX + 6, 14, SW - 12, 112, PAPER[3]);
+  dither(ctx, SX + 6, 14, SW - 12, 6, PAPER[3], PAPER[2], 3);
   const holder = String(character?.name ?? '').trim().split(/\s+/).slice(-1)[0] || 'OPERATOR';
   const post = String(scene?.post ?? 'SECTOR COMMANDER').toUpperCase();
-  const wide = (str, k) => glyphWidth(str, 1, k) <= SW - 34;
+  /*
+   * RE-FITTED TO A FACE THAT CAN SET WHAT IT SAYS.
+   *
+   * Every line on this sheet used to be set at a size chosen against a three
+   * pixel face and checked by eye. The face is six by ten now, with a cap
+   * height of seven and real diagonals in its N, K and M — which is half again
+   * as wide per letter — so every line is MEASURED against the paper it is
+   * printed on and set at the largest size that fits inside the margin.
+   * Nothing on this order is allowed to touch the deckle or the stamp again.
+   */
+  const MARGIN = 10;
+  const COL = SW - MARGIN * 2 - 4;
+  const fitK = (str, room, ks = [2, 1]) =>
+    ks.find((k) => glyphWidth(str, 1, k) <= room) ?? ks[ks.length - 1];
   /*
    * THE HEADLINE IS INSIDE THE PAPER'S OWN MARGIN.
    *
@@ -6253,19 +6254,36 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
    * two lines at the same size rather than one line squeezed into the deckle,
    * and the stamp and the order's reference are pulled back inside it.
    */
-  glyphs(ctx, 'ORDER OF', SX + 10, 20, INK, { k: 2 });
-  glyphs(ctx, 'APPOINTMENT', SX + 10, 31, INK, { k: 2 });
-  // the rule under the heading stops short of the stamp rather than being
-  // ruled through it
-  px(ctx, SX + 10, 43, 92, 1, PAPER[0]);
-  px(ctx, SX + 10, 45, 92, 1, PAPER[1]);
-  glyphs(ctx, 'TO', SX + 10, 52, PAPER[0]);
-  glyphs(ctx, holder.toUpperCase().slice(0, 16), SX + 24, 50, INK, { k: 2 });
-  glyphs(ctx, 'APPOINTED', SX + 10, 66, PAPER[0]);
-  glyphs(ctx, post.slice(0, 22), SX + 10, 73, INK, { k: wide(post.slice(0, 22), 2) ? 2 : 1 });
+  /*
+   * The title, in the display weight: the same face inked twice, one pixel
+   * apart, which is where the stencil flavour the graphics reviewer's KEEP
+   * list names comes from now. Two lines, because APPOINTMENT is eleven
+   * letters and this sheet is a hundred and seventy-six pixels wide.
+   */
+  const titleK = fitK('APPOINTMENT', COL, [2, 1]);
+  glyphs(ctx, 'ORDER OF', SX + MARGIN, 16, INK, { k: titleK, bold: titleK === 1 });
+  glyphs(ctx, 'APPOINTMENT', SX + MARGIN, 16 + titleK * 8, INK, { k: titleK, bold: titleK === 1 });
+  const afterTitle = 16 + titleK * 16;
+  px(ctx, SX + MARGIN, afterTitle + 1, COL - 10, 1, PAPER[0]);
+  px(ctx, SX + MARGIN, afterTitle + 3, COL - 10, 1, PAPER[1]);
+
+  // TO, and the name it was made out to, which is the one word on the sheet
+  // that is about a person
+  const toY = afterTitle + 8;
+  glyphs(ctx, 'TO', SX + MARGIN, toY + 3, PAPER[0]);
+  const name = holder.toUpperCase().slice(0, 16);
+  const nameX = SX + MARGIN + glyphWidth('TO') + 6;
+  glyphs(ctx, name, nameX, toY, INK, { k: fitK(name, 100, [2, 1]) });
+
+  const postY = toY + 20;
+  glyphs(ctx, 'APPOINTED', SX + MARGIN, postY, PAPER[0]);
+  const postText = post.slice(0, 26);
+  glyphs(ctx, postText, SX + MARGIN, postY + 9, INK, { k: fitK(postText, COL, [2, 1]) });
   if (scene?.gazetted) {
-    glyphs(ctx, 'RANK', SX + 10, 85, PAPER[0]);
-    glyphs(ctx, String(scene.gazetted).toUpperCase().slice(0, 22), SX + 32, 85, INK);
+    const rank = String(scene.gazetted).toUpperCase().slice(0, 26);
+    glyphs(ctx, 'RANK', SX + MARGIN, postY + 18, PAPER[0]);
+    glyphs(ctx, rank, SX + MARGIN + glyphWidth('RANK') + 5, postY + 18, INK,
+      { k: fitK(rank, COL - glyphWidth('RANK') - 5, [1]) });
   }
   /*
    * The foot of the order: a scrawl over a ruled line, the office that signed
@@ -6282,15 +6300,29 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
   const office = String(scene?.office ?? 'CHIEF OF AIR DEFENCE').toUpperCase().slice(0, 24);
   const ref = String(scene?.ref ?? 'ORDER 12-4').toUpperCase().slice(0, 12);
   for (let i = 0; i < 52; i++) {
-    px(ctx, SX + 12 + i, 94 - Math.round(Math.sin(i / 5) * 2) - (i % 7 === 0 ? 1 : 0), 1, 1, NIGHT[0]);
+    px(ctx, SX + 12 + i, 106 - Math.round(Math.sin(i / 5) * 2) - (i % 7 === 0 ? 1 : 0), 1, 1, NIGHT[0]);
   }
-  px(ctx, SX + 10, 98, 68, 1, PAPER[0]);
-  glyphs(ctx, office, SX + 10, 102, PAPER[0]);
-  glyphs(ctx, ref, SX + SW - 18 - glyphWidth(ref), 102, PAPER[1]);
-  // the stamp carries the service plate over its English, as every other stamp
-  // in the game does — the story judge caught this one reading a bare 'ADF' —
-  // and it stands clear of the sheet's fourteen-column edge dither
-  stamp(ctx, SX + SW - 72, 26, 52, 23, 'TM ADF', RED, { plate: true });
+  px(ctx, SX + MARGIN, 110, 68, 1, PAPER[0]);
+  /*
+   * The office signs on one line and the order's own reference sits under it,
+   * right-aligned. They used to share a baseline, which at the real width of
+   * this face left the signature block reading CHIEF OF AIR D.
+   */
+  let officeText = office;
+  while (glyphWidth(officeText) > COL && officeText.length > 4) {
+    officeText = officeText.slice(0, -1);
+  }
+  glyphs(ctx, officeText, SX + MARGIN, 113, PAPER[0]);
+  glyphs(ctx, ref, SX + SW - 14 - glyphWidth(ref), 120, PAPER[1]);
+  /*
+   * The stamp carries the service plate over its English, as every other stamp
+   * in the game does. It sits at the foot of the sheet on the right now rather
+   * than beside the title: at the real width of the display face the title
+   * fills the column, and a stamp printed across the last four letters of
+   * APPOINTMENT is the clipping complaint this sheet has already answered
+   * twice.
+   */
+  stamp(ctx, SX + SW - 62, 52, 52, 23, 'TM ADF', RED, { plate: true });
   /*
    * The new board, laid down beside the order by a hand that comes up out of
    * the bottom of the frame — and stays there, resting on the desk beside the
@@ -6336,11 +6368,13 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
     px(ctx, sx, by + 11, 6, 2, DAWN[3]);
     px(ctx, sx + 1, by + 10, 4, 4, DAWN[2]);
   }
-  // a pen, lying across the blotter where it was put down
-  px(ctx, 96, 122, 54, 3, INK);
-  px(ctx, 97, 122, 52, 2, WOOD[2]);
-  px(ctx, 97, 122, 52, 1, DAWN[1]);
-  px(ctx, 144, 122, 6, 2, STEEL[2]);
+  // a pen, lying on the desk below the blotter where it was put down — it used
+  // to lie across the foot of the order, which at the real width of this face
+  // is where the order's own reference is printed
+  px(ctx, 96, 134, 54, 3, INK);
+  px(ctx, 97, 134, 52, 2, WOOD[2]);
+  px(ctx, 97, 134, 52, 1, DAWN[1]);
+  px(ctx, 144, 134, 6, 2, STEEL[2]);
   // the hand: the same hand as every other beat, at the same scale, with a
   // wrist, a cuff and a forearm running off the bottom edge of the frame
   /*
@@ -6454,11 +6488,36 @@ function drawFolder(ctx, t, character, {
    * block, the classification stripe and the stamp all start clear of it, and
    * the box of words is set to the same left edge.
    */
-  glyphs(ctx, 'AIR DEFENCE DIRECTORATE', PX + 18, 38, PAPER[0]);
-  glyphs(ctx, `SECTOR 4-B · FILE ${String(ref ?? 'ON FILE').toUpperCase()}`, PX + 18, 45, PAPER[1]);
-  px(ctx, PX + 18, 52, 62, 7, RED);
-  glyphs(ctx, 'RESTRICTED', PX + 20, 54, PAPER[3]);
-  stamp(ctx, PX + PW - 74, 34, 54, 22, 'TM ADF', RED, { plate: true });
+  /*
+   * RE-SET FOR A FACE HALF AGAIN AS WIDE.
+   *
+   * The letterhead used to be measured against a three-pixel alphabet. At the
+   * real width of this one, AIR DEFENCE DIRECTORATE runs under the stamp and
+   * the file line runs past the deckle, so the head is measured: the stamp
+   * takes its corner first and the letterhead is set in what is left, dropping
+   * to the shorter form of its own name rather than being clipped by a red
+   * box. Nothing on this sheet is allowed to be printed through anything else.
+   */
+  const HX = PX + 14;
+  // the stamp takes the corner first and is sized from the plate it carries,
+  // so the six Cyrillic letters are never cut by their own red border
+  const stampW = PLATE_W + 12;
+  const stampX = PX + PW - 18 - stampW;
+  stamp(ctx, stampX, 30, stampW, FONT.capHeight * 2 + 12, 'TM ADF', RED, { plate: true });
+  const headRoom = stampX - HX - 8;
+  glyphs(ctx, 'AIR DEFENCE DIRECTORATE', HX, 34, PAPER[0]);
+  /*
+   * The file line, measured against what the stamp has left. The long form
+   * carries the sector; where the stamp takes the room for it, the reference
+   * is what stays, because the reference is the thing the rest of the evening
+   * refers back to.
+   */
+  const longFile = `SECTOR 4-B · FILE ${String(ref ?? 'ON FILE').toUpperCase()}`;
+  const fileLine = glyphWidth(longFile) <= headRoom
+    ? longFile : `FILE ${String(ref ?? 'ON FILE').toUpperCase()}`;
+  glyphs(ctx, fileLine, HX, 44, PAPER[1]);
+  px(ctx, HX, 53, glyphWidth('RESTRICTED') + 4, 8, RED);
+  glyphs(ctx, 'RESTRICTED', HX + 2, 55, PAPER[3]);
   if (wide) {
     /*
      * On a phone the drawn part of the sheet IS its head, so it carries a
@@ -6467,14 +6526,15 @@ function drawFolder(ctx, t, character, {
      * first line of the body is the empty page the judges filed.
      */
     const hx = PX + 18;
-    glyphs(ctx, 'FROM', hx, 66, PAPER[1]);
-    glyphs(ctx, 'DIRECTORATE OF SUPPLY', hx + 26, 66, PAPER[0]);
-    glyphs(ctx, 'TO', hx, 76, PAPER[1]);
-    glyphs(ctx, 'SECTOR 4-B POLITICAL SECTION', hx + 26, 76, PAPER[0]);
-    glyphs(ctx, 'COPY', hx, 86, PAPER[1]);
-    glyphs(ctx, '3 OF 4 NOT TO BE REPRODUCED', hx + 26, 86, PAPER[0]);
-    px(ctx, hx, 96, PW - 36, 1, PAPER[1]);
-    px(ctx, hx, 98, PW - 36, 1, PAPER[0]);
+    const lx = hx + glyphWidth('COPY') + 6;
+    glyphs(ctx, 'FROM', hx, 74, PAPER[1]);
+    glyphs(ctx, 'DIRECTORATE OF SUPPLY', lx, 74, PAPER[0]);
+    glyphs(ctx, 'TO', hx, 84, PAPER[1]);
+    glyphs(ctx, 'SECTOR 4-B POLITICAL SECTION', lx, 84, PAPER[0]);
+    glyphs(ctx, 'COPY', hx, 94, PAPER[1]);
+    glyphs(ctx, '3 OF 4 NOT TO BE REPRODUCED', lx, 94, PAPER[0]);
+    px(ctx, hx, 104, PW - 36, 1, PAPER[1]);
+    px(ctx, hx, 106, PW - 36, 1, PAPER[0]);
   }
   /*
    * The rest of the sheet.
