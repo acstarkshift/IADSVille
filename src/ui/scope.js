@@ -12,6 +12,7 @@
  */
 
 import { THEMES, readPalette, hostilityColour } from './themes.js';
+import { Lettering, withAlpha } from './labels.js';
 import { watchConditions } from '../engine/scenarios.js';
 import { MAP } from '../engine/geography.js';
 import { SAM_TYPES, ASSET_TYPES, AIR_TYPES } from '../engine/config.js';
@@ -20,8 +21,9 @@ import { trackProfile } from '../engine/detection.js';
 
 const TAU = Math.PI * 2;
 
-export class Scope {
+export class Scope extends Lettering {
   constructor(canvas) {
+    super();
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.paint = document.createElement('canvas');
@@ -98,62 +100,52 @@ export class Scope {
    * Six batteries, six defended assets and two radars sit inside twenty
    * kilometres of the town, so at sector zoom their names land on top of each
    * other and the map becomes unreadable. Labels are therefore collected,
-   * sorted by how much the operator needs them, and placed greedily in the
-   * first candidate position that does not collide with one already placed.
+   * sorted by how much the operator needs them, and placed at the end of the
+   * frame over a picture that is finished.
+   *
+   * `offset` is the first ring's radius in CSS pixels. It used to be
+   * multiplied by the device ratio inside the placer while three of the six
+   * callers had already multiplied it themselves, so on a two-times display
+   * those three labels stood off their marks by four times what they asked
+   * for. Every caller states it once, unmultiplied.
    */
   queueLabel(spec) {
     this.labelQueue.push(spec);
   }
 
-  /** Place queued labels, most important first, skipping ones with nowhere to go. */
+  /**
+   * Place the frame's labels, most important first.
+   *
+   * This was the game's second label engine and its worse one. It tried four
+   * corners against other LABELS only — nothing reserved a blip, a triangle, a
+   * defended place or a range numeral — and when all four were taken it simply
+   * dropped the label. Measured on the tree this replaces, over twelve
+   * consecutive frames: 39% of the board's names deleted at the commander's
+   * seat on The Two Cities, 48% at the district on Four Sectors, 60% on a
+   * phone. Among the casualties, every frame: PRESIDENTIAL PALACE, THE VILLE,
+   * FORWARD POST, CAPITAL SECTOR — a formation the player personally directs —
+   * and LOW LOOK, the only surveillance radar still alive on that watch. No
+   * mark, no dimming, no count.
+   *
+   * It is now the cabin's engine, which every mark on this tube reserves its
+   * extent with first, and which prints anyway when every corner is taken,
+   * because a missing track number is worse than a tight one. Only a place
+   * name may still give way: geography is `optional` and yields to anything
+   * flying.
+   */
   flushLabels() {
-    const { ctx } = this;
-    const placed = [];
-    const pad = 2 * this.dpr;
-
-    const overlaps = (box) => placed.some((b) =>
-      box.x < b.x + b.w + pad && box.x + box.w + pad > b.x
-      && box.y < b.y + b.h + pad && box.y + box.h + pad > b.y);
-
+    this.beginLabels();
     this.labelQueue.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
-
     for (const label of this.labelQueue) {
-      const lines = label.lines ?? [label.text];
-      ctx.font = label.font ?? `${9.5 * this.dpr}px ${FONT}`;
-      const w = Math.max(...lines.map((l) => ctx.measureText(l).width));
-      const lineH = 10 * this.dpr;
-      const h = lineH * lines.length;
-      const off = (label.offset ?? 6) * this.dpr;
-
-      // Right, left, above, below — in that order, because reading rightward is
-      // the habit and the other placements are fallbacks.
-      const candidates = [
-        { x: label.x + off, y: label.y - h / 2 },
-        { x: label.x - off - w, y: label.y - h / 2 },
-        { x: label.x - w / 2, y: label.y - off - h },
-        { x: label.x - w / 2, y: label.y + off },
-      ];
-
-      let box = candidates.find((c) => !overlaps({ x: c.x, y: c.y, w, h }));
-      if (!box) {
-        if (!label.force) continue;   // low-priority labels simply give way
-        box = candidates[0];
-      }
-      placed.push({ x: box.x, y: box.y, w, h });
-
-      lines.forEach((line, i) => {
-        ctx.fillStyle = label.colours?.[i] ?? label.colour;
-        ctx.fillText(line, box.x, box.y + lineH * (i + 0.8));
+      this.place(label.lines ?? [label.text], label.x, label.y, label.colour, {
+        size: label.size ?? 9.5,
+        radius: label.offset ?? 6,
+        colours: label.colours,
+        optional: label.optional === true,
+        key: label.key ?? null,
       });
     }
     this.labelQueue = [];
-  }
-
-  /** Stable per-id slot so a label never jitters between frames. */
-  labelSlot(id) {
-    let h = 0;
-    for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-    return Math.abs(h);
   }
 
   /** What is under the cursor? Tracks win over hardware — you click them more. */
@@ -189,6 +181,8 @@ export class Scope {
     ctx.fillStyle = p.bg;
     ctx.fillRect(0, 0, this.w, this.h);
     this.labelQueue = [];
+    // Nothing is reserved across frames: the picture is redrawn from scratch.
+    this.reserved = [];
 
     this.updatePaint(world, frameDtS, ui);
     // Drawn before the grid so the country sits under everything, but its
@@ -218,8 +212,18 @@ export class Scope {
     this.drawTracks(world, ui);
     this.drawAssignmentDrag(world, ui);
     this.drawEnvelope(world, ui);
-    this.flushLabels();
+    /*
+     * The corner readouts go on BEFORE the lettering, not after it.
+     *
+     * Drawn last they were painted over whatever the placer had just fitted
+     * into the top-left corner — which on a phone is where the range rings and
+     * the first two or three track blocks live, and is the whole of the bugs
+     * critic's `scope-legends-overprint-range-rings-on-a-phone`. Stamped
+     * first, they reserve their own boxes and the placer treats them as the
+     * furniture they are.
+     */
     this.drawChrome(world, ui);
+    this.flushLabels();
 
     if (this.theme.scanlines) this.drawScanlines();
     if (this.theme.vignette) this.drawVignette();
@@ -396,6 +400,7 @@ export class Scope {
         ctx.beginPath();
         ctx.arc(q.x, q.y, (town.capital ? 3 : 2) * this.dpr, 0, TAU);
         ctx.fill();
+        this.reserve(q.x - 3 * this.dpr, q.y - 3 * this.dpr, 6 * this.dpr, 6 * this.dpr);
         this.queueLabel({
           // One name, in English. Every town used to be lettered twice —
           // the Cyrillic over the English — which doubled the text on the
@@ -406,6 +411,10 @@ export class Scope {
           x: q.x, y: q.y,
           priority: town.capital ? 8 : 4,
           offset: 5,
+          key: `town:${town.en}`,
+          // Geography gives way. A town that cannot find a corner goes unnamed
+          // this frame rather than printing through a track number.
+          optional: true,
         });
       }
     }
@@ -415,24 +424,35 @@ export class Scope {
   drawGrid(world) {
     const { ctx } = this;
     const p = this.palette;
+    const d = this.dpr;
     const centre = this.toScreen(this.origin);
     const step = this.rangeKm > 160 ? 50 : this.rangeKm > 80 ? 25 : 10;
 
     ctx.save();
     ctx.strokeStyle = p.grid;
-    ctx.fillStyle = p.inkDim;
     ctx.lineWidth = 1;
-    ctx.font = `${10 * this.dpr}px ${FONT}`;
 
+    /*
+     * The range numerals go up the 045 radial, not up the twelve o'clock
+     * spoke.
+     *
+     * Every one of them used to be drawn at `centre.x + 3`, so the whole scale
+     * stood in one column straight up the north spoke — with the spoke ruled
+     * through the digits, and anything flying up the middle of the picture
+     * lettered into the same strip. On the 045 radial no spoke runs (they are
+     * every thirty degrees) and the column no longer exists.
+     */
+    const diag = Math.SQRT1_2;
     for (let r = step; r <= this.rangeKm * 1.6; r += step) {
       const px = r * this.scale;
       ctx.beginPath();
       ctx.arc(centre.x, centre.y, px, 0, TAU);
       ctx.stroke();
-      ctx.fillText(`${r}`, centre.x + 3 * this.dpr, centre.y - px - 3 * this.dpr);
+      this.stamp(`${r}`, centre.x + px * diag + 3 * d, centre.y - px * diag + 3 * d,
+        p.inkDim, { size: 8.5 });
     }
 
-    // Bearing spokes every thirty degrees, labelled at the edge.
+    // Bearing spokes every thirty degrees.
     const reach = this.rangeKm * 1.6 * this.scale;
     for (let a = 0; a < 360; a += 30) {
       const h = headingVec(a);
@@ -442,6 +462,48 @@ export class Scope {
       ctx.globalAlpha = a % 90 === 0 ? 0.8 : 0.35;
       ctx.stroke();
       ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+
+    /*
+     * And the scale to read them off, which this tube never had.
+     *
+     * The cabin's plan view has carried a bearing scale with cardinals and
+     * thirties for some time; the plan position indicator — the display whose
+     * net cues the seat by bearing, whose shootlist prints one per contact and
+     * whose fire-control arcs are drawn on one — had ruled spokes and not a
+     * single numeral. It is the cabin's scale, on the ring that fits the short
+     * axis of whatever the tube has been given.
+     *
+     * Only when the origin is on the glass: the board can be panned, and a
+     * scale struck from a centre somewhere off the left-hand edge is a ring of
+     * numerals that mean nothing.
+     */
+    if (centre.x < 0 || centre.y < 0 || centre.x > this.w || centre.y > this.h) return;
+    const ring = Math.min(this.w, this.h) / 2 - 13 * d;
+    if (ring < 40 * d) return;
+    ctx.save();
+    ctx.strokeStyle = withAlpha(p.inkDim, 0.7);
+    ctx.lineWidth = 1;
+    for (let a = 0; a < 360; a += 10) {
+      const h = headingVec(a);
+      const long = a % 30 === 0;
+      const t0 = ring - (long ? 6 : 3) * d;
+      ctx.beginPath();
+      ctx.moveTo(centre.x + h.x * t0, centre.y - h.y * t0);
+      ctx.lineTo(centre.x + h.x * ring, centre.y - h.y * ring);
+      ctx.globalAlpha = long ? 0.9 : 0.45;
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    for (let a = 0; a < 360; a += 30) {
+      const h = headingVec(a);
+      const rr = ring + 7 * d;
+      const cardinal = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' }[a];
+      this.stamp(cardinal ?? String(a).padStart(3, '0'),
+        centre.x + h.x * rr, centre.y - h.y * rr + 3 * d,
+        cardinal ? p.ink : p.inkDim,
+        { size: cardinal ? 10 : 8.5, align: 'center', weight: cardinal ? 'bold' : '' });
     }
     ctx.restore();
   }
@@ -543,6 +605,7 @@ export class Scope {
       ctx.setLineDash([]);
       ctx.restore();
 
+      this.reserve(s.x - 13 * this.dpr, s.y - 13 * this.dpr, 26 * this.dpr, 26 * this.dpr);
       this.queueLabel({
         lines: [formation.name, held ? 'DIRECT' : handover
           ? `HANDOVER ${Math.ceil(formation.handoverUntilS - world.t)}s`
@@ -551,7 +614,8 @@ export class Scope {
         colours: [colour, p.inkDim],
         colour,
         priority: held ? 64 : 40,
-        offset: 16 * this.dpr,
+        offset: 16,
+        key: `formation:${formation.id ?? formation.name}`,
       });
     }
   }
@@ -618,6 +682,8 @@ export class Scope {
         }
       }
 
+      const extent = designated ? size * 3.6 : size + 3;
+      this.reserve(s.x - extent, s.y - extent, extent * 2, extent * 2);
       this.queueLabel({
         text: designated ? `${asset.label} · PRIORITY` : asset.label,
         x: s.x, y: s.y,
@@ -626,8 +692,8 @@ export class Scope {
         // way. A designated one outranks both — it is the only place on this
         // map the file will ask you about by name.
         priority: designated ? 90 : asset.destroyed ? 60 : hurt > 0 ? 50 : 20,
-        force: designated,
-        offset: designated ? size * 3 : size + 3,
+        offset: extent / this.dpr + 2,
+        key: `asset:${asset.id}`,
       });
       ctx.restore();
     }
@@ -684,13 +750,15 @@ export class Scope {
       ctx.globalAlpha = 1;
       const busy = site.engagements.length
         ? ` ${'◆'.repeat(Math.min(site.engagements.length, 4))}` : '';
+      const extent = size * (selected ? 2.4 : crewed ? 1.9 : 1.1);
+      this.reserve(s.x - extent, s.y - extent, extent * 2, extent * 2);
       this.queueLabel({
         text: `${site.name}${site.alive ? ` ${site.readyRounds}${busy}` : ' ✕'}`,
         x: s.x, y: s.y,
         colour: !site.alive ? p.inkDim : site.engagements.length ? p.warn : p.ink,
         priority: selected || crewed ? 90 : 45,
-        force: selected || crewed,
-        offset: size + 3,
+        offset: extent / this.dpr + 2,
+        key: `site:${site.id}`,
       });
       ctx.restore();
     }
@@ -714,12 +782,17 @@ export class Scope {
       ctx.moveTo(s.x, s.y - r * 2.1);
       ctx.lineTo(s.x, s.y - r);
       ctx.stroke();
+      this.reserve(s.x - r, s.y - r * 2.1, r * 2, r * 3.1);
       this.queueLabel({
         text: radar.alive ? radar.label : `${radar.label} ✕`,
         x: s.x, y: s.y,
         colour: radar.alive ? p.inkDim : p.hostile,
-        priority: radar.alive ? 40 : 65,
-        offset: r + 3,
+        // The only set still radiating is not scenery. On the two watches with
+        // a wreck and a live set on the same board, the living one's name was
+        // among the first things the old placer threw away.
+        priority: radar.alive && radar.state === 'radiating' ? 72 : radar.alive ? 40 : 65,
+        offset: r / this.dpr + 3,
+        key: `radar:${radar.id}`,
       });
       ctx.restore();
     }
@@ -810,6 +883,9 @@ export class Scope {
         ctx.beginPath();
         ctx.arc(s.x, s.y, (5 + pulse * 4) * this.dpr, 0, TAU);
         ctx.stroke();
+        this.reserve(s.x - 9 * this.dpr, s.y - 9 * this.dpr, 18 * this.dpr, 18 * this.dpr);
+      } else {
+        this.reserve(s.x - 3 * this.dpr, s.y - 3 * this.dpr, 6 * this.dpr, 6 * this.dpr);
       }
     }
   }
@@ -818,6 +894,20 @@ export class Scope {
     const { ctx } = this;
     const p = this.palette;
     const standard = this.theme.symbology === 'standard';
+    /*
+     * On a small tube a contact carries its number and nothing else.
+     *
+     * Thirteen contacts on a 380 px glass is thirteen three-line blocks, and
+     * the graphics critic counted four of them overlapping inside one eighty
+     * pixel square. Their own remedy: "on the phone, drop the second line of a
+     * track label entirely and show it only for the selected contact." The
+     * altitude and the type are a tap away in the contact's own row and in the
+     * hover readout; the track number is what the board is read by.
+     *
+     * Measured off the glass rather than the device, because the question is
+     * how much room the lettering has.
+     */
+    const tight = this.w / this.dpr < 520;
     /*
      * Contacts the plot cannot reach get a caret on the rim pointing at them,
      * the way the cabin's plan view has always done it. Without this a track
@@ -863,11 +953,13 @@ export class Scope {
         ctx.moveTo(s.x - arm, s.y + arm); ctx.lineTo(s.x + arm, s.y - arm);
         ctx.stroke();
         ctx.restore();
+        this.reserve(s.x - bloom, s.y - bloom, bloom * 2, bloom * 2);
         this.queueLabel({
           lines: [`${track.tn} ✕`],
           x: s.x, y: s.y,
           colours: [colour], colour,
-          priority: 60, offset: bloom + 3,
+          priority: 60, offset: bloom / this.dpr + 3,
+          key: `track:${track.id}`,
         });
         continue;
       }
@@ -972,9 +1064,20 @@ export class Scope {
       const label = track.classification !== 'unknown'
         ? AIR_TYPES[track.classification]?.label ?? ''
         : trackProfile(track);
+      /*
+       * The contact owns everything drawn on it, not just its dot: the
+       * selection ring, the assignment brackets and the protected flight's
+       * pulsing ring all stand off the blip, and a label printed through any
+       * of them is printed through the mark it is naming.
+       */
+      const extent = size * (selected ? 2.8
+        : shape.bracket !== 'none' ? 2.4
+          : AIR_TYPES[track.classification]?.isVip ? 3.0 : 1.2);
+      this.reserve(s.x - extent, s.y - extent, extent * 2, extent * 2);
       this.queueLabel({
-        lines: [track.tn, `${String(alt).padStart(3, '0')} ${label}`,
-          ...(shape.tag ? [shape.tag] : [])],
+        lines: tight && !selected ? [track.tn]
+          : [track.tn, `${String(alt).padStart(3, '0')} ${label}`,
+            ...(shape.tag ? [shape.tag] : [])],
         x: s.x, y: s.y,
         colours: [selected ? p.inkBright : colour, p.inkDim,
           shape.bracket === 'solid' ? p.good : p.accent],
@@ -984,8 +1087,8 @@ export class Scope {
         priority: selected ? 100
           : AIR_TYPES[track.classification]?.isVip ? 98
             : 70 + Math.min(track.threat / 10, 20),
-        force: selected,
-        offset: size + 4,
+        offset: extent / this.dpr + 3,
+        key: `track:${track.id}`,
       });
 
       // A line to the battery working it, so assignment is visible at a glance.
@@ -1026,9 +1129,6 @@ export class Scope {
     // a caret printed over RANGE 140 KM is worse than no caret.
     const inset = { top: 46 * this.dpr, side: 30 * this.dpr, bottom: 18 * this.dpr };
     ctx.save();
-    ctx.font = `${8.5 * this.dpr}px ${FONT}`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
     for (const { track, colour } of edge) {
       const s = this.toScreen(track.pos);
       const dx = s.x - cx;
@@ -1065,12 +1165,14 @@ export class Scope {
        */
       const onSide = Math.abs(x - cx) > cx - inset.side - 1;
       const inward = 11 * this.dpr;
-      ctx.globalAlpha = 0.6;
-      ctx.fillStyle = colour;
-      ctx.textAlign = onSide ? (x > cx ? 'right' : 'left') : 'center';
-      ctx.fillText(`${track.tn} ${Math.round(len(track.pos))}`,
+      this.reserve(x - 6 * this.dpr, y - 6 * this.dpr, 12 * this.dpr, 12 * this.dpr);
+      // Stamped rather than written: the caption owns its corner of the rim,
+      // so nothing the placer fits afterwards is printed across it.
+      this.stamp(`${track.tn} ${Math.round(len(track.pos))}`,
         onSide ? x - Math.sign(dx) * inward : x,
-        onSide ? y : y + Math.sign(-dy) * inward);
+        onSide ? y + 3 * this.dpr : y + Math.sign(-dy) * inward,
+        colour,
+        { size: 8.5, align: onSide ? (x > cx ? 'right' : 'left') : 'center', alpha: 0.72 });
     }
     ctx.restore();
   }
@@ -1137,23 +1239,19 @@ export class Scope {
   }
 
   drawChrome(world, ui) {
-    const { ctx } = this;
     const p = this.palette;
-    ctx.save();
-    ctx.font = `${10 * this.dpr}px ${FONT}`;
-    ctx.fillStyle = p.inkDim;
-    ctx.fillText(`RANGE ${Math.round(this.rangeKm)} KM`, 10 * this.dpr, 16 * this.dpr);
+    const d = this.dpr;
+    this.stamp(`RANGE ${Math.round(this.rangeKm)} KM`, 10 * d, 16 * d, p.inkDim, { size: 10 });
     // The hour and the weather, under the range: the watch's own time of
     // night, which is one of the things that tells this watch from the last.
-    ctx.fillText(watchConditions(world.scenario, world.t).line, 10 * this.dpr, 30 * this.dpr);
+    this.stamp(watchConditions(world.scenario, world.t).line, 10 * d, 30 * d, p.inkDim, { size: 10 });
     if (!world.fusionOnline) {
-      ctx.fillStyle = p.hostile;
       // What it means for the person looking at the tube, not the name of
       // the mode: every radar is now reporting on its own, and the same
       // aircraft can wear a different track number on each of them.
-      ctx.fillText('SECTOR LINK DOWN — EACH RADAR REPORTS ON ITS OWN', 10 * this.dpr, 44 * this.dpr);
+      this.stamp('SECTOR LINK DOWN — EACH RADAR REPORTS ON ITS OWN',
+        10 * d, 44 * d, p.hostile, { size: 10 });
     }
-    ctx.restore();
   }
 
   drawScanlines() {
@@ -1178,8 +1276,6 @@ export class Scope {
     ctx.fillRect(0, 0, this.w, this.h);
   }
 }
-
-const FONT = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
 /** Approximate MIL-STD-2525 air frames: diamond hostile, dome friendly, quatrefoil unknown. */
 function drawStandardSymbol(ctx, s, size, track) {
@@ -1208,7 +1304,6 @@ function drawStandardSymbol(ctx, s, size, track) {
   ctx.stroke();
 }
 
-/** Add an alpha channel to a hex or rgb colour string from the theme. */
 /**
  * A contact's assignment, as the glass draws it.
  *
@@ -1230,15 +1325,5 @@ export function assignmentShape(world, track) {
   return { bracket, holders, tag };
 }
 
-export function withAlpha(colour, alpha) {
-  const c = colour.trim();
-  if (c.startsWith('#')) {
-    const hex = c.length === 4
-      ? c.slice(1).split('').map((ch) => ch + ch).join('')
-      : c.slice(1);
-    const n = parseInt(hex, 16);
-    return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-  }
-  if (c.startsWith('rgb(')) return c.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
-  return c;
-}
+/** Re-exported where it has always been imported from. It lives in labels.js. */
+export { withAlpha };

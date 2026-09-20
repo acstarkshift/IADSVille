@@ -20,7 +20,7 @@ import { bearing, dist, headingVec, len, clamp01,
 } from '../engine/math.js';
 import { inEnvelope, timeToInRangeS, computeSamPk } from '../engine/weapons.js';
 import { MAP } from '../engine/geography.js';
-import { withAlpha } from './scope.js';
+import { Lettering, withAlpha } from './labels.js';
 
 const TAU = Math.PI * 2;
 const FONT = 'ui-monospace, "SF Mono", Menlo, Consolas, monospace';
@@ -81,8 +81,9 @@ export function planGeography(world, site, rangeKm) {
   };
 }
 
-export class CrewConsole {
+export class CrewConsole extends Lettering {
   constructor(canvas) {
+    super();
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.dpr = 1;
@@ -200,155 +201,18 @@ export class CrewConsole {
    *
    * Every string on this display used to be a bare fillText at a fixed offset
    * from its mark, with no halo, no plate and no idea what else was already
-   * there. Ordinary play produced 'T-00[dot]✕T-002' where a kill marker met
-   * the next contact, 'T-003 11km' printed straight through a range numeral,
-   * the 10 km ring, the boresight line and the own-battery symbol, and two
-   * range-height contacts whose labels overprinted into 'T0002'. A radar
-   * display is mostly text on top of a grid, so the text is a layer with
+   * there. Ordinary play produced a kill marker printed into the next
+   * contact's number, a contact's range printed straight through a range
+   * numeral, the 10 km ring, the boresight line and the own-battery symbol,
+   * and two range-height contacts whose altitudes overprinted each other. A
+   * radar display is mostly text on top of a grid, so the text is a layer with
    * rules: it is knocked out of whatever is behind it, and it looks for a
    * corner nobody is standing in.
-   */
-
-  /**
-   * Keep a rectangle clear of lettering.
    *
-   * A symbol owns its pixels as much as a numeral does. Labels used to be
-   * placed the instant their own mark was drawn, so the next contact's dot,
-   * bracket, selection ring and bloom were all painted on TOP of a label that
-   * had already found a clear corner — measured on a splash, 'T-001 ✕',
-   * 'T-002 · CH1' and 'T-003' in one smear, and on the height plot two
-   * altitudes across a kill marker. Every mark reserves its own extent first
-   * and the lettering goes on afterwards, over a picture that is finished.
+   * `reserve`, `beginLabels`, `place` and `stamp` were written here and are
+   * now in `labels.js`, because the plan position indicator needed the same
+   * four and had a worse four of its own. See the class comment there.
    */
-  reserve(x, y, w, h) {
-    (this.reserved ??= []).push({ x, y, w, h });
-  }
-
-  /**
-   * Start a frame's label layer, holding everything already reserved.
-   *
-   * That is the axis numerals, the bearing scale, the corner blocks and every
-   * symbol on the glass: a label may not be printed through any of them.
-   */
-  beginLabels() { this.labelBoxes = (this.reserved ?? []).slice(); }
-
-  /**
-   * Draw a string near (x, y), knocked out of the grid, in a corner that is
-   * free. Tries the eight compass offsets in the preferred order and takes the
-   * first that collides with nothing already placed; if all eight are taken it
-   * uses the first and accepts the overlap rather than dropping the label,
-   * because a missing track number is worse than a tight one.
-   */
-  place(text, x, y, colour, { size = 8.5, radius = 6, prefer = 'NE', weight = '', optional = false } = {}) {
-    const { ctx } = this;
-    const d = this.dpr;
-    ctx.font = `${weight ? `${weight} ` : ''}${size * d}px ${FONT}`;
-    const w = ctx.measureText(text).width;
-    const h = size * d;
-    const r = radius * d;
-    const order = ['NE', 'E', 'SE', 'N', 'S', 'NW', 'W', 'SW'];
-    const from = order.indexOf(prefer);
-    const tries = order.slice(from < 0 ? 0 : from).concat(order.slice(0, from < 0 ? 0 : from));
-    /*
-     * Three rings of eight, and a gap that counts as a collision.
-     *
-     * With one ring the eighth try was often still taken and the label was
-     * dropped where it fell: measured on the range-height plot, 'T-002 6,721m'
-     * came to rest with its last glyph touching the first of 'T-003 6,879m' —
-     * boxes that do not overlap by the arithmetic and are unreadable on the
-     * glass. The box is padded by three pixels on every side before it is
-     * tested, so "touching" is a clash; and when all eight corners at the
-     * mark's own radius are taken the label steps out to a second ring and
-     * draws a leader back, which is what a crowded plot needs anyway.
-     */
-    const padX = 3 * d;
-    const padY = 2 * d;
-    /*
-     * How badly a candidate clashes, in square pixels, rather than whether it
-     * clashes at all.
-     *
-     * With a boolean test the last resort was "take the first corner tried and
-     * accept whatever it lands on", which on a busy plot meant a track number
-     * printed squarely through the HORIZON tag while a corner four pixels
-     * further round was clear. Scored, the fallback is the least bad corner of
-     * the thirty-two, which in practice is a corner that clips one grid line
-     * rather than one that buries another label.
-     */
-    const cost = (box) => this.labelBoxes.reduce((sum, b) => {
-      const ox = Math.min(box.x + box.w + padX, b.x + b.w) - Math.max(box.x - padX, b.x);
-      const oy = Math.min(box.y + box.h + padY, b.y + b.h) - Math.max(box.y - padY, b.y);
-      return ox > 0 && oy > 0 ? sum + ox * oy : sum;
-    }, 0);
-    let best = null;
-    let bestCost = Infinity;
-    let placed = false;
-    for (const ring of [r, r + 13 * d, r + 26 * d, r + 40 * d]) {
-      for (const dir of tries) {
-        const ox = dir.includes('E') ? ring : dir.includes('W') ? -ring - w : -w / 2;
-        const oy = dir.includes('N') ? -ring : dir.includes('S') ? ring + h * 0.8 : h * 0.35;
-        const box = { x: x + ox, y: y + oy - h, w, h: h * 1.15 };
-        const c = cost(box);
-        if (c === 0) { best = box; placed = true; break; }
-        if (c < bestCost) { bestCost = c; best = box; }
-      }
-      if (placed) break;
-    }
-    // A place name is not worth a clash. Geography gives way to anything
-    // flying: if every corner near a town is taken, the town goes unnamed
-    // this frame rather than printing through a track number.
-    if (!placed && optional) return null;
-    // And inside the glass. A label that ran off the right-hand edge lost its
-    // altitude figure to the frame; clamped, it keeps its leader line back to
-    // the mark, which is what the leader is for.
-    best.x = Math.max(2 * d, Math.min(best.x, this.w - w - 2 * d));
-    this.labelBoxes.push(best);
-    ctx.save();
-    // A label that had to move to find room says which mark it belongs to.
-    const home = { x: x + (r + 1), y: y - r };
-    if (Math.hypot(best.x - home.x, best.y - home.y) > 10 * d) {
-      ctx.strokeStyle = withAlpha(colour, 0.45);
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(best.x + (best.x < x ? best.w : 0), best.y + best.h * 0.6);
-      ctx.stroke();
-    }
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 3 * d;
-    ctx.strokeStyle = this.palette.bg;
-    ctx.globalAlpha = 0.85;
-    ctx.strokeText(text, best.x, best.y + h);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = colour;
-    ctx.fillText(text, best.x, best.y + h);
-    ctx.restore();
-    return best;
-  }
-
-  /**
-   * A string that owns its position — an axis numeral, a title — knocked out
-   * of the grid and reserved, so no placed label may be printed across it.
-   */
-  stamp(text, x, y, colour, { size = 9, align = 'left', weight = '' } = {}) {
-    const { ctx } = this;
-    const d = this.dpr;
-    ctx.save();
-    ctx.font = `${weight ? `${weight} ` : ''}${size * d}px ${FONT}`;
-    ctx.textAlign = align;
-    const tw = ctx.measureText(text).width;
-    const th = size * d;
-    this.reserve(align === 'right' ? x - tw : align === 'center' ? x - tw / 2 : x,
-      y - th, tw, th * 1.2);
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 3 * d;
-    ctx.strokeStyle = this.palette.bg;
-    ctx.globalAlpha = 0.85;
-    ctx.strokeText(text, x, y);
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = colour;
-    ctx.fillText(text, x, y);
-    ctx.restore();
-  }
 
   /**
    * The noise this battery's own set is looking into.
