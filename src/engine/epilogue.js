@@ -177,6 +177,12 @@ export const FLIGHT_ENDINGS = {
       // Firing on it and failing to bring it down is not the same watch as never
       // firing at all, and the file notices even when the outcome is identical.
       tapeLine(r),
+      // And so is refusing the order and holding the corridor anyway.
+      r.orderRefused
+        ? 'You refused the order to protect it, on the net, in the clear, and the corridor was held'
+          + ' anyway. The citation below is drafted from the outcome. The refusal is in the file the'
+          + ' citation is not.'
+        : null,
       'The state broadcast at 0600 described the President as continuing to direct the defence of the'
         + ' nation from a forward headquarters. It did not say where the forward headquarters is, and'
         + " the sector's own signals annex assigns it no frequency.",
@@ -210,11 +216,21 @@ export const FLIGHT_ENDINGS = {
     lines: (r, character) => [
       'STATE 01 was engaged from twenty-six kilometres and came down in the Tavrov district at 0431.'
         + ' The sector was informed by the fighters, in the sense that the sector was listening to them.',
+      /*
+       * Refusing and staying silent are the two things the whole command net
+       * exists to tell apart, and this is where the distinction has to land.
+       * A player who transmitted NO on the net used to be told they said
+       * nothing.
+       */
       r.orderAccepted
         ? 'You acknowledged the order to protect it at all cost on the net, in the clear, four minutes'
           + ' before that. The acknowledgement is on the tape immediately before everything else is.'
-        : 'You did not acknowledge the order. The omission is recorded in the same paragraph as the loss,'
-          + ' and the paragraph does not distinguish between them.',
+        : r.orderRefused
+          ? 'You refused the order to protect it at all cost, on the net, in the clear, four minutes'
+            + ' before that. The refusal is on the tape immediately before the loss, and the board will'
+            + ' read them in that order.'
+          : 'You did not acknowledge the order. The omission is recorded in the same paragraph as the loss,'
+            + ' and the paragraph does not distinguish between them.',
       tapeLine(r),
       `A board of inquiry has been convened to establish what this sector's batteries were doing at`
         + ' 0431. It has been convened by the political section, which is the part of the ministry'
@@ -252,8 +268,11 @@ export const FLIGHT_ENDINGS = {
       r.orderAccepted
         ? 'You acknowledged the order to protect it at all cost, on the net, in the clear, and then you'
           + ' did this. Both transmissions are on the same tape, four minutes apart.'
-        : 'You were ordered to protect it at all cost. You did not answer the net. The silence and the'
-          + ' launch are eleven seconds apart on the tape.',
+        : r.orderRefused
+          ? 'You refused the order to protect it at all cost, on the net, in the clear, and then you did'
+            + ' this. The refusal and the launch are on one tape, and nobody has asked for the tape.'
+          : 'You were ordered to protect it at all cost. You did not answer the net. The silence and the'
+            + ' launch are eleven seconds apart on the tape.',
       'No board of inquiry has been convened. The political section has not been reached since 0500 and'
         + ' the sector office has been open all morning with nobody in it.',
       'The last entry the ministry logged before it stopped logging is an amendment to the freight'

@@ -17,7 +17,22 @@
  * they say.
  */
 
-/** In campaign order. Each fires once, on completing the watch it is keyed to. */
+import { COMMAND } from './config.js';
+
+/**
+ * In campaign order. Each is handed over once, on completing the watch it is
+ * keyed to — and it is only learned when the player opens it.
+ *
+ * `desk` is how the document lies on the desk between watches: what the plate
+ * under it says, what a glance at it tells you before it is opened (never a
+ * word of what is inside), and whether it is yours. A folder that is not
+ * yours costs the file something to open, and the office writes down how
+ * long you were alone with it. The documents used to assert, in the second
+ * person, an investigation nobody performed — "you looked the grid reference
+ * up", "you had a reason" — so every clause of agency below is now either a
+ * thing that arrived or the one act the player actually takes, which is
+ * picking the folder up.
+ */
 export const REVELATIONS = {
   freeze: {
     id: 'freeze',
@@ -26,6 +41,11 @@ export const REVELATIONS = {
     /** Its own reference, on the corner of the sheet. */
     ref: 'ALLOC 219',
     title: 'THE ALLOCATION',
+    desk: {
+      plate: 'A QUERY FROM SIGNALS',
+      gist: 'Brought up with the returns. It is addressed to you.',
+      yours: true,
+    },
     lines: [
       /*
        * This paragraph used to open "The district hospital took four weapons",
@@ -86,13 +106,20 @@ export const REVELATIONS = {
     /** Its own reference, on the corner of the sheet. */
     ref: 'ANNEX 7-C',
     title: 'THE GRID REFERENCE',
+    desk: {
+      plate: 'THE SECTOR TARGET FOLDER',
+      gist: 'It came up with the strays\' return. It is not yours to open.',
+      yours: false,
+      cost: -3,
+    },
     lines: [
       'The strays were logged as strays. Two rounds, both malfunctioning in the same way, both'
         + ' malfunctioning onto the same grid reference six kilometres beyond a national border,'
         + ' four hours apart.',
-      'You looked the grid reference up. It is not in an intelligence product. It is in the sector'
-        + ' target folder, which sits on an open shelf because everything in it is our own ground'
-        + ' and there is nothing in there to protect.',
+      'The grid reference is not in an intelligence product. It is in the sector target folder,'
+        + ' which came up to your desk with the strays\' return because the clerk files a query'
+        + ' with the folder it refers to, and which sits on an open shelf the rest of the year'
+        + ' because everything in it is our own ground and there is nothing in there to protect.',
       'It is written on the inside back cover by hand, under no heading, in a folder that has no'
         + ' business containing a point in Listonia at all.',
       'Somebody wrote those coordinates down before the war started. Two rounds have now been put'
@@ -108,6 +135,12 @@ export const REVELATIONS = {
     /** Its own reference, on the corner of the sheet. */
     ref: 'RETURN 88',
     title: 'THE RETURN',
+    desk: {
+      plate: 'A DEPOT RETURN, IN THE WRONG FOLDER',
+      gist: 'Underneath one that was yours. It was not addressed to you.',
+      yours: false,
+      cost: -3,
+    },
     lines: [
       'A depot return crossed your desk during the resupply that did not arrive. It was not'
         + ' addressed to you. It was in the folder underneath one that was.',
@@ -117,8 +150,8 @@ export const REVELATIONS = {
       'The return is not a forgery. It is properly countersigned at three levels, which means the'
         + ' number was correct when it was written and has been correct ever since, in the only'
         + ' sense the ministry recognises.',
-      'You put the folder back the way it was, and you were out of the room before you had decided'
-        + ' to be.',
+      'You put it back underneath the one that was yours, the way it came. The clerk who collects'
+        + ' the folders in the morning counts them and does not read them.',
     ],
   },
 
@@ -139,6 +172,11 @@ export const REVELATIONS = {
     /** Its own reference, on the corner of the sheet. */
     ref: 'ORDER 512',
     title: 'THE DETENTION ORDER',
+    desk: {
+      plate: 'THE DISTRICT SIGNALS ANNEX',
+      gist: 'Circulated to every headquarters on Monday. Yours is one of them now.',
+      yours: true,
+    },
     lines: [
       'The detention order that was read to you on the net has a file number, and the file number'
         + ' is printed in the district signals annex, which is circulated to every headquarters'
@@ -160,10 +198,17 @@ export const REVELATIONS = {
     /** Its own reference, on the corner of the sheet. */
     ref: 'MOVE 61-4',
     title: 'THE MOVEMENT ORDER',
+    desk: {
+      plate: 'THE MOVEMENT ORDER SERIES',
+      gist: 'Three orders in one folder, from the freight office. Not yours.',
+      yours: false,
+      cost: -3,
+    },
     lines: [
       'The order that took your battalion is numbered, and orders in that series run consecutively,'
-        + ' so the ones on either side of it exist. A movement order is freight paperwork, and'
-        + ' freight paperwork is filed where freight is handled, in a room with no lock on it.',
+        + ' so the ones on either side of it exist. A movement order is freight paperwork, and the'
+        + ' freight office files a series together, so the folder that came up with yours has the'
+        + ' two on either side of it in it.',
       'Same series, same week: road movement, palace annexe to Demobodedovo, freight class four —'
         + ' household and administrative effects. Eleven vehicles. The escort was found from the'
         + ' capital garrison, which is the garrison your battalion was sent to reinforce.',
@@ -180,9 +225,15 @@ export const REVELATIONS = {
     /** Its own reference, on the corner of the sheet. */
     ref: 'TRANS 719',
     title: 'THE TRANSFER',
+    desk: {
+      plate: 'THE TRANSFER MANIFESTS',
+      gist: 'Left open on the desk. Nobody in the office that files them has come in.',
+      yours: true,
+    },
     lines: [
       'The transfer manifests are not secret. They are boring, and they are filed in a room nobody'
-        + ' has a reason to enter, and you had a reason.',
+        + ' has a reason to enter. Tonight they are on your desk, open, because nobody in the'
+        + ' office that files them has come in.',
       'Two hundred and sixty rounds left this sector across eleven months, on a schedule of routine'
         + ' redistributions. The same office signed off every one of them, and every one crossed the'
         + ' frontier within a week of being recorded.',
@@ -190,6 +241,17 @@ export const REVELATIONS = {
         + ' the money was recovered by an office in Mostrograd that does not appear on the'
         + " ministry's establishment. Its address does appear: it is the point of origin on a"
         + ' freight movement order you have also read.',
+      /*
+       * The hook the district watch pulled — nothing forecast against Brasov
+       * for eleven months, its commander chosen by the political section, a
+       * standing order you will not be shown — paid, in the document that has
+       * the road on it.
+       */
+      'They crossed at Brasov. The road out of the Brasov depot is the only crossing on the'
+        + ' manifests, and the standing order the commander of that sector holds is a copy of the'
+        + ' schedule they left on: nothing is to be engaged over that road on a night it is in'
+        + ' use. Nothing has been forecast against Brasov for eleven months. Whoever has been'
+        + ' buying has been careful of the road.',
       'This is what the expenditure freeze was for. The freeze exists so that the magazines are'
         + ' never opened and counted while there is still somebody to count them in front of.',
       'The palace you were ordered to hold above your own village was paid for out of the rounds you'
@@ -215,7 +277,8 @@ export function knownRevelations(campaign) {
 export function standing(campaign) {
   const known = knownRevelations(campaign).map((r) => r.id);
   if (known.includes('buyer')) {
-    return 'You know where the rounds went, who signed for them, and what the freeze was protecting.';
+    return 'You know where the rounds went, who signed for them, what the freeze was protecting, and'
+      + ' why nothing was ever forecast against Brasov.';
   }
   if (known.includes('movement')) {
     return 'You know the household effects left the palace before the threat that justified guarding'
@@ -234,18 +297,54 @@ export function standing(campaign) {
       + ' issued to keep you off the point while they landed.';
   }
   if (known.includes('freeze')) {
-    return 'You were ordered not to defend a hospital, and the order cost you almost nothing. That'
-      + ' has been sitting badly since.';
+    /*
+     * It used to go on: "That has been sitting badly since." The one line in
+     * the corpus that told the player how to feel about a choice they had
+     * just made, at the top of the brief on the watch after the first hinge,
+     * against the tone rule at the head of epilogue.js. The fact stops here;
+     * the player supplies the rest.
+     */
+    return 'You were ordered not to defend a hospital, and the order cost you almost nothing.';
   }
   return null;
 }
 
-/** Record a revelation on the campaign file. Returns it if it is new. */
+/**
+ * The document this watch puts on the desk, if the file does not already
+ * hold it. Handing it over records nothing: the file learns it when the
+ * player opens it (`readFolder`), which is the one act this story asks of
+ * them outside a console, and a player who leaves the folder where it lies
+ * finishes the campaign without it.
+ */
 export function learn(campaign, missionId) {
   const revelation = revelationAfter(missionId);
   if (!revelation) return null;
   campaign.revelations = campaign.revelations ?? [];
   if (campaign.revelations.includes(revelation.id)) return null;
+  return revelation;
+}
+
+/**
+ * Open the folder. The file records what you now know; and if the folder was
+ * not yours, it records that you opened it, and charges for it on the same
+ * scale the net charges for a radio check left unanswered. Returns the
+ * document, or null if the file already held it.
+ */
+export function readFolder(campaign, revelationId) {
+  const revelation = REVELATIONS[revelationId] ?? null;
+  if (!revelation) return null;
+  campaign.revelations = campaign.revelations ?? [];
+  if (campaign.revelations.includes(revelation.id)) return null;
   campaign.revelations.push(revelation.id);
+  const desk = revelation.desk ?? {};
+  if (desk.yours === false && Number.isFinite(desk.cost) && desk.cost !== 0) {
+    if (typeof campaign.standing === 'number') {
+      campaign.standing = Math.max(COMMAND.minStanding,
+        Math.min(COMMAND.maxStanding, campaign.standing + desk.cost));
+    }
+    campaign.character?.record?.push({
+      kind: 'folder', id: revelation.id, at: campaign.character.watches, cost: desk.cost,
+    });
+  }
   return revelation;
 }

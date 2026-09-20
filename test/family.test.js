@@ -38,6 +38,7 @@ function walk(household, standingFor = () => 60) {
   const campaign = emptyCampaign();
   enlist(campaign, { name: 'Dragan Krushev', background: 'factory', household });
   const sequence = [];
+  const payloads = [];
   for (const scenario of SCENARIOS) {
     const target = standingFor(scenario.id);
     campaign.standing = target;
@@ -50,9 +51,10 @@ function walk(household, standingFor = () => 60) {
     });
     if (entry.letter) {
       sequence.push({ id: entry.letter.id, disposition: entry.letter.disposition });
+      payloads.push(entry.letter);
     }
   }
-  return { campaign, sequence };
+  return { campaign, sequence, payloads };
 }
 
 /** Ordinary file all campaign: everything arrives, resealed. */
@@ -169,7 +171,7 @@ describe('the letters themselves', () => {
 });
 
 describe('the post follows the file', () => {
-  test('an ordinary campaign receives all six letters, opened and resealed', () => {
+  test('an ordinary campaign receives all seven letters, opened and resealed', () => {
     const { campaign, sequence } = walk('mother', CLEAN);
     assert.deepEqual(sequence, [
       { id: 'first-post', disposition: 'resealed' },
@@ -178,6 +180,8 @@ describe('the post follows the file', () => {
       { id: 'aftermath', disposition: 'resealed' },
       { id: 'shorter', disposition: 'resealed' },
       { id: 'last-before', disposition: 'resealed' },
+      // and one on the desk before the last watch, from a house the column passed
+      { id: 'column-south', disposition: 'resealed' },
     ]);
     assert.equal(campaign.family.withheld.length, 0);
     assert.equal(campaign.family.permit, 'standing');
@@ -191,27 +195,50 @@ describe('the post follows the file', () => {
   });
 
   test('the rough road: withholding, release, and the permit, all closed by the end', () => {
-    const { campaign, sequence } = walk('brother', ROUGH);
+    const { campaign, sequence, payloads } = walk('brother', ROUGH);
     assert.deepEqual(sequence, [
       { id: 'first-post', disposition: 'resealed' },
       { id: 'dispensary', disposition: 'resealed' },
       // The hospital watch is flagged: its letter exists, has a postmark, and
       // is somewhere in the sector office. You get the notice.
       { id: 'withheld-notice', disposition: 'withheld' },
-      // A new watch's own letter outranks the release of a held one...
+      // A new watch's own letter outranks the release of a held one, and the
+      // household now writes on every one of the last four watches...
       { id: 'aftermath', disposition: 'resealed' },
       { id: 'shorter', disposition: 'resealed' },
       { id: 'last-before', disposition: 'resealed' },
+      { id: 'column-south', disposition: 'resealed' },
       // ...so the held letter comes back on the first quiet clean watch,
-      // under the wrong seal.
+      // which is the last one, under the wrong seal.
       { id: 'hospital-road', disposition: 'released' },
-      // And the review the condemned watch opened is concluded: no action,
-      // and the review remains in the file.
-      { id: 'permit-close', disposition: 'notice' },
     ]);
+    // The review the condemned watch opened was concluded two clean watches
+    // later, and with no quiet evening left for a sheet of its own, the
+    // section's one line about it goes out on the released letter's docket.
+    const release = payloads.find((p) => p.id === 'hospital-road');
+    assert.match(release.note, /Released without comment/);
+    assert.match(release.note, /residence permit is concluded\. No action is taken/);
+    const file = campaign.character.record.filter((r) => r.kind === 'family');
+    const released = file.find((r) => r.id === 'hospital-road' && r.disposition === 'released');
+    const closed = file.find((r) => r.id === 'permit' && r.disposition === 'closed');
+    assert.ok(released && closed, 'both the release and the conclusion are entered on the file');
+    assert.equal(closed.at, released.at, 'on the same evening, as one docket');
     assert.equal(campaign.family.permit, 'closed');
+    assert.equal(campaign.family.permitNoticeDue, false, 'the section owes nothing further');
     assert.equal(campaign.family.withheld.length, 0);
     assert.equal(familyClause(campaign.family), null, 'every thread closed');
+  });
+
+  test('a review that concludes with a quiet evening to spare still gets its own sheet', () => {
+    // Condemned on the fifth watch, with nothing to withhold; the review opens,
+    // two clean watches close it, and the seventh watch has no letter of its
+    // own, so the notice arrives as paper in its own right.
+    const early = (id) => (id === 'white-noise' ? 5 : 60);
+    const { sequence, payloads } = walk('sister', early);
+    const notice = sequence.find((s) => s.id === 'permit-close');
+    assert.deepEqual(notice, { id: 'permit-close', disposition: 'notice' });
+    assert.equal(payloads.find((p) => p.id === 'permit-close').isLetter, false);
+    assert.equal(sequence.filter((s) => s.disposition === 'released').length, 0);
   });
 
   test('the walk is deterministic: the same campaign twice is the same post twice', () => {
@@ -234,16 +261,16 @@ describe('the post follows the file', () => {
 
   test('what is still held at the finale becomes a clause, not a loose end', () => {
     // A file that goes condemned at the promotion and never recovers: the last
-    // letter is withheld and the permit review has no clean watches to close
-    // on. The machine must NOT quietly resolve either — that is the clause's
-    // job at the finale.
+    // two letters are withheld and the permit review has no clean watches to
+    // close on. The machine must NOT quietly resolve either — that is the
+    // clause's job at the finale.
     const late = (id) => (['reinforce-the-capital', 'two-cities', 'presidents-flight']
       .includes(id) ? 5 : 60);
     const { campaign } = walk('mother', late);
     assert.equal(campaign.family.permit, 'review');
-    assert.equal(campaign.family.withheld.length, 1);
+    assert.equal(campaign.family.withheld.length, 2);
     const clause = familyClause(campaign.family);
-    assert.match(clause, /One letter/);
+    assert.match(clause, /Two letters addressed to you remain/);
     assert.match(clause, /overtaken by events/);
   });
 });

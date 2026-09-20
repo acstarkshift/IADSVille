@@ -285,6 +285,14 @@ export const ENDINGS = {
         + ' The Ville is not on the list of permitted destinations while the area is being cleared.',
       `${householdSubject(character)} had no notification by morning, either way. Notification,`
         + ' where it is made, is made in writing.',
+      /*
+       * A plain fact to end on. Nine of the eleven endings closed on the
+       * state failing to notice, record, mention or ask — each good on its
+       * own, eleven in a row a mannerism. This one closes on a thing that
+       * happens.
+       */
+      'The recommendation is confirmed on the ninth, and the decoration is read out at the sector'
+        + ' parade with your name on it.',
     ],
   },
 
@@ -339,6 +347,13 @@ export const ENDINGS = {
         + ` with ${r.casualties} casualties recorded in the valley.`,
       'The review finds that fires were divided between a designated defended place and an area that was'
         + ' not one, and that this division reduced the effect achieved at both.',
+      // The refusal, where there was one. The most common ending never
+      // mentioned that the order it is about had been refused.
+      r.orderRefused
+        ? 'You refused the priority of fires on the net, in the clear. The review\'s first finding is'
+          + ' the refusal and its second is the division of fires. It does not connect them, and it'
+          + ' does not need to.'
+        : null,
       r.displaced
         ? 'It notes separately that the post displaced during the engagement, and that the battalion'
           + ' capable of reaching either city was off the air while it moved. No comment is appended'
@@ -354,8 +369,9 @@ export const ENDINGS = {
       `${householdSubject(character)} will be notified if there is anything to notify, and the`
         + ' sector has undertaken that in writing. Nothing else about tonight was put in writing'
         + ' for you.',
-      'You remain on the watch roster. Nobody has said anything to you about it, which is the outcome'
-        + ' most people in this service would take.',
+      // A plain fact to end on, for the ending most people get.
+      'You remain on the watch roster. Your relief arrives at seven, on time, and takes the seat'
+        + ' from you with the log open at the same page.',
     ],
   },
 
@@ -370,25 +386,31 @@ export const ENDINGS = {
     plainTitle: 'BOTH HELD',
     plainSummary: (r) => `Both places held: the palace ${harmPhrase(r.palaceHarm)}, the Ville ${harmPhrase(r.villeHarm)}.`,
     standing: 6,
-    card: 'The file is annotated and closed. You are on the same roster in the morning, at the'
-      + ' same seat.',
+    // The card goes the other way from the ending it follows: the ending now
+    // closes on the telephone, so the card carries the annotation.
+    card: 'Your file is annotated in one word. You are not shown it, and it goes with the file to'
+      + ' your next posting and to the one after that.',
     lines: (r, character) => [
       `The palace is intact. The Ville is standing${r.casualties ? `, with ${r.casualties} casualties recorded` : ' and no casualties are recorded'}.`
         + ` ${r.sorties || 28} aircraft were committed against this sector and both places were held.`,
       'The state broadcast describes the defence of the capital. It does not mention the valley, because'
         + ' the valley contains no designated defended places and therefore nothing happened there.',
-      r.againstOrder
-        ? `The political section observes that ${r.againstOrder} rounds were expended outside the priority`
-          + ' of fires, and asks how you knew, before the western axis was detected, where to place your'
-          + ' batteries. You have said that you did not know. This has been recorded.'
-        : 'The political section has asked how the western axis came to be engaged at all. You have'
-          + ' explained the geometry twice. It has been recorded both times.',
-      `${householdSubject(character)} will not be on any list from tonight. The line to the Ville`
-        + ' was working by morning and you were permitted one call.',
+      r.orderRefused
+        ? 'The priority of fires was refused on the net, in the clear, and both places were held'
+          + ' regardless. The political section has asked how a refused order came to be carried out.'
+          + ' You have said that it was not. That has been recorded as well.'
+        : r.againstOrder
+          ? `The political section observes that ${r.againstOrder} rounds were expended outside the priority`
+            + ' of fires, and asks how you knew, before the western axis was detected, where to place your'
+            + ' batteries. You have said that you did not know. This has been recorded.'
+          : 'The political section has asked how the western axis came to be engaged at all. You have'
+            + ' explained the geometry twice. It has been recorded both times.',
+      `${householdSubject(character)} will not be on any list from tonight.`,
       'You are not decorated for this. A decoration would require the citation to describe what was'
         + ' defended, and one of the two things you defended does not officially exist.',
-      'Your file is annotated in one word. You are not shown it, and it goes with the file to your'
-        + ' next posting and to the one after that.',
+      // A plain fact to end on, with no irony in it.
+      'The line to the Ville was working by morning. You were permitted one call, and you made it,'
+        + ' and everybody in the house came to the telephone.',
     ],
   },
 
@@ -404,8 +426,10 @@ export const ENDINGS = {
     plainTitle: 'YOU SURVIVED; BOTH CITIES LOST',
     plainSummary: (r) => `You displaced and the post was not hit. ${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')}, with ${r.casualties} casualties.`,
     standing: -38,
-    card: 'The post stands where it moved to. Both cities and their returns pass to the district'
-      + ' office in the morning.',
+    // The other way from the ending: the ending closes on breakfast, so the
+    // card carries the question the review will not ask.
+    card: 'The review opens on Monday. It will establish that the displacement was correct by the'
+      + ' manual, and it will not ask what the battery was for.',
     lines: (r, character) => [
       /*
        * Two figures in this ending used to be invented. The strike package did
@@ -423,13 +447,18 @@ export const ENDINGS = {
         + ' window.',
       `${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')}, with ${r.casualties}`
         + ' casualties recorded in the valley.',
+      r.orderRefused
+        ? 'The priority of fires was refused on the net before the post displaced. The review will'
+          + ' record both, in that order, and will not say which of them was the decision.'
+        : null,
       r.homeDistrictHit
         ? `${homeSentence(character)} is on the damage returns.`
         : `${homeSentence(character)} is on the damage returns, along with the rest of it.`,
       `${householdSubject(character)} had no notification. The line to the valley is down and the`
         + ' sector has no crew to spare for it.',
-      'The review will establish that the displacement was correct by the manual. It will not ask'
-        + ' what the battery was for. Nobody is going to ask you that.',
+      // A plain fact to end on. The manual is right, and so is this.
+      'The manual says the displacement was correct, and it is. Everybody on this post eats'
+        + ' breakfast this morning.',
     ],
   },
 
@@ -451,6 +480,11 @@ export const ENDINGS = {
         + ' still guiding, and the watch continued for another'
         + ` ${spellCount(Math.max(1, Math.round(r.playedOutS / 60)))} minutes without anybody on`
         + ' it.',
+      // The last thing the player is ever told about their own decision.
+      r.orderRefused
+        ? 'You refused the priority of fires on the net before that. It is the last transmission from'
+          + ' this post with your voice on it, and the finding opens on it.'
+        : null,
       `In that time ${harmPair(r.palaceHarm, r.villeHarm, 'the palace', 'the Ville', true)}, and`
         + ` the valley's returns came up carrying ${r.casualties} names. The batteries that were already`
         + ' engaged finished their engagements and then stopped, because nobody was left to give'
@@ -481,6 +515,10 @@ export const ENDINGS = {
         + ' distinction is not one the review will trouble itself with.',
       `The raid was ${r.sorties || 28} aircraft against six batteries with no resupply behind them.`
         + ' The review will not record that, because the review is about you.',
+      r.orderRefused
+        ? 'You refused the priority of fires on the net, and neither city was defended after it. The'
+          + ' referral will quote the refusal and nothing that followed, because nothing did.'
+        : null,
       r.homeDistrictHit
         ? `${homeSentence(character)} was among the quarters struck.`
         : `Every quarter was struck, ${homePhrase(character)} among them.`,

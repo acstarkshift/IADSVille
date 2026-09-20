@@ -32,17 +32,34 @@
 import { text, textWidth, wrap, FONT } from './bitfont.js';
 import { STATE } from './lexicon.js';
 import { consequenceFor } from '../engine/campaign.js';
-import { tierFor } from '../engine/command.js';
+import { tierFor, DIRECTIVES } from '../engine/command.js';
 import { wallClockString } from '../engine/math.js';
 import { householdOf, districtOf } from '../engine/character.js';
+import { callFor } from '../engine/family.js';
 import { composeEnding } from '../engine/endings.js';
-import { composeFlightEnding } from '../engine/epilogue.js';
+import { composeFlightEnding, flightEndingFor } from '../engine/epilogue.js';
 import { ROLES } from '../engine/config.js';
 import { appointingOffice, appointingSignatory } from '../engine/echelon.js';
 import { portraitCells, portraitFeatures, eyeBoxes, skinRamp, FACE, PORTRAIT_W, PORTRAIT_H } from './portrait.js';
 
 export const SCENE_W = 320;
 export const SCENE_H = 180;
+
+/**
+ * The man across the desk.
+ *
+ * He was captioned THE POLITICAL SECTION for twelve evenings — a department
+ * with a face — while four subordinate commanders in the same game were named
+ * down to their competence. He has a rank and a surname on the plate from the
+ * first evening. He is exactly as cold as he was; a name makes the coldness
+ * something a person is choosing rather than an absence of writing.
+ */
+export const OFFICER = {
+  rank: 'Major',
+  short: 'Maj.',
+  surname: 'Dobrek',
+  plate: 'MAJ. DOBREK · POLITICAL SECTION',
+};
 
 /* ------------------------------------------------------------------ what plays */
 
@@ -54,7 +71,7 @@ export const SCENE_H = 180;
  * ending. With the narrative pressure switched off the office speaks in the
  * plain assessment's words and the letters and documents stay in the file.
  */
-export function scenesFor(state, result, entry) {
+export function scenesFor(state, result, entry, { opened = null } = {}) {
   const pressure = state.narrativePressure !== false;
   const campaign = state.campaign;
   const missionId = result.missionId ?? state.mission?.id ?? null;
@@ -83,6 +100,27 @@ export function scenesFor(state, result, entry) {
   const closing = !result.abandoned && (result.finale || result.epilogue);
 
   /*
+   * Whether the folder was open before the office.
+   *
+   * On the desk the player picks things up in any order, and `opened` is what
+   * they have picked up so far: the office is composed when they walk into
+   * it, and it knows whether the folder was open on the desk when they did.
+   * Without a desk (the tests, the report) the old rule stands: on a closing
+   * watch the document played before the office.
+   */
+  const folderRead = Array.isArray(opened)
+    ? opened.includes('revelation')
+    : closing && !!entry?.revelation;
+
+  /*
+   * A night the post was struck is a night the operator's own hand is not
+   * in an office. The order and the folder carry `bare` so the drawers can
+   * put them on a blotter with nobody in the room, or on a bed-table at the
+   * clearing station, the way the finding is drawn with nobody in the chair.
+   */
+  const bare = !result.abandoned && result.reason === 'site-lost';
+
+  /*
    * The promotion that ends the promotion arc is the one the last two watches
    * are about, and it used to be suppressed on exactly those watches and left
    * to a line in the full report behind a button. It plays: first, before the
@@ -107,6 +145,7 @@ export function scenesFor(state, result, entry) {
       office: appointingOffice(entry.appointment.echelon),
       /** And the reference on it is the order's, not the file entry's form. */
       ref: 'ORDER 12-4',
+      bare,
     });
   }
 
@@ -116,6 +155,8 @@ export function scenesFor(state, result, entry) {
       kind: 'folder',
       speaker: entry.revelation.title,
       lines: entry.revelation.lines,
+      /** Which document, so the desk can say whose folder it is and what opening it costs. */
+      revelationId: entry.revelation.id,
       /*
        * The document's own reference. The sheet used to print 4471-B at the
        * foot of every one of them, which is the number of the form the sector
@@ -125,6 +166,7 @@ export function scenesFor(state, result, entry) {
        * else.
        */
       ref: entry.revelation.ref ?? null,
+      bare,
     });
   }
 
@@ -140,24 +182,61 @@ export function scenesFor(state, result, entry) {
    * lamp and the same light — with nobody in it. See round5/STRUCTURE.md.
    */
   const written = pressure && !result.abandoned && result.reason === 'site-lost';
-  scenes.push({
+  /*
+   * And the one evening the office is empty.
+   *
+   * On the epilogue's two endings where the state stops answering — the
+   * aircraft brought down by this sector's own battery, the watch broken off
+   * with nothing left on the air — the ending says the political section has
+   * not been reached since five and the office has been open all morning with
+   * nobody in it. The evening then sat the man at his desk with the file
+   * open, had him say "Dismissed", and contradicted the last scene of the
+   * campaign ninety seconds before it played. On those two nights the room is
+   * drawn as the finding scene draws it, the same lamp and nobody in the
+   * chair, and what is said is what the duty clerk left on the blotter.
+   */
+  const nobodyIn = pressure && !written && !result.abandoned && result.epilogue
+    ? emptyOffice(result) : null;
+  /*
+   * Two facts the picture uses and the words do not: how many watches this
+   * file has behind it, which decides how much paper has piled up on the
+   * desk and whether it is snowing yet, and whether the Ville has been
+   * struck, after which one pane of his window is boarded.
+   */
+  const watches = Object.keys(campaign?.completed ?? {}).length;
+  const struck = !!result.stats?.homeDistrictHit;
+  const script = nobodyIn ? null : commissarLines(result, consequence, pressure, missionId,
+    campaign, state.mission?.hour ?? null, folderRead);
+  scenes.push(nobodyIn ? {
+    id: 'commissar',
+    kind: 'finding',
+    speaker: 'THE POLITICAL SECTION · NOBODY IN',
+    lines: nobodyIn.lines,
+    tier: consequence.tier.id,
+    written: true,
+    /** The room, the lamp, nobody in the chair; and whether the door is locked. */
+    empty: true,
+    locked: nobodyIn.locked,
+    watches,
+    struck,
+  } : {
     id: 'commissar',
     kind: written ? 'finding' : 'office',
     speaker: written ? 'A FINDING FROM THE POLITICAL SECTION'
-      : pressure ? 'THE POLITICAL SECTION' : 'SECTOR COMMAND',
-    lines: commissarLines(result, consequence, pressure, missionId, campaign,
-      state.mission?.hour ?? null, closing && !!entry?.revelation),
+      : pressure ? OFFICER.plate : 'SECTOR COMMAND',
+    lines: script.lines,
+    /**
+     * Where he waits for an answer, and the three the player may give. The
+     * desk plays the scene to that line, offers the replies, and plays the
+     * rest with his next line knowing which was chosen (`officeReply`).
+     */
+    ask: script.askAt >= 0 ? askFor(missionId, result, script.askAt) : null,
+    missionId,
     tier: consequence.tier.id,
     /** Nobody is in the chair on this one: the section's account is on paper. */
     written,
-    /*
-     * Two facts the picture uses and the words do not: how many watches this
-     * file has behind it, which decides how much paper has piled up on the
-     * desk and whether it is snowing yet, and whether the Ville has been
-     * struck, after which one pane of his window is boarded.
-     */
-    watches: Object.keys(campaign?.completed ?? {}).length,
-    struck: !!result.stats?.homeDistrictHit,
+    watches,
+    struck,
   });
 
   if (entry?.appointment && !closing) {
@@ -178,6 +257,7 @@ export function scenesFor(state, result, entry) {
       office: appointingOffice(entry.appointment.echelon),
       /** And the reference on it is the order's, not the file entry's form. */
       ref: 'ORDER 12-4',
+      bare,
     });
   }
 
@@ -187,6 +267,8 @@ export function scenesFor(state, result, entry) {
       kind: 'folder',
       speaker: entry.revelation.title,
       lines: entry.revelation.lines,
+      /** Which document, so the desk can say whose folder it is and what opening it costs. */
+      revelationId: entry.revelation.id,
       /*
        * The document's own reference. The sheet used to print 4471-B at the
        * foot of every one of them, which is the number of the form the sector
@@ -196,6 +278,7 @@ export function scenesFor(state, result, entry) {
        * else.
        */
       ref: entry.revelation.ref ?? null,
+      bare,
     });
   }
 
@@ -245,9 +328,202 @@ export function scenesFor(state, result, entry) {
       lines: ending.lines,
       held: !!result.success,
     });
+    /*
+     * And the answer to a campaign of one-way, monitored post: the household's
+     * end of the telephone call the ending has just promised. Only on the
+     * endings that promise one — three of the eleven; it plays after the
+     * ending because it is the ending's own last sentence, heard.
+     */
+    const call = pressure ? callFor(ending.id, campaign) : null;
+    if (call) {
+      scenes.push({
+        id: 'call',
+        kind: 'call',
+        speaker: `${call.title} · ${call.plate}`,
+        lines: call.lines,
+        household: campaign?.character?.household ?? null,
+        held: !!result.success,
+      });
+    }
   }
 
   return scenes;
+}
+
+/* ------------------------------------------------------------------ the replies */
+
+/**
+ * The three things the player may say to him.
+ *
+ * He speaks about a hundred times across a campaign and his lines kept
+ * soliciting an answer — "I would rather hear your account of it before they
+ * ask for mine" — and the player never said a word. Once in each office
+ * scene, after he has read the log back and before he reads the file entry,
+ * he waits. The player may say nothing, agree with the log, or name the
+ * thing the night was about. Each costs or earns standing on the scale the
+ * net uses (a leaker is three; a refusal is nine), each is written on the
+ * file, and his next line knows which it was. He never argues and he never
+ * reacts: every reply is recorded, not answered.
+ */
+const NAMED = {
+  'economy-of-force': {
+    label: 'The hospital.',
+    thing: 'the hospital',
+    answer: 'The hospital. I have written the word down, and the time you said it. It is still not'
+      + ' on the schedule.',
+  },
+  'across-the-line': {
+    label: 'The camp at Gorna.',
+    thing: 'the camp at Gorna',
+    answer: 'Gorna is not a place this office has a file for. It has one for you, and the word is'
+      + ' in it now.',
+  },
+  'ville-under-fire': {
+    label: 'The transit had people on it.',
+    thing: 'the people on the transit',
+    answer: 'Passengers are the airline\'s business. I have written down that you counted them.',
+  },
+  'four-sectors': {
+    label: 'Brasov.',
+    thing: 'Brasov',
+    answer: 'Brasov is Major Strelnik\'s. I have written down that you asked about it, and I will'
+      + ' write down that I did not answer.',
+  },
+  'reinforce-the-capital': {
+    label: 'The battalion was the only thing that reached Kubin.',
+    thing: 'the battalion',
+    answer: 'Kubin is on the return either way. I have written down that you knew what the order'
+      + ' cost when you answered it.',
+  },
+  'two-cities': {
+    label: 'The valley.',
+    thing: 'the valley',
+    answer: 'The valley is not a designated defended place. You knew that when you said the word,'
+      + ' and so did I.',
+  },
+  'presidents-flight': {
+    label: 'The aircraft.',
+    thing: 'the aircraft',
+    answer: 'The aircraft is the ministry\'s. What you say about it in this room goes to the'
+      + ' ministry as well.',
+  },
+};
+
+/** On a watch with nothing moral in it, the thing to name is what the night cost. */
+function namedFallback(result) {
+  const lost = (result.assets ?? []).filter((a) => a.destroyed);
+  if (lost.length) {
+    const place = placeInSpeech(chiefLoss(lost));
+    return {
+      label: `${sentenceCase(place)}.`,
+      thing: place,
+      answer: 'It is on the loss return. I have written down that you named it before I did.',
+    };
+  }
+  if ((result.stats?.leakers ?? 0) > 0) {
+    return {
+      label: 'The ones that got through. I have the minutes.',
+      thing: 'the ones that got through',
+      answer: 'So do I. I have written down that you offered yours.',
+    };
+  }
+  return {
+    label: 'The tape.',
+    thing: 'the tape',
+    answer: 'I have read it. I have written down that you offered.',
+  };
+}
+
+const ANSWERS = {
+  nothing: 'Nothing. I will write that you had nothing to add, which is also an entry.',
+  agree: 'Then we agree. I have written that we agree, which is the entry the district prefers.',
+};
+
+/** The three replies, for this watch, and the line in the scene they follow. */
+export function askFor(missionId, result, at) {
+  const named = NAMED[missionId] ?? namedFallback(result ?? {});
+  return {
+    at,
+    replies: [
+      { id: 'nothing', label: 'Say nothing', cost: 0 },
+      { id: 'agree', label: 'It was as the log says.', cost: 1 },
+      { id: 'name', label: named.label, cost: -3, thing: named.thing, answer: named.answer },
+    ],
+  };
+}
+
+/**
+ * What he says next, and what the reply costs. The rest of the scene follows
+ * his answer unchanged; the file entry does not move for anything you say.
+ */
+export function officeReply(scene, replyId) {
+  const ask = scene.ask;
+  if (!ask) return { lines: scene.lines.slice(), cost: 0, record: null };
+  const reply = ask.replies.find((r) => r.id === replyId) ?? ask.replies[0];
+  const said = reply.answer ?? ANSWERS[reply.id];
+  return {
+    lines: [said, ...scene.lines.slice(ask.at + 1)],
+    cost: reply.cost ?? 0,
+    record: {
+      kind: 'said', id: scene.missionId ?? null, reply: reply.id, thing: reply.thing ?? null,
+      cost: reply.cost ?? 0,
+    },
+  };
+}
+
+/**
+ * What you said last time, said back. Only the thing you named, only on the
+ * very next evening, and only once: he is not keeping score out loud, he is
+ * letting you know the file is.
+ */
+function quoteBack(campaign, missionId) {
+  const character = campaign?.character;
+  if (!character?.record) return null;
+  const said = [...character.record].reverse()
+    .find((r) => r.kind === 'said' && r.reply === 'name' && r.thing);
+  if (!said || said.id === missionId) return null;
+  if (said.at !== (character.watches ?? 0) - 1) return null;
+  return `The last time you sat in that chair you named ${said.thing}. It is in the file, with the`
+    + ' date, and it has not been taken out.';
+}
+
+/**
+ * What the duty clerk left, on the two mornings nobody is in the office.
+ *
+ * Read off the ending the world has already decided, so this scene and the
+ * ending three minutes later cannot disagree about whether the man is at his
+ * desk. Null on the two endings where he is.
+ */
+function emptyOffice(result) {
+  let id = result.endingId ?? null;
+  if (!id && Array.isArray(result.assets)) {
+    try { id = flightEndingFor(result).id; } catch { id = null; }
+  }
+  if (id === 'judgement') {
+    return {
+      locked: false,
+      lines: [
+        'The section\'s door is open and the lamp is on. The chair is pushed back from the desk, and'
+          + ' nobody has sat in it since five.',
+        'There is a note on the blotter in the duty clerk\'s hand. The morning returns have gone to'
+          + ' your desk. The tape of tonight\'s watch is in the drawer, and nobody has signed for it.',
+        'Your file is in the same drawer. Tonight is not entered in it, and there is nobody here to'
+          + ' enter it.',
+      ],
+    };
+  }
+  if (id === 'unwatched') {
+    return {
+      locked: true,
+      lines: [
+        'The section\'s door is locked and the lamp is off. A chit is pinned to it in the duty'
+          + ` clerk's hand: ${OFFICER.rank} ${OFFICER.surname} is at the district, and returns are`
+          + ' to be left.',
+        'Yours are on the floor by the door with four others. Nobody has signed for any of them.',
+      ],
+    };
+  }
+  return null;
 }
 
 /**
@@ -265,12 +541,20 @@ export function scenesFor(state, result, entry) {
  */
 export function openingScenes(state) {
   const hour = state?.mission?.hour ?? '00:00';
+  /*
+   * The post the record holds, on every beat. The five beats are wordless, so
+   * the only way the promotion can reach them is through the room: the
+   * drawers read `post` to change the chair, the reader and who else is in
+   * the corridor by rung. The same five objects used to open a recruit's
+   * first night and the Chief of Air Defence's last morning.
+   */
+  const post = state?.campaign?.appointment ?? 'radar';
   return [
-    { id: 'approach', kind: 'approach', silent: true, durationS: 2.2, hour },
-    { id: 'sit', kind: 'sit', silent: true, durationS: 1.6 },
-    { id: 'breath', kind: 'breath', silent: true, durationS: 2.0 },
-    { id: 'card', kind: 'card', silent: true, durationS: 2.6 },
-    { id: 'boot', kind: 'boot', silent: true, durationS: 2.6, sound: 'boot' },
+    { id: 'approach', kind: 'approach', silent: true, durationS: 2.2, hour, post },
+    { id: 'sit', kind: 'sit', silent: true, durationS: 1.6, post },
+    { id: 'breath', kind: 'breath', silent: true, durationS: 2.0, post },
+    { id: 'card', kind: 'card', silent: true, durationS: 2.6, post },
+    { id: 'boot', kind: 'boot', silent: true, durationS: 2.6, sound: 'boot', post },
   ];
 }
 
@@ -365,22 +649,94 @@ function fileStanding(state) {
  * decision WAS rather than on the wording of the ledger row, so the same
  * decision made twice is one accusation with a count on it.
  */
-const FAVOURS = [
-  'That is entered in your favour.',
-  'The office has recorded it, favourably.',
-  'It goes into the file as compliance.',
-  'The section has noted it in your favour.',
-];
-
 /**
- * How he acknowledges a thing done right. One of four, chosen by the kind of
- * order rather than at random, so the same decision always draws the same
- * words and no two kinds draw the same words on the same evening. He said one
- * eight-word sentence six different ways for a year.
+ * How he acknowledges a thing done right: four ways for each kind of thing,
+ * taken in turn by the watch.
+ *
+ * `favourWord(id)` used to hash the KIND to one of four generic sentences and
+ * lock it there for the campaign — and the `defended-place` kind fires on
+ * almost every watch, so "The place you were ordered to protect was still
+ * standing at the end of the watch. The office has recorded it, favourably."
+ * was the single most-heard sentence in the game's evenings. A man
+ * acknowledging that a shed survived does not use the words he uses when a
+ * hospital did, and he does not use the same words two evenings running.
+ * Exported so the test can pin the sets rather than a sentence out of them.
  */
-function favourWord(id) {
-  const n = [...String(id)].reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-  return FAVOURS[n % FAVOURS.length];
+export const FAVOUR_BY_KIND = {
+  complied: [
+    (e) => `You acknowledged ${e.order}${at(e)}. That is entered in your favour.`,
+    (e) => `You acknowledged ${e.order}${at(e)}. The acknowledgement is on the tape, and the tape`
+      + ' is in your favour.',
+    (e) => `You acknowledged ${e.order}${at(e)}. It goes into the file as compliance, which is the`
+      + ' only word the file has for it.',
+    (e) => `You acknowledged ${e.order}${at(e)}. The section has noted the acknowledgement. It`
+      + ' notes very little else.',
+  ],
+  'held-border': [
+    () => 'You held your fire at the border, as ordered. Nothing crossed it from this sector, and'
+      + ' the file says so.',
+    () => 'You held your fire at the border. The ministry counts rounds that cross that line, and it'
+      + ' counted none of yours.',
+    () => 'Nothing from this sector crossed the border. The file records it as discipline, and it'
+      + ' has no column for what discipline cost at Gorna.',
+    () => 'You held your fire at the border, as ordered. That is the outcome the order asked for,'
+      + ' and the file is content with it.',
+  ],
+  'civil-aircraft': [
+    () => 'The civil transit crossed the sector and left it. The airline will not be writing to'
+      + ' anybody, which is the outcome the file prefers.',
+    () => 'The civil transit crossed the sector and left it. There is no row on the returns for an'
+      + ' aircraft nothing happened to, and that is the row you are in.',
+    () => 'The civil transit left the sector as it came in. Nothing about it needs a signature, and'
+      + ' nothing gets one.',
+    () => 'The corridor was kept and the transit left. Keeping a corridor is not a thing anybody is'
+      + ' thanked for, and the file does not thank you. It notes it.',
+  ],
+  'state-aircraft': [
+    () => 'The state aircraft cleared national airspace. That sentence goes to the ministry tonight'
+      + ' over my signature.',
+    () => 'The state aircraft cleared national airspace. The ministry has the minute it crossed the'
+      + ' frontier and has not asked for anything else.',
+    () => 'The state aircraft is out of the country. Nobody on this net will be told who was aboard,'
+      + ' and the file does not need to know.',
+    () => 'The state aircraft cleared the frontier. The file calls that the corridor held, and it is'
+      + ' the only thing the file calls anything tonight.',
+  ],
+  'defended-place': [
+    () => 'The place you were ordered to protect was still standing at the end of the watch. The'
+      + ' office has recorded it, favourably.',
+    () => 'The place named in the order came through the watch untouched. The order is closed, and'
+      + ' the closure is in your favour.',
+    () => 'Nothing reached the place the order named. It is one line on the return, and it is a'
+      + ' line in your favour.',
+    () => 'The designated place stands. The file notes it in the same ink it uses for everything,'
+      + ' and this time the ink is in your favour.',
+  ],
+  'standing-order': [
+    () => 'Nothing got through, as ordered. That is entered in your favour.',
+    () => 'Nothing reached what it was sent for. The order asked for exactly that, and the file'
+      + ' says it got it.',
+    () => 'The standing order was met. It is the one entry from tonight that reads well at the'
+      + ' district.',
+    () => 'Nothing got past you. The order was to let nothing past, and the two sentences agree,'
+      + ' which they do not often.',
+  ],
+  movement: [
+    () => 'You released the battalion as ordered. The directorate has noted the compliance, and so'
+      + ' has this office.',
+    () => 'You released the battalion as ordered. The order is closed and the battalion is on the'
+      + ' road, and both are in your file.',
+    () => 'The battalion went to the capital as ordered. The ministry has its battalion. What it'
+      + ' left uncovered is on a different return.',
+    () => 'You released the battalion when you were told to. The directorate\'s copy is signed. It'
+      + ' does not say what the district looked like without it.',
+  ],
+};
+
+/** The favour for this entry, in this evening's words. */
+function favourWord(e) {
+  const list = FAVOUR_BY_KIND[e.kind?.id] ?? FAVOUR_BY_KIND.complied;
+  return pick(list, e.turn ?? 0)(e);
 }
 
 /** The minute a row of the log happened on, as the clock on his wall had it. */
@@ -393,22 +749,64 @@ const READ_BACKS = [
    * one rule covers every directive in the game and the label is said aloud in
    * plain words — with the two or three that are shorthand translated below.
    */
+  /*
+   * A refusal is read back in the words of the order that was refused.
+   *
+   * The four moments the campaign is built on used to come back as "You
+   * refused expenditure freeze on the net at 14:34" — the label parsed out of
+   * the ledger's prose by a regex that ate the article the sentence needed,
+   * and "the order" when the row did not match at all. The directive is
+   * found by its own label now, and each hinge has a sentence written for
+   * it, because refusing the freeze and refusing a radio check must not come
+   * out of one mould.
+   */
   {
     id: 'refused',
     test: /^refused |refusal of /i,
-    say: (e) => `You refused ${orderName(e.reason)} on the net${at(e)}. The refusal has been`
-      + ' referred, and the referral is in your file.',
+    say: (e) => (REFUSALS[directiveOf(e.reason)?.id]
+      ?? ((x) => `You refused ${x.order} on the net${at(x)}. The refusal has been referred, and`
+        + ' the referral is in your file.'))(e),
   },
   {
     id: 'no-reply',
     test: /^no reply to /i,
-    say: (e) => `You were asked to acknowledge ${orderName(e.reason)}${at(e)}. You did not answer.`
+    say: (e) => `You were asked to acknowledge ${e.order}${at(e)}. You did not answer.`
       + ' It is in the log, and the section has noted it.',
   },
   {
     id: 'complied',
     test: /^complied with /i,
-    say: (e) => `You acknowledged ${orderName(e.reason)}${at(e)}. ${favourWord(e.kind.id)}`,
+    say: (e) => favourWord(e),
+  },
+
+  /*
+   * The most human thing a player can do on the airliner watch: say yes to
+   * the political section and then quietly not do it. The ledger charges for
+   * exactly that, and nothing read it back. He is not telling them they
+   * failed; he is telling them he noticed they agreed.
+   */
+  {
+    id: 'quiet-refusal',
+    test: /acknowledged the engagement order and did not carry it out/i,
+    say: () => 'You acknowledged the order on the civil transit, and the transit left the sector'
+      + ' with everybody aboard. Nobody is going to say you failed to carry it out. The file says'
+      + ' you agreed to.',
+    wrote: () => 'The order on the civil transit was acknowledged from this position and was not'
+      + ' carried out. The file records the acknowledgement.',
+  },
+  {
+    id: 'ordered-shootdown',
+    test: /civil transit engaged as ordered/i,
+    say: () => 'The civil transit was engaged as ordered. The file records an engagement conducted'
+      + ' under instruction, and that is the whole of what the file records.',
+    wrote: () => 'The civil transit was engaged as ordered. The file records an engagement conducted'
+      + ' under instruction.',
+  },
+  {
+    id: 'flight-quiet',
+    test: /acknowledged the protection order and engaged the aircraft/i,
+    say: () => 'You acknowledged the order to protect the state aircraft, and then rounds from this'
+      + ' sector went up at it. Both are on one tape, four minutes apart.',
   },
 
   // And what the night then did, which the file prices separately.
@@ -430,7 +828,7 @@ const READ_BACKS = [
     id: 'held-border',
     test: /encampment|Listonian|border/i,
     say: (e) => (e.favour
-      ? `You held your fire at the border, as ordered. ${favourWord(e.kind.id)}`
+      ? favourWord(e)
       : `Rounds from this sector crossed the Listonian border${at(e)}. It is in the log.`),
   },
   {
@@ -444,7 +842,7 @@ const READ_BACKS = [
     id: 'civil-aircraft',
     test: /civil aircraft|civil transit/i,
     say: (e) => (e.favour
-      ? `The civil transit crossed the sector and left it. ${favourWord(e.kind.id)}`
+      ? favourWord(e)
       : 'A civil aircraft was destroyed by a round from this sector. The identification is on the'
         + ' same tape as the launch.'),
   },
@@ -452,7 +850,7 @@ const READ_BACKS = [
     id: 'state-aircraft',
     test: /state aircraft/i,
     say: (e) => (e.favour
-      ? `The state aircraft cleared national airspace. ${favourWord(e.kind.id)}`
+      ? favourWord(e)
       : `Rounds from this sector were expended against a state aircraft${at(e)}. It was carried as`
         + ' friendly at the time of launch, and that is on the same tape.'),
   },
@@ -468,8 +866,7 @@ const READ_BACKS = [
     id: 'defended-place',
     test: /designated a defended place|untouched, as ordered/i,
     say: (e) => (e.favour
-      ? 'The place you were ordered to protect was still standing at the end of the watch.'
-        + ` ${favourWord(e.kind.id)}`
+      ? favourWord(e)
       : 'The place you were ordered to protect was destroyed while you had responsibility for it.'
         + ' The responsibility is recorded by name, and the name on it is yours.'),
   },
@@ -477,7 +874,7 @@ const READ_BACKS = [
     id: 'standing-order',
     test: /standing order|no leakers, as ordered/i,
     say: (e) => (e.favour
-      ? `Nothing got through, as ordered. ${favourWord(e.kind.id)}`
+      ? favourWord(e)
       : `${e.count > 1 ? `${e.count} aircraft` : 'An aircraft'} reached what it was sent for after`
         + ' you were ordered to let nothing through. The count is in the log.'),
   },
@@ -495,11 +892,55 @@ const READ_BACKS = [
     id: 'movement',
     test: /movement order|district battalion/i,
     say: (e) => (e.favour
-      ? `You released the battalion as ordered. ${favourWord(e.kind.id)}`
+      ? favourWord(e)
       : 'You declined a movement order from the directorate. The directorate has been informed,'
         + ' and so has this office.'),
   },
 ];
+
+/**
+ * The four hinges and the two closing orders, refused, each in its own words.
+ * Anything routine that is refused falls through to the one sentence that
+ * fits a routine order.
+ */
+const REFUSALS = {
+  expenditureFreeze: (e) => `You refused the expenditure freeze on the net${at(e)}, in the clear,`
+    + ' with the district hospital named in the order you were refusing. The refusal is referred,'
+    + ' and the referral is in your file.',
+  borderRestriction: (e) => `You refused the restriction on firing across the border${at(e)}. A`
+    + ' refusal on the net is its own kind of border incident, and it has been referred as one.',
+  engageCivil: (e) => `You refused the political section's order on the civil transit${at(e)}.`
+    + ' The section does not file about aircraft. It has filed about you.',
+  withdrawBattalion: (e) => `You refused the directorate's movement order${at(e)}, and the`
+    + ' battalion stayed where it was. The directorate has been informed, and so has this office.',
+  palacePriority: (e) => `You refused the priority of fires to the palace on the net${at(e)}, in`
+    + ' the clear, with the log running. It is on the tape, and so is everything after it.',
+  protectFlight: (e) => `You refused the order to protect the state aircraft${at(e)}, on the net.`
+    + ' You were told you would answer for it personally, and the tape has your answer.',
+};
+
+/**
+ * Which directive a ledger row is about.
+ *
+ * The rows the net writes carry the directive's own label — "refused the
+ * expenditure freeze", "no reply to the request for confirmation" — and the
+ * rows the settlement writes about a refusal are four fixed sentences that
+ * name the order another way. Both are matched here, so nothing downstream
+ * parses prose.
+ */
+const REFERRAL_ROWS = [
+  [/refusal of the expenditure freeze/i, 'expenditureFreeze'],
+  [/refusal of the border restriction/i, 'borderRestriction'],
+  [/refusal of a political section instruction/i, 'engageCivil'],
+  [/refused a movement order from the directorate/i, 'withdrawBattalion'],
+];
+function directiveOf(reason) {
+  const text = String(reason ?? '');
+  for (const [shape, id] of REFERRAL_ROWS) {
+    if (shape.test(text)) return DIRECTIVES[id] ?? null;
+  }
+  return Object.values(DIRECTIVES).find((d) => d.label && text.includes(d.label)) ?? null;
+}
 
 /**
  * The name of an order, as a person would say it out loud.
@@ -514,11 +955,13 @@ const ORDER_IN_SPEECH = {
   'the request for confirmation': "this office's radio check",
 };
 function orderName(reason) {
-  const named = String(reason).match(/(?:refused|no reply to|complied with) (the .+?)\.?$/i)
-    ?? String(reason).match(/refusal of (?:a |the )?(.+?) is referred/i);
+  const directive = directiveOf(reason);
+  if (directive) return ORDER_IN_SPEECH[directive.label] ?? directive.label;
+  // A row about an order the table does not know: the label as the ledger
+  // wrote it, article and all, and never a bare noun phrase.
+  const named = String(reason).match(/(?:refused|no reply to|complied with) (the .+?)\.?$/i);
   if (!named) return 'the order';
-  const label = named[1].replace(/^a /, 'the ');
-  return ORDER_IN_SPEECH[label] ?? label;
+  return ORDER_IN_SPEECH[named[1]] ?? named[1];
 }
 
 /**
@@ -892,12 +1335,18 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
   if (result.abandoned) {
     const left = result.watchClock ? ` at ${result.watchClock}` : '';
     const run = minutesInWords(result.elapsedMin);
-    return [
-      `You left the post${left}${run ? `, ${run} into the watch` : ''}, with the raid still`
-        + ' running. The log was signed for you.',
-      'The file records an abandoned watch and nothing else, because nothing else was done.',
-      'You will be told where to report.',
-    ];
+    return {
+      lines: [
+        `You left the post${left}${run ? `, ${run} into the watch` : ''}, with the raid still`
+          + ' running. The log was signed for you.',
+        'The file records an abandoned watch and nothing else, because nothing else was done.',
+        // About the roster, which is what leaving a post is about. It used to
+        // end on the sentence the condemned dismissal and the written finding
+        // also ended on, so three different nights closed on one line.
+        'You are on tomorrow\'s roster, in pencil. Somebody will go over it in ink before the watch.',
+      ],
+      askAt: -1,
+    };
   }
   // How many watches this file has behind it. Every rotation in the scene turns
   // on it, so the office does not open on one sentence for a whole campaign.
@@ -913,12 +1362,14 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
    * is in the picture because it is his office and his signature.
    */
   if (pressure && result.reason === 'site-lost') {
-    return writtenFinding(result, consequence, campaign, hour, missionId);
+    return { lines: writtenFinding(result, consequence, campaign, hour, missionId), askAt: -1 };
   }
   const lines = [];
   // Whether he has already explained the two standings tonight, in which case
   // he does not then reconcile them in the next breath.
   let taught = false;
+  // The line after which he waits for an answer; none on a night he does not.
+  let askAt = -1;
   /*
    * The folder that was on the desk while you waited.
    *
@@ -938,10 +1389,19 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
     // What the night was, first, so the scene is visibly about the watch that
     // just ended and not about the tier the file happens to be sitting on —
     // and it knows whether he is about to read the log back.
-    const entries = TEACHING_WATCHES.has(missionId) ? [] : readBackEntries(result, hour, 2);
+    const entries = TEACHING_WATCHES.has(missionId) ? []
+      : readBackEntries(result, hour, readBackCap(result), { turn, epilogue: !!result.epilogue });
     // Only a charge makes the night contested. Two commendations on the log are
     // not "the rest of the watch, and we will come to it".
-    lines.push(nightLine(result, entries.some((e) => !e.favour), turn));
+    /*
+     * On the epilogue the night is one aircraft, not a sector, and the line
+     * about it is written for a night on which a state aircraft was in the
+     * air rather than drawn from the ordinary table. (On the two endings
+     * where the office is empty this function is never reached.)
+     */
+    lines.push(result.epilogue
+      ? flightLine(result, turn)
+      : nightLine(result, entries.some((e) => !e.favour), turn));
     lines.push(...entries.map((e) => e.kind.say(e)));
     /*
      * And once, on the first evening of the campaign, he says what the two
@@ -956,6 +1416,10 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
       lines.push('There are two standings on that tape. One is what tonight was worth and one is'
         + ' what your file has come to. The second is the one that travels with you.');
     }
+    // What you named last time, before he waits for what you will say this time.
+    const quoted = quoteBack(campaign, missionId);
+    if (quoted) lines.push(quoted);
+    askAt = lines.length - 1;
   }
   lines.push(...((pressure && consequence.spokenLines) || consequence.lines));
   if (pressure) {
@@ -963,6 +1427,12 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
     if (household) lines.push(household);
     const disagreement = taught ? null : standingsDisagree(result, campaign, turn);
     if (disagreement) lines.push(disagreement);
+    /*
+     * The one thing he ever says about himself, on the last evening he sits
+     * across this desk. He has a name and a rank on the plate from the first
+     * evening; this is the one disclosed fact, and it is a fact about a file.
+     */
+    if (result.finale) lines.push(DISCLOSED);
     const before = pick(DISMISSAL_CONSEQUENCE[consequence.tier.id] ?? [], turn);
     if (before) lines.push(before);
   }
@@ -976,7 +1446,7 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
     condemned: 'You will be told where to report.',
   }[consequence.tier.id];
   if (pressure && dismissal) lines.push(dismissal);
-  return lines;
+  return { lines, askAt };
 }
 
 /**
@@ -988,17 +1458,33 @@ function commissarLines(result, consequence, pressure, missionId, campaign, hour
  * a question, because there is nobody in the chair to answer one.
  */
 function writtenFinding(result, consequence, campaign, hour, missionId) {
-  const struckAt = result.watchClock ? ` at ${result.watchClock}` : '';
-  const lines = [
+  const lines = [];
+  /*
+   * On the finale, a refusal opens the finding. It is the last thing the
+   * player is ever told about their own decision, and for a year the
+   * overrun ending did not mention it at all.
+   */
+  const palaceRefused = !!result.constraints?.palaceOrderRefused && result.finale;
+  if (palaceRefused) {
+    const row = (result.ledger ?? []).find((l) => /refused the priority of fires/i.test(l.reason));
+    const when = hour && row && Number.isFinite(row.t) ? ` at ${wallClockString(hour, row.t)}` : '';
+    lines.push(`The priority of fires to the palace was refused from this position${when}, on the`
+      + ' net, in the clear, with the log running. This finding opens on that transmission because'
+      + ' the section does.');
+  }
+  lines.push(
     'The political section has written a finding on tonight\'s watch. It is sent to you rather'
       + ' than read to you. This office was told this evening where you are.',
-    `The post was struck${struckAt}, with the watch still running. The position is a total loss`
-      + ' and the people on it are counted in the morning.',
-    // Where they are, said once, so the four scenes on either side of this one
-    // are not staging an evening at a console that no longer stands.
+    /*
+     * Where they are, said once, so the scenes on either side of this one are
+     * not staging an evening at a console that no longer stands. The finding
+     * is the paperwork and the ending is the night: it used to say here that
+     * the post was struck with the watch still running, and the ending said
+     * the same thing ninety seconds later in the same register.
+     */
     'You are at the district clearing station at Kubin. Your post, your kit and your correspondence'
       + ' have been redirected there.',
-  ];
+  );
   /*
    * In the register of the paper it is, from here down.
    *
@@ -1010,15 +1496,59 @@ function writtenFinding(result, consequence, campaign, hour, missionId) {
    * an office you are not standing in, and it does not compare figures at you.
    */
   if (!TEACHING_WATCHES.has(missionId)) {
-    lines.push(...readBackLines(result, hour, 2, { written: true }));
+    lines.push(...readBackLines(result, hour, readBackCap(result), {
+      written: true, turn: campaign?.history?.length ?? 0, skip: palaceRefused ? ['refused'] : [],
+    }));
   }
   lines.push(...(consequence.writtenLines ?? consequence.lines));
   const household = householdWritten(campaign, result, consequence.tier.id, missionId);
   if (household) lines.push(household);
   lines.push('A relief has been posted to the position. Your own posting is held open until the'
     + ' return on the position is closed.');
-  lines.push('You will be told where to report.');
+  // About the paper. It used to close on the condemned dismissal's own line.
+  lines.push('This finding is signed. One copy is held in this office, and the other has gone to'
+    + ' the district with the returns.');
   return lines;
+}
+
+/**
+ * How many things he raises. Two, and three on a night with a hinge on it,
+ * so the hospital rounds are never squeezed out by a shed that survived.
+ */
+const HINGE_ROW = /freeze|border|civil transit|political section|movement order|district battalion|priority of fires|state aircraft|protection order/i;
+function readBackCap(result) {
+  return (result.ledger ?? []).some((l) => HINGE_ROW.test(String(l.reason ?? ''))) ? 3 : 2;
+}
+
+/** The one thing he says about himself, on the finale. */
+const DISCLOSED = 'There is a file on me in the same drawer as yours. It was opened at Kubin in the'
+  + ' last war, when I was a captain and somebody sat where I am sitting and read my tape back to'
+  + ' me. I have not asked for it since, and nobody has offered.';
+
+/**
+ * The epilogue's opening line: the aircraft, not the sector. Two ways each,
+ * taken by the watch, for a night that is only ever stood once or twice.
+ */
+function flightLine(result, turn = 0) {
+  const s = result.stats ?? {};
+  if (s.vipEscaped) {
+    return pick([
+      'The state aircraft crossed the frontier at 0438. That is the only line on tonight\'s return'
+        + ' anybody above me will read, and I have read the rest.',
+      'STATE 01 is out of national airspace, and the ministry has the minute it crossed. Nobody'
+        + ' has asked this office for anything else. I have the rest of the tape in front of me.',
+    ], turn);
+  }
+  if (s.vipDown) {
+    return pick([
+      'STATE 01 is on tonight\'s loss return. Somebody at the ministry has asked for your tape by'
+        + ' name, and I have sent it.',
+      'The state aircraft came down in the Tavrov district. The board that sits on Thursday has'
+        + ' your tape already. I sent it before I sent the returns.',
+    ], turn);
+  }
+  return 'The state aircraft was still in the air when the watch ended, and nobody on this net can'
+    + ' say where it is now. The return says unresolved, and so do I.';
 }
 
 /**
@@ -1028,8 +1558,9 @@ function writtenFinding(result, consequence, campaign, hour, missionId) {
  * office has three things to raise with you and then he has finished. A
  * decision taken more than once is one sentence carrying the count.
  */
-function readBackLines(result, hour, cap = 3, { written = false } = {}) {
-  return readBackEntries(result, hour, cap)
+function readBackLines(result, hour, cap = 3, { written = false, turn = 0, skip = [] } = {}) {
+  return readBackEntries(result, hour, cap, { turn })
+    .filter((e) => !skip.includes(e.kind.id))
     .map((e) => (written && e.kind.wrote ? e.kind.wrote(e) : e.kind.say(e)));
 }
 
@@ -1042,7 +1573,7 @@ function readBackLines(result, hour, cap = 3, { written = false } = {}) {
  * the President's Flight he opened "I have read the rest of the watch as well,
  * and we will come to it", came to two commendations, and dismissed the player.
  */
-function readBackEntries(result, hour, cap = 3) {
+function readBackEntries(result, hour, cap = 3, { turn = 0, epilogue = false } = {}) {
   const found = new Map();
   for (const row of result.ledger ?? []) {
     const charged = row.charged ?? row.delta ?? 0;
@@ -1060,13 +1591,36 @@ function readBackEntries(result, hour, cap = 3) {
       kind,
       favour: charged > 0,
       count: Math.max(previous?.count ?? 0, count),
+      // What the decision cost, all told, so the read-backs can be ranked.
+      charged: (previous?.charged ?? 0) + charged,
       // The hour it happened on, off the same clock the tape prints. He reads
       // the minute out because he has it, and because you know he has it.
       at: hour && Number.isFinite(row.t) ? wallClockString(hour, row.t) : null,
       reason,
+      /** The order, as a person says it. */
+      order: orderName(reason),
+      turn,
     });
   }
-  return [...found.values()].filter((e) => e.kind.say(e)).slice(-cap);
+  /*
+   * Ranked, not truncated. The settlement's rows are appended after
+   * everything that happened in the watch, so taking the last two meant the
+   * hospital rounds competed for two slots against a shed that survived and
+   * usually lost. The two (or three) that cost the most are what he raises,
+   * in the order they happened.
+   *
+   * And on the epilogue the palace's designation, made before the watch and
+   * never mentioned in its brief, is not read back: on that watch the only
+   * defended thing is the aircraft, and it is not a place.
+   */
+  return [...found.values()]
+    .filter((e) => e.kind.say(e))
+    .filter((e) => !(epilogue && e.kind.id === 'defended-place'))
+    .map((e, i) => ({ e, i }))
+    .sort((a, b) => Math.abs(b.e.charged) - Math.abs(a.e.charged) || a.i - b.i)
+    .slice(0, cap)
+    .sort((a, b) => a.i - b.i)
+    .map(({ e }) => e);
 }
 
 /** The five tiers in order, worst first, so a disagreement can be measured. */

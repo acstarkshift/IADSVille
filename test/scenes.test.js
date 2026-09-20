@@ -16,7 +16,9 @@ import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
 import { scenarioById } from '../src/engine/scenarios.js';
 import { emptyCampaign, enlist, recordMission } from '../src/engine/campaign.js';
-import { scenesFor, standingsDisagree, DISMISSAL_CONSEQUENCE } from '../src/ui/scenes.js';
+import {
+  scenesFor, standingsDisagree, DISMISSAL_CONSEQUENCE, OFFICER, FAVOUR_BY_KIND,
+} from '../src/ui/scenes.js';
 import { SCENARIOS } from '../src/engine/scenarios.js';
 import { LETTERS } from '../src/engine/family.js';
 import { REVELATIONS } from '../src/engine/revelations.js';
@@ -104,14 +106,19 @@ describe('which scenes play', () => {
     assert.ok(folder.lines.length >= 3);
   });
 
-  test('the ending is the last scene of the last watch', () => {
+  test('the ending is the last scene of the last watch, unless it promises a call', () => {
     const { state, result, entry } = stood('two-cities', { seconds: 900 });
     assert.ok(result.finale, 'Two Cities is the finale');
     const scenes = scenesFor(state, result, entry);
-    assert.equal(scenes.at(-1).id, 'ending');
-    assert.equal(scenes.at(-1).kind, 'ending');
-    assert.ok(scenes.at(-1).lines.length >= 2);
-    assert.equal(typeof scenes.at(-1).held, 'boolean');
+    const ending = scenes.find((s) => s.id === 'ending');
+    assert.ok(ending, 'the ending plays');
+    assert.equal(ending.kind, 'ending');
+    assert.ok(ending.lines.length >= 2);
+    assert.equal(typeof ending.held, 'boolean');
+    // Nothing follows it but the household's end of the telephone call the
+    // ending itself has just promised.
+    const after = scenes.slice(scenes.indexOf(ending) + 1).map((s) => s.id);
+    assert.ok(after.every((id) => id === 'call'), `after the ending: ${after.join(', ')}`);
   });
 
   test('an abandoned watch is a short evening: the tape, and the section, and no post', () => {
@@ -125,7 +132,7 @@ describe('which scenes play', () => {
 
   test('an ending watch closes on the ending, with the document read before the office', () => {
     const { state, result, entry } = stood('two-cities', { seconds: 900 });
-    const ids = scenesFor(state, result, entry).map((s) => s.id);
+    const ids = scenesFor(state, result, entry).map((s) => s.id).filter((id) => id !== 'call');
     assert.equal(ids.at(-1), 'ending', 'the ending is the last thing said');
     // The folder is on the desk while you wait, not between the office and the
     // ending, where it answered a question the ending had already closed.
@@ -195,14 +202,21 @@ describe('what is said', () => {
     result.ledger.push({ t: 200, delta: 4, charged: 4, reason: 'held fire on the encampment as ordered' });
     const office = scenesFor(state, result, entry).find((s) => s.id === 'commissar');
     assert.equal(office.kind, 'office');
-    assert.equal(office.speaker, 'THE POLITICAL SECTION');
+    // A rank and a surname on the plate, from the first evening: he is a man
+    // doing this, not a department with a face.
+    assert.equal(office.speaker, OFFICER.plate);
+    assert.match(OFFICER.plate, /^[A-Z]+\. [A-Z]+ · POLITICAL SECTION$/);
+    assert.ok(OFFICER.rank && OFFICER.surname && OFFICER.plate.includes(OFFICER.surname.toUpperCase()));
     // Spoken sentences, not the ledger's own lowercase fragment after a colon.
     const hospital = office.lines.findIndex((l) => /district hospital/.test(l));
-    const camp = office.lines.findIndex((l) => /border/.test(l) && /in your favour/.test(l));
+    // The favour is one of four sentences for that kind, taken by the watch,
+    // not one phrase locked to the kind for the campaign.
+    const campFavours = FAVOUR_BY_KIND['held-border'].map((f) => f({}));
+    const camp = office.lines.findIndex((l) => campFavours.includes(l));
     assert.ok(hospital >= 0, 'the hospital is read back');
     assert.match(office.lines[hospital], /^You put .* over the district hospital/);
-    assert.ok(camp >= 0, 'and so is the encampment');
-    assert.match(office.lines[camp], /in your favour/);
+    assert.ok(camp >= 0, `and so is the encampment: ${office.lines.join(' | ')}`);
+    assert.match(office.lines[camp], /border/);
     assert.ok(!office.lines.some((l) => l.startsWith('The log says')),
       'nobody says "The log says:" out loud');
     // The file entry comes after the log, and its supply line is a sentence
@@ -309,7 +323,11 @@ describe('what is said', () => {
       'the finding is drawn as a finding, not as an interview');
     assert.match(office.speaker, /FINDING/, `the plate says what it is: "${office.speaker}"`);
     assert.match(office.lines[0], /sent to you rather than read to you/);
-    assert.equal(office.lines.at(-1), 'You will be told where to report.');
+    // It closes on the paper, not on the condemned dismissal's own sentence,
+    // which three different nights used to end on.
+    assert.match(office.lines.at(-1), /This finding is signed/);
+    assert.ok(!office.lines.some((l) => /The post was struck at/.test(l)),
+      'the striking of the post is left to the ending, which needs it');
     assert.ok(!office.lines.some((l) => /^Dismissed\.$|^You may go\.$/.test(l)),
       'nobody is dismissed from a room they were never in');
     /*
