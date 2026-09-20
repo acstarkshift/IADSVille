@@ -530,8 +530,8 @@ export const CALLS = {
             + ' I hear one.',
           'The cellar is stocked and the enamel box is by the door. Neither of them is needed'
             + ' now. I will leave them where they are for a week.',
-          'I am not going to ask you anything. I have twenty minutes and I am going to use them'
-            + ' listening to you breathe.',
+          'I have twenty minutes and I am going to use them listening to you breathe. Say'
+            + ' something, so that I can hear you doing it.',
           'Keep your boots dry. I mean it more than I have meant it before.',
           'Vera. That is all.',
         ],
@@ -543,8 +543,7 @@ export const CALLS = {
             + ' listening, and I do not know what to say down it now that nobody is.',
           'The pickets on the mill roof asked this morning if it was one of ours. I said yes. I'
             + ' said it twice.',
-          'I am not going to ask you what you did. I have worked it out from the roof, and I am'
-            + ' going to keep it there.',
+          'I worked out what you did from the roof. I am keeping it on the roof.',
           'The board can keep its decision. I have a ladder to carry and a telephone that works,'
             + ' and I am going to talk until it stops.',
           'Ilya. Your brother. Ilya.',
@@ -584,8 +583,8 @@ export const CALLS = {
           `${first}.`,
           'The house is standing and everybody in it is accounted for. Whoever is on this line can'
             + ' write that down; it is true.',
-          'I have nothing to say that I want written down, so I am going to say nothing, and you'
-            + ' are going to listen to me say it.',
+          'Whoever is writing this down can write that I have the kettle on. That is the whole of'
+            + ' my news, and I am giving it slowly.',
           'Keep your boots dry. Vera.',
         ],
         brother: [
@@ -928,8 +927,8 @@ export function briefLine(campaign, missionId) {
       + ' does not mark which street they live on.';
   }
   if ((campaign.family?.permit ?? 'standing') === 'review') {
-    return 'Your family\'s residence permit is still listed as under review. Nobody has written to'
-      + ' you about it, and nobody will until there is something to write.';
+    return 'Your family\'s residence permit is still listed as under review. The office that writes'
+      + ' to you about it writes when the review closes, and it has not closed.';
   }
   return null;
 }

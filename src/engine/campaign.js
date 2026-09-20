@@ -479,8 +479,8 @@ const MONTHLY = {
     'Your housing category is revised upward by one grade. Somebody in this office signed for'
       + ' that, and it was me.',
     'Your travel category goes up a grade. It does not extend to the western valley.',
-    'The district asked this office for a name on Tuesday and I gave them yours. You will hear'
-      + ' nothing more about it.',
+    'The district asked this office for a name on Tuesday and I gave them yours. What it was'
+      + ' for will reach you from them, on their paper.',
     'Your correspondence allowance is increased by two letters a month. You are not obliged to'
       + ' use it.',
   ],
@@ -488,7 +488,8 @@ const MONTHLY = {
     'Nothing further is required of you at this time.',
     'Your file goes back in the drawer tonight with one more page in it.',
     'Your allowances are unchanged this month. The clerk brings the paper round on Thursday.',
-    'The tape is filed. Nobody above me has asked for it.',
+    'The tape is filed. It comes out of the drawer if a loss return names this sector, and'
+      + ' tonight\'s loss return is blank.',
   ],
   noted: [
     'Your correspondence allowance is unchanged this month.',
@@ -593,20 +594,23 @@ function supplyWritten(tactical) {
  */
 const SIGNAL_BY_TIER = {
   commended: [
-    () => 'The mess has been giving you the good coffee. Nobody has explained why.',
-    () => 'Your relief saluted this morning, which he has not done before. Nobody has told him to.',
+    () => 'The mess has been giving you the good coffee since Thursday. The cook says it was on a'
+      + ' chit.',
+    () => 'Your relief saluted this morning, which he has not done before. He had been reading the'
+      + ' board in the corridor.',
     () => 'There is a photograph of the sector\'s operators on the board in the corridor. You are'
-      + ' in it, second from the left, and nobody said it was being taken.',
-    () => 'The clerk brought your allocation up himself instead of sending the boy. He did not'
-      + ' say why, and you did not ask.',
+      + ' in it, second from the left, looking at something off to the right.',
+    () => 'The clerk brought your allocation up himself instead of sending the boy. He waited'
+      + ' while you signed for it, and took the copy himself.',
   ],
   satisfactory: [
-    () => 'Nobody mentioned the last engagement. That is the best outcome available.',
-    () => 'The tape from the last watch was filed on Thursday, with the others. Nobody has asked'
-      + ' for it back.',
-    (last) => `Your relief handed over on time and said nothing about ${last.leakers
-      ? 'the ones that got through' : 'the night'}. The log is open at a fresh page.`,
-    () => 'There is a new mug on the shelf by the door. It is not yours, and nobody has claimed it.',
+    () => 'The last watch went into the drawer with the others. For a watch, that is the best'
+      + ' place there is.',
+    () => 'The tape from the last watch was filed on Thursday, with the others. The drawer was'
+      + ' locked on Friday, as it is every Friday.',
+    (last) => `Your relief handed over on time and talked about the weather. The log is open at a`
+      + ` fresh page${last.leakers ? ', with the ones that got through on the page before it' : ''}.`,
+    () => 'There is a new mug on the shelf by the door. It is not yours, and it has been used.',
   ],
   noted: [
     () => 'Your relief was late and would not meet your eye. Take the seat.',
@@ -618,28 +622,29 @@ const SIGNAL_BY_TIER = {
   ],
   flagged: [
     () => 'There is a man from the political section in the corridor. He is not here for you yet.',
-    () => 'Your name was read out at the morning parade with two others, in a list, for no stated'
-      + ' purpose.',
+    () => 'Your name was read out at the morning parade with two others, in a list. The sergeant'
+      + ' read the list twice.',
     () => 'The seat has been moved a hand\'s width to the left. Somebody sat in it last night who'
       + ' was not the relief.',
     () => 'A second copy of the last tape was made this morning. The first copy is where it'
       + ' always is.',
   ],
   condemned: [
-    () => 'You were not told why the position moved forward. You were told to be at the console by'
-      + ' first light.',
+    () => 'The position moved forward in the night. The order to be at the console by first light'
+      + ' came in the same envelope as the new map reference.',
     () => 'The transport left before the mess opened. You ate in the cab.',
     () => 'The two men from the corridor came out to the position with you. They have chairs behind'
       + ' yours.',
     () => 'Your kit arrived at the forward position in a sack with somebody else\'s name crossed'
       + ' out on it.',
   ],
-  // Nobody asks where you went. The file simply knows.
+  // The file knows where you went, and the sheet says so as a fact about paper.
   abandoned: [
-    () => 'Nobody asked where you went last time. The log was signed for you, in somebody else’s hand.',
+    () => 'The clerk signed the log for the watch you left. His signature is on the page, and the'
+      + ' page is in the file.',
     () => 'The watch you left is in the log as stood, with a signature on it that is not yours.',
     () => 'Your relief has been told to note the hour you arrive. He was not told why.',
-    () => 'The seat was warm when you came in. Nobody says whose it was.',
+    () => 'The seat was warm when you came in. The relief\'s chit says he was stood down at six.',
   ],
 };
 
@@ -660,7 +665,7 @@ export function briefingNote(campaign, { narrativePressure = true, missionId = n
      */
     return Object.keys(campaign.completed ?? {}).length === 0
       ? 'You have the watch. The sector is quiet. It will not stay that way.'
-      : 'You have the watch. Nobody has briefed you tonight and nobody is going to.';
+      : 'You have the watch. The brief is the sheet in front of you, and the sheet is all of it.';
   }
   const list = SIGNAL_BY_TIER[last.tier];
   if (!list) return null;

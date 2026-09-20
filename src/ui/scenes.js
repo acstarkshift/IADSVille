@@ -501,12 +501,12 @@ function emptyOffice(result) {
     return {
       locked: false,
       lines: [
-        'The section\'s door is open and the lamp is on. The chair is pushed back from the desk, and'
-          + ' nobody has sat in it since five.',
+        'The section\'s door is open and the lamp is on. The chair is pushed back from the desk,'
+          + ' the way it was left at five.',
         'There is a note on the blotter in the duty clerk\'s hand. The morning returns have gone to'
-          + ' your desk. The tape of tonight\'s watch is in the drawer, and nobody has signed for it.',
-        'Your file is in the same drawer. Tonight is not entered in it, and there is nobody here to'
-          + ' enter it.',
+          + ' your desk. The tape of tonight\'s watch is in the drawer, with the signature line'
+          + ' blank.',
+        'Your file is in the same drawer, open at yesterday.',
       ],
     };
   }
@@ -517,7 +517,7 @@ function emptyOffice(result) {
         'The section\'s door is locked and the lamp is off. A chit is pinned to it in the duty'
           + ` clerk's hand: ${OFFICER.rank} ${OFFICER.surname} is at the district, and returns are`
           + ' to be left.',
-        'Yours are on the floor by the door with four others. Nobody has signed for any of them.',
+        'Yours are on the floor by the door with four others, in the order they arrived.',
       ],
     };
   }
@@ -667,8 +667,8 @@ export const FAVOUR_BY_KIND = {
       + ' is in your favour.',
     (e) => `You acknowledged ${e.order}${at(e)}. It goes into the file as compliance, which is the`
       + ' only word the file has for it.',
-    (e) => `You acknowledged ${e.order}${at(e)}. The section has noted the acknowledgement. It`
-      + ' notes very little else.',
+    (e) => `You acknowledged ${e.order}${at(e)}. The section has noted the acknowledgement, and`
+      + ' the note is signed.',
   ],
   'held-border': [
     () => 'You held your fire at the border, as ordered. Nothing crossed it from this sector, and'
@@ -687,16 +687,16 @@ export const FAVOUR_BY_KIND = {
       + ' aircraft nothing happened to, and that is the row you are in.',
     () => 'The civil transit left the sector as it came in. Nothing about it needs a signature, and'
       + ' nothing gets one.',
-    () => 'The corridor was kept and the transit left. Keeping a corridor is not a thing anybody is'
-      + ' thanked for, and the file does not thank you. It notes it.',
+    () => 'The corridor was kept and the transit left. Keeping a corridor earns one line in the'
+      + ' file, and I have written it. It is a short line.',
   ],
   'state-aircraft': [
     () => 'The state aircraft cleared national airspace. That sentence goes to the ministry tonight'
       + ' over my signature.',
-    () => 'The state aircraft cleared national airspace. The ministry has the minute it crossed the'
-      + ' frontier and has not asked for anything else.',
-    () => 'The state aircraft is out of the country. Nobody on this net will be told who was aboard,'
-      + ' and the file does not need to know.',
+    () => 'The state aircraft cleared national airspace. The ministry asked this office for the'
+      + ' minute it crossed the frontier, and it has the minute.',
+    () => 'The state aircraft is out of the country. Who was aboard is a ministry document. What'
+      + ' this file holds is the minute it crossed, and that is the whole of it.',
     () => 'The state aircraft cleared the frontier. The file calls that the corridor held, and it is'
       + ' the only thing the file calls anything tonight.',
   ],
@@ -787,8 +787,8 @@ const READ_BACKS = [
     id: 'quiet-refusal',
     test: /acknowledged the engagement order and did not carry it out/i,
     say: () => 'You acknowledged the order on the civil transit, and the transit left the sector'
-      + ' with everybody aboard. Nobody is going to say you failed to carry it out. The file says'
-      + ' you agreed to.',
+      + ' with everybody aboard. The file calls that an acknowledgement, in your voice, and it'
+      + ' keeps the tape. It has a heading for an order not carried out, and I have not used it.',
     wrote: () => 'The order on the civil transit was acknowledged from this position and was not'
       + ' carried out. The file records the acknowledgement.',
   },
@@ -1262,8 +1262,8 @@ function nightLine(result, contested = false, turn = 0) {
     return pick([
       `${n} aircraft came down in this sector tonight and nothing on the tape needs explaining. I`
         + ' have written that down as well.',
-      `${n} down and no questions on the log. A watch like that is filed and read by nobody, which`
-        + ' is the best thing this office can do for you.',
+      `${n} down and no questions on the log. A watch like that goes in the drawer and stays`
+        + ' there, which is the best thing this office can do for you.',
       `${n} aircraft destroyed, and the returns come to me clean. I have signed them already.`,
     ], turn + s.kills);
   }
@@ -1287,22 +1287,29 @@ function nightLine(result, contested = false, turn = 0) {
 export const DISMISSAL_CONSEQUENCE = {
   commended: [
     'One of your crews will be interviewed this week. It is not about tonight.',
-    'Your name went up to the district this afternoon on a list of four. I am not told what the'
-      + ' list is for.',
+    'Your name went up to the district this afternoon on a list of four. The list has a course'
+      + ' number at the top of it.',
     'A photograph of this sector\'s operators is going to the ministry. You are in it.',
     'Somebody will come and ask you how you did it. Answer them in writing and send me the copy.',
   ],
   satisfactory: [
     'I will read the tape again in the morning, when the office is quieter.',
     'Your file goes back in the drawer tonight. It comes out again on Thursday, with the others.',
-    'Nothing on tonight needs a second signature. Very little does, until it does.',
+    /*
+     * The one time he says what his own work is worth. He writes into a
+     * system that reads the loss returns and nothing else, and he says so
+     * here, once, on an ordinary evening, as a fact about the district.
+     */
+    'I write four of these a week. The district reads the ones that arrive with a loss return'
+      + ' clipped to the front, and tonight arrives on its own.',
     'The clerk will bring you something to sign this week. It is routine, and you will sign it.',
   ],
   noted: [
     'The review is minuted, and the minute goes up to the district with the rest of the post.',
     'I have kept the tape out rather than filing it. That is not a decision about you yet.',
     'Somebody above me has asked for a summary of this sector. I am writing it this week.',
-    'You will not hear about the review again unless there is something to hear about.',
+    'The review runs until the file moves one way or the other. If it moves the wrong way, you'
+      + ' hear it from me before you hear it from the district.',
   ],
   flagged: [
     'There are two copies. One goes to the district and one stays in this room.',
@@ -1313,7 +1320,8 @@ export const DISMISSAL_CONSEQUENCE = {
   ],
   condemned: [
     'The transport leaves before the mess opens.',
-    'Your kit has been moved out of the block. Nobody asked me where it should go.',
+    'Your kit has been moved out of the block. It is in the guardroom, under a label with your'
+      + ' number on it.',
     'The two men in the corridor are waiting for you, not for me.',
     'Your quarters have been reassigned from Monday. The order came down before the watch ended.',
   ],
@@ -1533,8 +1541,8 @@ function flightLine(result, turn = 0) {
     return pick([
       'The state aircraft crossed the frontier at 0438. That is the only line on tonight\'s return'
         + ' anybody above me will read, and I have read the rest.',
-      'STATE 01 is out of national airspace, and the ministry has the minute it crossed. Nobody'
-        + ' has asked this office for anything else. I have the rest of the tape in front of me.',
+      'STATE 01 is out of national airspace, and the ministry has the minute it crossed. The minute'
+        + ' is all it asked for. I have the rest of the tape in front of me.',
     ], turn);
   }
   if (s.vipDown) {
@@ -1643,16 +1651,16 @@ export function standingsDisagree(result, campaign, turn = 0) {
   // of the two, and the file is what leaves this office.
   return gap > 0
     ? pick([
-      'Tonight was worse than your file. The file is what the district reads, and it will not be'
-        + ' reading it tonight.',
+      'Tonight was worse than your file. The district reads the file, and the file still reads'
+        + ' well.',
       'Your file is in better standing than this watch deserves. That is a difference somebody'
         + ' notices eventually, and it is usually me.',
       'The watch went worse than the record you carry. One more like it and the two figures will'
         + ' agree.',
     ], turn)
     : pick([
-      'Tonight was better than your file says. Nobody outside this sector reads the night; they'
-        + ' read the file.',
+      'Tonight was better than your file says. The district reads the file, and the file is what'
+        + ' I send up.',
       'You stood a better watch than your record carries. The record is the part that travels.',
       'This watch was the best thing in your file and it is still not what the district will see'
         + ' when your name comes up.',
@@ -1724,8 +1732,8 @@ function appointmentLines(appointment, pressure, tierId = null, result = null) {
     ? 'The order was signed this morning. It does not mention the position, and the position no'
       + ' longer exists.'
     : ({
-      flagged: 'The order was drawn up before tonight\'s entry reached the file. Nobody has'
-        + ' withdrawn it.',
+      flagged: 'The order was drawn up before tonight\'s entry reached the file. It stands, and so'
+        + ' does the entry.',
       /*
        * It used to end "Nobody in the office mentioned the transport either" —
        * but the transport is one of four things the section can say to a
@@ -1736,8 +1744,8 @@ function appointmentLines(appointment, pressure, tierId = null, result = null) {
       condemned: 'The order is dated today and mentions nothing that happened tonight. Nothing that'
         + ' was said to you in the office is on it either.',
     }[tierId] ?? {
-      flagged: 'Tonight reached the file after this order was signed. Nobody has withdrawn the'
-        + ' order.',
+      flagged: 'Tonight reached the file after this order was signed. Both are in the file now, in'
+        + ' that order.',
       condemned: 'The order is dated today. Tonight is dated today as well, and the two papers'
         + ' will sit in the same file without either one mentioning the other.',
     }[watchTier]);
