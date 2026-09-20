@@ -2148,7 +2148,19 @@ export const SCENARIOS = [
       // watch that cost competent play a night of sixteen (69 to 63) — under
       // the escort watch that follows it, which the staircase forbids. One
       // fewer in the first package puts it back at 69.
-      { atS: 105, type: 'striker', count: 4, bearingDeg: 296, spreadDeg: 26, spacingS: 18, altM: 6000,
+      /*
+       * FIVE, AND IT WAS FOUR, AND THE NOTE ABOVE SAYS WHY FOUR. Re-measured
+       * after the intercept was resolved in three dimensions and the climb was
+       * paced against the run a round actually flies: a round that is unguided
+       * on its first step no longer latches that run at a tenth of a kilometre
+       * and fly the whole engagement at rail height. The district's batteries
+       * started hitting what they were shooting at and the watch went with
+       * them — sixteen seeds, competent, 69% held before the fix and 81% after,
+       * which is over the top of its own act. The fifth aeroplane in the
+       * opening package puts it back on 69%, which is the number the note
+       * above was written about.
+       */
+      { atS: 105, type: 'striker', count: 5, bearingDeg: 296, spreadDeg: 26, spacingS: 18, altM: 6000,
         distanceKm: 145, targetAssetId: 'a_kubin' },
       { atS: 190, type: 'striker', count: 5, bearingDeg: 305, spreadDeg: 22, spacingS: 20, altM: 180,
         distanceKm: 145, targetAssetId: 'a_kubin_depot' },
@@ -2445,7 +2457,17 @@ export const SCENARIOS = [
        */
       { atS: 205, type: 'decoy', count: 4, bearingDeg: 28, spreadDeg: 26, spacingS: 11, altM: 5200,
         distanceKm: 124 },
-      { atS: 250, type: 'cruise', count: 5, bearingDeg: 30, spreadDeg: 20, spacingS: 10, altM: 90,
+      /*
+       * FOUR, AND IT WAS FIVE, and this one went the other way. The same
+       * flight-model pass gates the intercept vertically — a round drawn
+       * thousands of metres under the aeroplane it is shooting at no longer
+       * destroys it from there — and this is the watch with the most steep
+       * close shots in the game, because two of its three axes come down on
+       * places the batteries are standing next to. Sixteen seeds, competent:
+       * 69% held before, 56% after, under the floor of the published band. One
+       * fewer cruise on the northern axis puts it back on 69%.
+       */
+      { atS: 250, type: 'cruise', count: 4, bearingDeg: 30, spreadDeg: 20, spacingS: 10, altM: 90,
         distanceKm: 130, targetAssetId: 'a_palace' },
 
       /*
@@ -2766,7 +2788,17 @@ export const SCENARIOS = [
        * corridor where one battalion's coverage runs out and the reloads have
        * not come back yet.
        */
-      { atS: 290, type: 'interceptor', count: 4, spacingKm: 16, scalable: false,
+      /*
+       * TEN SECONDS EARLIER, WHICH IS TWELVE POINTS OF HELD RATE. The same
+       * re-measure: 75% held before the flight-model pass, 81% after, which is
+       * above its own act. The count is the wrong dial here — four aircraft
+       * holds 81%, five holds 50% and six holds 19%, because this watch is
+       * decided by one aeroplane rather than by a count of arrivals — so the
+       * lever is WHEN the second element reaches the far end of the corridor
+       * rather than how many of it there are. At 280 s it arrives while the
+       * first element is still being fought: 69% held.
+       */
+      { atS: 280, type: 'interceptor', count: 4, spacingKm: 16, scalable: false,
         pos: { x: 196, y: 40 }, waypoints: [{ x: 186, y: -6 }] },
     ],
   },
@@ -2804,7 +2836,13 @@ export function isUnlocked(scenario, campaign) {
      * cities still opens the watch); older records fall back to the ending
      * list they were saved with.
      */
-    const facts = campaign?.endingFacts;
+    /*
+     * Read from the BEST night stood, not the last one. Replaying the finale
+     * and having a bad night used to take the twelfth watch back off the
+     * roster — see `recordMission`. A record written before the distinction
+     * existed carries only `endingFacts`, which is then both.
+     */
+    const facts = campaign?.bestEndingFacts ?? campaign?.endingFacts;
     const unlocked = facts
       ? !!facts.palaceHeld
       : scenario.requiresEnding.includes(campaign?.ending);

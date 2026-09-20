@@ -9,15 +9,17 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { createMissile, stepMissiles } from '../src/engine/weapons.js';
+import { createMissile, stepMissiles, launchRunKm } from '../src/engine/weapons.js';
 import { SAM_TYPES, FLIGHT, ENGAGEMENT } from '../src/engine/config.js';
+import { World } from '../src/engine/world.js';
+import { scenarioById } from '../src/engine/scenarios.js';
 
 /**
  * Fly one round and record what it did. A bare world: enough of the shape for
  * the missile step, nothing else, so the profile is measured on its own.
  */
 function fly({ siteType = 'bastion', rangeKm = 100, targetAltM = 9000,
-  closingKmS = -0.22, turnAwayAtS = null, steps = 4000 } = {}) {
+  closingKmS = -0.22, turnAwayAtS = null, steps = 4000, darkUntilS = 0 } = {}) {
   const type = SAM_TYPES[siteType];
   const site = { id: 's1', type: siteType, alive: true, pos: { x: 0, y: 0 } };
   const radar = { id: 'r1', pos: site.pos, state: 'radiating', alive: true };
@@ -44,11 +46,15 @@ function fly({ siteType = 'bastion', rangeKm = 100, targetAltM = 9000,
     siteId: site.id, radarId: radar.id,
   });
   missile.launchRangeKm = rangeKm;
+  // The run is stamped at launch by launchSalvo; this bare world has no
+  // launcher, so it is stamped here the same way.
+  missile.runKm = launchRunKm(site.pos, target, type.missileSpeed);
   world.missiles.push(missile);
 
   const series = [];
   for (let i = 0; i < steps && missile.alive; i++) {
     if (turnAwayAtS != null && world.t >= turnAwayAtS) target.vel.y = 0.24;
+    radar.state = world.t < darkUntilS ? 'off' : 'radiating';
     target.pos.y += target.vel.y * world.dt;
     world.t += world.dt;
     stepMissiles(world, world.dt);
@@ -185,5 +191,92 @@ describe('the vertical profile of a round', () => {
     const a = fly({ siteType: 'bastion', rangeKm: 80, targetAltM: 8000 });
     const b = fly({ siteType: 'bastion', rangeKm: 80, targetAltM: 8000 });
     assert.deepEqual(a.series.map((p) => p.altM), b.series.map((p) => p.altM));
+  });
+
+  test('a round that flies its first step blind still climbs', () => {
+    /*
+     * The one that mattered. A round unguided on its very FIRST step — the
+     * mount still slewing, or the crew ducking an anti-radiation round, which
+     * is the trade the whole game is built on — used to latch its run off its
+     * own launch point, which is one step of travel. `arcF` pinned at zero,
+     * and the round flew the entire engagement at rail height, twenty metres,
+     * under the horizon line the cabin's own indicator prints, at a target
+     * seven kilometres up. Then it killed it. Measured at 3.8% of every round
+     * fired, over all twelve watches.
+     */
+    const { apex, last, target } = fly({
+      siteType: 'bastion', rangeKm: 60, targetAltM: 8000, darkUntilS: 0.15,
+    });
+    assert.ok(apex.altM > target.altM / 2,
+      `a round blind on its first step tops out at ${Math.round(apex.altM)} m against a target at ${target.altM} m`);
+    assert.ok(Math.abs(last.altM - target.altM) <= ENGAGEMENT.lethalRadiusKm * 1000,
+      `it arrives ${Math.round(Math.abs(last.altM - target.altM))} m off the target's height`);
+  });
+});
+
+describe('a salvo is two rounds', () => {
+  /*
+   * A two-round salvo used to be two rounds created on the same step at the
+   * same point on the same heading, with the gap between them modelled as a
+   * negative time-of-flight counter. Measured across twenty-four watches:
+   * 225,003 samples of two rounds of one salvo alive together, and not one
+   * separated on the ground by more than fifty metres. Both renderers then
+   * skipped a round whose counter was still negative, so for two and a half
+   * seconds after every salvo the console showed one round while two were in
+   * the air — and 1,341 round-seconds of flight per twenty-four watches were
+   * alive, steering, and undrawn.
+   */
+  test('the second round leaves the rail later, and is a second dot', () => {
+    const w = new World(scenarioById('ville-under-fire'), { role: 'net', seed: 'salvo1' });
+    for (const s of w.sites) { s.salvoSize = 2; w.setWeaponsState(s.id, 'free'); }
+    for (const r of w.radars) { r.on = true; r.state = 'radiating'; }
+
+    let sampled = 0;
+    let separated = 0;
+    let undrawn = 0;
+    for (let i = 0; i < 9000 && w.phase !== 'complete'; i++) {
+      w.step(0.1);
+      const mine = w.missiles.filter((m) => m.kind === 'sam' && m.alive);
+      for (const m of mine) if (m.tofS < 0) undrawn++;
+      for (let a = 0; a < mine.length; a++) {
+        for (let b = a + 1; b < mine.length; b++) {
+          if (mine[a].targetId !== mine[b].targetId || mine[a].siteId !== mine[b].siteId) continue;
+          /*
+           * Only rounds somebody is actually steering. A round that has never
+           * had a solution holds its own launcher as its aim point and crawls
+           * back and forth across the rail until it is written off, which is a
+           * different fault from this one and would be measured here as two
+           * rounds in the same place.
+           */
+          if (!mine[a].hadSolution || !mine[b].hadSolution) continue;
+          sampled++;
+          if (Math.hypot(mine[a].pos.x - mine[b].pos.x, mine[a].pos.y - mine[b].pos.y) * 1000 > 50) separated++;
+        }
+      }
+    }
+    assert.ok(sampled > 0, 'the watch never had two rounds of one salvo in the air together');
+    assert.equal(separated, sampled, `${sampled - separated} of ${sampled} samples were superimposed`);
+    assert.equal(undrawn, 0, 'no round is ever alive and undrawn');
+  });
+
+  test('a battery destroyed mid-salvo keeps the round it never fired', () => {
+    const w = new World(scenarioById('ville-under-fire'), { role: 'net', seed: 'salvo2' });
+    for (const r of w.radars) { r.on = true; r.state = 'radiating'; }
+    for (const s of w.sites) { s.salvoSize = 2; w.setWeaponsState(s.id, 'free'); }
+    for (let i = 0; i < 9000 && w.phase !== 'complete'; i++) {
+      w.step(0.1);
+      if (w.railQueue.length) {
+        const waiting = w.railQueue[0];
+        const site = w.siteById.get(waiting.missile.siteId);
+        const before = site.readyRounds;
+        site.alive = false;
+        // Step past the moment that round was due to leave the rail.
+        while (w.railQueue.includes(waiting) && w.t < waiting.atS + 1) w.step(0.1);
+        assert.equal(site.readyRounds, before + 1, 'the unfired round goes back on the rack');
+        assert.ok(!w.railQueue.includes(waiting), 'and it is not still waiting');
+        return;
+      }
+    }
+    assert.fail('no salvo was ever held on the rail');
   });
 });

@@ -1461,7 +1461,8 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
         ${key('V', 'switch seat — net or cabin (commander only)')}
         ${key('Y / N', 'acknowledge or refuse a directive')}
         ${key('M', 'the map of Trans Mordovia under the picture')}
-        ${key('H', 'this screen')}
+        ${key('Escape', 'back out of one thing at a time — the contact menu, then the selection. It never leaves the post')}
+        ${key('H', 'this screen; H or Escape again to leave it')}
       </div>
     </div>
     ${/*
@@ -1496,8 +1497,14 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
         ${key('A', 'flip the selected battery’s radar switch — careful: this switches your own radar off')}
         ${ride ? key('G', 'HOLD BEAM — keep its radar on and guide the missile even with an enemy anti-radar missile inbound (the crew never will on its own)') : ''}
         ${key('R', 'loaders out — start filling the selected battery’s rails now, short or not')}
+        ${/* S is on the card with an S chip on it and the key works from this
+              seat; the page listed it only under SAM operator, so a battle
+              manager reading the manual was never told about the one control
+              that decides how many rounds go at each contact. */ ''}
+        ${salvo ? key('S', 'rounds per engagement on the selected battery — one or two') : ''}
         ${displace ? key('X', 'move the selected battery — a minute off the air, and the enemy has to find it again') : ''}
         ${key('`', 'switch every search radar on or off')}
+        ${key('Escape', 'close the contact menu, or drop the selection')}
       </div>
       <p class="note">Every key on that list acts on the <b>selected</b> battery, which is why the
       key chips are stamped on the selected card and on no other: the rack shows six keys once,

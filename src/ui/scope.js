@@ -190,7 +190,7 @@ export class Scope {
     ctx.fillRect(0, 0, this.w, this.h);
     this.labelQueue = [];
 
-    this.updatePaint(world, frameDtS);
+    this.updatePaint(world, frameDtS, ui);
     // Drawn before the grid so the country sits under everything, but its
     // labels are queued and placed with the rest at the end of the frame.
     if (ui.showMap !== false) this.drawMap(world);
@@ -232,7 +232,7 @@ export class Scope {
    * honest behaviour — the scope shows echoes, and everything else is a symbol
    * the system drew for you.
    */
-  updatePaint(world, frameDtS = 1 / 60) {
+  updatePaint(world, frameDtS = 1 / 60, ui = {}) {
     const ctx = this.paintCtx;
     const p = this.palette;
     const glow = this.theme.afterglow;
@@ -251,7 +251,9 @@ export class Scope {
       ctx.globalCompositeOperation = 'source-over';
     }
 
-    for (const plot of world.plots ?? []) {
+    // Every echo of every simulation step this frame, when the frame ran more
+    // than one; the world's own last step otherwise. See the frame loop.
+    for (const plot of ui.framePlots ?? world.plots ?? []) {
       const s = this.toScreen(plot.pos);
       const r = Math.max(1.6, 3.2 * this.dpr);
       const alpha = 0.55 + 0.45 * clamp01(plot.strength ?? 0.5);
@@ -775,7 +777,7 @@ export class Scope {
     }
 
     for (const missile of world.missiles) {
-      if (!missile.alive || missile.tofS < 0) continue;
+      if (!missile.alive) continue;
       const s = this.toScreen(missile.pos);
       const colour = missile.kind === 'arm' ? p.hostile
         : missile.kind === 'strike' ? p.warn : p.accent;

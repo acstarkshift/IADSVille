@@ -29,6 +29,8 @@
  * button when the scenes are done.
  */
 
+import { text, textWidth, wrap, FONT } from './bitfont.js';
+import { STATE } from './lexicon.js';
 import { consequenceFor } from '../engine/campaign.js';
 import { tierFor, DIRECTIVES } from '../engine/command.js';
 import { wallClockString } from '../engine/math.js';
@@ -2103,6 +2105,12 @@ export class ScenePlayer {
       case 'finding': return { x: 10, y: 140, w: 300, h: 34, anchor: 'bottom', max: 54 };
       // On the empty foreground, with the valley above it.
       case 'ending': return { x: 10, y: 126, w: 300, h: 48, anchor: 'bottom', max: 62 };
+      /*
+       * The call: across the wainscot under the bunk, in the columns the
+       * handset and its cord do not cross. Nothing is being read, so the words
+       * take the room's whole width below the hand.
+       */
+      case 'call': return { x: 10, y: 134, w: 188, h: 40, anchor: 'bottom', max: 58 };
       // Across the desk front only: the room behind him stays visible.
       default: return { x: 10, y: 140, w: 300, h: 34, anchor: 'bottom', max: 54 };
     }
@@ -2541,6 +2549,10 @@ export class ScenePlayer {
         struck: !!scene.struck,
         seed: 'THE POLITICAL SECTION',
         empty: scene.kind === 'finding',
+        // The epilogue's morning: an empty office on which nothing was
+        // entered, and on `unwatched` one that was never unlocked.
+        unentered: !!scene.empty,
+        locked: !!scene.locked,
         narrow: !!this.stacked,
         line: this.line,
         lines: scene.lines?.length ?? 1,
@@ -2555,16 +2567,21 @@ export class ScenePlayer {
         if (page !== this.page) { this.page = page; this.pageAt = t; }
         drawFolder(ctx, t, this.character, {
           line: this.line, page, pageAt: this.pageAt ?? 0, wide: !!this.stacked, ref: scene.ref,
-          waiting: this.waiting ?? 0,
+          waiting: this.waiting ?? 0, bare: !!scene.bare,
         });
         break;
       }
       case 'quarters': drawQuarters(ctx, t, this.character, { ...reading, wide: !!this.stacked, notice: !!scene.notice }); break;
+      /*
+       * The same room, and no paper in it: the telephone call the epilogue has
+       * been promising for twelve watches. See drawQuarters.
+       */
+      case 'call': drawQuarters(ctx, t, this.character, { ...reading, wide: !!this.stacked, call: true }); break;
       case 'ending': drawEnding(ctx, t, { held: scene.held }); break;
       case 'approach': drawApproach(ctx, t, scene); break;
-      case 'sit': drawSit(ctx, t, this.character); break;
-      case 'breath': drawBreath(ctx, t, this.character); break;
-      case 'card': drawCard(ctx, t, this.character); break;
+      case 'sit': drawSit(ctx, t, this.character, scene); break;
+      case 'breath': drawBreath(ctx, t, this.character, scene); break;
+      case 'card': drawCard(ctx, t, this.character, scene); break;
       case 'boot': drawBoot(ctx, t, scene, this.character); break;
       default: px(ctx, 0, 0, SCENE_W, SCENE_H, INK);
     }
@@ -2607,8 +2624,94 @@ const TUBE = '#45e874';
 const RED = '#9a2b26';
 /** The card reader's power lamp — this one colour and nowhere else. */
 const BLUE = '#5aa9ff';
-/** True black: slot mouths, outlines, contact shadows, the ground. */
+/** True black: slot mouths, outlines, and the ground. */
 const INK = '#0a0d0a';
+
+/**
+ * AND THE LIGHT, WHICH THE TABLE ABOVE DID NOT HAVE.
+ *
+ * Seven material ramps and not one light ramp. The graphics reviewer named it
+ * as the single root cause of four separate standing complaints, and the
+ * diagnosis is exactly right: no drawer had a lit step of paper, wood, skin or
+ * steel to put down, so nothing in this game could be lit BY anything.
+ *
+ * What that cost, in the reviewer's own measurements. A warm amber bulb threw
+ * sage-green light, because the only inks the cone had were the wall's, and it
+ * stopped dead on a diagonal above the desk — `lampCone`'s own comment says
+ * why: "a cone painted in the WALL's inks over the wood was half of why the
+ * beam read as a stain". A lit bulb hung directly over a sheet of paper in the
+ * quarters and the sheet was uniformly flat. A green cathode-ray tube thirty
+ * centimetres from the operator's face in a dark bunker put no green on his
+ * hands, on the desk lip or on the open log book — measured, the tube is 0.7%
+ * of that frame and 84% of the rest of it is three neutral greys. A town burned
+ * and the buildings beside it were the same navy as the buildings a kilometre
+ * away. And nothing in any room cast a contact shadow, because INK was
+ * documented as the palette's shadow colour and pure black on mid-value wood is
+ * too harsh to use, so no shadow was ever drawn at all.
+ *
+ * Thirteen inks, and every one of them derived from an ink already in the
+ * table by one recipe rather than chosen by eye: the top of a ramp mixed 45%
+ * toward AMBER for what a warm lamp does to it, the bottom mixed 45% toward INK
+ * for what its own shadow does, and the third step mixed 38% toward TUBE for
+ * what a cathode-ray tube does to a hand in front of it. The discipline the
+ * reviewer's KEEP list asks for survives: the list is still countable, still
+ * derived, and a light step may only ever be laid by a light SOURCE.
+ */
+const SKIN_LIT = '#f7c377';
+const SKIN_DARK = '#5b4332';
+const SKIN_TUBE = '#abd28f';
+const CLOTH_LIT = '#ae944b';
+const CLOTH_DARK = '#192016';
+const PAPER_LIT = '#f9d497';
+const PAPER_DARK = '#423d32';
+const PAPER_TUBE = '#a4db9e';
+const WOOD_LIT = '#cc9b46';
+const WOOD_DARK = '#1c1710';
+const STEEL_LIT = '#eaca90';
+const STEEL_DARK = '#181b16';
+const STEEL_TUBE = '#72b382';
+
+/**
+ * Keyed on the ramp itself rather than on its name, so a drawer that already
+ * holds a ramp can ask what light does to it without knowing what it is.
+ */
+const LIGHT_STEPS = new Map([
+  [SKIN, { lit: SKIN_LIT, dark: SKIN_DARK, tube: SKIN_TUBE }],
+  [CLOTH, { lit: CLOTH_LIT, dark: CLOTH_DARK, tube: STEEL_TUBE }],
+  [PAPER, { lit: PAPER_LIT, dark: PAPER_DARK, tube: PAPER_TUBE }],
+  [WOOD, { lit: WOOD_LIT, dark: WOOD_DARK, tube: STEEL_TUBE }],
+  [STEEL, { lit: STEEL_LIT, dark: STEEL_DARK, tube: STEEL_TUBE }],
+]);
+
+/**
+ * What a warm lamp does to this material, what its own shadow does to it, and
+ * what a cathode-ray tube does to it.
+ *
+ * A ramp with no light steps of its own — NIGHT and DAWN are lights rather
+ * than materials — falls back to the ends of itself, so these are always safe
+ * to call and never invent an ink.
+ */
+const lit = (ramp) => LIGHT_STEPS.get(ramp)?.lit ?? ramp[ramp.length - 1];
+const shadowOf = (ramp) => LIGHT_STEPS.get(ramp)?.dark ?? ramp[0];
+const tubeLit = (ramp) => LIGHT_STEPS.get(ramp)?.tube ?? ramp[2];
+
+/**
+ * The shadow an object sitting on a surface casts at its own foot.
+ *
+ * One row of the surface's own shadow step under the object's footprint, and
+ * one cell of it out at each side, laid BEFORE the object is drawn. Two rows
+ * under something heavy. Every object in every room used to meet its surface
+ * on a bare outline with nothing between, which the reviewer summed up as
+ * "objects read as stickers on a backdrop"; this is twenty calls and it is the
+ * whole of the fix.
+ */
+function contactShadow(ctx, x, y, w, surface, { rows = 1, spread = 1 } = {}) {
+  const ink = shadowOf(surface);
+  for (let r = 0; r < rows; r += 1) {
+    const inset = r * spread;
+    px(ctx, x - spread + inset, y + r, w + spread * 2 - inset * 2, 1, ink);
+  }
+}
 
 /* ---------------------------------------------------------------- the frame */
 
@@ -2782,65 +2885,35 @@ function linePx(ctx, x0, y0, x1, y1, c) {
 }
 
 /**
- * A hand-authored 3x5 face, because `fillText` at this size is a grey smudge
- * magnified five times. Three bits a row, five rows, one octal digit each.
- */
-const GLYPHS = {
-  0: '75557', 1: '26227', 2: '71747', 3: '71717', 4: '55711', 5: '74717',
-  6: '74757', 7: '71222', 8: '75757', 9: '75717',
-  ':': '02020', '.': '00002', '-': '00700', ' ': '00000', '/': '11242',
-  A: '75755', B: '65656', C: '34443', D: '65556', E: '74647', F: '74644',
-  G: '34553', H: '55755', I: '72227', J: '11152', K: '55655', L: '44447',
-  N: '65555', O: '25552', P: '65644', Q: '25573', R: '65655',
-  S: '34216', T: '72222', U: '55557', V: '55552', X: '55255',
-  Y: '55222', Z: '71247',
-};
-/*
- * Two letters that cannot be told apart at three pixels.
+ * The game's type, drawn from `bitfont.js`.
  *
- * The story judge, on the order of appointment: "The 3-pixel-wide M is
- * indistinguishable from an H, so the game's promotion document reads ORDER OF
- * APPOINTHENT and SECTOR COHHANDER at every size the scene uses." An M needs a
- * middle stroke that comes down BETWEEN two uprights, and a W the same inverted,
- * so both are cut five columns wide and the run of type makes room for them.
+ * What used to be here was a 3x5 table of octal digits, and the graphics
+ * reviewer took it apart: "N is '65555', which plots as a top-left corner with
+ * two uprights — readers see DAПILOV, RAПK, AППEX. K is '55655', which plots as
+ * an H with a notch and no arm. There is no lowercase, no comma, no apostrophe,
+ * no question mark and no parenthesis, so it cannot set a sentence." Three
+ * pixels is below the floor for a Latin alphabet: N, K, M, W and S all need a
+ * diagonal and there is nowhere to put one. Everything that WAS a sentence
+ * therefore fell back to the browser's anti-aliased monospace laid over
+ * five-times-magnified pixel art, which is the two-typographies complaint, the
+ * grey-fringe-on-a-phosphor complaint and the blank-drawn-paper complaint, all
+ * from one cause.
+ *
+ * `glyphs` and `glyphWidth` keep their old shape so that every plate, stamp and
+ * order in this file goes on calling them. What changed under them is the face:
+ * six by ten, a cap height of seven, an x-height of five, a real descender, and
+ * an alphabet that includes the letters it claims to.
+ *
+ * The y a caller passes is still the top of a CAPITAL, as it always was, so the
+ * new cell is offset by one row to put its cap line where the old one was.
  */
-const WIDE_GLYPHS = {
-  M: [0b10001, 0b11011, 0b10101, 0b10001, 0b10001],
-  W: [0b10001, 0b10001, 0b10101, 0b11011, 0b10001],
-};
-const glyphCols = (ch) => (WIDE_GLYPHS[ch] ? 5 : 3);
-function glyphs(ctx, s, x, y, c, { gap = 1, k = 1 } = {}) {
-  let cx = Math.round(x);
-  for (const ch of String(s).toUpperCase()) {
-    const wide = WIDE_GLYPHS[ch];
-    if (wide) {
-      for (let r = 0; r < 5; r++) {
-        for (let b = 0; b < 5; b++) if (wide[r] & (16 >> b)) px(ctx, cx + b * k, y + r * k, k, k, c);
-      }
-    } else {
-      const g = GLYPHS[ch];
-      if (g) {
-        for (let r = 0; r < 5; r++) {
-          const bits = Number(g[r]);
-          for (let b = 0; b < 3; b++) if (bits & (4 >> b)) px(ctx, cx + b * k, y + r * k, k, k, c);
-        }
-      }
-    }
-    cx += (glyphCols(ch) + gap) * k;
-  }
-  return cx - x;
+function glyphs(ctx, s, x, y, c, { gap = 1, k = 1, bold = false, caps = true } = {}) {
+  return text(ctx, px, caps ? String(s).toUpperCase() : s, x, y - k, c,
+    { k, bold, tracking: gap - 1 });
 }
-const glyphWidth = (s, gap = 1, k = 1) => {
-  const chars = [...String(s).toUpperCase()];
-  if (!chars.length) return 0;
-  return (chars.reduce((n, ch) => n + glyphCols(ch) + gap, 0) - gap) * k;
-};
+const glyphWidth = (s, gap = 1, k = 1, { bold = false } = {}) =>
+  textWidth(s, { k, bold, tracking: gap - 1 });
 
-/**
- * A pen: every rectangle rounded to whole pixels at whatever scale it is
- * drawn at, so the console can grow through the approach without a single
- * anti-aliased edge. `ctx.scale` would have put a grey fringe on every rect.
- */
 /**
  * The "go on" prompt, drawn on the picture rather than set in the DOM over the
  * sheet: a solid chevron, and the word beside it on the last line of a scene.
@@ -2851,6 +2924,12 @@ function promptMark(ctx, x, y, state, ink) {
   for (let i = 0; i < 4; i++) px(ctx, x + i, y + i, 1, 7 - i * 2, ink);
   if (state === 2) glyphs(ctx, 'NEXT', x + 7, y + 1, ink);
 }
+
+/**
+ * A pen: every rectangle rounded to whole pixels at whatever scale it is
+ * drawn at, so the console can grow through the approach without a single
+ * anti-aliased edge. `ctx.scale` would have put a grey fringe on every rect.
+ */
 
 function pen(ctx, k = 1, ox = 0, oy = 0) {
   const S = (v) => Math.round(v * k);
@@ -3437,9 +3516,26 @@ function handsBack(ctx, ramp, y, left, right, rim = null, shade = PAPER[1]) {
   handBack(ctx, ramp, left, y, 1, rim, { from: left - 8, shade, light: 1 });
   handBack(ctx, ramp, right, y, -1, rim, { from: right + 28, shade, light: -1 });
 }
-function handsFront(ctx, ramp, y, left, right) {
+function handsFront(ctx, ramp, y, left, right, { tube = 0 } = {}) {
   handFront(ctx, ramp, left, y, 1);
   handFront(ctx, ramp, right, y, -1);
+  /*
+   * And the tube on the backs of them.
+   *
+   * A green cathode-ray tube thirty centimetres from these hands used to put
+   * nothing on them at all — the reviewer measured the hands at the console as
+   * the same flat skin they are in the daylit office. The light comes from
+   * above and behind the near edge of the desk, so it catches the top of the
+   * knuckles and nothing else: two rows, dithered, in the green-lit step of
+   * this operator's own skin.
+   */
+  if (tube > 0) {
+    const lvl = Math.max(1, Math.round(6 * tube));
+    for (const hx of [left, right]) {
+      dither(ctx, hx + 2, y + 1, 18, 2, ramp[2], tubeLit(SKIN), lvl);
+      dither(ctx, hx + 4, y + 3, 14, 1, ramp[2], tubeLit(SKIN), Math.max(1, lvl - 2));
+    }
+  }
 }
 
 
@@ -3584,37 +3680,22 @@ function filePage(ctx, x, y, w, h, { number = '', lit = false, ruleFrom = 24, he
 }
 
 /**
- * The service plate on a stamp, cut as pixels.
+ * The service plate on a stamp.
  *
  * The story judge: "The red stamp reads a bare ADF, an abbreviation nothing on
  * screen has taught, while every other stamp in the game is the paired plate."
  * So the drawn stamps carry the same pair as the printed ones — the stencil
- * above, its English beneath. The six letters are bitmaps rather than text
- * because the hand-cut 3x5 face has no Cyrillic in it and the stamp is a
- * picture, not a string: Ve, Pe, Ve, O, Te and a five-wide Em.
+ * above, its English beneath.
+ *
+ * These six letters used to be hand-cut bitmaps sitting in this file, for one
+ * reason: the 3x5 face had no Cyrillic in it and a stamp is a picture rather
+ * than a string. The face has Cyrillic now, so the plate is the plate — read
+ * off `lexicon.js`, which is the file whose whole promise is that every legend
+ * plate in the game comes from one table.
  */
-const PLATE_ROWS = ['65656', '75555', '65656', '25552', null, '72222', 'M'];
-function servicePlate(ctx, x, y, c, k = 1) {
-  let cx = Math.round(x);
-  for (const g of PLATE_ROWS) {
-    if (g === null) { cx += 4 * k; continue; }
-    if (g === 'M') {
-      const wide = WIDE_GLYPHS.M;
-      for (let r = 0; r < 5; r++) {
-        for (let b = 0; b < 5; b++) if (wide[r] & (16 >> b)) px(ctx, cx + b * k, y + r * k, k, k, c);
-      }
-      cx += 6 * k;
-      continue;
-    }
-    for (let r = 0; r < 5; r++) {
-      const bits = Number(g[r]);
-      for (let b = 0; b < 3; b++) if (bits & (4 >> b)) px(ctx, cx + b * k, y + r * k, k, k, c);
-    }
-    cx += 4 * k;
-  }
-  return cx - x;
-}
-const PLATE_W = 4 * 4 + 4 + 4 + 6 - 1;
+const servicePlate = (ctx, x, y, c, k = 1) =>
+  glyphs(ctx, STATE.serviceShort.tm, x, y + k, c, { k });
+const PLATE_W = glyphWidth(STATE.serviceShort.tm);
 
 /**
  * A rubber stamp: a double-ruled frame, letterspaced type, turned a few
@@ -3632,13 +3713,23 @@ function stamp(ctx, x, y, w, h, words, c, { plate = false } = {}) {
     }
   }
   if (plate) {
-    servicePlate(ctx, x + Math.round((w - PLATE_W) / 2), y + Math.round(h / 2) - 6, c);
+    /*
+     * Two lines, measured off the face rather than off two magic numbers: the
+     * stencil on top and its English under it, each centred on the box, with
+     * the pair centred in the box's own height. The face is seven rows to a
+     * capital now instead of five, and the old offsets put the English through
+     * the stamp's bottom rule.
+     */
+    const lineH = FONT.capHeight + 2;
+    const top = y + Math.round((h - lineH * 2) / 2);
+    servicePlate(ctx, x + Math.round((w - PLATE_W) / 2), top, c);
     const wide = glyphWidth(words);
-    glyphs(ctx, words, x + Math.round((w - wide) / 2), y + Math.round(h / 2) + 1, c);
+    glyphs(ctx, words, x + Math.round((w - wide) / 2), top + lineH, c);
     return;
   }
   const wide = glyphWidth(words);
-  glyphs(ctx, words, x + Math.round((w - wide) / 2), y + Math.round(h / 2) - 2, c);
+  glyphs(ctx, words, x + Math.round((w - wide) / 2),
+    y + Math.round((h - FONT.capHeight) / 2), c);
 }
 
 /* --------------------------------------------------------------- the console */
@@ -4139,12 +4230,67 @@ function consoleRoom(ctx, t, opts = {}) {
       px(ctx, 304 + Math.round(Math.sin(i / 6) * 5), cy, 3, 1, S(STEEL, 0));
     }
   }
-  // the tube's own light, falling on the desk in front of it
+  /*
+   * THE TUBE LIGHTS THE ROOM.
+   *
+   * The reviewer: "A lit green CRT sits 30cm from the operator's face in a dark
+   * bunker and lights nothing. The hands are the same flat skin they are in the
+   * daylit office; the desk lip, the log book, the keyboard and the card reader
+   * have no green cast and no falloff. The one thing that would make the
+   * console beats feel like a place is missing." Measured, the tube was 0.7% of
+   * that frame and 84% of the rest of it was three neutral greys.
+   *
+   * It could not have done anything else: there was no green-lit step of steel
+   * or paper or skin in the palette to put down. There is now, and the falloff
+   * is a single mask applied once per surface — brightest on the row nearest
+   * the glass, gone by the near lip, and strongest in the columns the tube
+   * actually occupies.
+   */
   if (opts.live !== false && (opts.tube ?? 1) > 0) {
-    const lvl = Math.round(3 * (opts.tube ?? 1));
+    const glow = opts.tube ?? 1;
+    const lvl = Math.round(3 * glow);
     dither(ctx, 96, deskTop, 128, 3, STEEL[1], TUBE, lvl);
     dither(ctx, 110, deskTop + 3, 100, 5, STEEL[0], TUBE, Math.max(1, lvl - 1));
+    /*
+     * And the spill on everything between the glass and the operator: the desk
+     * running away to the panel, the near shelf, the lip, and whatever is
+     * standing on them. The band is widest at the back and narrows to the
+     * width of the tube by the time it reaches the hands, which is what light
+     * from a rectangle a foot wide does in a room this size.
+     */
+    const reach = lip - deskTop;
+    for (let i = 0; i < reach; i += 1) {
+      const y2 = deskTop + i;
+      const f = 1 - i / reach;                      // 1 at the glass, 0 at the lip
+      const level = Math.round(5 * f * f * glow);
+      if (level <= 0) continue;
+      const half = Math.round(58 + 40 * (1 - f));
+      const surface = y2 >= shelf ? step(STEEL, 1) : STEEL[0];
+      const core = Math.round(half * 0.55);
+      /*
+       * Light on grey metal LIFTS ITS VALUE first and carries its colour
+       * second: the spill is the steel's own next step over the whole pool,
+       * and only the rows nearest the glass take the green on top of that. A
+       * bright phosphor dithered straight on to a dark desk is not a wash, it
+       * is a field of green dots — which is the transparency-checker mistake
+       * this file has filed three times under another name.
+       */
+      dither(ctx, 160 - core, y2, core * 2, 1, surface, step(STEEL, 1), Math.min(14, level * 3));
+      const wing = Math.max(1, level);
+      dither(ctx, 160 - half, y2, half - core, 1, surface, step(STEEL, 1), wing);
+      dither(ctx, 160 + core, y2, half - core, 1, surface, step(STEEL, 1), wing);
+      if (f > 0.5) {
+        dither(ctx, 160 - core, y2, core * 2, 1, step(STEEL, 1), tubeLit(STEEL),
+          Math.max(1, Math.round(level * 0.8)));
+      }
+    }
+    // the near lip takes the last of it along its top edge, which is the edge
+    // the operator's own hands lie behind
+    dither(ctx, 108, lip, 104, 2, step(STEEL, 2), tubeLit(STEEL), Math.max(1, Math.round(2 * glow)));
   }
+  // and the one thing in the room that says which seat this is — last, so the
+  // desk's own furniture cannot be drawn over the top of it
+  postMark(ctx, opts.post, shelf, lip);
 }
 
 /* ------------------------------------------------------------------ the opening */
@@ -4541,8 +4687,71 @@ function vignette(ctx, level) {
   }
 }
 
+/**
+ * One thing on the desk that says which seat this is.
+ *
+ * The narrative reviewer: "A recruit's first night at a radar set and the Chief
+ * of Air Defence's last morning in the capital sector begin with the identical
+ * sequence at the identical console. The promotion ladder is the spine of the
+ * campaign and the one recurring first-person moment in the game does not
+ * register it once." The beats are wordless, which is why this is cheap: the
+ * room changes, nothing is narrated, and the player's hands feel the rung.
+ *
+ * One object per rung, and only one, because five of these play before every
+ * watch and a busy room stops being a place and becomes a list.
+ */
+function postMark(ctx, post, shelf, lip) {
+  if (!post) return;
+  if (post === 'radar' || post === 'crew') {
+    /*
+     * The junior seats: somebody else's enamel mug, left on the shelf where
+     * the last watch left it, gone cold. You are not the first person in this
+     * chair tonight and the chair knows it.
+     */
+    const mx = 232;
+    const y = shelf + 6;
+    px(ctx, mx, y, 17, 15, INK);
+    px(ctx, mx + 1, y + 1, 15, 13, PAPER[2]);
+    px(ctx, mx + 1, y + 1, 15, 2, PAPER[3]);
+    px(ctx, mx + 1, y + 4, 15, 1, RED);
+    px(ctx, mx + 3, y + 7, 11, 5, WOOD[0]);           // what is left in it, cold
+    px(ctx, mx + 17, y + 4, 5, 8, INK);               // the handle
+    px(ctx, mx + 18, y + 5, 3, 6, PAPER[2]);
+    px(ctx, mx - 1, y + 15, 21, 1, STEEL[0]);         // where it sits
+    return;
+  }
+  if (post === 'battalion' || post === 'sector') {
+    /*
+     * A second chair, pushed in under the desk at your right hand. Somebody
+     * sits there on this rung, and on the nights they are not there the chair
+     * is still there.
+     */
+    const cx = SCENE_W - 74;
+    const top = lip + 8;
+    px(ctx, cx, top, 62, FRAME_BOTTOM - top, INK);
+    px(ctx, cx + 3, top + 3, 56, FRAME_BOTTOM - top - 3, step(CLOTH, 1));
+    px(ctx, cx + 3, top + 3, 56, 2, step(CLOTH, 2));
+    dither(ctx, cx + 3, top + 9, 56, 10, step(CLOTH, 1), step(CLOTH, 0), 6);
+    px(ctx, cx + 3, top + 3, 3, FRAME_BOTTOM - top - 3, step(CLOTH, 2));
+    return;
+  }
+  /*
+   * District and national: you do not come in here alone. An escort stands at
+   * the near end of the desk — a greatcoat and two buttons at the edge of the
+   * frame, close enough to read the log over your shoulder and far enough
+   * away to be able to say they were not reading it.
+   */
+  const ex = SCENE_W - 34;
+  const top = lip - 6;
+  px(ctx, ex, top, 40, FRAME_BOTTOM - top, INK);
+  px(ctx, ex + 3, top + 2, 36, FRAME_BOTTOM - top - 2, step(CLOTH, 1));
+  px(ctx, ex + 3, top + 2, 4, FRAME_BOTTOM - top - 2, step(CLOTH, 2));
+  dither(ctx, ex + 3, top + 2, 36, 10, step(CLOTH, 1), step(CLOTH, 0), 7);
+  for (let i = 0; i < 3; i++) px(ctx, ex + 13, top + 10 + i * 11, 4, 4, DAWN[1]);
+}
+
 /** Sitting down: the room rises, the chair arrives, the hands land on the desk. */
-function drawSit(ctx, t, character) {
+function drawSit(ctx, t, character, scene = null) {
   const p = clamp01(t / 1.6);
   const ease = 1 - Math.pow(1 - p, 3);
   const overshoot = p > 0.85 ? Math.round(3 * Math.sin((p - 0.85) / 0.15 * Math.PI)) : 0;
@@ -4553,7 +4762,7 @@ function drawSit(ctx, t, character) {
    * the breath.
    */
   const oy = Math.round(22 * (1 - ease)) + overshoot;
-  consoleRoom(ctx, t, { live: false, tube: 0, lamps: 0, oy });
+  consoleRoom(ctx, t, { live: false, tube: 0, lamps: 0, oy, post: scene?.post });
   // the chair's arm rests, coming in at the bottom corners
   const armY = Math.round(FRAME_BOTTOM - 26 * ease);
   px(ctx, -4, armY, 48, 30, INK);
@@ -4573,11 +4782,11 @@ function drawSit(ctx, t, character) {
 }
 
 /** One breath, in a room at three below: the body moves, the camera does not. */
-function drawBreath(ctx, t, character) {
+function drawBreath(ctx, t, character, scene = null) {
   const inhale = clamp01(t / 0.8);
   const out = clamp01((t - 1.0) / 1.0);
   const rise = Math.round(3 * inhale - 3 * out);
-  consoleRoom(ctx, t, { live: false, tube: 0, lamps: 0 });
+  consoleRoom(ctx, t, { live: false, tube: 0, lamps: 0, post: scene?.post });
   /*
    * No shoulders in the corners any more.
    *
@@ -4612,7 +4821,7 @@ function drawBreath(ctx, t, character) {
  * eases, the blue power lamp comes up at the halfway mark, and the room takes
  * a step up in light as it seats — the card is what turns the console on.
  */
-function drawCard(ctx, t, character) {
+function drawCard(ctx, t, character, scene = null) {
   const seated = t >= 1.6;
   const halfway = t >= 1.1;
   const settle = seated && t < 1.75 ? 1 : 0;
@@ -4620,7 +4829,7 @@ function drawCard(ctx, t, character) {
   // the power lamp does, rather than a wash being drawn over the top of it
   consoleRoom(ctx, t, {
     live: false, tube: 0, lamps: 0, power: halfway, cardIn: seated, showCard: false,
-    dim: halfway ? 0 : 1,
+    dim: halfway ? 0 : 1, post: scene?.post,
   });
   const ramp = skinOf(character);
   // The left hand never leaves the desk lip, at any point in this beat.
@@ -4774,7 +4983,7 @@ function drawBoot(ctx, t, scene, character) {
   const room = Math.max(0, Math.min(3, Math.floor(t / 0.4)));
   consoleRoom(ctx, t, {
     live: t > 0.3, tube, lamps, power: true, cardIn: true, net: t > 2.2,
-    cardSeed: character?.name ?? null,
+    cardSeed: character?.name ?? null, post: scene?.post,
   });
   const gx = 96;
   const gy = 6 + consoleDrop();
@@ -4800,7 +5009,7 @@ function drawBoot(ctx, t, scene, character) {
     px(ctx, 0, dy, SCENE_W, 1, step(STEEL, 1 + room));
   }
   handsBack(ctx, skinOf(character), restRow(), HAND_L, HAND_R, room > 1 ? TUBE : null, STEEL[0]);
-  handsFront(ctx, skinOf(character), restRow(), HAND_L, HAND_R);
+  handsFront(ctx, skinOf(character), restRow(), HAND_L, HAND_R, { tube });
   if (t > 2.2) {
     // READY, printed low on the glass where a set's own legend goes — not in
     // a box in the middle of the picture, which read as a button on a diagram.
@@ -5021,6 +5230,22 @@ function drawPrintout(ctx, t, character, { line = 0, typed = 0, talking = false,
 function drawOffice(ctx, t, {
   talking, face, tier, watches = 0, struck = false, seed = '', empty = false,
   narrow = false, line = 0, lines = 1, since = 99, dismissing = false,
+  /*
+   * THE MORNING NOBODY CAME IN.
+   *
+   * `empty` is the ordinary empty office: the night the post was struck, the
+   * section wrote its finding and sent it, and the sheet is squared on the
+   * blotter with ENTERED stamped across it.
+   *
+   * `unentered` is a different morning and a worse one. On the epilogue's
+   * `judgement` and `unwatched` endings the state aircraft was lost and the
+   * ending says the political section has not been reached since 05:00 and the
+   * sector office has been open all morning with nobody in it. Nothing was
+   * entered, so there is no finding on the desk — a folded note the duty clerk
+   * left, and that is all. `locked` is the harder of the two: the office was
+   * not opened at all, so the lamp is off and the room is the window's.
+   */
+  unentered = false, locked = false,
 }) {
   const hard = tier === 'flagged' || tier === 'condemned';
   /*
@@ -5297,8 +5522,11 @@ function drawOffice(ctx, t, {
    * the cone was painted over the stem that holds the shade up. The light
    * leaves the shade's mouth, and the lamp is solid in front of it.
    */
-  lampCone(ctx, lampX, 54, lampAt, fall, lampLean);
-  deskLamp(ctx, lampX, 46, lampAt, (ramp, i) => step(ramp, i - Math.max(0, dim - 1)));
+  // Nobody turned it on. The lamp is still there and it is still the object
+  // the room is built round; it is simply not lit.
+  if (!locked) lampCone(ctx, lampX, 54, lampAt, fall, lampLean);
+  deskLamp(ctx, lampX, 46, lampAt, (ramp, i) => step(ramp, i - Math.max(0, dim - 1)),
+    { off: locked });
   // the man, behind the desk, lit from the lamp's side
   if (!empty) {
     // what is behind his shoulders, so the slope of them can be cut out of the
@@ -5363,6 +5591,7 @@ function drawOffice(ctx, t, {
    * ramp, with a dithered turn at each step, and the blotter's own cloth takes
    * the light along its near edge.
    */
+  contactShadow(ctx, 26, 114, 52, WOOD);
   px(ctx, 26, 100, 52, 14, S(WOOD, 0));
   px(ctx, 26, 100, 52, 1, S(WOOD, 1));
   for (let i = 0; i < 48; i++) {
@@ -5385,6 +5614,21 @@ function drawOffice(ctx, t, {
    */
   const pile = Math.min(30, 5 + watches * 2);
   const sheets = Math.max(2, Math.min(9, 2 + Math.floor(watches / 1.4)));
+  /*
+   * AND EVERYTHING IN THIS ROOM SITS ON SOMETHING NOW.
+   *
+   * The reviewer: "Nothing in the game sits on anything. The paper stack, the
+   * typewriter, the stamps, the file box, the lamp base, the stove, the bunk,
+   * the log book, the mug, the card reader, the commissar's forearms and the
+   * identity card all meet their surfaces on a bare outline with no occlusion
+   * and no cast shadow. Objects read as stickers on a backdrop." The reason
+   * was in the palette's own comment — INK was documented as the contact
+   * shadow ink, pure black on mid-value wood is too harsh to use, so no
+   * contact shadow was ever drawn. Every ramp has its own shadow step now and
+   * `contactShadow` lays one row of it under a footprint before the object
+   * goes down. Two rows under something heavy.
+   */
+  contactShadow(ctx, 232, 118, 28, WOOD, { rows: 2 });
   px(ctx, 232, 116 - pile, 28, pile + 2, INK);
   px(ctx, 233, 117 - pile, 26, pile, S(PAPER, 1));
   px(ctx, 233, 117 - pile, 26, 1, S(PAPER, 2));
@@ -5395,12 +5639,14 @@ function drawOffice(ctx, t, {
   // and the two folders that were there on the first evening
   for (let i = 0; i < 2; i++) {
     const fx = 196 + i * 11;
+    contactShadow(ctx, fx, 112 + i, 10, WOOD);
     px(ctx, fx, 100 - i, 10, 12 + i, INK);
     px(ctx, fx + 1, 101 - i, 8, 10 + i, S(PAPER, 1));
     px(ctx, fx + 1, 101 - i, 8, 1, S(PAPER, 2));
     px(ctx, fx + 1, 104 - i, 8, 1, S(PAPER, 0));
   }
   // the telephone, and its shadow thrown away from the lamp
+  contactShadow(ctx, 264, 112, 48, WOOD, { rows: 2 });
   px(ctx, 264, 94, 42, 18, INK);
   px(ctx, 266, 96, 38, 8, S(STEEL, 0));
   px(ctx, 266, 96, 38, 1, S(STEEL, 1));
@@ -5417,7 +5663,33 @@ function drawOffice(ctx, t, {
    * stay true is the absence: no man, no hands, no shadow on the wall, the
    * lamp still burning, and one closed document where his forearms were.
    */
-  if (empty) {
+  if (empty && unentered) {
+    /*
+     * NOTHING WAS ENTERED.
+     *
+     * A folded note the duty clerk left on the blotter, squared the way a
+     * clerk squares a thing they were told to leave: one crease across it, two
+     * lines of somebody else's handwriting, no letterhead, no plate and no
+     * stamp. The ending says the office has not been reached since 05:00, and
+     * a signed finding stamped ENTERED would be the state doing its work on a
+     * morning the state did not come in.
+     */
+    const NX = Math.max(20, Math.min(SCENE_W - 76, pool + 42 - 28));
+    const NY = 92;
+    px(ctx, NX, NY, 58, 22, INK);
+    px(ctx, NX + 1, NY + 1, 56, 20, locked ? PAPER[1] : PAPER[2]);
+    // the crease, and the half of the sheet that is still folded standing a
+    // step darker than the half that has fallen open
+    px(ctx, NX + 1, NY + 10, 56, 1, PAPER[0]);
+    dither(ctx, NX + 1, NY + 11, 56, 10, locked ? PAPER[0] : PAPER[1], PAPER[1], 6);
+    for (let i = 0; i < 2; i++) {
+      for (let x = 0; x < [38, 26][i]; x++) {
+        px(ctx, NX + 6 + x, NY + 4 + i * 3 - Math.round(Math.sin(x / 3.2) * 1.2), 1, 1, NIGHT[0]);
+      }
+    }
+    // it casts the one shadow in the room, away from the window
+    px(ctx, NX + 2, NY + 22, 58, 2, S(WOOD, 0));
+  } else if (empty) {
     /*
      * The finding: signed, closed, squared on the blotter with its signature
      * block facing the camera. The reader, not the writer, is who this sheet
@@ -5434,8 +5706,14 @@ function drawOffice(ctx, t, {
      * throws, it is the brightest paper in the room, and it throws a hard
      * shadow away from the lamp on to the blotter.
      */
-    const FW = 100;
-    const FH = 36;
+    /*
+     * Wider and two rows deeper than it was, because the face is. The plate
+     * and the word FINDING are each measured and set at opposite ends of the
+     * head, and at a hundred pixels they met in the middle with no paper
+     * between them.
+     */
+    const FW = 124;
+    const FH = 40;
     const FX = Math.max(20, Math.min(SCENE_W - FW - 20, pool + 42 - Math.round(FW / 2)));
     const FY = 80;
     // the pool the lamp throws round it: the wood a step up at the core and
@@ -5503,21 +5781,29 @@ function drawOffice(ctx, t, {
      * judges caught "TM ADF" damaged: "overrun by the sheet's dither band and
      * two ruled lines, which cut the bottom third off the glyphs".
      */
-    servicePlate(ctx, FX + 8, FY + 3, PAPER[0]);
-    glyphs(ctx, 'TM ADF', FX + 8, FY + 10, PAPER[0]);
-    glyphs(ctx, 'FINDING', FX + 58, FY + 3, PAPER[0]);
-    px(ctx, FX + 58, FY + 9, 36, 1, PAPER[1]);
-    px(ctx, FX + 8, FY + 18, FW - 18, 1, PAPER[1]);
-    px(ctx, FX + 8, FY + 20, FW - 18, 1, PAPER[0]);
+    /*
+     * Measured, because the face is wider than the one this block was laid out
+     * against: the plate takes the left of the head and FINDING is
+     * right-aligned inside the sheet's own margin rather than set at a column
+     * chosen by eye, which at this width ran it off the paper.
+     */
+    servicePlate(ctx, FX + 8, FY + 2, PAPER[0]);
+    glyphs(ctx, 'TM ADF', FX + 8, FY + 11, PAPER[0]);
+    const titleW = glyphWidth('FINDING');
+    const titleX = FX + FW - 10 - titleW;
+    glyphs(ctx, 'FINDING', titleX, FY + 2, PAPER[0]);
+    px(ctx, titleX, FY + 10, titleW, 1, PAPER[1]);
+    px(ctx, FX + 8, FY + 20, FW - 18, 1, PAPER[1]);
+    px(ctx, FX + 8, FY + 22, FW - 18, 1, PAPER[0]);
     // four typed lines, ragged right the way typing is
     for (let i = 0; i < 4; i++) {
-      px(ctx, FX + 9, FY + 23 + i * 2, [62, 68, 50, 64][i], 1, PAPER[0]);
+      px(ctx, FX + 9, FY + 25 + i * 2, [62, 68, 50, 64][i], 1, PAPER[0]);
     }
     // the signature: a scrawl over a ruled line
     for (let i = 0; i < 26; i++) {
-      px(ctx, FX + 10 + i, FY + 31 - Math.round(Math.sin(i / 3.5) * 1.6), 1, 1, NIGHT[0]);
+      px(ctx, FX + 10 + i, FY + 33 - Math.round(Math.sin(i / 3.5) * 1.6), 1, 1, NIGHT[0]);
     }
-    px(ctx, FX + 9, FY + 32, 30, 1, PAPER[0]);
+    px(ctx, FX + 9, FY + 34, 30, 1, PAPER[0]);
     /*
      * The stamp: a word in a ruled box with its ink broken up, set down at an
      * angle. The reader judge had the last one as "a solid red rectangle with
@@ -5526,7 +5812,8 @@ function drawOffice(ctx, t, {
      */
     // wider than the word, so no letter of it touches its own border: the
     // story judge found "the stamp's leading E clipped by its own red border"
-    stamp(ctx, FX + 52, FY + 22, 40, 13, 'ENTERED', RED);
+    stamp(ctx, FX + FW - 14 - (glyphWidth('ENTERED') + 10), FY + 22,
+      glyphWidth('ENTERED') + 10, FONT.capHeight + 8, 'ENTERED', RED);
   }
   /*
    * The desk between you and him is the brightest thing in the room at every
@@ -5545,7 +5832,20 @@ function drawOffice(ctx, t, {
     // next step — a field of dots at half strength reads as grit on the desk
     const core = Math.max(0, Math.round(half * 0.55));
     dither(ctx, front - half, 116 + i, half - core, 1, S(WOOD, 1), S(WOOD, 2), lvl);
-    if (core > 0) px(ctx, front - core, 116 + i, core * 2, 1, S(WOOD, lvl > 10 ? 3 : 2));
+    /*
+     * And the core of it is the wood WARM rather than the wood one step up.
+     * This is the only surface in the room the bulb reaches directly, and
+     * until the palette had a lit step of wood in it there was nothing to
+     * paint that with — so the brightest thing in the office was the same
+     * colour the desk is in daylight.
+     */
+    if (core > 0) {
+      px(ctx, front - core, 116 + i, core * 2, 1, S(WOOD, lvl > 10 ? 3 : 2));
+      if (lvl > 9 && !hard) {
+        dither(ctx, front - Math.round(core * 0.7), 116 + i, Math.round(core * 1.4), 1,
+          S(WOOD, 3), lit(WOOD), Math.max(2, lvl - 6));
+      }
+    }
     dither(ctx, front + core, 116 + i, half - core, 1, S(WOOD, 1), S(WOOD, 2), lvl);
   }
 }
@@ -5700,13 +6000,15 @@ function framedPortrait(ctx, x, y, w, h, S, { capped = true } = {}) {
 }
 
 /** The desk lamp, and the pool it throws on the surface in front of it. */
-function deskLamp(ctx, x, y, turn, S) {
+function deskLamp(ctx, x, y, turn, S, { off = false } = {}) {
   const tilt = turn * 4;
   // the stem first, so the shade sits on top of a lamp that stands on the desk
   px(ctx, x - 1, y + 8, 5, 48, INK);
   px(ctx, x, y + 8, 3, 48, S(STEEL, 1));
   px(ctx, x, y + 8, 1, 48, S(STEEL, 2));
-  // the base plate, with a lip and a highlight along the front of it
+  // the base plate, with a lip and a highlight along the front of it — and the
+  // shadow it throws where it meets the desk, two rows, because it is heavy
+  contactShadow(ctx, x - 12, y + 59, 28, WOOD, { rows: 2 });
   px(ctx, x - 12, y + 52, 28, 7, INK);
   px(ctx, x - 11, y + 53, 26, 5, S(STEEL, 1));
   px(ctx, x - 11, y + 53, 26, 1, S(STEEL, 2));
@@ -5728,7 +6030,13 @@ function deskLamp(ctx, x, y, turn, S) {
   px(ctx, x - 14 + tilt, y + 1, 28, 3, INK);
   px(ctx, x - 13 + tilt, y + 1, 26, 2, S(STEEL, 1));
   px(ctx, x - 13 + tilt, y + 1, 26, 1, S(STEEL, 2));
-  // the bulb in the mouth of it, and the heat off the filament
+  // the bulb in the mouth of it, and the heat off the filament — or a cold
+  // filament in a dark glass, on the morning nobody came in to switch it on
+  if (off) {
+    px(ctx, x - 5 + tilt, y + 3, 10, 3, STEEL[0]);
+    px(ctx, x - 3 + tilt, y + 3, 6, 2, STEEL[1]);
+    return;
+  }
   px(ctx, x - 5 + tilt, y + 3, 10, 3, AMBER);
   px(ctx, x - 3 + tilt, y + 3, 6, 2, DAWN[3]);
   px(ctx, x - 7 + tilt, y + 3, 2, 2, DAWN[1]);
@@ -6135,32 +6443,41 @@ function commissarLight(ctx, { tier, hard, S, gold, cells, back, bow = 0 }) {
  * puts a dithered cone of the wall's own ink back over the wall, brightest at
  * the shade and falling off with the square of the distance.
  */
-function lampCone(ctx, x, y, turn, fall, lean) {
-  // Turned at the papers the beam runs a long way down the wall; turned at the
-  // player the shade cuts it off short and what is lit is the desk in front of
-  // you, which the desk's own pool draws.
-  // it stops at the dado: below that is floor and desk, and a cone painted in
-  // the WALL's inks over the wood was half of why the beam read as a stain
-  const rows = Math.min(turn > 0 ? 40 : 58, 88 - y);
+function lampCone(ctx, x, y, turn, fall, lean, { deskTop = 96, bottom = 124 } = {}) {
   /*
-   * The cone puts the wall's OWN next step back on the wall, at 25, 50 and 75
-   * per cent through the length of it. The art judge: "build the lamp cone
-   * from ordered dither at 25/50/75 percent so it reads as light spilling, not
-   * as static." It never lays a colour on the wall that the wall could not
-   * have been.
+   * IT REACHES THE DESK NOW, AND IT IS WARM ALL THE WAY DOWN.
+   *
+   * This cone used to stop dead on a diagonal above the blotter, and the
+   * comment here said why: "it stops at the dado: below that is floor and desk,
+   * and a cone painted in the WALL's inks over the wood was half of why the
+   * beam read as a stain". That comment was diagnosing the real fault and then
+   * working round it — the cone was painted in the wall's inks because those
+   * were the only inks it had. A warm amber bulb throwing sage-green light and
+   * stopping in mid air were one defect with one cause, and the cause was that
+   * the palette had no light in it.
+   *
+   * So: every step it deposits is that surface's own ink mixed toward AMBER,
+   * the beam runs on over the dado and lands on the wood, and the bottom of it
+   * is a pool on the desk rather than a cut.
    */
+  const rows = Math.max(0, Math.min(turn > 0 ? 62 : 80, bottom - (y + 4)));
   for (let i = 0; i < rows; i++) {
     const half = 5 + Math.round(i * 0.62);
     const cx = x + Math.round(lean * i);
     const ry = y + 4 + i;
-    const under = 2 - Math.round(fall(cx, ry));
-    const lvl = Math.max(0, 12 - Math.round(i * 0.20));
+    // which surface the beam is falling on at this row: wall above the dado,
+    // desk below it, and the light belongs to whatever it lands on
+    const wall = ry < deskTop;
+    const surface = wall ? CLOTH : WOOD;
+    const under = wall ? 2 - Math.round(fall(cx, ry)) : 1;
+    const lvl = Math.max(0, 12 - Math.round(i * 0.14));
     if (lvl <= 0) continue;
-    dither(ctx, cx - half, ry, half * 2, 1, step(CLOTH, under), step(CLOTH, under + 1), lvl);
-    // the core of the beam, half the width and one step brighter again
+    dither(ctx, cx - half, ry, half * 2, 1, step(surface, under), step(surface, under + 1), lvl);
+    // the core of the beam, half the width, warm — the one place in the room
+    // that carries the colour of the bulb rather than the colour of the wall
     if (i > 2) {
       dither(ctx, cx - Math.round(half * 0.45), ry, Math.round(half * 0.9), 1,
-        step(CLOTH, under + 1), step(CLOTH, under + 2), Math.max(2, lvl - 2));
+        step(surface, under + 1), lit(surface), Math.max(2, lvl - 3));
     }
   }
   /*
@@ -6432,7 +6749,9 @@ function commissarHands(ctx, { S, gold, hard = false, dismiss = 0, turn = 0, clo
  */
 function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) {
   const land = clamp01(t / 0.8);
-  const ease = 1 - Math.pow(1 - land, 2);
+  // On a bare night nothing is landing: the paper was squared by somebody else
+  // and it is already lying there. See the note on `scene.bare` below.
+  const ease = scene?.bare ? 1 : 1 - Math.pow(1 - land, 2);
   px(ctx, 0, 0, SCENE_W, SCENE_H, WOOD[1]);
   px(ctx, 0, 0, SCENE_W, 8, WOOD[0]);
   for (let x = 0; x < SCENE_W; x += 26) px(ctx, x, 8, 1, SCENE_H - 8, WOOD[0]);
@@ -6455,7 +6774,7 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
    */
   const SX = 22;
   const SW = 176;
-  filePage(ctx, SX, 12, SW, 106, { number: '', lit: true, ruleFrom: 92, head: false });
+  filePage(ctx, SX, 10, SW, 120, { number: '', lit: true, ruleFrom: 100, head: false });
   /*
    * The order's own words, printed on it.
    *
@@ -6466,11 +6785,24 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
    * the typing starts — the headings are set at twice the size, and the ink is
    * ink rather than a middle step of the paper's own ramp.
    */
-  px(ctx, SX + 6, 18, SW - 12, 94, PAPER[3]);
-  dither(ctx, SX + 6, 18, SW - 12, 6, PAPER[3], PAPER[2], 3);
+  px(ctx, SX + 6, 14, SW - 12, 112, PAPER[3]);
+  dither(ctx, SX + 6, 14, SW - 12, 6, PAPER[3], PAPER[2], 3);
   const holder = String(character?.name ?? '').trim().split(/\s+/).slice(-1)[0] || 'OPERATOR';
   const post = String(scene?.post ?? 'SECTOR COMMANDER').toUpperCase();
-  const wide = (str, k) => glyphWidth(str, 1, k) <= SW - 34;
+  /*
+   * RE-FITTED TO A FACE THAT CAN SET WHAT IT SAYS.
+   *
+   * Every line on this sheet used to be set at a size chosen against a three
+   * pixel face and checked by eye. The face is six by ten now, with a cap
+   * height of seven and real diagonals in its N, K and M — which is half again
+   * as wide per letter — so every line is MEASURED against the paper it is
+   * printed on and set at the largest size that fits inside the margin.
+   * Nothing on this order is allowed to touch the deckle or the stamp again.
+   */
+  const MARGIN = 10;
+  const COL = SW - MARGIN * 2 - 4;
+  const fitK = (str, room, ks = [2, 1]) =>
+    ks.find((k) => glyphWidth(str, 1, k) <= room) ?? ks[ks.length - 1];
   /*
    * THE HEADLINE IS INSIDE THE PAPER'S OWN MARGIN.
    *
@@ -6484,19 +6816,36 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
    * two lines at the same size rather than one line squeezed into the deckle,
    * and the stamp and the order's reference are pulled back inside it.
    */
-  glyphs(ctx, 'ORDER OF', SX + 10, 20, INK, { k: 2 });
-  glyphs(ctx, 'APPOINTMENT', SX + 10, 31, INK, { k: 2 });
-  // the rule under the heading stops short of the stamp rather than being
-  // ruled through it
-  px(ctx, SX + 10, 43, 92, 1, PAPER[0]);
-  px(ctx, SX + 10, 45, 92, 1, PAPER[1]);
-  glyphs(ctx, 'TO', SX + 10, 52, PAPER[0]);
-  glyphs(ctx, holder.toUpperCase().slice(0, 16), SX + 24, 50, INK, { k: 2 });
-  glyphs(ctx, 'APPOINTED', SX + 10, 66, PAPER[0]);
-  glyphs(ctx, post.slice(0, 22), SX + 10, 73, INK, { k: wide(post.slice(0, 22), 2) ? 2 : 1 });
+  /*
+   * The title, in the display weight: the same face inked twice, one pixel
+   * apart, which is where the stencil flavour the graphics reviewer's KEEP
+   * list names comes from now. Two lines, because APPOINTMENT is eleven
+   * letters and this sheet is a hundred and seventy-six pixels wide.
+   */
+  const titleK = fitK('APPOINTMENT', COL, [2, 1]);
+  glyphs(ctx, 'ORDER OF', SX + MARGIN, 16, INK, { k: titleK, bold: titleK === 1 });
+  glyphs(ctx, 'APPOINTMENT', SX + MARGIN, 16 + titleK * 8, INK, { k: titleK, bold: titleK === 1 });
+  const afterTitle = 16 + titleK * 16;
+  px(ctx, SX + MARGIN, afterTitle + 1, COL - 10, 1, PAPER[0]);
+  px(ctx, SX + MARGIN, afterTitle + 3, COL - 10, 1, PAPER[1]);
+
+  // TO, and the name it was made out to, which is the one word on the sheet
+  // that is about a person
+  const toY = afterTitle + 8;
+  glyphs(ctx, 'TO', SX + MARGIN, toY + 3, PAPER[0]);
+  const name = holder.toUpperCase().slice(0, 16);
+  const nameX = SX + MARGIN + glyphWidth('TO') + 6;
+  glyphs(ctx, name, nameX, toY, INK, { k: fitK(name, 100, [2, 1]) });
+
+  const postY = toY + 20;
+  glyphs(ctx, 'APPOINTED', SX + MARGIN, postY, PAPER[0]);
+  const postText = post.slice(0, 26);
+  glyphs(ctx, postText, SX + MARGIN, postY + 9, INK, { k: fitK(postText, COL, [2, 1]) });
   if (scene?.gazetted) {
-    glyphs(ctx, 'RANK', SX + 10, 85, PAPER[0]);
-    glyphs(ctx, String(scene.gazetted).toUpperCase().slice(0, 22), SX + 32, 85, INK);
+    const rank = String(scene.gazetted).toUpperCase().slice(0, 26);
+    glyphs(ctx, 'RANK', SX + MARGIN, postY + 18, PAPER[0]);
+    glyphs(ctx, rank, SX + MARGIN + glyphWidth('RANK') + 5, postY + 18, INK,
+      { k: fitK(rank, COL - glyphWidth('RANK') - 5, [1]) });
   }
   /*
    * The foot of the order: a scrawl over a ruled line, the office that signed
@@ -6513,15 +6862,29 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
   const office = String(scene?.office ?? 'CHIEF OF AIR DEFENCE').toUpperCase().slice(0, 24);
   const ref = String(scene?.ref ?? 'ORDER 12-4').toUpperCase().slice(0, 12);
   for (let i = 0; i < 52; i++) {
-    px(ctx, SX + 12 + i, 94 - Math.round(Math.sin(i / 5) * 2) - (i % 7 === 0 ? 1 : 0), 1, 1, NIGHT[0]);
+    px(ctx, SX + 12 + i, 106 - Math.round(Math.sin(i / 5) * 2) - (i % 7 === 0 ? 1 : 0), 1, 1, NIGHT[0]);
   }
-  px(ctx, SX + 10, 98, 68, 1, PAPER[0]);
-  glyphs(ctx, office, SX + 10, 102, PAPER[0]);
-  glyphs(ctx, ref, SX + SW - 18 - glyphWidth(ref), 102, PAPER[1]);
-  // the stamp carries the service plate over its English, as every other stamp
-  // in the game does — the story judge caught this one reading a bare 'ADF' —
-  // and it stands clear of the sheet's fourteen-column edge dither
-  stamp(ctx, SX + SW - 72, 26, 52, 23, 'TM ADF', RED, { plate: true });
+  px(ctx, SX + MARGIN, 110, 68, 1, PAPER[0]);
+  /*
+   * The office signs on one line and the order's own reference sits under it,
+   * right-aligned. They used to share a baseline, which at the real width of
+   * this face left the signature block reading CHIEF OF AIR D.
+   */
+  let officeText = office;
+  while (glyphWidth(officeText) > COL && officeText.length > 4) {
+    officeText = officeText.slice(0, -1);
+  }
+  glyphs(ctx, officeText, SX + MARGIN, 113, PAPER[0]);
+  glyphs(ctx, ref, SX + SW - 14 - glyphWidth(ref), 120, PAPER[1]);
+  /*
+   * The stamp carries the service plate over its English, as every other stamp
+   * in the game does. It sits at the foot of the sheet on the right now rather
+   * than beside the title: at the real width of the display face the title
+   * fills the column, and a stamp printed across the last four letters of
+   * APPOINTMENT is the clipping complaint this sheet has already answered
+   * twice.
+   */
+  stamp(ctx, SX + SW - 62, 52, 52, 23, 'TM ADF', RED, { plate: true });
   /*
    * The new board, laid down beside the order by a hand that comes up out of
    * the bottom of the frame — and stays there, resting on the desk beside the
@@ -6567,11 +6930,13 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
     px(ctx, sx, by + 11, 6, 2, DAWN[3]);
     px(ctx, sx + 1, by + 10, 4, 4, DAWN[2]);
   }
-  // a pen, lying across the blotter where it was put down
-  px(ctx, 96, 122, 54, 3, INK);
-  px(ctx, 97, 122, 52, 2, WOOD[2]);
-  px(ctx, 97, 122, 52, 1, DAWN[1]);
-  px(ctx, 144, 122, 6, 2, STEEL[2]);
+  // a pen, lying on the desk below the blotter where it was put down — it used
+  // to lie across the foot of the order, which at the real width of this face
+  // is where the order's own reference is printed
+  px(ctx, 96, 134, 54, 3, INK);
+  px(ctx, 97, 134, 52, 2, WOOD[2]);
+  px(ctx, 97, 134, 52, 1, DAWN[1]);
+  px(ctx, 144, 134, 6, 2, STEEL[2]);
   // the hand: the same hand as every other beat, at the same scale, with a
   // wrist, a cuff and a forearm running off the bottom edge of the frame
   /*
@@ -6582,9 +6947,27 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
    * near edge of it — the one piece of good news in the campaign, delivered by
    * a hand that has just put it there.
    */
-  const ramp = skinOf(character);
-  handBack(ctx, ramp, handX, handY, -1, null, { from: 288, shade: INK, light: -1 });
-  handFront(ctx, ramp, handX, handY, -1);
+  /*
+   * NOBODY IN THE ROOM, ON THE NIGHT THE POST WAS LOST.
+   *
+   * The last two panels both handed this one forward. On a closing watch that
+   * ended with the position overrun, this is the FIRST scene of the evening —
+   * so the first thing a player saw after being carried off their own post was
+   * their own whole uniformed hand taking a promotion in an office, two beats
+   * before the finding told them they were at a clearing station at Kubin and
+   * the people on the post are counted in the morning. The words were fixed
+   * last round and the picture was not.
+   *
+   * `scene.bare` is set by `scenesFor` when the watch ended `site-lost`. The
+   * order and the board are on the blotter, squared by somebody else, and
+   * there is no hand: the room is drawn empty, the way the `finding` scene
+   * already draws this same room on the one night the operator is not in it.
+   */
+  if (!scene?.bare) {
+    const ramp = skinOf(character);
+    handBack(ctx, ramp, handX, handY, -1, null, { from: 288, shade: INK, light: -1 });
+    handFront(ctx, ramp, handX, handY, -1);
+  }
 }
 
 /**
@@ -6594,7 +6977,7 @@ function drawAppointment(ctx, t, character, scene = null, { waiting = 0 } = {}) 
  * longer than the page turns onto a second sheet rather than being clipped.
  */
 function drawFolder(ctx, t, character, {
-  line = 0, page = 0, pageAt = 0, wide = false, ref = null, waiting = 0,
+  line = 0, page = 0, pageAt = 0, wide = false, ref = null, waiting = 0, bare = false,
 } = {}) {
   /*
    * ON A PHONE THE SHEET RUNS OFF THE BOTTOM OF THE PICTURE.
@@ -6667,11 +7050,36 @@ function drawFolder(ctx, t, character, {
    * block, the classification stripe and the stamp all start clear of it, and
    * the box of words is set to the same left edge.
    */
-  glyphs(ctx, 'AIR DEFENCE DIRECTORATE', PX + 18, 38, PAPER[0]);
-  glyphs(ctx, `SECTOR 4-B · FILE ${String(ref ?? 'ON FILE').toUpperCase()}`, PX + 18, 45, PAPER[1]);
-  px(ctx, PX + 18, 52, 62, 7, RED);
-  glyphs(ctx, 'RESTRICTED', PX + 20, 54, PAPER[3]);
-  stamp(ctx, PX + PW - 74, 34, 54, 22, 'TM ADF', RED, { plate: true });
+  /*
+   * RE-SET FOR A FACE HALF AGAIN AS WIDE.
+   *
+   * The letterhead used to be measured against a three-pixel alphabet. At the
+   * real width of this one, AIR DEFENCE DIRECTORATE runs under the stamp and
+   * the file line runs past the deckle, so the head is measured: the stamp
+   * takes its corner first and the letterhead is set in what is left, dropping
+   * to the shorter form of its own name rather than being clipped by a red
+   * box. Nothing on this sheet is allowed to be printed through anything else.
+   */
+  const HX = PX + 14;
+  // the stamp takes the corner first and is sized from the plate it carries,
+  // so the six Cyrillic letters are never cut by their own red border
+  const stampW = PLATE_W + 12;
+  const stampX = PX + PW - 18 - stampW;
+  stamp(ctx, stampX, 30, stampW, FONT.capHeight * 2 + 12, 'TM ADF', RED, { plate: true });
+  const headRoom = stampX - HX - 8;
+  glyphs(ctx, 'AIR DEFENCE DIRECTORATE', HX, 34, PAPER[0]);
+  /*
+   * The file line, measured against what the stamp has left. The long form
+   * carries the sector; where the stamp takes the room for it, the reference
+   * is what stays, because the reference is the thing the rest of the evening
+   * refers back to.
+   */
+  const longFile = `SECTOR 4-B · FILE ${String(ref ?? 'ON FILE').toUpperCase()}`;
+  const fileLine = glyphWidth(longFile) <= headRoom
+    ? longFile : `FILE ${String(ref ?? 'ON FILE').toUpperCase()}`;
+  glyphs(ctx, fileLine, HX, 44, PAPER[1]);
+  px(ctx, HX, 53, glyphWidth('RESTRICTED') + 4, 8, RED);
+  glyphs(ctx, 'RESTRICTED', HX + 2, 55, PAPER[3]);
   if (wide) {
     /*
      * On a phone the drawn part of the sheet IS its head, so it carries a
@@ -6680,14 +7088,15 @@ function drawFolder(ctx, t, character, {
      * first line of the body is the empty page the judges filed.
      */
     const hx = PX + 18;
-    glyphs(ctx, 'FROM', hx, 66, PAPER[1]);
-    glyphs(ctx, 'DIRECTORATE OF SUPPLY', hx + 26, 66, PAPER[0]);
-    glyphs(ctx, 'TO', hx, 76, PAPER[1]);
-    glyphs(ctx, 'SECTOR 4-B POLITICAL SECTION', hx + 26, 76, PAPER[0]);
-    glyphs(ctx, 'COPY', hx, 86, PAPER[1]);
-    glyphs(ctx, '3 OF 4 NOT TO BE REPRODUCED', hx + 26, 86, PAPER[0]);
-    px(ctx, hx, 96, PW - 36, 1, PAPER[1]);
-    px(ctx, hx, 98, PW - 36, 1, PAPER[0]);
+    const lx = hx + glyphWidth('COPY') + 6;
+    glyphs(ctx, 'FROM', hx, 74, PAPER[1]);
+    glyphs(ctx, 'DIRECTORATE OF SUPPLY', lx, 74, PAPER[0]);
+    glyphs(ctx, 'TO', hx, 84, PAPER[1]);
+    glyphs(ctx, 'SECTOR 4-B POLITICAL SECTION', lx, 84, PAPER[0]);
+    glyphs(ctx, 'COPY', hx, 94, PAPER[1]);
+    glyphs(ctx, '3 OF 4 NOT TO BE REPRODUCED', lx, 94, PAPER[0]);
+    px(ctx, hx, 104, PW - 36, 1, PAPER[1]);
+    px(ctx, hx, 106, PW - 36, 1, PAPER[0]);
   }
   /*
    * The rest of the sheet.
@@ -6744,6 +7153,14 @@ function drawFolder(ctx, t, character, {
   // the hand tracks a little way down the sheet as the file is read, but never
   // so far up it that the forearm has to cross the picture to reach the wrist
   const fy = wide ? 128 : Math.min(132, 112 + (line % FOLDER_PAGE) * 5);
+  /*
+   * And nobody in the room on the night the post was lost. `scene.bare` is set
+   * by `scenesFor` when the watch ended `site-lost`: the file is open on the
+   * blotter with nobody reading it, because the operator is at the clearing
+   * station at Kubin and the picture must not say otherwise two beats before
+   * the finding does. Same conditional as the order of appointment above.
+   */
+  if (bare) return;
   const ramp = skinOf(character);
   handBack(ctx, ramp, wide ? 262 : 240, fy, -1, null, { from: wide ? 306 : 286, shade: PAPER[1] });
   handFront(ctx, ramp, wide ? 262 : 240, fy, -1);
@@ -6753,7 +7170,7 @@ function drawFolder(ctx, t, character, {
  * Quarters, at night: a bulb, a stove, a bunk, snow past a frosted window, and
  * a letter held low and to the left so the room stays legible around it.
  */
-function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = false, waiting = 0 } = {}) {
+function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = false, waiting = 0, call = false } = {}) {
   // On a phone the sheet is wide and stands low, and the words carry on down
   // the screen below it; at a desk it is held low-left with the room around it.
   /*
@@ -6826,9 +7243,38 @@ function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = fals
   px(ctx, 155 + swing, 22, 10, 8, PAPER[3]);
   px(ctx, 157 + swing, 30, 6, 4, AMBER);
   px(ctx, 156 + swing, 21, 8, 1, STEEL[2]);
-  const pool = 140 + swing * 6;
-  dither(ctx, pool, 104, 80, 40, null, WOOD[1], 4);
-  dither(ctx, pool + 14, 104, 52, 22, null, WOOD[2], 3);
+  /*
+   * AND THE POOL IT THROWS, WHICH USED TO BE TWO RECTANGLES.
+   *
+   * The reviewer: "Directly above the letter hangs a lit bulb which casts
+   * nothing at all: no cone, no pool on the paper, no glow on the ceiling.
+   * There are two light sources in the room and neither one lights the object
+   * the scene is about." It is an ellipse now, warm, with a dithered falloff,
+   * and it runs from the wainscot down on to the near edge of whatever is
+   * being held up under it.
+   */
+  const pool = 180 + swing * 6;
+  for (let i = 0; i < 46; i += 1) {
+    const q = (i - 20) / 26;
+    const half = Math.round(58 * Math.sqrt(Math.max(0, 1 - q * q)));
+    if (half <= 2) continue;
+    const lvl = Math.max(1, Math.round(9 - Math.abs(q) * 7));
+    const ry = 102 + i;
+    if (ry >= FRAME_BOTTOM) break;
+    dither(ctx, pool - half, ry, half * 2, 1, WOOD[0], WOOD[1], lvl);
+    if (lvl > 5) {
+      dither(ctx, pool - Math.round(half * 0.5), ry, half, 1, WOOD[1], lit(WOOD), Math.max(1, lvl - 5));
+    }
+  }
+  // and the glow on the wall above it, which is what a bare bulb does — an
+  // ellipse round the flex, not a band across the top of the picture
+  for (let i = 0; i < 26; i += 1) {
+    const q = (i - 13) / 15;
+    const half = Math.round(30 * Math.sqrt(Math.max(0, 1 - q * q)));
+    if (half <= 1) continue;
+    dither(ctx, 160 + swing - half, 16 + i, half * 2, 1, CLOTH[0], CLOTH[1],
+      Math.max(1, Math.round(5 - Math.abs(q) * 4)));
+  }
   // the stove, with coals that breathe
   px(ctx, 4, 56, 36, 58, INK);
   px(ctx, 6, 58, 32, 54, STEEL[0]);
@@ -6841,8 +7287,28 @@ function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = fals
   px(ctx, 11, 75, 22, 12, coal % 2 ? DAWN[1] : WOOD[1]);
   px(ctx, 13, 77, 18, 8, coal > 2 ? AMBER : DAWN[2]);
   px(ctx, 16, 80, 12, 3, coal > 1 ? PAPER[3] : AMBER);
-  dither(ctx, 2, 106, 54, 16, null, DAWN[1], 3);
-  dither(ctx, 4, 106, 34, 8, null, AMBER, 2);
+  /*
+   * THE FIRELIGHT, WHICH USED TO BE A RECTANGLE.
+   *
+   * The reviewer: "The stove throws an orange dither patch on the floor with
+   * straight vertical edges and a straight bottom edge — a rectangle of
+   * firelight." It is a graded ellipse now, leaning out of the fire door,
+   * climbing the wainscot at its inner edge and reaching the near ground; the
+   * coals move it a little every few tenths of a second, so the room breathes
+   * with the fire rather than beside it.
+   */
+  const flick = coal > 2 ? 1 : 0;
+  for (let i = 0; i < 34; i += 1) {
+    const q = (i - 12) / 22;
+    const half = Math.round((30 + flick * 2) * Math.sqrt(Math.max(0, 1 - q * q)));
+    if (half <= 1) continue;
+    const ry = 100 + i;
+    if (ry >= FRAME_BOTTOM) break;
+    const lvl = Math.max(1, Math.round(5 - Math.abs(q) * 4) + flick);
+    dither(ctx, Math.max(0, 20 - half), ry, half + Math.min(20, half), 1, WOOD[0], WOOD[1], lvl * 2);
+    dither(ctx, Math.max(0, 20 - Math.round(half * 0.7)), ry, Math.round(half * 1.1), 1,
+      WOOD[1], lit(WOOD), lvl);
+  }
   // the bunk, and the enamel box kept by it
   px(ctx, 210, 56, 104, 66, INK);
   px(ctx, 212, 58, 100, 62, STEEL[0]);
@@ -6885,6 +7351,87 @@ function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = fals
     handBack(ctx, ramp, hl, hy, 1, null, { from: hl - 22, rest: false, light: 1 });
     handBack(ctx, ramp, hr, hy, -1, null, { from: hr + 43, rest: false, light: -1 });
   }
+  /*
+   * THE TWENTY-MINUTE TELEPHONE CALL.
+   *
+   * `family.js` says in its own header that the post is one-way and monitored
+   * all campaign long "so that the epilogue's twenty-minute unmonitored
+   * telephone call means what it means" — and the game then reported that call
+   * in a subordinate clause and ended. Six letters of setup and no payoff.
+   *
+   * It is a scene now, and it is this room without the paper in it: the same
+   * bunk, the same stove, the same snow at the window, and a handset off its
+   * cradle held up at the right of the frame with the cord running down out of
+   * it. Nothing is being read. The words are the household's, spoken.
+   */
+  if (call) {
+    /*
+     * The telephone stands where the letters used to be opened, and the
+     * handset is off it. Same room, same stove, same snow: what is different
+     * is that nothing is being read and nobody is reading it to anybody.
+     */
+    const TX = 44;
+    const TY = 120;
+    px(ctx, TX - 2, TY - 2, 52, 30, INK);
+    px(ctx, TX, TY, 48, 26, NIGHT[0]);
+    px(ctx, TX, TY, 48, 3, NIGHT[1]);
+    px(ctx, TX, TY + 23, 48, 3, INK);
+    // the sloped front with the dial on it
+    px(ctx, TX + 4, TY + 8, 40, 14, NIGHT[1]);
+    px(ctx, TX + 4, TY + 8, 40, 1, NIGHT[2]);
+    circlePx(ctx, TX + 24, TY + 15, 8, NIGHT[2]);
+    circlePx(ctx, TX + 24, TY + 15, 5, NIGHT[0]);
+    // the cradle, standing empty, which is the whole point of the picture
+    px(ctx, TX + 2, TY - 6, 8, 7, INK);
+    px(ctx, TX + 3, TY - 5, 6, 6, NIGHT[1]);
+    px(ctx, TX + 38, TY - 6, 8, 7, INK);
+    px(ctx, TX + 39, TY - 5, 6, 6, NIGHT[1]);
+
+    /*
+     * The handset, held up at the right of the frame with a whole hand round
+     * it and the forearm running off the bottom edge, the way every hand in
+     * this game is built. The earpiece stands above the fist and the
+     * mouthpiece below it, so it reads as a handset at an ear rather than as a
+     * dark bar behind a fist.
+     */
+    const hx = 198;
+    const top = 36;
+    const bot = 132;
+    px(ctx, hx - 2, top, 22, bot - top, INK);
+    px(ctx, hx, top + 2, 18, bot - top - 4, NIGHT[1]);
+    px(ctx, hx, top + 2, 4, bot - top - 4, NIGHT[2]);
+    // the two ends, wider than the shaft
+    px(ctx, hx - 7, top, 32, 16, INK);
+    px(ctx, hx - 5, top + 2, 28, 12, NIGHT[1]);
+    px(ctx, hx - 5, top + 2, 28, 1, NIGHT[2]);
+    px(ctx, hx - 7, bot - 16, 32, 16, INK);
+    px(ctx, hx - 5, bot - 14, 28, 12, NIGHT[1]);
+    for (let i = 0; i < 3; i++) px(ctx, hx - 1 + i * 7, bot - 9, 3, 3, INK);
+
+    /*
+     * The cord, from the mouthpiece across the room to the telephone: a sag,
+     * drawn as a curve with a coil in it, moving a little on the breath of the
+     * room the way the bulb above it does.
+     */
+    const x0 = hx + 4;
+    const y0 = bot - 2;
+    const x1 = TX + 48;
+    const y1 = TY + 4;
+    for (let i = 0; i <= 44; i++) {
+      const f = i / 44;
+      const cx = Math.round(x0 + (x1 - x0) * f);
+      const sag = Math.sin(f * Math.PI) * 26;
+      const cy = Math.round(y0 + (y1 - y0) * f + sag);
+      if (cy >= FRAME_BOTTOM - 1) continue;
+      px(ctx, cx, cy, 3, 2, INK);
+      if (i % 3 === 0) px(ctx, cx, cy - 2 + Math.round(Math.sin(t * 1.6 + i) * 1), 2, 2, NIGHT[0]);
+    }
+
+    handBack(ctx, ramp, hx - 6, 78, -1, null, { from: 300, shade: INK, light: -1 });
+    handFront(ctx, ramp, hx - 6, 78, -1);
+    if (!wide) promptMark(ctx, 300, 168, waiting, PAPER[2]);
+    return;
+  }
   if (notice) {
     px(ctx, SX + 3, SY + 3, SW, SHEET_H, INK);
     px(ctx, SX, SY, SW, SHEET_H, PAPER[2]);
@@ -6900,7 +7447,23 @@ function drawQuarters(ctx, t, character, { line = 0, notice = false, wide = fals
   } else {
     // the letter, held low and to the left
     letterSheet(ctx, SX, SY, SW, SHEET_H);
-    dither(ctx, SX, SY, SW, 18, null, PAPER[3], 5);
+    /*
+     * AND THE BULB ON IT. The sheet is the subject of the scene and it used to
+     * be lit by nothing: the reviewer measured "a lit bulb directly over a
+     * sheet of paper, the sheet uniformly flat". The bulb hangs above and a
+     * little right of it, so the paper is warm at the top and under the flex,
+     * falls off across the fold, and is a step down at the bottom corners
+     * where the hands hold it.
+     */
+    const cx2 = SX + Math.round(SW * 0.56);
+    for (let i = 0; i < Math.min(34, SHEET_H); i += 1) {
+      const f = 1 - i / 34;
+      const half = Math.round(SW * (0.30 + 0.22 * (1 - f)));
+      const lvl = Math.max(1, Math.round(9 * f * f));
+      dither(ctx, Math.max(SX, cx2 - half), SY + i,
+        Math.min(SW, half * 2), 1, PAPER[3], lit(PAPER), lvl);
+    }
+    dither(ctx, SX, SY + SHEET_H - 14, SW, 14, PAPER[3], PAPER[2], 7);
   }
   /*
    * The two hands on the paper.
@@ -7180,6 +7743,8 @@ function endingBackdrop(g, held) {
     [126, 24, 17], [148, 11, 10], [157, 21, 22], [177, 13, 13], [188, 28, 15],
     [214, 12, 9], [224, 17, 18], [239, 24, 11], [262, 14, 14],
   ];
+  /** Where the quarter that is burning stands, for everything the fire lights. */
+  const FIRE_AT = 82;
   for (const [x, w, h] of town) {
     const base = 112;
     // Held, the town is a lit grey mass under the dawn. Lost, it is the same
@@ -7190,14 +7755,34 @@ function endingBackdrop(g, held) {
     px(g, x, base - h, w, 1, held && x > 150 ? DAWN[0] : held ? NIGHT[2] : NIGHT[1]);
     px(g, x + w - 1, base - h, 1, h, held ? NIGHT[2] : INK);
     if (!held) {
-      px(g, x, base - h, 1, h, x < 150 ? RED : NIGHT[1]);
-      dither(g, x + 1, base - h + 1, w - 2, h - 2, null, x < 150 ? RED : INK, x < 150 ? 4 : 3);
+      /*
+       * THE FIRE LIGHTS WHAT IS BESIDE IT.
+       *
+       * The reviewer: "A town is on fire and the fire illuminates nothing. The
+       * flames are flat shapes with a yellow core; the buildings immediately
+       * beside them are the same navy as the buildings a kilometre away." The
+       * arithmetic was a hard cut at x = 150 — lit or not lit, with nothing in
+       * between — so the ninth house was ablaze and the tenth was night. It
+       * falls off with distance from the fire now, on its near face, in
+       * concentric steps: the walls closest to it take the flame itself, the
+       * next take the red of it, and the far end of the town takes nothing,
+       * which is what makes the near end read as burning.
+       */
+      const glow = Math.max(0, 1 - Math.abs(x + w / 2 - FIRE_AT) / 128);
+      const near = glow > 0.62 ? DAWN[1] : glow > 0.3 ? RED : NIGHT[1];
+      px(g, x, base - h, 1, h, near);
+      if (glow > 0.08) {
+        dither(g, x + 1, base - h + 1, w - 2, h - 2, null, glow > 0.55 ? RED : INK,
+          Math.max(1, Math.round(glow * 7)));
+      }
     }
     px(g, x, base - 1, w, 1, INK);
     // a roof, for the houses that have one
     if (w > 12) {
+      const glow = held ? 0 : Math.max(0, 1 - Math.abs(x + w / 2 - FIRE_AT) / 128);
       px(g, x + 2, base - h - 2, w - 4, 2, held ? NIGHT[1] : NIGHT[0]);
-      px(g, x + 2, base - h - 2, w - 4, 1, held && x > 150 ? DAWN[0] : held ? NIGHT[1] : x < 150 ? DAWN[0] : NIGHT[1]);
+      px(g, x + 2, base - h - 2, w - 4, 1, held && x > 150 ? DAWN[0] : held ? NIGHT[1]
+        : glow > 0.55 ? DAWN[0] : glow > 0.25 ? RED : NIGHT[1]);
     }
   }
   // the church, taller than the rest, with its east face in the light

@@ -39,18 +39,28 @@ const ORIGIN = `http://127.0.0.1:${PORT}/`;
  */
 const RUNS = [
   { mission: 'first-light', role: 'radar', background: 'factory' },
+  // The second rung's own watch. It was never opened in a browser by this
+  // suite, and it is one of the two with the most unusual detection behaviour
+  // in the game — horizon-limited low fliers — and the highest track churn.
+  { mission: 'low-riders', role: 'radar', background: 'penal' },
   { mission: 'solo-battery', role: 'crew', background: 'border' },
   { mission: 'weasel-hour', role: 'crew', background: 'academy' },
   { mission: 'economy-of-force', role: 'net', background: 'factory' },
   { mission: 'across-the-line', role: 'net', background: 'border' },
   { mission: 'ville-under-fire', role: 'both', background: 'penal' },
+  { mission: 'ville-under-fire', role: 'net', background: 'academy' },
   { mission: 'four-sectors', role: 'net', background: 'academy' },
   { mission: 'reinforce-the-capital', role: 'net', background: 'factory' },
   { mission: 'two-cities', role: 'net', background: 'border' },
+  { mission: 'two-cities', role: 'both', background: 'factory' },
   // The epilogue needs both gates open: the appointment, and a palace that was
   // still standing at the end of the last watch.
   {
     mission: 'presidents-flight', role: 'net', background: 'academy',
+    campaignEnding: 'obedient',
+  },
+  {
+    mission: 'presidents-flight', role: 'both', background: 'border',
     campaignEnding: 'obedient',
   },
 ];
@@ -306,6 +316,50 @@ async function main() {
         await page.click('#btn-close-report');
         await wait(200);
         if (!await page.isVisible('#btn-again')) failures.push(`${run.mission}/${run.role}: closing the report did not return to the end card`);
+      }
+    }
+
+    /*
+     * And then the watch is stood to its end, in a browser, every run.
+     *
+     * Nothing in this repository had ever finished a watch in a browser. Every
+     * run simulated the first twenty-five to sixty-eight seconds of a night
+     * that lasts eight to fourteen minutes, so "all smoke runs clean" was a
+     * statement about the first forty seconds — and the two crashes the panel
+     * found both fire inside `endMission`, after the world goes complete, with
+     * the frame loop already past the point where the player can do anything
+     * about it. The world is stepped out inside the page rather than played at
+     * 4x, so this costs seconds of wall time rather than minutes; the frame
+     * loop then reaches the end of the watch on its own, which is the path a
+     * player takes.
+     */
+    if (run !== RUNS[0]) {
+      await page.evaluate(() => {
+        const w = window.__world;
+        let guard = 0;
+        while (w.phase !== 'complete' && guard++ < 20000) w.step(0.1);
+      });
+      await page.waitForSelector('#scene:not([hidden])', { timeout: 20000 })
+        .catch(() => failures.push(`${run.mission}/${run.role}: the evening did not start at the end of the watch`));
+      for (let i = 0; i < 90; i++) {
+        if (await page.isVisible('#btn-report')) break;
+        await page.keyboard.press('Enter');
+        await wait(90);
+      }
+      if (!await page.isVisible('#btn-report')) {
+        failures.push(`${run.mission}/${run.role}: the evening never reached the end card`);
+      } else {
+        await page.click('#btn-report');
+        await wait(250);
+        if (!await page.isVisible('#btn-close-report')) {
+          failures.push(`${run.mission}/${run.role}: the full report did not open from the end card`);
+        } else {
+          await page.click('#btn-close-report');
+          await wait(200);
+        }
+        await page.click('#btn-again');
+        await page.waitForSelector('[data-mission]', { timeout: 10000 })
+          .catch(() => failures.push(`${run.mission}/${run.role}: the end card did not lead back to the roster`));
       }
     }
 

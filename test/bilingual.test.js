@@ -31,6 +31,20 @@ import { ECHELONS, POSTS } from '../src/engine/echelon.js';
 const CYRILLIC = /[Ѐ-ӿ]/;
 const hasCyrillic = (v) => typeof v === 'string' && CYRILLIC.test(v);
 
+/**
+ * The one interface file these source scans do not read, and why.
+ *
+ * `bitfont.js` is a TYPEFACE. Its Cyrillic is an alphabet — the list of
+ * characters the face is able to draw, one letter per line beside the pixels
+ * that letter is made of — and not a word, a label, a plate or anything a
+ * player reads. Pairing Б with an English gloss would be pairing a letter with
+ * a translation of a letter. The rule these tests exist for is about COPY, and
+ * it is enforced on the font by the test directly below this list instead: the
+ * face may declare single characters and may not contain a Cyrillic word, so a
+ * sentence can never be smuggled in behind an alphabet.
+ */
+const NOT_COPY = new Set(['bitfont.js']);
+
 /** Every entry in a table must pair its Cyrillic with an English field. */
 function assertPaired(table, label, glossKeys = ['en']) {
   for (const [key, entry] of Object.entries(table)) {
@@ -220,7 +234,7 @@ describe('the interface source', () => {
    */
   test('no template line emits Cyrillic without any Latin text beside it', () => {
     const offenders = [];
-    for (const file of readdirSync('src/ui').filter((f) => f.endsWith('.js'))) {
+    for (const file of readdirSync('src/ui').filter((f) => f.endsWith('.js') && !NOT_COPY.has(f))) {
       const source = readFileSync(`src/ui/${file}`, 'utf8');
       source.split('\n').forEach((line, i) => {
         const code = line.replace(/^\s*(\/\/|\*).*$/, '');
@@ -248,7 +262,8 @@ describe('how much of it there is', () => {
    */
   test('the interface prints Cyrillic from a handful of lines, and no more', () => {
     const lines = [];
-    for (const file of readdirSync('src/ui').filter((f) => f.endsWith('.js') && f !== 'lexicon.js')) {
+    for (const file of readdirSync('src/ui')
+      .filter((f) => f.endsWith('.js') && f !== 'lexicon.js' && !NOT_COPY.has(f))) {
       const source = readFileSync(`src/ui/${file}`, 'utf8');
       source.split('\n').forEach((line, i) => {
         const code = line.replace(/^\s*(\/\/|\*|\/\*).*$/, '').replace(/\/\/.*$/, '');
@@ -256,6 +271,18 @@ describe('how much of it there is', () => {
       });
     }
     assert.ok(lines.length <= 5, `Cyrillic literals are back on the console:\n${lines.join('\n')}`);
+  });
+
+  test('the typeface declares letters, and never a word', () => {
+    /*
+     * The face is excused the scans above because an alphabet is not copy.
+     * This is what holds it to that: every Cyrillic run in the font file is one
+     * character long. Two in a row would be a word, and a word in a typeface is
+     * a label somebody has hidden where the bilingual rule cannot see it.
+     */
+    const source = readFileSync('src/ui/bitfont.js', 'utf8');
+    const runs = source.match(/[Ѐ-ӿ]{2,}/g) ?? [];
+    assert.deepEqual(runs, [], `the typeface is carrying words: ${runs.join(', ')}`);
   });
 
   test('the lesson card speaks English only', () => {

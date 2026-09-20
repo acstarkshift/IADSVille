@@ -1568,7 +1568,13 @@ export function renderBatteries(world, ui, els) {
      * the chip's corner on every cap either way, so nothing on the rack moves
      * when the selection does.
      */
-    const keyed = ui.view !== 'crew'
+    /*
+     * And never on a battery that is not on your net. A detached battery's
+     * caps are all disabled, and the chip arithmetic did not know that — so a
+     * card the player cannot give a single order to was stencilled A, G, R, S,
+     * X and Q/W/E, advertising eight keys that do nothing on it.
+     */
+    const keyed = ui.view !== 'crew' && !detached
       && (ui.selectedSiteId === site.id || (!ui.selectedSiteId && mine));
 
     return `<div class="unit ${ui.selectedSiteId === site.id ? 'is-selected' : ''}

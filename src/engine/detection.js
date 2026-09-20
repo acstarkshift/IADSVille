@@ -270,7 +270,7 @@ function gateKm(track, radius, t) {
 }
 
 /** A fresh track built from a first plot. */
-function newTrack(world, plot, truth) {
+function newTrack(world, plot) {
   const tn = world.nextTn++;
   return {
     id: `trk${tn}`,
