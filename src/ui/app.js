@@ -27,7 +27,7 @@ import { Audio } from './audio.js';
 import {
   renderTopbar, renderTrackList, renderFlightStrip, renderFormations, renderBatteries, renderCrewConsole,
   renderEventLog, renderCommandNet, renderBlackout, renderScopeSide, renderActionBar, stampLegends,
-  clearPanelCache, RANGE_SCALES, batteryOrder, rackBatteries, isPhoneConsole,
+  clearPanelCache, rangeDetents, batteryOrder, rackBatteries, isPhoneConsole,
 } from './panels.js';
 import { CONTROLS, POSTURE_CYCLE, STATE, legend, pairHtml } from './lexicon.js';
 import { SPEED_BY_KEY, digitPressed } from './keymap.js';
@@ -514,6 +514,9 @@ function startMission() {
    * put the entire engagement in one corner.
    */
   scope.rangeKm = world.scenario.scopeRangeKm ?? world.echelon.scopeRangeKm;
+  // The wheel may go as wide as the switch does, and the switch has a position
+  // for the scale the set was handed over on.
+  scope.maxRangeKm = rangeDetents(world).at(-1);
   scope.origin = { ...world.centre };
   scope.centre = { ...world.centre };
   scope.clearPaint();
@@ -1140,6 +1143,17 @@ function wireCanvasInput() {
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
     const renderer = ui.view === 'crew' ? crew : scope;
+
+    // The RANGE readout on the glass is the range switch at every width the
+    // bezel is not drawn at — and a perfectly good one at the widths it is.
+    const hitBox = ui.view === 'crew' ? null : scope.rangeHit;
+    if (e.button !== 2 && hitBox
+      && px >= hitBox.x && px <= hitBox.x + hitBox.w
+      && py >= hitBox.y && py <= hitBox.y + hitBox.h) {
+      stepRange();
+      return;
+    }
+
     const hit = renderer.pick(px, py, world);
 
     if (e.button === 2) {
@@ -1200,6 +1214,23 @@ function wireCanvasInput() {
     e.preventDefault();
     scope.zoom(e.deltaY > 0 ? 1.12 : 0.89);
   }, { passive: false });
+}
+
+/**
+ * One detent of the range switch, wider, wrapping at the end of its travel.
+ *
+ * Shared by the knob on the bezel, the + / − keys' neighbours and the RANGE
+ * readout on the tube, which is the only range control a phone has: the bezel
+ * strip is not drawn below 1400px and there is no wheel and no keyboard under
+ * a thumb, so on a phone the scale used to be frozen for the whole watch —
+ * 300 km on a 378 px tube at the commander's seat.
+ */
+function stepRange() {
+  if (!world || ui.view === 'crew') return;
+  const detents = rangeDetents(world);
+  const at = detents.findIndex((r) => r > scope.rangeKm + 0.5);
+  scope.rangeKm = detents[at === -1 ? 0 : at];
+  audio.detent();
 }
 
 /**
@@ -1484,14 +1515,19 @@ function wirePanelInput() {
     if (btn) setSpeed(Number(btn.dataset.speed));
   });
 
-  // The range selector clicks round its detents; the wheel over the tube still
-  // works for anyone who would rather zoom continuously.
+  /*
+   * The range selector clicks round its detents; the wheel over the tube still
+   * works for anyone who would rather zoom continuously.
+   *
+   * The detents are the watch's own — see `rangeDetents` — so the scale the
+   * set was handed to you on is always a position the switch has. It used to
+   * be a fixed [60, 100, 150, 220] against echelons that open at 140, 150, 260
+   * and 300: on Four Sectors one click went 260 to 60 and 260 never came back,
+   * and on The Two Cities 300 was not reachable at all.
+   */
   els.scopeSide.addEventListener('click', (e) => {
     if (!e.target.closest('#range-knob') || ui.view === 'crew') return;
-    const current = RANGE_SCALES.findIndex((r) => r >= scope.rangeKm - 1);
-    const next = RANGE_SCALES[(current + 1 + RANGE_SCALES.length) % RANGE_SCALES.length];
-    scope.rangeKm = next;
-    audio.detent();
+    stepRange();
   });
 
   els.viewToggle.onclick = toggleView;

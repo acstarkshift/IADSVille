@@ -32,6 +32,8 @@ export class Scope extends Lettering {
     this.w = 0;
     this.h = 0;
     this.rangeKm = 150;
+    /** The widest position the watch's own range switch has. See `zoom`. */
+    this.maxRangeKm = 260;
     this.centre = { x: 0, y: 0 };
     /** Where the range rings and bearing spokes are struck from. */
     this.origin = { x: 0, y: 0 };
@@ -90,8 +92,18 @@ export class Scope extends Lettering {
     };
   }
 
+  /**
+   * The wheel's continuous zoom, stopped at the ends of the switch's travel.
+   *
+   * The ceiling used to be a flat 260 km, which is under two of the scales the
+   * game actually opens on. On The Two Cities the tube starts at 300, so one
+   * turn of the wheel outward clamped it to 260 and 300 was gone — on a watch
+   * whose batteries outreach the picture. The ceiling is now the widest detent
+   * the watch's own selector has, set with the rest of the framing when the
+   * watch opens.
+   */
   zoom(factor) {
-    this.rangeKm = Math.max(15, Math.min(260, this.rangeKm * factor));
+    this.rangeKm = Math.max(15, Math.min(this.maxRangeKm ?? 260, this.rangeKm * factor));
   }
 
   /**
@@ -893,7 +905,6 @@ export class Scope extends Lettering {
   drawTracks(world, ui) {
     const { ctx } = this;
     const p = this.palette;
-    const standard = this.theme.symbology === 'standard';
     /*
      * On a small tube a contact carries its number and nothing else.
      *
@@ -970,16 +981,33 @@ export class Scope extends Lettering {
       ctx.fillStyle = colour;
       ctx.lineWidth = (selected ? 2.2 : 1.4) * this.dpr;
 
-      if (standard) {
-        drawStandardSymbol(ctx, s, size, track);
-      } else {
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, size * 0.55, 0, TAU);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, size, 0, TAU);
-        ctx.stroke();
-      }
+      /*
+       * WHAT IT IS, AS A SHAPE.
+       *
+       * Every contact on this tube used to be the same mark — a filled dot
+       * inside a ring — and hostile, friendly and unidentified differed only
+       * in colour. The one distinction the whole game turns on, the one that
+       * decides whether you shoot the airliner, was carried by hue with no
+       * redundant channel at all: measured, #ff5b52 against #ffd447 is 2.15:1
+       * in ordinary vision and 1.44:1 under deuteranopia, against a floor of
+       * 3.0 for a graphical object that has to be told apart.
+       *
+       * The frames to fix it were written in this file years ago and have
+       * never once been drawn: `drawStandardSymbol` was gated on
+       * `this.theme.symbology === 'standard'` and there is one theme, whose
+       * symbology is 'blip'. The gate is gone. Diamond hostile, dome friendly,
+       * quatrefoil unidentified — and the track is coasting when the frame is
+       * broken rather than merely dimmed, because a dead-reckoned position
+       * half a minute old is a different thing from a paint and half an alpha
+       * is not a statement.
+       */
+      if (track.coasting) ctx.setLineDash([2.5 * this.dpr, 2.5 * this.dpr]);
+      drawStandardSymbol(ctx, s, size, track);
+      ctx.setLineDash([]);
+      // The plot itself, inside the frame: where the system believes it is.
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, size * 0.38, 0, TAU);
+      ctx.fill();
 
       /*
        * The protected flight.
@@ -1242,6 +1270,20 @@ export class Scope extends Lettering {
     const p = this.palette;
     const d = this.dpr;
     this.stamp(`RANGE ${Math.round(this.rangeKm)} KM`, 10 * d, 16 * d, p.inkDim, { size: 10 });
+    /*
+     * And the readout is the control, wherever the bezel is not.
+     *
+     * Below 1400px the whole bezel strip is not drawn, so at 1280x800 — one of
+     * the two desk widths — the range could be changed only by a wheel or by
+     * keys, neither of which is stated anywhere; and on a phone there is no
+     * wheel, no keyboard and no pinch, so the scale was frozen for the entire
+     * watch. The box the readout was just stamped in is remembered in CSS
+     * pixels so a tap on it can step the switch.
+     */
+    const box = this.reserved[this.reserved.length - 1];
+    this.rangeHit = box
+      ? { x: box.x / d - 6, y: box.y / d - 6, w: box.w / d + 12, h: box.h / d + 14 }
+      : null;
     // The hour and the weather, under the range: the watch's own time of
     // night, which is one of the things that tells this watch from the last.
     this.stamp(watchConditions(world.scenario, world.t).line, 10 * d, 30 * d, p.inkDim, { size: 10 });
@@ -1277,8 +1319,15 @@ export class Scope extends Lettering {
   }
 }
 
-/** Approximate MIL-STD-2525 air frames: diamond hostile, dome friendly, quatrefoil unknown. */
-function drawStandardSymbol(ctx, s, size, track) {
+/**
+ * The air frames: diamond hostile, dome friendly, quatrefoil unidentified.
+ *
+ * Exported because the console is no longer allowed to draw a mark it will not
+ * also explain. The nomenclature plate on the bezel draws each of these at the
+ * size the tube draws it, from this function, so the key can never drift from
+ * the picture.
+ */
+export function drawStandardSymbol(ctx, s, size, track) {
   ctx.beginPath();
   if (track.hostility === 'hostile') {
     ctx.moveTo(s.x, s.y - size * 1.2);
@@ -1302,6 +1351,183 @@ function drawStandardSymbol(ctx, s, size, track) {
     ctx.closePath();
   }
   ctx.stroke();
+}
+
+/**
+ * THE NOMENCLATURE: every mark on the glass, and what it is called.
+ *
+ * The interface critic's count: "Nothing on this console tells the player what
+ * any mark means. Red is never defined as hostile, yellow never as
+ * unidentified, blue never as friendly. Nor is the dashed corner bracket, the
+ * solid bracket, the rim caret, the cross, the pulsing ring or the dashed
+ * tether. `#scope-legend`, the element named 'legend', is not a legend: it is
+ * a fixed instruction line that never changes." A regular expression for the
+ * name of any colour over the whole handbook returned false.
+ *
+ * So this is the table, and it is drawn rather than described — by the same
+ * code the tube draws with, at the size the tube draws it, so the key cannot
+ * drift away from the picture it explains. It is printed in the handbook under
+ * THE PICTURE and on the bezel plate beside the range knob.
+ */
+export const NOMENCLATURE = [
+  { id: 'hostile', name: 'Hostile', note: 'identified as an enemy aircraft' },
+  { id: 'friendly', name: 'Friendly', note: 'identified as one of ours' },
+  { id: 'unknown', name: 'Unidentified', note: 'seen, not yet named — most of what you shoot at' },
+  { id: 'coasting', name: 'Coasting', note: 'no paint this sweep; the position is dead reckoned' },
+  { id: 'destroyed', name: 'Splashed', note: 'held for a few seconds, then the track drops' },
+  { id: 'vip', name: 'Protected flight', note: 'the one aircraft a watch is about' },
+  { id: 'claimed', name: 'Assigned', note: 'a battery has it; its name is under the contact' },
+  { id: 'firing', name: 'Engaged', note: 'that battery has a round in the air on it' },
+  { id: 'offscale', name: 'Off the scale', note: 'outside the picture, on the bearing shown' },
+  { id: 'battery', name: 'Battery', note: 'filled while its radar is radiating' },
+  { id: 'radar', name: 'Surveillance radar', note: 'a set of its own, not a battery’s' },
+  { id: 'place', name: 'Defended place', note: 'what the watch is fought for' },
+  { id: 'priority', name: 'Priority of fires', note: 'the place an order has named; it is not to be touched' },
+];
+
+/**
+ * One entry of the nomenclature, drawn centred on (cx, cy) at the size the
+ * tube draws it. `u` is the device ratio the swatch is being drawn at.
+ */
+export function drawNomenclature(ctx, id, cx, cy, p, u = 1) {
+  const s = { x: cx, y: cy };
+  const size = 5 * u;
+  const frame = (hostility, dash = null) => {
+    ctx.save();
+    ctx.strokeStyle = ctx.fillStyle = hostility === 'hostile' ? p.hostile
+      : hostility === 'friendly' ? p.friendly : p.unknown;
+    ctx.lineWidth = 1.4 * u;
+    if (dash) { ctx.setLineDash(dash); ctx.globalAlpha = 0.5; }
+    drawStandardSymbol(ctx, s, size, { hostility });
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, size * 0.38, 0, TAU);
+    ctx.fill();
+    ctx.restore();
+  };
+  const brackets = (solid) => {
+    ctx.save();
+    ctx.strokeStyle = solid ? p.good : p.accent;
+    ctx.lineWidth = (solid ? 1.8 : 1.3) * u;
+    if (!solid) ctx.setLineDash([2 * u, 2 * u]);
+    const b = size * 2.1;
+    const arm = size * 0.9;
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      ctx.beginPath();
+      ctx.moveTo(s.x + sx * b, s.y + sy * b - sy * arm);
+      ctx.lineTo(s.x + sx * b, s.y + sy * b);
+      ctx.lineTo(s.x + sx * b - sx * arm, s.y + sy * b);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  switch (id) {
+    case 'hostile': frame('hostile'); break;
+    case 'friendly': frame('friendly'); break;
+    case 'unknown': frame('unknown'); break;
+    case 'coasting': frame('hostile', [2.5 * u, 2.5 * u]); break;
+    case 'destroyed': {
+      ctx.save();
+      ctx.strokeStyle = p.hostile;
+      ctx.lineWidth = 1.6 * u;
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, size * 2.4, 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      const arm = size * 0.9;
+      ctx.beginPath();
+      ctx.moveTo(s.x - arm, s.y - arm); ctx.lineTo(s.x + arm, s.y + arm);
+      ctx.moveTo(s.x - arm, s.y + arm); ctx.lineTo(s.x + arm, s.y - arm);
+      ctx.stroke();
+      ctx.restore();
+      break;
+    }
+    case 'vip':
+      frame('friendly');
+      ctx.save();
+      ctx.strokeStyle = p.friendly;
+      ctx.lineWidth = 1.6 * u;
+      ctx.setLineDash([4 * u, 3 * u]);
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, size * 2.6, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+      break;
+    case 'claimed': frame('unknown'); brackets(false); break;
+    case 'firing': frame('hostile'); brackets(true); break;
+    case 'offscale':
+      ctx.save();
+      ctx.strokeStyle = p.hostile;
+      ctx.lineWidth = 1.4 * u;
+      ctx.globalAlpha = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(s.x - 4 * u, s.y - 4 * u);
+      ctx.lineTo(s.x + 2 * u, s.y);
+      ctx.lineTo(s.x - 4 * u, s.y + 4 * u);
+      ctx.stroke();
+      ctx.globalAlpha = 0.45;
+      ctx.beginPath();
+      ctx.moveTo(s.x + 5 * u, s.y - 6 * u);
+      ctx.lineTo(s.x + 5 * u, s.y + 6 * u);
+      ctx.stroke();
+      ctx.restore();
+      break;
+    case 'battery': {
+      ctx.save();
+      const b = 6 * u;
+      ctx.strokeStyle = p.accent;
+      ctx.fillStyle = withAlpha(p.accent, 0.22);
+      ctx.lineWidth = 1.5 * u;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y - b);
+      ctx.lineTo(s.x + b, s.y + b * 0.8);
+      ctx.lineTo(s.x - b, s.y + b * 0.8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      break;
+    }
+    case 'radar': {
+      ctx.save();
+      const r = 5 * u;
+      ctx.strokeStyle = p.ink;
+      ctx.lineWidth = 1.4 * u;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, r, 0, TAU);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y - r * 2.1);
+      ctx.lineTo(s.x, s.y - r);
+      ctx.stroke();
+      ctx.restore();
+      break;
+    }
+    case 'place':
+    case 'priority': {
+      ctx.save();
+      const colour = id === 'priority' ? p.hostile : p.friendly;
+      ctx.strokeStyle = colour;
+      ctx.fillStyle = withAlpha(colour, id === 'priority' ? 0.3 : 0.15);
+      ctx.lineWidth = (id === 'priority' ? 2.2 : 1.4) * u;
+      ctx.beginPath();
+      ctx.rect(s.x - size, s.y - size, size * 2, size * 2);
+      ctx.fill();
+      ctx.stroke();
+      if (id === 'priority') {
+        ctx.setLineDash([3 * u, 3 * u]);
+        ctx.lineWidth = 1.6 * u;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, size * 2.6, 0, TAU);
+        ctx.stroke();
+      }
+      ctx.restore();
+      break;
+    }
+    default: break;
+  }
 }
 
 /**

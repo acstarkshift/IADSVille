@@ -1342,11 +1342,53 @@ h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-rig
 .scope-side .placard { width: 100%; }
 .scope-side .data-plate { width: 100%; text-align: left; white-space: normal; }
 .scope-side .data-plate.is-footer { margin-top: auto; }
-/* The works plate needs a column to be read in. At 76px it broke to one word
-   a line — ЗАВОД / ИМ. / КОРНЕЛА stacked down a gutter — and the red placard
-   beside it did the same. It gets a wider strip, and below the width where
-   that strip fits it is simply not drawn: the same plates are on the topbar. */
-@media (max-width: 1400px) { .scope-side { display: none; } }
+/*
+ * THE PLATES FOLD AWAY BELOW 1400px. THE CONTROLS DO NOT.
+ *
+ * The works plate needs a column to be read in: at 76px it broke to one word a
+ * line and the red placard beside it did the same, so below the width that
+ * strip fits, the plates are not drawn — the same figures are on the topbar.
+ * But the whole strip used to go, and with it the only visible range control
+ * in the game. At 1280x800, one of the two desk widths, the scale could then
+ * be changed only by a wheel over the tube or by + / −, and neither is stated
+ * anywhere on the console. The knob, its legend and its readout stay; the
+ * riveted plates and the key fold.
+ */
+@media (max-width: 1400px) {
+  .scope-side { width: 62px; padding: 4px 2px 2px 4px; }
+  .scope-side .data-plate.is-footer,
+  .scope-side .placard,
+  .scope-side .nom-plate { display: none; }
+}
+/* On a phone the bezel has no strip at all — the console is four things and
+   the tube is one of them. The range switch there is the RANGE readout on the
+   glass itself, which is a tap target; see drawChrome. */
+@media (max-width: 900px) { .scope-side { display: none; } }
+
+/* The key to the glass, riveted on the bezel under the range switch. */
+.nom-plate {
+  display: flex; flex-direction: column; align-items: stretch; gap: 3px;
+  width: 100%; margin-top: 8px; padding: 5px 4px 4px;
+  border: 1px solid var(--metal-edge); border-radius: 2px;
+  background: linear-gradient(180deg, var(--metal-hi), var(--metal-lo));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+.nom-plate > b {
+  font-size: 7px; letter-spacing: .14em; color: var(--engrave); text-align: center;
+}
+.nom-plate .nom-cell { display: flex; align-items: center; gap: 4px; }
+.nom-plate .nom-cell i {
+  font-style: normal; font-size: 7.5px; letter-spacing: .04em; color: var(--engrave);
+}
+.nom-swatch.is-bezel {
+  width: 30px; height: 20px; flex: 0 0 auto; display: block;
+  background: var(--tube-face, #050d0a); border: 1px solid var(--metal-edge);
+}
+.nom-plate > u {
+  text-decoration: none; font-size: 7px; letter-spacing: .1em;
+  color: var(--engrave-dim); text-align: center; padding-top: 2px;
+  border-top: 1px solid var(--metal-edge);
+}
 
 .scope-overlay {
   position: absolute; inset: 0 0 30px; pointer-events: none;
@@ -2946,6 +2988,31 @@ table.ledger .down { color: var(--hostile); }
 .is-manual .class-art line { stroke: #6f6552; }
 .is-manual .reach-bar { background: #efe8d5; border-color: #8d938a; }
 .is-manual .reach-bar i { background: #7b4a18; opacity: .85; }
+
+/*
+ * THE NOMENCLATURE, AS FIGURES OF THE GLASS.
+ *
+ * A mark on a phosphor tube cannot be printed on cream stock and still be the
+ * mark, so each one is set in a little window of the tube's own black — the
+ * way a manual reproduces a photograph of a display — with a plate border
+ * round it and the name and the sentence beside it.
+ */
+.nomenclature {
+  display: grid; gap: 2px; grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 760px) { .nomenclature { grid-template-columns: minmax(0, 1fr); } }
+.nom-row {
+  display: grid; grid-template-columns: 66px minmax(0, 1fr); gap: 12px;
+  align-items: center; padding: 7px 0; border-bottom: 1px solid var(--edge);
+}
+.nom-swatch {
+  width: 60px; height: 40px; display: block;
+  background: #050d0a; border: 1px solid #6f6552;
+  box-shadow: 1px 1px 0 rgba(35, 38, 31, .22);
+}
+.nom-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.nom-text b { font-size: 12px; letter-spacing: .06em; }
+.nom-text small { font-size: 10.5px; line-height: 1.4; }
 
 /* The last watch's outcome: a black field with margin, and no card at all. */
 /* The ending is not another panel in the deck: it is set on the black field,

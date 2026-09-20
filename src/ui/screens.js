@@ -29,6 +29,8 @@ import { composeFlightEnding, flightEndingSummary } from '../engine/epilogue.js'
 import { standing as arcStanding } from '../engine/revelations.js';
 import { briefLine } from '../engine/family.js';
 import { drawEndingStill, plainLedgerReason, SCENE_W, SCENE_H } from './scenes.js';
+import { NOMENCLATURE, drawNomenclature } from './scope.js';
+import { readPalette } from './themes.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1585,6 +1587,31 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
       service is ${Math.max(...Object.values(SAM_TYPES).map((t) => t.maxRangeKm))}&nbsp;km.</p>
     </div>
 
+    ${/*
+       * THE PICTURE.
+       *
+       * The handbook had seven sections and not one of them said what a mark
+       * on the tube means: a regular expression for the name of any colour
+       * over its whole text returned false, on a game whose central decision
+       * is whether the thing on the glass is an airliner. Every mark is now
+       * printed here, drawn by the code that draws the tube rather than
+       * described in words beside it, so the key cannot drift away from the
+       * picture.
+       */ ''}
+    <div class="card">
+      <h3>The picture</h3>
+      <p class="note">Every mark the tube draws, at the size it draws it. A contact's shape says
+      what it is and its colour says the same thing again; the frame is the one you can still read
+      when the colours are not available to you.</p>
+      <div class="nomenclature">
+        ${NOMENCLATURE.map((m) => `<div class="nom-row">
+          <canvas class="nom-swatch" width="120" height="80" data-mark="${esc(m.id)}"
+            aria-hidden="true"></canvas>
+          <span class="nom-text"><b>${esc(m.name)}</b><small class="note">${esc(m.note)}</small></span>
+        </div>`).join('')}
+      </div>
+    </div>
+
     <div class="card">
       <h3>What is actually going on</h3>
       <p>A radar only sees a target when its beam sweeps that bearing, and it cannot see through
@@ -1608,5 +1635,24 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
 
     <div class="actions"><button class="btn-primary" id="btn-close-help">BACK</button></div>
   </div>`;
+  paintNomenclature(host);
   toTop(host);
+}
+
+/**
+ * Fill the handbook's key with the marks themselves.
+ *
+ * Each swatch is a 72 x 48 canvas drawn at three device pixels to one, so the
+ * mark is the size it is on the tube and the line weights are the tube's, at a
+ * scale the page can be read at.
+ */
+function paintNomenclature(host) {
+  if (!host) return;
+  const p = readPalette();
+  for (const canvas of host.querySelectorAll('canvas.nom-swatch[data-mark]')) {
+    if (!canvas.getContext) continue;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawNomenclature(ctx, canvas.dataset.mark, canvas.width / 2, canvas.height / 2, p, 3);
+  }
 }

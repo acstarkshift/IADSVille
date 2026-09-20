@@ -133,6 +133,25 @@ describe('lettering stays on the glass and stays put', () => {
     assert.ok(box.x + box.w <= 400, `the label ran off the tube (right edge ${box.x + box.w})`);
   });
 
+  test('a label at the top of the glass keeps its first line', () => {
+    const s = surface({ w: 400, h: 300 });
+    s.reserved = [];
+    s.beginLabels();
+    const box = s.place(['T-004', '065 STRIKE'], 200, 3, '#fff');
+    assert.ok(box.y >= 0, `the block was placed above the tube (top ${box.y})`);
+    assert.ok(box.y + box.h <= 300);
+  });
+
+  test('a line longer than the glass is cut to it, with a mark', () => {
+    const s = surface({ w: 120 });
+    s.reserved = [];
+    s.beginLabels();
+    s.place('PRESIDENTIAL PALACE · PRIORITY', 60, 100, '#fff');
+    const [printed] = s.printed;
+    assert.ok(printed.text.endsWith('…'), `not cut: ${printed.text}`);
+    assert.ok(printed.text.length * 6 <= 120, 'the cut line is still wider than the tube');
+  });
+
   test('an unchanged picture letters itself the same way twice', () => {
     const s = surface();
     const frame = () => {

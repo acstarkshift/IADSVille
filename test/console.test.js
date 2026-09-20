@@ -14,7 +14,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 
 import { World } from '../src/engine/world.js';
-import { scenarioById, consoleCaps } from '../src/engine/scenarios.js';
+import { SCENARIOS, scenarioById, consoleCaps } from '../src/engine/scenarios.js';
 import { emptyCampaign, enlist, recordMission, briefingNote } from '../src/engine/campaign.js';
 import { SPEED_BY_KEY, digitPressed } from '../src/ui/keymap.js';
 import {
@@ -22,7 +22,7 @@ import {
 } from '../src/ui/lexicon.js';
 import { RADAR_TYPES, SAM_TYPES } from '../src/engine/config.js';
 import { planGeography } from '../src/ui/console.js';
-import { seatPicture } from '../src/ui/panels.js';
+import { seatPicture, rangeDetents, detentAngle } from '../src/ui/panels.js';
 import {
   NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, RADAR_TUTORIAL_STEPS, radarNamesIn,
   stepText, stepTexts,
@@ -560,5 +560,69 @@ describe('whose a contact is, as a shape', () => {
     // Released: nothing on it again, cleanly.
     assert.ok(w.unassign(track.id, bastion.id));
     assert.equal(assignmentShape(w, track).bracket, 'none');
+  });
+});
+
+describe('the range selector says which scale the tube is on', () => {
+  /*
+   * It used to say the opposite. `RANGE_SCALES` was [60, 100, 150, 220] and
+   * the echelons open at 140, 150, 260 and 300 with three scenarios at 260,
+   * 260 and 175, so `indexOf` and `findIndex(r => r >= km)` both returned -1
+   * and `Math.max(0, -1)` drove the pointer hard over to MINIMUM while the
+   * tube was at MAXIMUM. Measured by the interface critic at t=60: First
+   * Light 140 km / the 150 detent, Four Sectors 260 / the 60 detent, The Two
+   * Cities 300 / the 60 detent, The President's Flight 175 / the 220 detent.
+   *
+   * The rule, held here for every watch and every seat the game has: the
+   * scale the set is handed over on is a position the switch has, and the
+   * pointer stands on it.
+   */
+  const MIN = -135;
+  const MAX = 135;
+
+  test('every watch opens on a detent, and the pointer is on it', () => {
+    const wrong = [];
+    for (const scenario of SCENARIOS) {
+      const world = new World(scenario, { role: scenario.roles[0], seed: 3 });
+      const open = scenario.scopeRangeKm ?? world.echelon.scopeRangeKm;
+      const detents = rangeDetents(world);
+      const at = detents.indexOf(open);
+      if (at < 0) { wrong.push(`${scenario.id}: opens at ${open} km, not a detent (${detents})`); continue; }
+      const angle = detentAngle(detents, open);
+      const want = MIN + (at / (detents.length - 1)) * (MAX - MIN);
+      if (Math.abs(angle - want) > 0.01) {
+        wrong.push(`${scenario.id}: ${open} km is detent ${at} of ${detents.length - 1}`
+          + ` (${want.toFixed(0)} deg) but the pointer is at ${angle.toFixed(0)} deg`);
+      }
+    }
+    assert.deepEqual(wrong, [], wrong.join('\n'));
+  });
+
+  test('the pointer never clamps to the first detent for a wide scale', () => {
+    const detents = [60, 100, 150, 220, 300];
+    assert.equal(detentAngle(detents, 300), MAX);
+    assert.equal(detentAngle(detents, 60), MIN);
+    // And a scale between two detents stands between them rather than at zero.
+    const between = detentAngle(detents, 260);
+    assert.ok(between > detentAngle(detents, 220) && between < MAX,
+      `260 km should stand between 220 and 300, not at ${between}`);
+  });
+
+  test('the switch can be turned back to the scale the watch opened on', () => {
+    for (const scenario of SCENARIOS) {
+      const world = new World(scenario, { role: scenario.roles[0], seed: 3 });
+      const open = scenario.scopeRangeKm ?? world.echelon.scopeRangeKm;
+      const detents = rangeDetents(world);
+      // One click is the next position up, wrapping at the end of travel.
+      let km = detents[0];
+      const seen = new Set([km]);
+      for (let i = 0; i < detents.length + 2; i++) {
+        const at = detents.findIndex((r) => r > km + 0.5);
+        km = detents[at === -1 ? 0 : at];
+        seen.add(km);
+      }
+      assert.ok(seen.has(open),
+        `${scenario.id}: ${open} km cannot be reached with the knob (${[...seen]})`);
+    }
   });
 });

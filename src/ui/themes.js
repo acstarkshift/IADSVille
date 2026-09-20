@@ -33,7 +33,15 @@ export const THEMES = {
     scanlines: true,
     glowPx: 9,
     sweepTailDeg: 62,
-    symbology: 'blip',
+    /*
+     * There is no symbol-set switch any more.
+     *
+     * There used to be a `symbology` key here, set to 'blip' on the only theme
+     * there is, which gated a written and complete set of air frames in
+     * scope.js out of the game: every contact was the same dot in a ring and
+     * hostility was hue and nothing else, at 1.44:1 under deuteranopia. The
+     * frames are simply drawn.
+     */
     vignette: 0.55,
     curvature: true,
   },

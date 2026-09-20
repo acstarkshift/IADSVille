@@ -24,6 +24,8 @@ import { rankOf, serviceNumber } from '../engine/character.js';
 import { consoleCaps } from '../engine/scenarios.js';
 import { rankInsignia } from './insignia.js';
 import { drawPortrait } from './portrait.js';
+import { NOMENCLATURE, drawNomenclature } from './scope.js';
+import { readPalette } from './themes.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -2661,20 +2663,68 @@ function glossWord(entry) {
   return entry.en.replace(/\s*\S*\d\S*$/, '');
 }
 
-/** Range scale positions on the selector, in kilometres. */
-export const RANGE_SCALES = [60, 100, 150, 220];
+/**
+ * Range scale positions on the selector, in kilometres.
+ *
+ * The watch's OWN opening scale is added to these at render time — see
+ * `rangeDetents`. It used to be [60, 100, 150, 220] and nothing else, on a
+ * game whose echelons open at 140, 150, 260 and 300 and three of whose
+ * scenarios open at 260, 260 and 175. Not one of the scales the equipment is
+ * actually switched to was a position the selector had.
+ */
+export const RANGE_SCALES = [60, 100, 150, 220, 300];
+
+/**
+ * The positions this watch's selector has, smallest first.
+ *
+ * A rotary switch has a detent for every scale the set can be put on, and the
+ * scale the set was handed to you on is one of them. Without that, Four
+ * Sectors opened at 260 km with 220 as the widest position on the knob and 260
+ * as the wheel's clamp: one click collapsed the picture to 60 and the scale
+ * the watch was designed to be read at was gone for the rest of the night.
+ */
+export function rangeDetents(world) {
+  const open = world?.scenario?.scopeRangeKm ?? world?.echelon?.scopeRangeKm;
+  const set = new Set(RANGE_SCALES);
+  if (Number.isFinite(open)) set.add(Math.round(open));
+  return [...set].sort((a, b) => a - b);
+}
+
+/**
+ * Where the pointer stands, in degrees, for a scale that may be between
+ * detents.
+ *
+ * `RANGE_SCALES.indexOf(300)` is -1 and so is `findIndex(r => r >= 300)`, and
+ * `Math.max(0, -1)` is 0 — so on the two widest boards in the game the pointer
+ * was driven hard over to MINIMUM while the tube was at MAXIMUM, on the one
+ * instrument whose whole job is to say which scale you are reading. Measured
+ * at t=60: First Light 140 km / the 150 detent, Four Sectors 260 km / the 60
+ * detent, The Two Cities 300 km / the 60 detent, The President's Flight 175 km
+ * / the 220 detent. Four watches, four wrong answers.
+ */
+export function detentAngle(detents, rangeKm) {
+  const last = detents.length - 1;
+  if (last <= 0) return -135;
+  if (rangeKm <= detents[0]) return -135;
+  if (rangeKm >= detents[last]) return 135;
+  let i = 0;
+  while (i < last - 1 && detents[i + 1] < rangeKm) i++;
+  const span = detents[i + 1] - detents[i];
+  const f = span > 0 ? (rangeKm - detents[i]) / span : 0;
+  return -135 + ((i + f) / last) * 270;
+}
 
 /**
  * The scope's own controls, mounted on the bezel beside the tube: a rotary range
- * selector with real detents, and the plate the factory riveted on.
+ * selector with real detents, the key to what is on the glass, and the plate
+ * the factory riveted on.
  *
  * The knob is drawn once and then only its pointer is rotated, so turning it
  * costs a transform rather than a re-render.
  */
 export function renderScopeSide(world, ui, els, rangeKm) {
-  const index = RANGE_SCALES.indexOf(rangeKm);
-  const detent = index >= 0 ? index : RANGE_SCALES.findIndex((r) => r >= rangeKm);
-  const angle = -135 + (Math.max(0, detent) / (RANGE_SCALES.length - 1)) * 270;
+  const detents = rangeDetents(world);
+  const angle = detentAngle(detents, rangeKm);
 
   if (els.scopeSide.dataset.built !== '1') {
     els.scopeSide.dataset.built = '1';
@@ -2687,6 +2737,25 @@ export function renderScopeSide(world, ui, els, rangeKm) {
       ${legend(CONTROLS.range, {})}
       <span class="knob-readout" id="range-readout"></span>
       ${/*
+     * THE KEY TO THE GLASS, RIVETED WHERE A KEY GOES.
+     *
+     * Nothing on this console said what any mark meant: not the colours, not
+     * the brackets, not the caret, not the cross. The three air frames are the
+     * ones that carry the decision the whole game turns on, so they are on the
+     * bezel where the operator can look without leaving the watch, and the
+     * other ten marks are in the handbook under THE PICTURE, which this plate
+     * says how to reach.
+     */ ''}
+      <span class="nom-plate">
+        <b>NOMENCLATURE</b>
+        ${['hostile', 'unknown', 'friendly'].map((id) => {
+    const mark = NOMENCLATURE.find((m) => m.id === id);
+    return `<span class="nom-cell"><canvas class="nom-swatch is-bezel" width="60" height="40"
+        data-mark="${id}" aria-hidden="true"></canvas><i>${esc(mark.name)}</i></span>`;
+  }).join('')}
+        <u>H — THE PICTURE</u>
+      </span>
+      ${/*
      * The works plate: the figure once, the word for it in both languages.
      * It used to print ТИП 4М-2 / TYPE 4M-2 / ЗАВ. № 118-44 / WORKS NO. 118-44
      * — the same two numbers stamped twice each, which is not a plate, it is a
@@ -2698,6 +2767,13 @@ export function renderScopeSide(world, ui, els, rangeKm) {
         ${esc(PLATES.factory.tm)}<br>${esc(PLATES.factory.en)}
       </span>
       <span class="placard">${esc(PLATES.caution.tm)}<br>${esc(PLATES.caution.en)}</span>`;
+    const p = readPalette();
+    for (const canvas of els.scopeSide.querySelectorAll('canvas.nom-swatch[data-mark]')) {
+      if (canvas.getContext) {
+        drawNomenclature(canvas.getContext('2d'), canvas.dataset.mark,
+          canvas.width / 2, canvas.height / 2, p, 2.4);
+      }
+    }
   }
 
   const pointer = els.scopeSide.querySelector('.knob-pointer');

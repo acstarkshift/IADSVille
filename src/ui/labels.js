@@ -67,8 +67,24 @@ export class Lettering {
   } = {}) {
     const { ctx } = this;
     const d = this.dpr;
-    const lines = Array.isArray(text) ? text : [text];
     ctx.font = `${weight ? `${weight} ` : ''}${size * d}px ${FONT}`;
+    /*
+     * A line longer than the glass is cut to the glass.
+     *
+     * The box is clamped inside the tube, which pins a too-long label to the
+     * left-hand edge and runs the rest of it off the right — measured on a 390
+     * px phone at the 60 km scale, "PRESIDENTIAL PALACE · PRIORITY" lost its
+     * last nine characters to the bezel and read as a different place. A cut
+     * word with a mark on it says it was cut; a word sliced by a frame does
+     * not.
+     */
+    const maxW = this.w - 6 * d;
+    const lines = (Array.isArray(text) ? text : [text]).map((line) => {
+      if (ctx.measureText(line).width <= maxW) return line;
+      let cut = String(line);
+      while (cut.length > 1 && ctx.measureText(`${cut}…`).width > maxW) cut = cut.slice(0, -1);
+      return `${cut}…`;
+    });
     const w = Math.max(...lines.map((line) => ctx.measureText(line).width));
     const h = size * d;
     // The pitch between lines of one block. A single line is exactly what it
@@ -140,10 +156,13 @@ export class Lettering {
     // flying: if every corner near a town is taken, the town goes unnamed
     // this frame rather than printing through a track number.
     if (!placed && optional) return null;
-    // And inside the glass. A label that ran off the right-hand edge lost its
-    // altitude figure to the frame; clamped, it keeps its leader line back to
-    // the mark, which is what the leader is for.
+    // And inside the glass, both ways. A label that ran off the right-hand
+    // edge lost its altitude figure to the frame and one that found a corner
+    // above the top of the canvas lost its whole first line; clamped, they
+    // keep their leader line back to the mark, which is what the leader is
+    // for.
     best.x = Math.max(2 * d, Math.min(best.x, this.w - w - 2 * d));
+    if (this.h) best.y = Math.max(2 * d, Math.min(best.y, this.h - best.h - 2 * d));
     this.labelBoxes.push(best);
     if (key !== null && chosen && placed) this.labelMemoryNext?.set(key, chosen);
     ctx.save();
