@@ -263,6 +263,35 @@ async function main() {
     }
 
     /*
+     * THE ROOM IS RUNNING, AND IT IS A READOUT.
+     *
+     * The bed — fans, racks, sweep — is the answer to two critics who asked
+     * for sound independently, and the rack hum's level is tied to how many
+     * surveillance sets are actually radiating, so the sound of the room is
+     * also the state of the trade the game is built on. It is synthesised, so
+     * there is no file to notice missing and nothing would say if it silently
+     * stopped being built. This asks the page.
+     */
+    if (run.role === 'radar') {
+      const room = await page.evaluate(() => {
+        const a = window.__audio;
+        if (!a?.ctx) return { ctx: false };
+        const r = a.room;
+        return { ctx: true, room: !!r, fan: r?.fanGain.gain.value ?? 0,
+          up: window.__world.radars
+            .filter((x) => x.alive && !x.siteId && x.state === 'radiating').length,
+          hum: r?.humGain.gain.value ?? 0 };
+      });
+      if (!room.ctx) failures.push(`${run.mission}/${run.role}: no audio context after a gesture`);
+      else if (!room.room) failures.push(`${run.mission}/${run.role}: the room was never built`);
+      else if (!(room.fan > 0)) failures.push(`${run.mission}/${run.role}: the room is silent`);
+      else if (room.up > 0 && !(room.hum > 0)) {
+        failures.push(`${run.mission}/${run.role}: ${room.up} set(s) radiating and the racks `
+          + 'are cold — the hum is meant to be a readout of that');
+      }
+    }
+
+    /*
      * A CONTAINER THAT DRAWS CONTROLS IS A CONTAINER THAT TAKES PRESSES.
      *
      * The rack lifts the worked unit's card out of the scroller and into a

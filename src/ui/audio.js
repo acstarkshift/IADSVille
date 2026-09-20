@@ -19,6 +19,8 @@ export class Audio {
     this.enabled = true;
     this.armOsc = null;
     this.pulseLevel = 0;
+    /** The continuous bed: fans, racks, sweep. See `startRoom`. */
+    this.room = null;
   }
 
   /** Must be called from a user gesture; browsers require it. */
@@ -42,7 +44,7 @@ export class Audio {
   setEnabled(on) {
     this.enabled = on;
     if (this.master) this.master.gain.value = on ? 0.32 : 0;
-    if (!on) this.stopArmWarning();
+    if (!on) { this.stopArmWarning(); this.stopRoom(); }
   }
 
   /** One shaped tone. Everything else is built from this. */
@@ -79,6 +81,185 @@ export class Audio {
     env.gain.value = gain;
     src.connect(filter).connect(env).connect(this.master);
     src.start(t0);
+  }
+
+  /* ------------------------------------------------------------ the room */
+
+  /**
+   * THE ROOM, AND THE ROOM IS A READOUT.
+   *
+   * Two critics asked for this independently and neither asked for music.
+   * The experience critic: "What is missing is the room: a rack hum that
+   * changes pitch when a set comes up... Half the dead air I measured would
+   * stop being dead air if the room were audible — a scope with nothing on it
+   * and a hum is a watch; a scope with nothing on it and silence is a paused
+   * game." The narrative critic, separately: "Not music — the room... In a
+   * game whose entire subject is transmitting and being heard, the one sense
+   * it does not use is the one the fiction is about."
+   *
+   * And the experience critic's own warning about it, which is the design:
+   * "A hum that never changes becomes wallpaper. Tie its pitch and level to
+   * the number of sets radiating, so the sound of the room is also a readout
+   * of the trade."
+   *
+   * So the bed is three layers and every one of them is an instrument:
+   *
+   *   - THE FANS. Filtered noise, always there while a console is powered.
+   *     This is the floor: the difference between a quiet watch and a dead
+   *     game.
+   *   - THE RACKS. Mains hum at the fundamental and its second harmonic,
+   *     whose level and brightness rise with the number of surveillance sets
+   *     actually RADIATING. Everything cold is a nearly silent room — which
+   *     is the honest sound of being blind, and is the first thing the whole
+   *     game is about. Throw the switch and you hear the racks take the
+   *     current, over about a second and a half, so the change is a change
+   *     and not a step.
+   *   - THE SWEEP. One soft click per pass of the antenna, struck by
+   *     `sweepTick` from the frame loop when the beam comes round. A set on
+   *     the circle ticks at its own scan period; a set HOLDING A SECTOR ticks
+   *     six times as often, because it is looking at a sixth of the sky six
+   *     times as hard. The trade the whole seat is built on is audible.
+   *
+   * Nothing is loaded from a file: the game stays a folder you can open.
+   */
+  startRoom() {
+    if (!this.enabled || !this.ctx || this.room) return;
+    const t = this.ctx.currentTime;
+
+    // Fans: two seconds of noise on a loop, well under the cutoff so it is
+    // air moving rather than hiss.
+    const frames = Math.floor(this.ctx.sampleRate * 2);
+    const buffer = this.ctx.createBuffer(1, frames, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let prev = 0;
+    for (let i = 0; i < frames; i++) {
+      // A one-pole lowpass on white noise: brown-ish, which is what a cabinet
+      // fan at three metres actually sounds like.
+      prev = prev * 0.96 + (Math.random() * 2 - 1) * 0.04;
+      data[i] = prev * 3;
+    }
+    // Cross-fade the last quarter-second into the first so the loop seam is
+    // not a click every two seconds.
+    const blend = Math.floor(this.ctx.sampleRate * 0.25);
+    for (let i = 0; i < blend; i++) {
+      const k = i / blend;
+      data[i] = data[i] * k + data[frames - blend + i] * (1 - k);
+    }
+    const fans = this.ctx.createBufferSource();
+    fans.buffer = buffer;
+    fans.loop = true;
+    const fanFilter = this.ctx.createBiquadFilter();
+    fanFilter.type = 'lowpass';
+    fanFilter.frequency.value = 420;
+    const fanGain = this.ctx.createGain();
+    fanGain.gain.value = 0.05;
+    fans.connect(fanFilter).connect(fanGain).connect(this.master);
+    fans.start(t);
+
+    // Racks: the mains and its second harmonic, silent until a set comes up.
+    const hum = this.ctx.createOscillator();
+    const hum2 = this.ctx.createOscillator();
+    hum.type = 'sine';
+    hum2.type = 'triangle';
+    hum.frequency.value = 50;
+    hum2.frequency.value = 100;
+    const humGain = this.ctx.createGain();
+    const hum2Gain = this.ctx.createGain();
+    humGain.gain.value = 0;
+    hum2Gain.gain.value = 0;
+    hum.connect(humGain).connect(this.master);
+    hum2.connect(hum2Gain).connect(this.master);
+    hum.start(t);
+    hum2.start(t);
+
+    this.room = { fans, fanGain, fanFilter, hum, hum2, humGain, hum2Gain };
+  }
+
+  stopRoom() {
+    if (!this.room) return;
+    try {
+      this.room.fans.stop();
+      this.room.hum.stop();
+      this.room.hum2.stop();
+    } catch { /* already stopped */ }
+    this.room = null;
+  }
+
+  /**
+   * How loud the room is, and it is the number of sets radiating.
+   *
+   * `sets` is how many surveillance sets are up, `of` how many the sector
+   * owns. Nothing up is a room with only its fans in it. Glided rather than
+   * set, over about a second and a half, so throwing the switch sounds like a
+   * rack taking current instead of like a value changing.
+   */
+  setRoom(sets, of = Math.max(sets, 1)) {
+    if (!this.enabled || !this.room || !this.ctx) return;
+    const share = Math.max(0, Math.min(1, sets / Math.max(of, 1)));
+    const lit = sets > 0 ? 0.35 + share * 0.65 : 0;
+    const t = this.ctx.currentTime;
+    const glide = (param, to) => {
+      try {
+        param.cancelScheduledValues(t);
+        param.setValueAtTime(param.value, t);
+        param.linearRampToValueAtTime(to, t + 1.5);
+      } catch { /* context torn down mid-frame */ }
+    };
+    glide(this.room.humGain.gain, 0.030 * lit);
+    glide(this.room.hum2Gain.gain, 0.016 * lit);
+    // The fans lift a little when the racks are loaded, and the whole room
+    // opens up: a cabinet with its valves hot is brighter as well as louder.
+    glide(this.room.fanGain.gain, 0.045 + 0.030 * lit);
+    glide(this.room.fanFilter.frequency, 380 + 340 * lit);
+  }
+
+  /**
+   * One pass of the antenna. Struck by the frame loop, not by a timer, so it
+   * is the beam's own rate — including six times a circuit when the set is
+   * holding a sector rather than turning.
+   */
+  sweepTick() {
+    this.tone({ freq: 196, to: 150, dur: 0.055, type: 'triangle', gain: 0.022 });
+  }
+
+  /**
+   * The net opening before somebody speaks. A carrier clicking in, which is
+   * what the console's whole subject is, and quiet enough to live under a
+   * sentence rather than in front of it.
+   */
+  netOpen() {
+    this.noise({ dur: 0.05, gain: 0.05, freq: 2200 });
+    this.tone({ freq: 520, dur: 0.02, type: 'square', gain: 0.012 });
+  }
+
+  /**
+   * THE PRINTER, WHICH IS THE ONE SOUND THE NARRATIVE CRITIC ASKED FOR BY
+   * NAME: "If the budget is one sound, make it the printer."
+   *
+   * The evening opens on a dot-matrix machine putting the night's tape into
+   * the operator's hands, and the scene player has been calling `tick()` —
+   * a 1050 Hz square blip — once per character at fifty-five characters a
+   * second. Fifty-five thirty-millisecond square tones a second overlapping
+   * each other is a whine, and a whine is not a print head.
+   *
+   * A print head is a row of pins hitting a ribbon: an impact, not a pitch.
+   * So it is a two-millisecond noise burst with a wooden body under it, and
+   * it fires every third character — about eighteen a second, which is the
+   * rasp a nine-pin head makes and not a buzz. `printReturn` is the carriage
+   * coming back at the end of a line, which is the sound that tells you a
+   * line finished without your having to read it.
+   */
+  printHead(n = 0) {
+    if (!this.enabled || !this.ctx || (n % 3)) return;
+    this.noise({ dur: 0.012, gain: 0.05, freq: 3200 });
+    this.tone({ freq: 210 + (n % 5) * 14, dur: 0.012, type: 'square', gain: 0.012 });
+  }
+
+  /** The carriage, at the end of a line. */
+  printReturn() {
+    if (!this.enabled || !this.ctx) return;
+    this.noise({ dur: 0.09, gain: 0.06, freq: 1400 });
+    this.tone({ freq: 150, to: 96, dur: 0.07, type: 'square', gain: 0.02 });
   }
 
   newTrack() { this.tone({ freq: 1320, dur: 0.05, type: 'square', gain: 0.05 }); }

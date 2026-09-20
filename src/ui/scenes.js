@@ -2018,6 +2018,8 @@ export class ScenePlayer {
       this.line++;
       this.typed = 0;
       this.lineAt = performance.now();
+      // The carriage coming back, which is how you hear that a line finished.
+      if (scene.kind === 'printout' && this.audio?.enabled) this.audio.printReturn?.();
       this.renderText();
       return;
     }
@@ -2411,7 +2413,9 @@ export class ScenePlayer {
       if (want !== this.typed) {
         this.typed = want;
         this.renderText();
-        if (scene.kind === 'printout' && this.audio?.enabled) this.audio.tick?.();
+        // The head, not a tone. See `printHead` in audio.js: fifty-five
+        // square blips a second is a whine, and a print head is an impact.
+        if (scene.kind === 'printout' && this.audio?.enabled) this.audio.printHead?.(this.typed);
       }
     }
     this.lastTick = now;

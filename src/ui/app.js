@@ -519,6 +519,8 @@ function startMission() {
   window.__state = state;
   window.__scope = scope;
   window.__ui = ui;
+  // The room is a readout, so it is a thing that can be read and checked.
+  window.__audio = audio;
   /*
    * Frame the watch. Almost every scenario is drawn around the Ville at the
    * origin; the one fought over the capital is a hundred and seventeen
@@ -579,6 +581,8 @@ function endMission() {
       service: null, revelation: null, appointment: null, letter: null };
   }
   audio.stopArmWarning();
+  // The watch is over; the room goes with it.
+  audio.stopRoom();
   playScenes(result, entry);
 }
 
@@ -912,8 +916,13 @@ function handleAudio() {
   // with it: a frozen scope screaming indefinitely about a frozen round.
   if (state.speed === 0 || document.hidden) {
     audio.stopArmWarning();
+    // And the room with it. A held clock is a held room: the fans and the
+    // racks are the sound of a watch running, so leaving them under a stopped
+    // console would say the opposite of what HOLD means.
+    audio.stopRoom();
     return;
   }
+  audio.startRoom();
 
   // Keyed on the monotonic event seq, never on array position: the event list
   // is capped, and comparing against its frozen length once made every sound
@@ -946,6 +955,19 @@ function handleAudio() {
     else if (e.kind === 'alert' && e.text.includes('— HIT (')) audio.clank();
     else if (e.kind === 'alert' && /IMPACT|STRUCK|DESTROYED/.test(e.text)) audio.impact();
     else if (e.kind === 'command') audio.command();
+    /*
+     * And the net opening before anybody speaks. Radio traffic is the one
+     * kind of line that is a PERSON rather than a machine reporting itself,
+     * and in a game whose subject is transmitting and being heard it should
+     * be audible that a channel opened. Throttled to one every three seconds
+     * of real time, because the lull reporter now speaks every twelve seconds
+     * of watch time and at 4x that is three seconds apart: a carrier click is
+     * texture at that rate and a stutter at any faster one.
+     */
+    else if (e.kind === 'comms' && performance.now() - (ui.lastNetOpenAt ?? -9999) > 3000) {
+      ui.lastNetOpenAt = performance.now();
+      audio.netOpen();
+    }
   }
   ui.seenEventSeq = world.events.length
     ? world.events[world.events.length - 1].seq : ui.seenEventSeq;
@@ -985,6 +1007,51 @@ function handleAudio() {
     worst = Math.max(worst, 1 - clamp01(toGo / 45));
   }
   audio.pulse(worst < 0.15 ? 0 : worst);
+
+  /*
+   * THE ROOM, WHICH IS ALSO A READOUT.
+   *
+   * The racks hum with the number of surveillance sets actually radiating, so
+   * a sector that has gone dark sounds like one — nearly silent, with only
+   * the fans in it — and the switch the whole game turns on is audible as
+   * well as visible. See `startRoom` in audio.js for why this is a bed and
+   * not music.
+   */
+  const search = world.radars.filter((r) => r.alive && !r.siteId);
+  const up = search.filter((r) => r.state === 'radiating').length;
+  audio.setRoom(up, search.length);
+
+  /*
+   * And the sweep, struck off the beam rather than off a timer.
+   *
+   * `sweepRadar` advances `az` clockwise and wraps it, and a set holding a
+   * sector flies the beam back to its left edge at the end of every pass —
+   * both of which show up here as the azimuth going DOWN. So one tick is one
+   * pass, whichever the set is doing, and a set held on a sixty-degree sector
+   * ticks six times for every one the circle gives. You can hear the trade.
+   */
+  const lead = search.find((r) => r.state === 'radiating');
+  if (lead) {
+    /*
+     * Measured as progress THROUGH A PASS rather than as the azimuth itself,
+     * because a held sector that straddles north wraps the azimuth in the
+     * middle of its own pass and would tick twice. Inside a sector the beam
+     * runs from the left edge to the right and flies back to the left, so
+     * progress from the left edge falls exactly once a pass; on the circle
+     * the azimuth itself is the progress and falls once a revolution.
+     */
+    const wrap360 = (d) => ((d % 360) + 360) % 360;
+    const pos = lead.fovDeg
+      ? wrap360(lead.az - (lead.boresightDeg - lead.fovDeg / 2))
+      : wrap360(lead.az);
+    if (ui.sweepPos !== undefined && lead.id === ui.sweepRadarId
+      && pos < ui.sweepPos - 1e-6) audio.sweepTick();
+    ui.sweepPos = pos;
+    ui.sweepRadarId = lead.id;
+  } else {
+    ui.sweepPos = undefined;
+    ui.sweepRadarId = null;
+  }
 }
 
 function updateLegend() {
@@ -2330,7 +2397,7 @@ function wireGlobalInput() {
   // oscillator does not: the warble kept sounding with nothing left alive to
   // stop it. Silence is handled here because the frame loop cannot.
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) audio.stopArmWarning();
+    if (document.hidden) { audio.stopArmWarning(); audio.stopRoom(); }
   });
 }
 
