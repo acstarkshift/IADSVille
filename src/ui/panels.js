@@ -23,7 +23,7 @@ import {
 import { rankOf, serviceNumber } from '../engine/character.js';
 import { consoleCaps } from '../engine/scenarios.js';
 import { rankInsignia } from './insignia.js';
-import { drawPortrait, PORTRAIT_W, PORTRAIT_H } from './portrait.js';
+import { drawPortrait } from './portrait.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -500,7 +500,7 @@ export function idCardHtml(character, echelon) {
       <span class="idc-f"><label>RANK</label><b>${rankInsignia(character.rankIndex, { size: 9 })}${esc(rank.en.toUpperCase())}</b></span>
       <span class="idc-f"><label>APPOINTMENT</label><b>${esc(echelon.appointment.en.toUpperCase())}</b></span>
     </span>
-    <span class="idc-photo-mount"><canvas class="idc-photo" width="48" height="60" aria-hidden="true"></canvas></span>`;
+    <span class="idc-photo-mount"><canvas class="idc-photo" width="24" height="30" aria-hidden="true"></canvas></span>`;
 }
 
 /**
@@ -523,7 +523,7 @@ export function renderIdCard(world, els) {
       if (character) {
         card.innerHTML = idCardHtml(character, world.post);
         const photo = card.querySelector('canvas');
-        if (photo?.getContext) drawPortrait(photo.getContext('2d'), 0, 0, PORTRAIT_W, PORTRAIT_H, character.name);
+        if (photo?.getContext) drawPortrait(photo.getContext('2d'), 0, 0, 24, 30, character.name);
         card.title = `${rankOf(character).en} ${character.name} · ${world.post.appointment.en}`
           + ` · service no. ${serviceNumber(character)}`;
       }

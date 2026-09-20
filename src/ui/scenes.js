@@ -40,7 +40,7 @@ import { composeEnding } from '../engine/endings.js';
 import { composeFlightEnding, flightEndingFor } from '../engine/epilogue.js';
 import { ROLES } from '../engine/config.js';
 import { appointingOffice, appointingSignatory } from '../engine/echelon.js';
-import { portraitCells, portraitFeatures, eyeBoxes, skinRamp, FACE, PORTRAIT_W, PORTRAIT_H } from './portrait.js';
+import { portraitCells, portraitFeatures, skinRamp, FACE, PORTRAIT_W, PORTRAIT_H } from './portrait.js';
 
 export const SCENE_W = 320;
 export const SCENE_H = 180;
@@ -2987,28 +2987,13 @@ function backdropOf(seed) {
   return [back, `#${dim.map((v) => v.toString(16).padStart(2, '0')).join('')}`];
 }
 
-/*
- * THE HEAD AT A DESK IS FORTY-EIGHT SCENE PIXELS WIDE, whatever the grid is.
- *
- * The commissar's whole figure — the collar, the shoulder line, the boards, the
- * chair behind him — was measured against a head that width, back when the
- * photograph was twenty-four cells across and every cell was two pixels. The
- * photograph is forty-eight cells now, so a cell is one pixel and the man is
- * exactly the same size, with four times the detail in his face. These three
- * are the only place that arithmetic lives.
- */
-const HEAD_PX = 48;
-const HEAD_K = HEAD_PX / PORTRAIT_W;
-/** The drop from the top of the blit to the collar line, in scene pixels. */
-const HEAD_COLLAR = Math.round((FACE.collar - 2) * HEAD_K);
-
 /**
  * Draw a portrait's cells at a scale, optionally with a peaked cap on top.
  *
  * The booth backdrop behind the head is left out — in a room the room is the
  * backdrop — and `rows` stops the blit at the throat so that the scene can
  * build the collar, the shoulders and the chest at its own width. The photo
- * booth's tunic is as wide as the photograph; a man sitting at a desk is sixty
+ * booth's tunic is twenty-four cells wide; a man sitting at a desk is sixty
  * scene pixels across, and blitting both left a seam across his collarbone.
  */
 function blitFace(ctx, cells, x, y, k, {
@@ -3023,69 +3008,44 @@ function blitFace(ctx, cells, x, y, k, {
    * so that a dotted rule crosses the middle of the face". It is the face's
    * own cells taken down a step now, inside the blit, and there is no overlay.
    */
-  /*
-   * ONE CELL OF THE PHOTOGRAPH, in the units this cap was drawn in.
-   *
-   * Every offset below was measured against a twenty-four-cell face; the face is
-   * forty-eight cells now, so a literal means `u` of them. Writing it this way
-   * rather than doubling the numbers keeps the cap's proportions readable
-   * against the head it sits on, and keeps it honest if the grid moves again.
-   */
-  const u = PORTRAIT_W / 24;
-  const lift = cap ? FACE.eyes + 4 : FACE.eyes + 2;
+  const lift = cap ? FACE.eyes + 2 : FACE.eyes + 1;
   for (let j = 0; j < Math.min(rows, PORTRAIT_H); j++) {
     for (let i = 0; i < PORTRAIT_W; i++) {
       const c = cells[j][i];
       if (backdrop.includes(c)) continue;
       let down = light ? light(i, j) : 0;
       if (shadow > 0) {
-        // the cast shadow lifts off the cheek over three rows on this grid,
-        // where it had two to do it in on the old one
         if (j === lift) down += shadow * 2;
-        else if (j === lift + 1) down += Math.round(shadow * 1.5);
-        else if (j === lift + 2) down += shadow;
+        else if (j === lift + 1) down += shadow;
       }
       px(ctx, x + i * k, y + j * k, k, k, flat ?? (down ? darken(c, down) : c));
     }
   }
-  if (mouthOpen) px(ctx, x + 20 * k, y + FACE.mouth * k, 8 * k, 3 * k, INK);
+  if (mouthOpen) px(ctx, x + 9 * k, y + (FACE.mouth + 1) * k, 6 * k, 2 * k, INK);
   if (cap) {
-    /*
-     * A service cap on a heavy head: a crown as wide as the skull, a band, and
-     * a peak that is WIDER than the head and sits low on it, so the brow and
-     * the eyes are under it. The player asked for stockier men; a cap that
-     * perches on top of a tall skull is what made the last one a puppet.
-     *
-     * AND THE BLACK MASS IS BROKEN. The art reviewer, on the officer this cap is
-     * worn by: "Three consecutive near-black rows (the cap peak, an INK rule,
-     * the brow) sit directly on top of two pale tan blocks ... give the peak its
-     * own step (one lighter than INK), leave one row of lit skin between the
-     * peak's underside and the brow." The peak's underside used to land ON the
-     * brow — peak, rule and brow were one continuous slab six rows deep with the
-     * eyes immediately under it. The rows are named now rather than counted off
-     * the crown, and there is a lit row between the cap and the face.
-     */
-    const bandY = FACE.top - 1;          // the band, down on the hairline
-    const brim = FACE.top + 3;           // the peak under it
-    const edge = brim + 4;               // and its underside, a row clear of the brow
+    // A service cap on a heavy head: a crown as wide as the skull, a band, and
+    // a peak that is WIDER than the head and sits low on it, so the brow and
+    // the eyes are under it. The player asked for stockier men; a cap that
+    // perches on top of a tall skull is what made the last one a puppet.
+    const brim = FACE.top + 3;
     // the crown, with its corners taken off, so the cap is a shape on a head
     // rather than the rectangle the story judge saw as a blit boundary
-    px(ctx, x + 2 * u * k, y + (FACE.top - 6) * k, 20 * u * k, 5 * k, cap.crown);
-    px(ctx, x + 4 * u * k, y + (FACE.top - 9) * k, 16 * u * k, 3 * k, cap.crown);
-    px(ctx, x + 5 * u * k, y + (FACE.top - 11) * k, 14 * u * k, 2 * k, cap.crown);
-    px(ctx, x + 5 * u * k, y + (FACE.top - 12) * k, 14 * u * k, k, INK);
-    px(ctx, x + 4 * u * k, y + (FACE.top - 9) * k, u * k, k, INK);
-    px(ctx, x + 19 * u * k, y + (FACE.top - 9) * k, u * k, k, INK);
-    px(ctx, x + 3 * u * k, y + (FACE.top - 6) * k, 6 * u * k, 5 * k, cap.crownLit ?? cap.crown);
-    px(ctx, x + 2 * u * k, y + (FACE.top - 6) * k, 20 * u * k, k, INK);
-    px(ctx, x + 2 * u * k, y + bandY * k, 20 * u * k, 4 * k, cap.band);
+    px(ctx, x + 2 * k, y + (FACE.top - 3) * k, 20 * k, 4 * k, cap.crown);
+    px(ctx, x + 4 * k, y + (FACE.top - 5) * k, 16 * k, 2 * k, cap.crown);
+    px(ctx, x + 5 * k, y + (FACE.top - 6) * k, 14 * k, k, cap.crown);
+    px(ctx, x + 5 * k, y + (FACE.top - 6) * k, 14 * k, k, INK);
+    px(ctx, x + 4 * k, y + (FACE.top - 5) * k, k, k, INK);
+    px(ctx, x + 19 * k, y + (FACE.top - 5) * k, k, k, INK);
+    px(ctx, x + 3 * k, y + (FACE.top - 3) * k, 6 * k, 3 * k, cap.crownLit ?? cap.crown);
+    px(ctx, x + 2 * k, y + (FACE.top - 3) * k, 20 * k, k, INK);
+    px(ctx, x + 2 * k, y + (FACE.top + 1) * k, 20 * k, 2 * k, cap.band);
     // the peak: wider than the head and tapered at both ends, low over the eyes
-    px(ctx, x + 2 * u * k, y + brim * k, 20 * u * k, 4 * k, cap.peak ?? INK);
-    px(ctx, x + u * k, y + brim * k, u * k, 2 * k, cap.peak ?? INK);
-    px(ctx, x + 22 * u * k, y + brim * k, u * k, 2 * k, cap.peak ?? INK);
-    px(ctx, x + 2 * u * k, y + brim * k, 20 * u * k, 2 * k, cap.peakLit ?? cap.peak ?? INK);
-    px(ctx, x + 3 * u * k, y + edge * k, 18 * u * k, k, INK);
-    px(ctx, x + 11 * u * k, y + bandY * k, 2 * u * k, 4 * k, cap.badge ?? DAWN[3]);
+    px(ctx, x + 2 * k, y + brim * k, 20 * k, 2 * k, cap.peak ?? INK);
+    px(ctx, x + 1 * k, y + brim * k, k, k, cap.peak ?? INK);
+    px(ctx, x + 22 * k, y + brim * k, k, k, cap.peak ?? INK);
+    px(ctx, x + 2 * k, y + brim * k, 20 * k, k, cap.peakLit ?? cap.peak ?? INK);
+    px(ctx, x + 3 * k, y + (brim + 2) * k, 18 * k, 1 * k, INK);
+    px(ctx, x + 11 * k, y + (FACE.top + 1) * k, 2 * k, 2 * k, cap.badge ?? DAWN[3]);
   }
   /*
    * The peak's own shadow across the brow and the eyes.
@@ -5566,7 +5526,6 @@ function drawOffice(ctx, t, {
     commissar(ctx, t, { talking, face, tier, hard, S, gold, seed, bow, chairInk: At(WOOD, -1, 160, 70) });
     commissarLight(ctx, {
       tier, hard, S, gold, bow, cells: face, back: backdropOf(seed || 'THE POLITICAL SECTION'),
-      eyes: eyeBoxes(seed || 'THE POLITICAL SECTION'),
     });
   }
   // the desk itself, drawn over him: a top, a near edge, a front
@@ -6106,13 +6065,13 @@ function commissar(ctx, t, { talking, face, tier, hard, S: room, gold, seed, bow
    */
   const HARD_WOOL = [CLOTH[0], CLOTH[0], CLOTH[1], CLOTH[2]];
   const wool = (i) => (hard ? HARD_WOOL[Math.max(0, Math.min(3, Math.round(i)))] : S(CLOTH, i));
-  const k = HEAD_K;
+  const k = 2;
   const lean = tier === 'commended' ? 2 : 0;
   // The portrait is blitted down to the throat only — face, jaw and neck — and
   // everything from the collar down is built here at the width of a man rather
   // than at the width of a photograph. Cap to desk is two and a half heads;
   // the shoulders are three heads across.
-  const fx = 160 - HEAD_PX / 2;          // the head, centred on the frame
+  const fx = 160 - PORTRAIT_W;           // the head, centred on the frame
   const rest = 14 + lean;
   /*
    * He moves three times in a scene and not otherwise, which is the whole of
@@ -6122,7 +6081,7 @@ function commissar(ctx, t, { talking, face, tier, hard, S: room, gold, seed, bow
    * `bow` is 1 with his head down and 0 with it level.
    */
   const head = rest + Math.round(bow * 5);
-  const cy = rest + HEAD_COLLAR;            // the collar line, y ≈ 50
+  const cy = rest + (FACE.collar - 1) * k;   // the collar line, y ≈ 50
   const chest = cy + 8;
   /*
    * Half the shoulder width. The story judge measured the last cut: "the tunic
@@ -6324,14 +6283,7 @@ function commissar(ctx, t, { talking, face, tier, hard, S: room, gold, seed, bow
   blitFace(ctx, face, fx, head, k, {
     cap: {
       crown: wool(1), crownLit: wool(2), band: RED,
-      /*
-       * The peak keeps a step of its own at every tier. It used to be INK, and
-       * with the INK rule under it and the brow under that, the art reviewer
-       * counted "three consecutive near-black rows ... directly on top of two
-       * pale tan blocks". A peak is patent leather with a lamp on it, not a
-       * hole in the picture.
-       */
-      peak: darken(INK, -16), peakLit: hard ? darken(INK, -30) : darken(INK, -46),
+      peak: INK, peakLit: hard ? INK : S(CLOTH, 0),
       badge: gold(3),
     },
     mouthOpen: talking && Math.floor(t * 7) % 2 === 0,
@@ -6354,19 +6306,16 @@ function commissar(ctx, t, { talking, face, tier, hard, S: room, gold, seed, bow
        * three steps of its own, because the front of a head is a cylinder and
        * the far edge of it turns out of the light before the shadow starts.
        */
-      const u = PORTRAIT_W / 24;                  // a cell of the old grid, in cells
-      const b = (j - FACE.eyes) / (7 * u);        // -1 at the brow, +1 at the chin
-      const bow = 2.4 * u * (1 - b * b) - 1.6 * u * Math.max(0, b);
-      const turn = i - (9.4 * u + bow);
+      const b = (j - FACE.eyes) / 7;              // -1 at the brow, +1 at the chin
+      const bow = 2.4 * (1 - b * b) - 1.6 * Math.max(0, b);
+      const turn = i - (9.4 + bow);
       const under = j > FACE.jaw ? 30 : 0;
-      // the peak's cast shadow starts AT THE BROW, so the row between the cap
-      // and the face keeps its light and the black mass is broken there too
-      const brim = j >= FACE.eyes - 5 && j <= FACE.eyes + u ? (hard ? 44 : 30) : 0;
-      const side = turn < -6 * u ? 20 + deepen    // the far temple, rolling out of it
-        : turn < -3 * u ? 7 + deepen              // the plane the lamp stands on
-        : turn < -u ? Math.max(0, deepen - 10)    // the cheekbone, nearest the lamp
-        : turn < u ? 17 + deepen                  // the turn at the nose
-        : turn < 3 * u ? 34 + deepen
+      const brim = j >= FACE.top + 5 && j <= FACE.eyes + 1 ? (hard ? 44 : 30) : 0;
+      const side = turn < -6 ? 20 + deepen        // the far temple, rolling out of it
+        : turn < -3 ? 7 + deepen                  // the plane the lamp stands on
+        : turn < -1 ? Math.max(0, deepen - 10)    // the cheekbone, nearest the lamp
+        : turn < 1 ? 17 + deepen                  // the turn at the nose
+        : turn < 3 ? 34 + deepen
         : 60 + deepen;
       return Math.min(150, side + under + brim);
     },
@@ -6394,13 +6343,12 @@ function commissar(ctx, t, { talking, face, tier, hard, S: room, gold, seed, bow
  * shoulder board, and two points in the eyes. A screenshot of him alone has to
  * read as a threat; that is what the eyes are for.
  */
-function commissarLight(ctx, { tier, hard, S, gold, cells, back, eyes, bow = 0 }) {
-  const k = HEAD_K;
-  const u = PORTRAIT_W / 24;               // a cell of the grid this was measured on
-  const fx = 160 - HEAD_PX / 2;
+function commissarLight(ctx, { tier, hard, S, gold, cells, back, bow = 0 }) {
+  const k = 2;
+  const fx = 160 - PORTRAIT_W;
   const rest = 14 + (tier === 'commended' ? 2 : 0);
   const head = rest + Math.round(bow * 5);
-  const cy = rest + HEAD_COLLAR;
+  const cy = rest + (FACE.collar - 1) * k;
   const HALF = 68;
   /*
    * The lamp stands on the desk at his right hand and is low. What it catches
@@ -6408,11 +6356,11 @@ function commissarLight(ctx, { tier, hard, S, gold, cells, back, eyes, bow = 0 }
    * the skull rather than ruled straight down it — the top of the cheekbone,
    * the underside of the jaw, and the eyes.
    */
-  for (let j = FACE.top + 5 * u; j <= FACE.jaw; j++) {
+  for (let j = FACE.top + 5; j <= FACE.jaw; j++) {
     // the edge is read off the photograph itself, so it follows the skull
     // rather than being ruled straight down the side of it
-    let edge = 3 * u;
-    while (edge < 10 * u && back.includes(cells[j][edge])) edge++;
+    let edge = 3;
+    while (edge < 10 && back.includes(cells[j][edge])) edge++;
     const t = (j - FACE.top) / (FACE.jaw - FACE.top);
     /*
      * The rim ROLLS OFF at both ends. Two judges had the last one as "a flat
@@ -6432,20 +6380,13 @@ function commissarLight(ctx, { tier, hard, S, gold, cells, back, eyes, bow = 0 }
    * one as "a solid cream block across the chin that reads as a bandage": it
    * was six cells of one light skin ruled straight across the jaw line.
    */
-  dither(ctx, fx + 5 * u * k, head + (FACE.eyes + u) * k, 3 * k, 3 * k,
-    S(SKIN, hard ? 0 : 1), S(SKIN, hard ? 1 : 2), 11);
-  /*
-   * The jaw's own lit edge, keyed to where the jaw IS. It started six cells
-   * outside the chin and ran across the neck behind it, which read as a chin
-   * strap — the head tapers now and a bar measured off the old silhouette lands
-   * on the background.
-   */
-  for (let i = 0; i < 6 * u; i++) {
-    const jy = head + (FACE.jaw - (i > 4 * u ? u : 0)) * k;
-    dither(ctx, fx + (7 * u + i) * k, jy, k, k, S(SKIN, hard ? 0 : 1), S(SKIN, hard ? 1 : 2), 14 - i);
+  px(ctx, fx + 5 * k, head + (FACE.eyes + 1) * k, 2 * k, 2 * k, S(SKIN, hard ? 1 : 2));
+  for (let i = 0; i < 7; i++) {
+    const jy = head + (FACE.jaw - (i > 4 ? 1 : 0)) * k;
+    dither(ctx, fx + (4 + i) * k, jy, k, k, S(SKIN, hard ? 0 : 1), S(SKIN, hard ? 1 : 2), 14 - i * 2);
   }
   // the underside of the jaw, where a heavy man has one
-  px(ctx, fx + 7 * u * k, head + (FACE.jaw + u) * k, 10 * u * k, u * k, INK);
+  px(ctx, fx + 5 * k, head + (FACE.jaw + 1) * k, 13 * k, k, INK);
   /*
    * The eyes, in the shadow of the peak.
    *
@@ -6453,43 +6394,25 @@ function commissarLight(ctx, { tier, hard, S, gold, cells, back, eyes, bow = 0 }
    * pixels in the room ... they read startled and cartoonish", "the player
    * asked for menacing and the brief asked for the eyes in shadow". So there
    * is no white in them at any tier. The brow and the peak lay a hard shadow
-   * across the socket, the iris is ink, and the lamp leaves ONE pixel of a
-   * catchlight on the near eye. He is legible because the head lifts and the
-   * file closes, not because two pale ovals are the brightest thing in the frame.
-   *
-   * AND IT IS THE PHOTOGRAPH'S EYE THAT COMES BACK, not one drawn here.
-   *
-   * The art reviewer, measuring the last cut: "the code comment says 'there is
-   * no white in them at any tier', and the hex was indeed changed — but the
-   * socket is painted S(SKIN,1) against a face whose surrounding cells are two
-   * deep browns, so it is still the lightest thing in the region by 60 luminance
-   * steps ... the eye is currently a 3x1 block; give it a lid line that clips
-   * its top third so it reads as an opening, not a tile." (Their two measured
-   * hexes are left out of this comment on purpose: `test/palette.test.js` scans
-   * this file for inks and cannot tell a quotation from a fillStyle.)
-   *
-   * Both halves of that were one mistake: this function drew its own eye, a
-   * three-cell block of a light skin with an ink dot in it, over the top of the
-   * photograph's. Whatever the photograph does with lids and irises, a tile went
-   * back on top of it — which is exactly where the officer's welding goggles
-   * came from. So nothing is drawn here now. The lamp simply lifts the
-   * photograph's OWN cells out of the peak's shadow, by less than the shadow the
-   * blit laid on them, so the eye is a step or two above the cheek it sits in
-   * and the catchlight is the only bright pixel in it.
+   * across the socket, the socket itself is a step or two under the cheek, the
+   * iris is ink, and the lamp leaves ONE pixel of a catchlight on the near eye.
+   * He is legible because the head lifts and the file closes, not because two
+   * pale ovals are the brightest thing in the frame.
    */
-  const lift = hard ? 40 : 26;       // against the blit's brim shade of 44 / 30
-  for (const [x0, x1] of eyes ?? []) {
-    for (let j = FACE.eyes - 4; j <= FACE.eyes + 3; j++) {
-      for (let i = x0 - 2; i <= x1 + 2; i++) {
-        const c = cells[j]?.[i];
-        if (!c || back.includes(c)) continue;
-        px(ctx, fx + i * k, head + j * k, k, k, darken(c, lift));
-      }
-    }
-  }
-  // one pixel of the lamp in the near eye, and nothing at all in the far one
-  if (!hard && eyes?.[0]) {
-    px(ctx, fx + (eyes[0][0] + 2) * k, head + FACE.eyes * k, k, k, S(SKIN, 3));
+  const eyeY = head + (FACE.eyes - 1) * k;
+  for (let i = 0; i < 2; i++) {
+    const ex = i === 0 ? fx + 7 * k : fx + 14 * k;
+    px(ctx, ex - k, eyeY - 2 * k, 4 * k, k, S(CLOTH, 0));          // the brow
+    px(ctx, ex - 1, eyeY - k, 3 * k + 2, k, INK);                  // the peak's shadow
+    px(ctx, ex, eyeY, 3 * k, k, S(SKIN, hard ? 0 : 1));            // the socket
+    px(ctx, ex, eyeY, 3 * k, 1, INK);                              // the lash line over it
+    px(ctx, ex + k - (i === 0 ? 0 : 1), eyeY + 1, k, k - 1, INK);  // the iris
+    px(ctx, ex - 1, eyeY, 1, k, INK);                              // the inner corner
+    px(ctx, ex + 3 * k, eyeY, 1, k, INK);                          // and the outer
+    // one pixel of the lamp in the near eye, and nothing at all in the far one
+    if (i === 0 && !hard) px(ctx, ex + k - 1, eyeY + 1, 1, 1, S(SKIN, 3));
+    px(ctx, ex, eyeY + k, 3 * k, 1, S(SKIN, hard ? 0 : 1));        // the lower lid
+    px(ctx, ex, eyeY + k + 1, 3 * k, 1, INK);
   }
   /*
    * The collar piping and the near board, out of the dark — and the lamp along

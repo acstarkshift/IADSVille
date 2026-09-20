@@ -13,7 +13,7 @@ import {
   serviceNumber, rankIndexOf,
 } from '../engine/character.js';
 import { rankInsignia, rankBadge } from './insignia.js';
-import { drawPortrait, PORTRAIT_W, PORTRAIT_H } from './portrait.js';
+import { drawPortrait } from './portrait.js';
 import { knownRevelations } from '../engine/revelations.js';
 import { tierFor } from '../engine/command.js';
 import { STATE, PLATES, STATUS } from './lexicon.js';
@@ -212,7 +212,7 @@ export function renderDossier(host, state) {
            the card in the console carries, at a size a file prints them. */ ''}
       <div class="file-ident">
         <span class="file-ident-photo">
-          <canvas class="portrait file-photo" width="48" height="60" aria-label="Photograph on file"></canvas>
+          <canvas class="portrait file-photo" width="24" height="30" aria-label="Photograph on file"></canvas>
         </span>
         <div class="file-ident-text">
           ${rankBadge(character.rankIndex, { size: 30 })}
@@ -383,7 +383,7 @@ export function renderDossier(host, state) {
     </div>
   </div>`;
   for (const photo of host.querySelectorAll('canvas.portrait')) {
-    if (photo.getContext) drawPortrait(photo.getContext('2d'), 0, 0, PORTRAIT_W, PORTRAIT_H, character.name);
+    if (photo.getContext) drawPortrait(photo.getContext('2d'), 0, 0, 24, 30, character.name);
   }
   // and the page opens at the top of itself, after the new content is in it
   host.scrollTop = 0;
@@ -442,7 +442,7 @@ export function serviceSummary(character, service, campaign) {
     <div class="record-head">
       ${/* The same print that is stuck to the front of the dossier. */ ''}
       <span class="file-ident-photo">
-        <canvas class="portrait file-photo is-small" width="48" height="60"
+        <canvas class="portrait file-photo is-small" width="24" height="30"
           data-seed="${esc(character.name)}" aria-label="Photograph on file"></canvas>
       </span>
       ${/* The board is captioned with what it IS. It used to be captioned with
@@ -471,7 +471,7 @@ export function serviceSummary(character, service, campaign) {
 export function paintFilePhotos(host) {
   if (!host) return;
   for (const canvas of host.querySelectorAll('canvas.file-photo[data-seed]')) {
-    if (canvas.getContext) drawPortrait(canvas.getContext('2d'), 0, 0, PORTRAIT_W, PORTRAIT_H, canvas.dataset.seed);
+    if (canvas.getContext) drawPortrait(canvas.getContext('2d'), 0, 0, 24, 30, canvas.dataset.seed);
   }
 }
 

@@ -247,7 +247,7 @@ export function renderMenu(host, state) {
              the reader, the dossier and the end card. The menu is the screen
              the player sees most and it used to carry no face at all. */ ''}
         <span class="file-ident-photo">
-          <canvas class="portrait file-photo" width="48" height="60"
+          <canvas class="portrait file-photo" width="24" height="30"
             data-seed="${esc(character.name)}" aria-label="Photograph on file"></canvas>
         </span>
         ${/* The holder, typed on the file's own name rule. The appointment used
@@ -1350,7 +1350,7 @@ export function renderEndCard(host, state, result) {
            head of the service record, at the end of the file it belongs to —
            at the size it is read at there, not at a third of it. */ ''}
       ${state.campaign.character ? `<span class="file-ident-photo endcard-photo">
-        <canvas class="portrait file-photo" width="48" height="60"
+        <canvas class="portrait file-photo" width="24" height="30"
           data-seed="${esc(state.campaign.character.name)}" aria-label="Photograph on file"></canvas>
       </span>` : ''}
       ${ending && ending.subtitle ? `<p class="endcard-tm">${esc(ending.title)}</p>` : ''}
