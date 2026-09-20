@@ -65,6 +65,15 @@ const RUNS = [
   },
 ];
 
+/*
+ * The one run that stands up from the desk instead of reading it out. Two
+ * Cities at the commander's seat has the fullest desk in the game — five
+ * things on it and the ending waiting on the way out — so it is the run where
+ * the difference between reading everything and leaving is largest, and the
+ * one worth measuring. Every other run still reads its way through.
+ */
+const FAST_PATH = RUNS.find((r) => r.mission === 'two-cities' && r.role === 'both');
+
 /**
  * Every watch below this one's POST, which is what its roster entry needs.
  *
@@ -341,7 +350,41 @@ async function main() {
       });
       await page.waitForSelector('#scene:not([hidden])', { timeout: 20000 })
         .catch(() => failures.push(`${run.mission}/${run.role}: the evening did not start at the end of the watch`));
-      for (let i = 0; i < 90; i++) {
+      /*
+       * Enter, until the end card. The budget is generous on purpose: the desk
+       * replaced a fixed sequence of scenes with a room the player picks items
+       * up in, so hammering Enter now costs one press to choose an item and
+       * then a press a line to read it. Measured on the longest evening in the
+       * game — Two Cities, five items on the desk and the ending on the way
+       * out — that is 86 presses, which sat one bad frame under the old budget
+       * of 90 and failed the run intermittently.
+       *
+       * The number is a harness limit and not a statement about the game.
+       * Reading everything is the long way round and nobody is made to take
+       * it: one run stands up instead, below, and measures the short one.
+       */
+      if (run === FAST_PATH) {
+        /*
+         * The desk must be a room and not a corridor. One click on STAND UP,
+         * from the fullest desk in the game, and the paper is behind you: the
+         * night's own ending plays and the card follows. Measured at ten lines
+         * against the eighty-six presses it takes to read all five items, so
+         * the budget here is short on purpose — if standing up ever starts
+         * costing the player the paper again, this run runs out of presses.
+         */
+        const desk = await page.evaluate(() => ({
+          kind: document.getElementById('scene')?.dataset.kind ?? '',
+          items: document.querySelectorAll('.desk-item').length,
+        }));
+        if (desk.kind !== 'desk' || desk.items < 1) {
+          failures.push(`${run.mission}/${run.role}: the evening did not open on a desk with paper on it (kind ${desk.kind || 'none'}, ${desk.items} items)`);
+        }
+        await page.click('.desk-leave');
+        await wait(250);
+        const up = await page.evaluate(() => !!document.querySelector('.desk-items:not([hidden])'));
+        if (up) failures.push(`${run.mission}/${run.role}: STAND UP left the player at the desk`);
+      }
+      for (let i = 0; i < (run === FAST_PATH ? 40 : 260); i++) {
         if (await page.isVisible('#btn-report')) break;
         await page.keyboard.press('Enter');
         await wait(90);
