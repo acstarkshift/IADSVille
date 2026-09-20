@@ -1099,6 +1099,41 @@ export const WATCH = {
   tailAfterLastSpawnS: 300,
 };
 
+/**
+ * The radar operator's own resource: where the beam is, and what it is not
+ * looking at while it is there.
+ *
+ * The balance critic measured the first hour of the campaign and found "a
+ * two-state skill model: you touched the button or you did not. There is
+ * nothing above 'competent' to reach for, and on the teaching watch there is
+ * nothing below it either" — at sixteen seeds the expert and the competent
+ * operator produced byte-identical runs on both radar watches, nought of
+ * thirty-two paired seeds separating them.
+ *
+ * So the set can SWEEP or it can STARE. Sweeping is the circle. Staring puts
+ * the beam into a sixty-degree sector and rasters it there, which is six
+ * crossings for every one the circle gives — a contact firms in a fraction of
+ * the time and the operator can report it properly — and the rest of the sky
+ * is not being looked at at all while that is true. Every second is an
+ * allocation: which contact am I sure about, and what am I not watching while
+ * I am sure about it. That is the same shape as the decision the whole game
+ * is built on, one rung down.
+ *
+ * The machinery is the fire-control sets': a radar with `fovDeg` rasters
+ * inside its arc and flies back, and `sweepRadar` has handled that since the
+ * sectored sets were written. Nothing new is simulated here; a surveillance
+ * set is simply allowed to be pointed.
+ */
+export const SEARCH = {
+  /** The width of the sector a surveillance set can be told to hold. */
+  stareFovDeg: 60,
+  /**
+   * And the price, beyond the sky you are not sweeping: a beam that dwells
+   * gives a listener a cleaner cut. Exposure builds faster while staring.
+   */
+  stareExposureMult: 1.35,
+};
+
 export const COMMAND = {
   startingStanding: 50,
   minStanding: 0,

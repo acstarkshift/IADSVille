@@ -263,6 +263,42 @@ async function main() {
     }
 
     /*
+     * A CONTAINER THAT DRAWS CONTROLS IS A CONTAINER THAT TAKES PRESSES.
+     *
+     * The rack lifts the worked unit's card out of the scroller and into a
+     * sibling element above it — `#worked-unit`, the one card that is always
+     * on screen. It was not in the console's list of press hosts, so every
+     * control on it was dead to a pointer: the set's own emissions switch at
+     * the radar seat, the whole of the worked battery's card everywhere else.
+     * It looked perfectly right. The caps lit, `:active` fired because that
+     * is CSS, and nothing happened. Only the keyboard worked, which is
+     * precisely why this suite did not catch it — everything here reached the
+     * rack through the rail and the keys.
+     *
+     * So the card is pressed with a pointer, on every desktop run, and the
+     * world is asked whether the press did anything. Emissions is the switch
+     * to do it with: it is on the card at every seat, and it is the one
+     * decision the whole game is built on.
+     */
+    {
+      const sel = '#worked-unit [data-act="emcon-radar"], #worked-unit [data-act="emcon"]';
+      const present = await page.evaluate((s) => !!document.querySelector(s), sel);
+      if (present) {
+        const radiating = () => page.evaluate(() => window.__world.radars.map((r) => !!r.on).join(''));
+        const before = await radiating();
+        await page.click(sel);
+        await wait(250);
+        if (await radiating() === before) {
+          failures.push(`${run.mission}/${run.role}: a press on the worked card's emissions `
+            + 'switch changed nothing — the card is outside the console\'s press hosts');
+        }
+        // And put it back, so nothing downstream inherits a set we switched.
+        await page.click(sel).catch(() => {});
+        await wait(250);
+      }
+    }
+
+    /*
      * HOLD READS; IT DOES NOT ORDER.
      *
      * Measured in the browser before the fix: at speed 0 the world clock does
@@ -679,6 +715,23 @@ async function touchRun(browser) {
            * the proof the hand-over was real — nothing on this watch is fired
            * at a contact the operator has not called.
            */
+          /*
+           * And the seat's other verb, which is what makes it a seat: hold
+           * the sector the selected contact is in. One tap, and the world
+           * must say the set is pointed — a control that reports 'ready' and
+           * changes nothing is the failure this checks for.
+           */
+          const hold = await tapWhenLive('.ab-caps [data-act="stare"]', 20000, rolledTap);
+          if (hold !== 'ready') failures.push(`${label}: HOLD SECTOR ${hold}`);
+          await wait(400);
+          if (!await page.evaluate(() => window.__world.radars.some((r) => window.__world.isStaring(r)))) {
+            failures.push(`${label}: a tap on HOLD SECTOR did not point the set`);
+          }
+          await tap('.ab-caps [data-act="stare"]');
+          await wait(300);
+          if (await page.evaluate(() => window.__world.radars.some((r) => window.__world.isStaring(r)))) {
+            failures.push(`${label}: the set could not be given the circle back`);
+          }
           const report = await tapWhenLive('.ab-caps [data-act="report"]', 40000, rolledTap);
           if (report !== 'ready') failures.push(`${label}: HAND OVER ${report}`);
           await wait(600);

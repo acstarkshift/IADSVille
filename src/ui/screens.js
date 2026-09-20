@@ -1509,11 +1509,16 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
         ${key('Click a contact', 'select it')}
         ${key('L', 'read it to the launch officer — he answers on the radio and puts a battery on it')}
         ${key('Right-click a contact', 'the officer at the top of the list, and under him every battery and what it reaches')}
-        ${key('`', 'switch every search radar on or off — the one switch this seat has')}
+        ${key('`', 'switch every search radar on or off — the switch the whole game turns on')}
+        ${key('C', 'hold the set on the selected contact\u2019s bearing: sixty degrees, six looks for every one the circle gives, and nothing outside the sector is swept. Press it again to turn through the circle')}
       </div>
       <p class="note">There is no launch cap on this console and there is not meant to be. You
-      switch the set, you hold what it finds and you call it; the officer at the next desk fires,
-      and he fires at nothing you have not called.</p>
+      switch the set, you point it, you hold what it finds and you call it; the officer at the
+      next desk fires, and he fires at nothing you have not called.</p>
+      <p class="note">The two switches are the whole seat and they are both trades. The set has
+      to be up for you to see and being up is how they find you; and while the beam is held on
+      one bearing it is not on any other. Nobody will tell you which contact is worth being sure
+      about.</p>
     </div>
     <div class="card">
       <h3>Battle manager</h3>

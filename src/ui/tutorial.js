@@ -111,6 +111,22 @@ export const RADAR_TUTORIAL_STEPS = [
     done: (w, u, sinceS) => [...w.tracks.values()]
       .some((t) => t.quality >= 0.55 && t.hostility === 'hostile') || sinceS > TUTORIAL_FALLBACK_S,
   },
+  /*
+   * The seat's second verb, taught where the first lesson lands: the row is
+   * filling in slowly, and there is something the operator can do about it.
+   * The card says the cost in the same sentence as the benefit, because the
+   * cost is the whole control.
+   */
+  {
+    id: 'point',
+    en: 'You can make it fill in faster. Press HOLD SECTOR, or C, and the set stops turning '
+      + 'and holds a sixty-degree sector on that contact — six looks for every one. Nothing '
+      + 'outside the sector is being swept while it does. Press it again for ALL ROUND.',
+    phone: 'You can make it fill in faster. Press HOLD SECTOR and the set stops turning and '
+      + 'holds a sixty-degree sector on that contact — six looks for every one. Nothing '
+      + 'outside the sector is swept while it does. Press it again for ALL ROUND.',
+    done: (w, u, sinceS) => w.radars.some((r) => w.isStaring(r)) || sinceS > TUTORIAL_FALLBACK_S,
+  },
   {
     id: 'call',
     en: 'Press HAND OVER, or L, to read the contact to the launch officer. He answers on the '

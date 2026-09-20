@@ -461,6 +461,78 @@ describe('the playtest harness', () => {
       + `four (${pc(mean(acts[0]))} to ${pc(mean(acts[3]))})`);
   });
 
+  /*
+   * THE RADAR RUNG HAS A LADDER NOW, AND IT IS MEASURED.
+   *
+   * The balance critic, on the first hour of the campaign: "a two-state skill
+   * model: you touched the button or you did not. There is nothing above
+   * 'competent' to reach for, and on the teaching watch there is nothing
+   * below it either." At sixteen seeds the expert and the competent operator
+   * produced BYTE-IDENTICAL runs on both radar watches — nought of
+   * thirty-two paired seeds separating them, which is not a small difference,
+   * it is no difference at all.
+   *
+   * The set can be held on a bearing now: sixty degrees rastered, six
+   * crossings for every one the circle gives, and nothing outside the sector
+   * swept while it is. Measured after, at TWENTY-FOUR seeds — sixteen is not
+   * enough to tune anything on this game and it read the expert a full rung
+   * high:
+   *
+   *   First Light   nothing 92%  novice 100%  competent 100%  expert 100%
+   *   Low Riders    nothing  0%  novice  58%  competent  83%  expert  92%
+   *
+   * First Light is held by everybody who plays, which is what a teaching
+   * watch is for and is asserted elsewhere; below competent there is now an
+   * operator who loses two seeds in twenty-four, which is the floor the
+   * critic said the teaching watch did not have. Low Riders is where the
+   * ceiling lives: a ladder from an empty chair to an expert with three rungs
+   * between, and expert takes ten of twenty-four paired seeds off competent
+   * for a mean of +7.5%. Only the `expert` policy stares; every published
+   * band is measured at `competent`, so the curve is exactly where the
+   * re-tune left it.
+   */
+  test('the radar seat has something to be good at, and the ladder is monotone', () => {
+    const SEEDS = 24;
+    const rung = (mission, policy) => {
+      let held = 0;
+      const runs = [];
+      for (let i = 1; i <= SEEDS; i++) {
+        const { run } = playRun({ mission, seat: 'radar', policy, seed: `p${i}` });
+        if (run.held) held++;
+        runs.push(JSON.stringify(run));
+      }
+      return { held, runs };
+    };
+
+    const nothing = rung('low-riders', 'nothing');
+    const novice = rung('low-riders', 'novice');
+    const competent = rung('low-riders', 'competent');
+    const expert = rung('low-riders', 'expert');
+
+    assert.ok(novice.held > nothing.held,
+      `an operator who joins in must beat an empty chair (${novice.held} vs ${nothing.held})`);
+    assert.ok(competent.held >= novice.held,
+      `and competence must beat fixation (${competent.held} vs ${novice.held})`);
+    assert.ok(expert.held >= competent.held,
+      `and there must be something above competent to reach for `
+      + `(${expert.held} vs ${competent.held})`);
+
+    /*
+     * And the property the critic actually measured, stated directly: the two
+     * top players must not be the same player. Their words were "expert beats
+     * competent on 0 of 32 paired seeds; rounds 7.9 vs 7.9, kills 4.7 vs 4.7,
+     * first launch 100.4 s vs 100.4 s" — two names for one script. A run is
+     * the harness's whole record of a watch, so identical JSON is identical
+     * play.
+     */
+    const identical = competent.runs.filter((r, i) => r === expert.runs[i]).length;
+    assert.equal(identical, 0,
+      `expert and competent produced identical runs on ${identical} of ${SEEDS} seeds`);
+    assert.ok(expert.held > novice.held,
+      `and the top of the ladder must be clear of the bottom of it `
+      + `(${expert.held} vs ${novice.held})`);
+  });
+
   test('a switch flipping in an empty sky is not something happening', () => {
     const run = playRun({ mission: 'two-cities', seat: 'net', policy: 'competent', seed: 'p1' }).run;
     assert.ok(run.holes.longestS > 0,

@@ -114,6 +114,21 @@ export const CONTROLS = {
     tm: 'ДОЛОЖИТЬ', en: 'HAND OVER',
     hint: 'report the selected contact to the launch officer, who fires on it',
   },
+  /*
+   * The set's second verb, and the one that makes the seat a seat: hold the
+   * beam on a bearing instead of turning it through the circle. Six looks for
+   * every one, so the contact firms in a fraction of the time — and the rest
+   * of the sky is not being looked at at all while that is true. The hints
+   * say the cost, because the cost is the whole point of the control.
+   */
+  hold: {
+    tm: 'СОПРОВОЖД', en: 'HOLD SECTOR',
+    hint: 'point the set at the selected contact: it firms six times faster, and nothing else is swept',
+  },
+  sweep: {
+    tm: 'КРУГОВОЙ', en: 'ALL ROUND',
+    hint: 'let the set turn through the circle again, and see everything slowly',
+  },
   /* The two halves of the question the LEAVE POST cap now asks first. */
   abandon: { tm: 'ОСТАВИТЬ ПОСТ', en: 'ABANDON THE WATCH' },
   stay: { tm: 'ОСТАТЬСЯ', en: 'STAY AT THE POST' },

@@ -287,7 +287,7 @@ import {
 } from '../src/engine/doctrine.js';
 import { inEnvelope, timeToInRangeS } from '../src/engine/weapons.js';
 import { AIR_TYPES, ASSET_TYPES, DETECTION, ENGAGEMENT, SAM_TYPES } from '../src/engine/config.js';
-import { closureRate, dist, len } from '../src/engine/math.js';
+import { bearing, closureRate, dist, len } from '../src/engine/math.js';
 
 const THIS_FILE = fileURLToPath(import.meta.url);
 
@@ -496,6 +496,45 @@ function reportPass(ctx) {
     if (track.classification === 'decoy') continue;
     if (track.hostility === 'friendly') continue;
     if (w.handOver(track.id)) ctx.act(`REPORTS ${track.tn}`);
+  }
+}
+
+/**
+ * The set's second verb, as an operator would use it.
+ *
+ * The seat had one verb with no cost and no ordering problem: at sixteen seeds
+ * the expert and the competent operator produced byte-identical runs on both
+ * radar watches, nought of thirty-two paired seeds separating them. Now the
+ * set can be held on a bearing — six looks for every one the circle gives,
+ * and nothing outside the sector swept — so there is something to be good at.
+ *
+ * The rule here is the one a real operator would use and it is deliberately
+ * not clever: hold the sector of the most threatening contact that is NOT yet
+ * firm enough to report, because that is the one the dwell buys something on,
+ * and go back to the circle the moment there is nothing like that or the
+ * sector has been held for `STARE_MAX_S`. A player who stares all night sees
+ * one bearing beautifully and loses the watch behind them, and the harness
+ * has to be able to be wrong in that direction as well.
+ */
+const STARE_MAX_S = 45;
+const STARE_REST_S = 20;
+function starePass(ctx) {
+  const { w, mem } = ctx;
+  const set = w.searchSet();
+  if (!set || !set.on) return;
+  const holding = w.isStaring(set);
+  if (holding && w.t - (mem.stareSinceS ?? 0) > STARE_MAX_S) {
+    if (w.setRadarSector(set.id, null)) { mem.stareRestedS = w.t; ctx.act('ALL ROUND'); }
+    return;
+  }
+  if (holding) return;
+  if (w.t - (mem.stareRestedS ?? -99) < STARE_REST_S) return;
+  const wanted = sortedTracks(w).find((t) => !t.destroyed && t.reportedAtS === null
+    && t.hostility !== 'friendly' && t.classification !== 'decoy' && t.quality < FIRM);
+  if (!wanted) return;
+  if (w.setRadarSector(set.id, bearing(set.pos, wanted.pos))) {
+    mem.stareSinceS = w.t;
+    ctx.act(`HOLDS ${Math.round(bearing(set.pos, wanted.pos))}°`);
   }
 }
 
@@ -1210,7 +1249,7 @@ export const POLICIES = {
       // channel spent on the palace is a channel the fighters do not have to
       // get past, and this player has read the brief.
       if (runsTheNet(ctx.seat)) guardTheCorridor(ctx);
-      if (ctx.seat === 'radar') reportPass(ctx);
+      if (ctx.seat === 'radar') { starePass(ctx); reportPass(ctx); }
       if (runsTheNet(ctx.seat) && w.t - (mem.lastPassS ?? -99) >= 3) {
         mem.lastPassS = w.t;
         assignPass(ctx, { greedy: true, salvo: true, holdCorridor: w.scenario.epilogue === true });

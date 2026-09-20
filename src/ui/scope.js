@@ -596,13 +596,20 @@ export class Scope extends Lettering {
   }
 
   /**
-   * Where the fire-control antennas are looking.
+   * Where the pointed antennas are looking.
    *
    * A long-range battalion guides through a hundred-and-twenty-degree arc that
    * takes the better part of half a minute to swing, so which way it points is
    * a decision the operator is making whether they can see it or not. Now they
    * can see it: a faint wedge out to the battery's reach, brighter along the
    * boresight, and drawn under the symbols so it never competes with a track.
+   *
+   * And a surveillance set held on a sector is the same picture for the same
+   * reason, so it falls out here without a line: anything with a `fovDeg` is
+   * something being pointed, and the wedge is where it is pointed. At the
+   * radar seat that wedge is the operator's own decision drawn on the glass —
+   * a sixth of the sky looked at six times as often, and the rest of it not
+   * looked at at all.
    */
   drawFireControlArcs(world) {
     const { ctx } = this;

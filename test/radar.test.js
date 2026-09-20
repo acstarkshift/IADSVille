@@ -12,6 +12,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { World } from '../src/engine/world.js';
+import { SEARCH } from '../src/engine/config.js';
 import { scenarioById } from '../src/engine/scenarios.js';
 import { fcRadarOf, fcBearsOn, stepFireControl } from '../src/engine/doctrine.js';
 import { effectiveRangeKm, sweepRadar } from '../src/engine/detection.js';
@@ -37,6 +38,109 @@ function trackAt(from, bearingDeg, rangeKm, extra = {}) {
     ...extra,
   };
 }
+
+/**
+ * THE SEAT'S SECOND VERB.
+ *
+ * The balance critic on the first hour of the campaign: "a two-state skill
+ * model: you touched the button or you did not. There is nothing above
+ * 'competent' to reach for, and on the teaching watch there is nothing below
+ * it either" — at sixteen seeds the expert and the competent operator
+ * produced BYTE-IDENTICAL runs on both radar watches, nought of thirty-two
+ * paired seeds separating them.
+ *
+ * So a surveillance set can be held on a bearing: sixty degrees, rastered,
+ * which is six crossings for every one the circle gives — and nothing outside
+ * the sector is looked at at all while that is true.
+ */
+describe('the set can be pointed, and that is the seat\'s resource', () => {
+  const searchSet = (w) => w.radars.find((r) => r.alive && !r.siteId);
+
+  test('holding a sector narrows the beam and starts it at the edge', () => {
+    const w = new World(scenarioById('low-riders'), { role: 'radar', seed: 'stare-1' });
+    const set = searchSet(w);
+    assert.equal(set.fovDeg, null, 'a surveillance set turns through the circle');
+    assert.equal(w.isStaring(set), false);
+    assert.equal(w.setRadarSector(set.id, 340), true);
+    assert.equal(set.fovDeg, SEARCH.stareFovDeg);
+    assert.equal(set.boresightDeg, 340);
+    assert.equal(Math.round(set.az), Math.round(340 - SEARCH.stareFovDeg / 2),
+      'the first pass is a whole pass, not the remainder of wherever the circle had got to');
+    assert.ok(w.events.some((e) => /HOLDING 340/.test(e.text)), 'and it is said');
+    assert.equal(w.isStaring(set), true);
+    assert.equal(w.setRadarSector(set.id, null), true);
+    assert.equal(set.fovDeg, null, 'and the circle can be given back');
+    assert.equal(w.isStaring(set), false);
+  });
+
+  test('a switch that does not move says nothing', () => {
+    const w = new World(scenarioById('low-riders'), { role: 'radar', seed: 'stare-2' });
+    const set = searchSet(w);
+    assert.equal(w.setRadarSector(set.id, null), false, 'already all round');
+    w.setRadarSector(set.id, 100);
+    assert.equal(w.setRadarSector(set.id, 100), false, 'already on that bearing');
+  });
+
+  test('a battery\'s own set is not the sector\'s to point', () => {
+    const w = new World(scenarioById('low-riders'), { role: 'radar', seed: 'stare-3' });
+    const own = w.radars.find((r) => r.siteId);
+    assert.ok(own, 'the batteries have their own antennas');
+    assert.equal(w.setRadarSector(own.id, 200), false,
+      'a fire-control set already holds a boresight and its pointing is the crew\'s');
+  });
+
+  /*
+   * THE THING THE VERB IS FOR, COUNTED.
+   *
+   * The whole claim the control makes — to the player in the tutorial card, in
+   * the handbook and on the cap's own tooltip — is "six looks for every one,
+   * and nothing outside the sector is swept". A control whose price is a
+   * sentence nobody checks is a control that quietly stops costing anything,
+   * so the sentence is counted here rather than described.
+   *
+   * Ten minutes of watch, one contact 020 and one 200, the same set and the
+   * same rolls: all round paints each of them 50 times (600 s over a 12 s
+   * turn); held on 020 it paints the first 300 times and the second never.
+   * Exactly six, because the sector is a sixth of the circle and the beam
+   * still runs at the set's own rate. If `stareFovDeg` moves, the ratio moves
+   * with it and this test says so.
+   */
+  test('the sector is six looks for one, and nothing outside it is looked at at all', () => {
+    const at = (from, bDeg, km) => {
+      const rad = (90 - bDeg) * Math.PI / 180;
+      return { x: from.x + Math.cos(rad) * km, y: from.y + Math.sin(rad) * km };
+    };
+    const look = (hold) => {
+      const w = new World(scenarioById('low-riders'), { role: 'radar', seed: 'stare-4' });
+      const set = searchSet(w);
+      set.on = true;
+      set.state = 'radiating';
+      const targets = [
+        { id: 'ahead', alive: true, type: 'striker', rcs: 5, altM: 4000, jamming: false,
+          pos: at(set.pos, 20, 60) },
+        { id: 'abeam', alive: true, type: 'striker', rcs: 5, altM: 4000, jamming: false,
+          pos: at(set.pos, 200, 60) },
+      ];
+      if (hold !== null) assert.equal(w.setRadarSector(set.id, hold), true);
+      const rng = makeRng('sector');
+      const counts = { ahead: 0, abeam: 0 };
+      for (let i = 0; i < 6000; i++) {
+        for (const plot of sweepRadar(set, targets, [], rng, 0.1)) counts[plot.truthId]++;
+      }
+      return counts;
+    };
+
+    const sweeping = look(null);
+    assert.equal(sweeping.ahead, 50, 'the circle is one look every twelve seconds');
+    assert.equal(sweeping.abeam, 50, 'and it is the same look for everything in the sky');
+
+    const held = look(20);
+    assert.equal(held.abeam, 0,
+      'nothing outside the sector is looked at at all — that is the price');
+    assert.equal(held.ahead, sweeping.ahead * (360 / SEARCH.stareFovDeg),
+      `a contact in the sector is painted ${360 / SEARCH.stareFovDeg} times as often`);
+  });
+});
 
 describe('the battalion has two sets', () => {
   test('long-range batteries carry an acquisition set and a sectored fire-control set', () => {

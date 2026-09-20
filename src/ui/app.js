@@ -19,7 +19,7 @@ import { armTimeToImpact, railsOf } from '../engine/doctrine.js';
 import { stepCommand } from '../engine/command.js';
 import { cannotEngageReason } from '../engine/threat.js';
 import { AIR_TYPES } from '../engine/config.js';
-import { dist, clamp01, clockString } from '../engine/math.js';
+import { dist, bearing, clamp01, clockString } from '../engine/math.js';
 import { applyTheme } from './themes.js';
 import { Scope } from './scope.js';
 import { CrewConsole } from './console.js';
@@ -1022,15 +1022,27 @@ function updateLegend() {
   // The strip under the tube reserves two lines at the narrowest reference
   // width, so each sentence is written to fit two lines at 1280 and no more.
   els.scopeLegend.textContent = ui.hoverInfo ?? (world?.control.role === 'radar'
-    ? 'Hover over anything to read what it is. Click a contact to pick it, then press L to read it '
-      + 'to the launch officer. He fires, and only at what you have called. Right-click a radar '
-      + 'symbol to switch it on or off.'
+    /*
+     * The seat has two verbs now and the line has to carry both, in the same
+     * two lines at 1280 it has always been written to. So it is tightened
+     * rather than lengthened: same three affordances, one more, 205
+     * characters against the 207 it was. Measured at 1280 after the change.
+     */
+    ? 'Hover to read anything. Click a contact, then L reads it to the launch officer — he fires '
+      + 'only at what you call. C holds the set on it: six looks for one, nothing else swept. '
+      + 'Right-click a radar to switch it.'
     : ui.view === 'crew'
     ? 'Click a contact to make it your target. L locks your battery onto it, F launches a missile. '
       + 'A switches your radar on or off: off, the enemy cannot find you; on, you can see and shoot.'
-    : 'Hover over anything to read what it is. Drag a contact onto a battery symbol (or press Shift '
-      + 'and its number) to give it the shot, or right-click the contact for every battery that could take it. '
-      + 'Right-click a radar symbol to switch it on or off.');
+    /*
+     * The net's was the longest of the three and the worst clipped: four
+     * lines into two at 1280, losing the whole of the emissions sentence.
+     * Same four affordances, tightened to three lines in a strip that now
+     * reserves three. See `.scope-legend` in hud.css.
+     */
+    : 'Hover to read anything. Drag a contact onto a battery — or Shift and its number — to give '
+      + 'it the shot. Right-click a contact for every battery that could take it, or a radar to '
+      + 'switch it.');
 }
 
 /** One sentence for whatever the scope's hit-test found under the pointer. */
@@ -1547,8 +1559,27 @@ function wirePanelInput() {
       openContactMenu(row.dataset.track, e.clientX, e.clientY);
     });
   }
-  for (const host of [els.trackList, els.batteryList, els.crewConsole, els.formationList,
-    els.actionBar]) {
+  /*
+   * `els.workedUnit` IS IN THIS LIST, AND IT WAS NOT.
+   *
+   * The rack lifted the worked unit's card OUT of the scroller and into a
+   * sibling element above it, so the one card that is always on screen — the
+   * set's own emissions switch at the radar seat, the whole of the worked
+   * battery's card at every other — sat outside every press host on the
+   * console and took no presses at all. It looked exactly right, its caps lit
+   * and unlit correctly, `:active` fired because that is CSS, and nothing
+   * happened. The keyboard still worked, which is why it survived a smoke
+   * suite: `tools/smoke.js` reaches the rack through the rail and the keys.
+   * Measured before the fix on two watches and two seats: a click on the
+   * worked card's emissions switch changed nothing in the world; the same
+   * switch on a rack strip one row below it changed the world every time.
+   *
+   * A container that draws controls is a container that takes presses. The
+   * smoke run holds that now.
+   */
+  for (const host of [els.trackList, els.batteryList, els.workedUnit, els.crewConsole,
+    els.formationList, els.actionBar]) {
+    if (!host) continue;
     host.addEventListener('pointerdown', beginPress);
     /*
      * And the keyboard's own press. A click with `detail === 0` was not made
@@ -1656,7 +1687,7 @@ function closeAbort() {
  */
 const HOLD_REFUSES = new Set([
   'direct', 'posture', 'reserve', 'emcon', 'emcon-radar', 'weapons', 'salvo',
-  'ride', 'reload', 'scoot', 'lock', 'fire', 'assign', 'report',
+  'ride', 'reload', 'scoot', 'lock', 'fire', 'assign', 'report', 'stare',
 ]);
 
 /**
@@ -1810,6 +1841,28 @@ function runAction(act, siteId, radarId, formationId, stateArg, trackArg) {
     case 'assign': if (siteId) assignSelected(siteId); break;
     /* The set's own verb: pass the contact to the man who fires. */
     case 'report': handOverSelected(trackArg); break;
+    /*
+     * The set's second verb. Hold the sector the selected contact is in, or
+     * let the antenna turn again. It reads the bearing off the contact rather
+     * than off a knob, because the seat's question is "which of these am I
+     * sure about" and not "what is three hundred and forty degrees".
+     */
+    case 'stare': {
+      const set = radarId ? world.radarById.get(radarId) : world.searchSet();
+      if (!set) {
+        world.logThrottled('noSearchSet', 15, 'warn', 'NO SURVEILLANCE SET TO POINT.');
+        break;
+      }
+      if (world.isStaring(set)) { world.setRadarSector(set.id, null); break; }
+      const target = world.tracks.get(trackArg ?? ui.selectedTrackId);
+      if (!target) {
+        world.logThrottled('stareNothing', 10, 'warn',
+          'NOTHING SELECTED — PICK A CONTACT AND THE SET WILL HOLD ITS BEARING.');
+        break;
+      }
+      world.setRadarSector(set.id, bearing(set.pos, target.pos));
+      break;
+    }
     // The rail's seat cap is the topbar's V, for a phone that draws no topbar
     // toggle; `toggleView` already refuses on a watch with one seat.
     case 'seat': toggleView(); break;
@@ -2143,6 +2196,20 @@ function wireGlobalInput() {
         }
         break;
       case 'r': { const s = batteryFor(); if (s) runAction('reload', s.id); break; }
+      /*
+       * C, for the sector the set is holding. The radar operator's second
+       * verb: point the antenna at the selected contact, or let it turn
+       * again. Every other seat is told what it is and why it is not theirs,
+       * the way every other key on this console answers.
+       */
+      case 'c':
+        if (world.control.role === 'radar' || world.control.ownsSurveillance) {
+          runAction('stare', null, null, null, null, ui.selectedTrackId);
+        } else {
+          refuse('nosearch', 'THE SECTOR\'S SEARCH IS NOT YOURS TO POINT FROM A CABIN. '
+            + 'YOUR OWN SET LOOKS WHERE THE LAUNCHER IS LOOKING.');
+        }
+        break;
       /*
        * S, G and X answer to the same predicate their caps do.
        *

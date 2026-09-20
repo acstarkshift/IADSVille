@@ -1482,6 +1482,38 @@ h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-rig
 }
 
 /*
+ * AND THREE LINES WHERE THE STRIP IS NARROW, BECAUSE IT WAS SLICING THE
+ * SENTENCE IT EXISTS TO CARRY.
+ *
+ * Two lines were enough when the strip was as wide as the tube. It is not any
+ * more: the bezel column that carries the range knob and the nomenclature
+ * plate took the right-hand side of it, and the strip measures 572px at 1280
+ * against 856px at 1600. So the seat's instruction — the first sentence a new
+ * player reads on a console — was cut off mid-word at every width below 1600,
+ * with `overflow: hidden` and no sign that anything was missing.
+ *
+ * Measured, content height against the 43px of room, on the three seat lines:
+ *
+ *            1280   1366   1440   1600
+ *   set       55     55     55     43
+ *   cabin     55     43     43     43
+ *   net       70     55     55     43
+ *
+ * The net's lost two whole lines at 1280, and what went with them was
+ * "right-click a radar symbol to switch it on or off" — the emissions
+ * affordance, which is the one idea the whole game is built on.
+ *
+ * The height is still FIXED at any given width, which is the property the
+ * rule above exists for: this line doubles as the hover readout, and a
+ * caption that grew a line as the pointer moved would resize the canvas and
+ * rescale the picture. It is simply a different fixed height where the strip
+ * is narrow, and it costs the tube fifteen pixels there.
+ */
+@media (max-width: 1599px) {
+  .scope-legend { height: 59px; }
+}
+
+/*
  * The whole cabin moves, not the picture inside a rigid bezel.
  *
  * This animated `.scope-wrap` alone: measured through the shake that follows

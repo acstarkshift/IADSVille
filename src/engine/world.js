@@ -18,6 +18,7 @@
 
 import {
   SIM, SAM_TYPES, RADAR_TYPES, ASSET_TYPES, AIR_TYPES, DETECTION, DIFFICULTY, COMMAND, DAMAGE, WATCH,
+  SEARCH,
 } from './config.js';
 import { makeRng } from './rng.js';
 import {
@@ -1886,6 +1887,64 @@ export class World {
     if (!site) return null;
     return this.radarsOf(site).find((r) => r.alive)
       ?? this.radarById.get(site.radarId) ?? null;
+  }
+
+  /**
+   * Point a surveillance set, or let it go round again.
+   *
+   * `bearingDeg` puts the beam into a sixty-degree sector centred on it and
+   * rasters it there — six looks for every one the circle gives, and nothing
+   * at all outside the wedge. `null` gives the circle back. See SEARCH in
+   * config.js for why the seat has this at all.
+   *
+   * Only sets that turn through the circle to begin with: a fire-control set
+   * already holds a boresight and its pointing is the crew's business, not a
+   * switch, and a battery's acquisition set answers to whoever is sitting in
+   * the battery. The one thing the radar operator owns is where the sector's
+   * search is looking.
+   */
+  setRadarSector(radarId, bearingDeg) {
+    const radar = this.radarById.get(radarId);
+    if (!radar || !radar.alive || radar.siteId) return false;
+    const to = bearingDeg == null ? null : wrapDeg(bearingDeg);
+    const wasHeld = radar.searchHeldDeg ?? null;
+    if (wasHeld === null && to === null) return false;
+    if (wasHeld !== null && to !== null && Math.abs(absDeltaDeg(wasHeld, to)) < 1) return false;
+    radar.searchHeldDeg = to;
+    if (to === null) {
+      radar.fovDeg = null;
+      this.log('info', `${radar.label} — SEARCHING ALL ROUND`, { radarId: radar.id });
+    } else {
+      radar.fovDeg = SEARCH.stareFovDeg;
+      radar.boresightDeg = to;
+      // The beam starts at the left edge of the new sector rather than
+      // wherever the circle had got to, so the first pass is a whole pass.
+      radar.az = wrapDeg(to - SEARCH.stareFovDeg / 2);
+      this.log('info', `${radar.label} — HOLDING ${String(Math.round(to)).padStart(3, '0')}°, `
+        + `${SEARCH.stareFovDeg}° SECTOR`, { radarId: radar.id });
+    }
+    return true;
+  }
+
+  /** Is this set being held on a bearing rather than turning? */
+  isStaring(radar) {
+    return !!radar && !radar.siteId && (radar.searchHeldDeg ?? null) !== null;
+  }
+
+  /**
+   * The set a sector control that names no set acts on.
+   *
+   * One rule in one place, because there are two of these controls — the cap
+   * on the rack card names its own set explicitly, but the phone rail, the C
+   * key and the harness all just mean "the search set". A set that is up is
+   * preferred over one that is cold: pointing a radar that is not radiating
+   * is a control that reports done and changes nothing on the glass, which is
+   * exactly the class of defect the smoke run checks for.
+   */
+  searchSet() {
+    return this.radars.find((r) => r.alive && !r.siteId && r.on)
+      ?? this.radars.find((r) => r.alive && !r.siteId)
+      ?? null;
   }
 
   toggleRadar(radarId) {

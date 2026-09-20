@@ -15,7 +15,7 @@
  *     thing the raid takes away from you.
  */
 
-import { DETECTION, AIR_TYPES } from './config.js';
+import { DETECTION, AIR_TYPES, SEARCH } from './config.js';
 import {
   bearing, dist, radarHorizonKm, absDeltaDeg, sweptPast, clamp, clamp01,
   wrapDeg, sub, scale, add, len, norm,
@@ -163,8 +163,18 @@ export function stepRadarPower(radar, dt) {
     // radiating all morning.
     // A signals-disciplined operator gives their opposite numbers less to work
     // with: short looks, irregular intervals, nothing to average.
+    /*
+     * AND A BEAM THAT DWELLS GIVES A CLEANER CUT. A surveillance set held on
+     * a bearing is putting the same energy down the same line every two
+     * seconds instead of every twelve, which is exactly what somebody taking
+     * bearings on you wants. It is the second half of the price of staring —
+     * the first is the sky you are not sweeping — and it is what makes the
+     * verb a decision on the watches where something is listening.
+     */
+    const staring = !radar.siteId && (radar.searchHeldDeg ?? null) !== null;
     radar.exposure = Math.min(
-      1, radar.exposure + dt * 0.0055 * radar.elintGain * (radar.exposureMult ?? 1));
+      1, radar.exposure + dt * 0.0055 * radar.elintGain * (radar.exposureMult ?? 1)
+        * (staring ? SEARCH.stareExposureMult : 1));
   } else {
     radar.exposure = Math.max(0, radar.exposure - dt * 0.0035);
   }

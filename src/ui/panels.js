@@ -324,8 +324,9 @@ function reloadBar(site, type) {
 }
 
 /** A legend-cap pushbutton, with its one key stencilled in the corner. */
-function press(entry, { act, site, track = '', state = '', disabled = false, extra = '', key = '', title = '' } = {}) {
+function press(entry, { act, site, radar = '', track = '', state = '', disabled = false, extra = '', key = '', title = '' } = {}) {
   return `<button class="pb ${extra}" data-act="${act}" ${site ? `data-site="${site}"` : ''}
+      ${radar ? `data-radar="${radar}"` : ''}
       ${track ? `data-track="${esc(track)}"` : ''}
       ${state ? `data-state="${state}"` : ''}
       ${disabled ? 'disabled' : ''} title="${esc(title || entry.en)}${key ? ` (${key})` : ''}"
@@ -1892,6 +1893,19 @@ export function renderBatteries(world, ui, els) {
    * same switch on them.
    */
   const lead = world.radars.find((r) => !r.siteId && r.alive) ?? null;
+  /*
+   * WHOSE ANTENNA IT IS.
+   *
+   * `ownsSurveillance` is the rule the engine already uses for the emissions
+   * switch: everybody but a crew in a cabin, because a cabin sits behind
+   * somebody else's picture and the sector's search is not theirs to point.
+   * The sector control is drawn on exactly the seats that switch, so a seat
+   * never carries half of a set's instrument. The teaching watch keeps it —
+   * `basicConsole` hides the four controls that belong to watches where
+   * somebody shoots back, and this is not one of those: it is the second of
+   * the two switches that ARE the radar seat.
+   */
+  const pointing = !!lead && !!world.control.ownsSurveillance;
   const surveillance = (lead ? [lead] : []).map((radar, index) => {
     const nomenclature = nomenclatureFor(radar.typeLabel ?? radar.label);
     const armEta = radar.alive ? armTimeToImpact(world, radar) : Infinity;
@@ -1932,11 +1946,42 @@ export function renderBatteries(world, ui, els) {
           <i style="width:${Math.round(radar.exposure * 100)}%"></i></span>
         <span class="unit-type">${Math.round(radar.exposure * 100)}%</span>
       </div>` : ''}
+      ${/*
+     * Where the beam is, and it is a control and not a readout.
+     *
+     * The seat had ONE verb with no cost and no ordering problem — at sixteen
+     * seeds the expert and the competent operator produced byte-identical
+     * runs on both radar watches. The set can be held on a sixty-degree
+     * sector now: six looks for every one the circle gives, and nothing
+     * outside it swept while it is. The bearing is read off the selected
+     * contact, so the control is a sentence about a contact rather than a
+     * knob with three digits on it, and the line under it says which of the
+     * two states the set is actually in.
+     *
+     * It is drawn wherever the emissions switch is drawn, because a verb with
+     * a key and no button is the same defect as a button with no key: the
+     * binding, the control and the handbook entry go together.
+     */ ''}
+      ${pointing ? `<div class="unit-row">
+        <span class="unit-type wrap">${esc(world.isStaring(radar)
+    ? `HOLDING ${String(Math.round(radar.boresightDeg)).padStart(3, '0')}°`
+    : 'SEARCHING ALL ROUND')}</span>
+      </div>` : ''}
       <div class="unit-switches">
         ${switch2(CONTROLS.radiate, CONTROLS.silence, !!radar.on, {
     act: 'emcon-radar', radar: radar.id, disabled: !radar.alive,
     extra: `sw-primary${!radar.on && blind && radar.alive ? ' is-urgent' : ''}`,
   })}
+        ${pointing ? press(world.isStaring(radar) ? CONTROLS.sweep : CONTROLS.hold, {
+    act: 'stare', radar: radar.id, track: ui.selectedTrackId ?? '',
+    key: 'C',
+    disabled: !radar.alive || (!world.isStaring(radar) && !ui.selectedTrackId),
+    title: !radar.alive ? 'The set is wreckage'
+      : world.isStaring(radar) ? `Let ${radar.label} turn through the circle again`
+        : !ui.selectedTrackId ? 'Pick a contact first — the set is pointed at something'
+          : `Hold ${radar.label} on the selected contact's bearing: six looks for every `
+            + 'one, and nothing outside the sector is swept',
+  }) : ''}
       </div>
     </div>`;
   }).join('');
@@ -2766,6 +2811,28 @@ export function renderActionBar(world, ui, els, cabin) {
       title: !track ? 'Pick a contact first'
         : passed ? `${track.tn} has already gone to CONTROL`
           : `Report ${track.tn} to CONTROL — he decides which battery takes it`,
+    }));
+    /*
+     * And the seat's own resource beside it: where the beam is.
+     *
+     * The rung had one verb with no cost and no ordering problem — at sixteen
+     * seeds the expert and the competent operator produced byte-identical
+     * runs on both radar watches. This is the second: hold the sector the
+     * contact is in and it firms six times faster, and everything outside
+     * sixty degrees goes unswept while you do. The cap names the state it
+     * SELECTS, the way the weapons caps do.
+     */
+    const sweeper = world.searchSet?.() ?? null;
+    const staring = world.isStaring?.(sweeper);
+    caps.push(press(staring ? CONTROLS.sweep : CONTROLS.hold, {
+      act: 'stare', radar: sweeper?.id ?? '', track: track?.id,
+      disabled: !sweeper || (!staring && !track),
+      extra: 'pb-rail',
+      title: !sweeper ? 'No surveillance set'
+        : staring ? `Let ${sweeper.label} turn through the circle again`
+          : !track ? 'Pick a contact first — the set is pointed at something'
+            : `Hold ${sweeper.label} on ${track.tn}'s bearing: six looks for every one, `
+              + 'and nothing outside the sector is swept',
     }));
   } else {
     /*
