@@ -65,7 +65,7 @@ const CLEAN = () => 60;
  * watch, then a recovered file. Exercises withholding, the release queue, the
  * permit machine end to end, and the one-card precedence rules.
  */
-const ROUGH = (id) => ({ 'economy-of-force': 20, 'across-the-line': 5 }[id] ?? 60);
+const ROUGH = (id) => ({ 'weasel-hour': 20, 'economy-of-force': 5 }[id] ?? 60);
 
 describe('the letters themselves', () => {
   test('every letter is keyed to a watch that exists, in campaign order', () => {

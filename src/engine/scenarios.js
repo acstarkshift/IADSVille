@@ -1287,12 +1287,62 @@ export const SCENARIOS = [
      * competent cells before that package existed; with it, sixteen seeds a
      * seat, the honest count runs nought to four and the readings are
      * 25 / 50 / 38 per cent at an allowance of one, 81 / 81 / 88 at two and
-     * 88 / 94 / 100 at three. Two is the rung, and all three seats sit inside
-     * the band on it.
+     * 88 / 94 / 100 at three.
+     *
+     * STILL TWO ON THE MERGED TABLE, AND THE ROUTE THERE IS WORTH WRITING
+     * DOWN BECAUSE IT WENT THROUGH THREE. The twelve-to-ten cut put Across
+     * the Line's two strays, its crossing package and its camp on this night
+     * as well. At twenty-three armed aircraft an allowance of two held three
+     * of eight — 38 per cent, below the band's floor — so the allowance went
+     * to three and read 69. Then the second northern package came out for a
+     * different reason (see the wave table: at twenty-three armed the
+     * commander loses to his own free crews) and three read 88, which is
+     * above act one. Twenty armed at an allowance of two reads 69 per cent
+     * over sixteen seeds, which is where the first night at battalion
+     * belongs, and the aeroplanes did the work rather than the integer.
+     *
+     * `leakerTolerance` is as coarse as the balance critic says: on this
+     * watch it reads 69 at two and 88 at three with nothing in between.
+     *
+     * NEITHER HINGE IS A DIFFICULTY KNOB AND NEITHER MAY BECOME ONE. The
+     * freeze strikes the hospital off the schedule and `registerLeaker`
+     * follows the same recognition; the encampment is valued at nothing
+     * permanently, by the same rule. So a weapon that arrives at either place
+     * is not in the count the verdict is read against, both strays can come
+     * down at Gorna and the verdict will still read SECTOR HELD, and what
+     * they cost is four hundred points of score and whatever you think of
+     * yourself. The debrief prints "1 (+1 UNCOUNTED)" and names the camp.
      */
     leakerTolerance: 2,
     playerBatteryId: 's_lance_w',
-    roundAllowance: 12,
+    /*
+     * EIGHTEEN, AND IT WAS TWELVE, AND THE MERGE IS WHY.
+     *
+     * Twelve was the allocation for one hinge and nineteen armed aircraft.
+     * This night carries both hinges, twenty-three armed aircraft, a jammer
+     * and seven decoys, and Across the Line's own allocation was eighteen
+     * against seventeen. Eighteen is that watch's number on a raid that is
+     * larger than either of the two it was built from, so the sentence the
+     * brief ends on — "you have rounds, you will be told they are not yours
+     * to spend" — is measurably still true.
+     */
+    roundAllowance: 18,
+    /*
+     * PLACEHOLDER FOR THE WRITER — THE MERGED BRIEF.
+     *
+     * The first three lines are this watch's own. The fourth came with White
+     * Noise's jammer. The last four are Across the Line's, carried here with
+     * both strays and the camp when that watch was merged into this one. They
+     * are two briefs laid end to end: eight lines where the other watches run
+     * to three or four, and the join between "they are not yours to spend"
+     * and "one of tonight's cruise missiles is not tracking anything" has not
+     * been written. Nothing is missing. The seam is.
+     *
+     * The order to put them in is a decision too: the freeze arrives at a
+     * hundred seconds and the border restriction at two hundred and twenty,
+     * so the brief probably wants to read in that order rather than by
+     * subject.
+     */
     brief: [
       'Sector has transmitted an expenditure freeze ahead of tonight. You will receive it formally'
         + ' once the raid is up, and you will be asked to acknowledge it.',
@@ -1300,43 +1350,79 @@ export const SCENARIOS = [
         + ' inside its envelope. It is not on the schedule of designated defended places. Nothing in'
         + ' this sector is, except the airbase, the power station and sector operations.',
       'You have rounds. You will be told they are not yours to spend.',
-      /*
-       * PLACEHOLDER FOR THE WRITER — White Noise's jamming line, carried here
-       * with the jammer and the decoy stream that came off that watch when it
-       * was dissolved. It is that watch's sentence and it has not been written
-       * to sit under the three above it.
-       */
       'There is a standoff jammer on station beyond your reach, and the decoys it is escorting are'
         + ' built to look like strike aircraft. They succeed.',
+      'One of tonight\'s cruise missiles is not tracking anything in this sector. Its course takes it'
+        + ' west, over the ridge, across the Listonian border, and down near Gorna. A second one'
+        + ' follows the same course later in the watch. Two rounds arriving on the same point are not'
+        + ' a malfunction.',
+      'There is a camp at Gorna. Four hundred people who left Trans Mordovia and have been living in'
+        + ' tents on the far side of that line for two years, and whose continued existence is a'
+        + ' subject the ministry does not enjoy.',
+      'LANCE WEST holds it at thirty-seven kilometres, five inside its envelope, and BASTION reaches'
+        + ' it with sixty to spare. It is a straight, slow, unmanoeuvring target and you have rounds'
+        + ' on the rails. You can stop it.',
+      'Sector will transmit its position during the watch, and its position will be that the camp'
+        + ' is not your concern.',
     ],
-    teaches: 'You find out what the ammunition allocation is actually for.',
+    /*
+     * PLACEHOLDER FOR THE WRITER — one sentence is wanted where there are two.
+     * Across the Line taught "that the schedule of defended places lists
+     * installations and does not list people", and this watch now teaches both
+     * halves of the same thing on one night.
+     */
+    teaches: 'You find out what the ammunition allocation is actually for, and that the schedule of'
+      + ' defended places lists installations and does not list people.',
     /*
      * Voices on the ground. The five watches that carry the whole story had
      * no scripted traffic at all — the craft watches were alive with it — so
      * on the night the hospital is struck off the schedule the only thing the
      * net said about the hospital was the order. The lines marked
      * pressureOnly are the colour; the rest is information about the raid.
+     *
+     * THE MERGE: twelve lines, eight of this watch's own and four of Across
+     * the Line's, and the arithmetic is why it is twelve and not nineteen.
+     * `test/words.test.js` holds every story watch to eight to twelve
+     * scripted lines, which is one every sixty-seven seconds on a night this
+     * long; nineteen is one every forty-two and denser than anything else in
+     * the campaign. So a two-hinge night keeps the ceiling and chooses.
+     *
+     * What it chose: the four lines that make the hospital ring and stop
+     * ringing, the two that put the low package on the Kubin road, and four
+     * of Across the Line's — the frontier post on the fires at Gorna, the two
+     * WIDE EYE calls on the strays' course, and SECTOR OPS on the schedule
+     * not extending past the frontier. The seven it did not choose are parked
+     * in the block under `waves`, not deleted.
+     *
+     * PLACEHOLDER FOR THE WRITER: which twelve is a writing decision and this
+     * is only a first fit. The timings are chosen to keep the lines off each
+     * other and off the two orders, at a hundred and at two hundred and
+     * twenty.
      */
     chatter: [
       { atS: 18, text: 'TOWN WARDEN REPORTS THE SIRENS SOUNDED AT TWENTY PAST. THE DISPENSARY QUEUE HAS BEEN MOVED INDOORS.' },
+      /* BORDER — the four lines carried from Across the Line are marked. */
+      { atS: 30, text: 'FRONTIER POST TWO REPORTS THE LINE QUIET. THE CAMP AT GORNA HAS LIT ITS FIRES EARLY; IT IS COLD ON THE RIDGE.' },
       { atS: 40, text: 'LANCE WEST REPORTS THE KUBIN ROAD CLEAR AS FAR AS THE TWENTY-FIRST KILOMETRE. THE HOSPITAL IS ON THAT ROAD.' },
       { atS: 70, pressureOnly: true,
         text: 'SECTOR OPS: THE SCHEDULE OF DEFENDED PLACES FOR TONIGHT IS THE AIRBASE, THE POWER STATION AND THIS BUILDING. NOTHING HAS BEEN ADDED TO IT.' },
       { atS: 92, pressureOnly: true,
         text: 'THE DISTRICT HOSPITAL ASKS BY LANDLINE WHETHER IT IS COVERED. SECTOR HAS NOT ANSWERED THE LANDLINE.' },
-      { atS: 125, text: 'HAMMER REPORTS THE SNOW THICKENING OVER THE AIRBASE. VISUAL ON NOTHING.' },
       { atS: 160, text: 'WIDE EYE HOLDS LOW CONTACTS ON THE KUBIN ROAD BEARING. THEY ARE UNDER THE HORIZON FOR EVERYTHING BUT LANCE WEST.' },
       { atS: 185, pressureOnly: true,
         text: 'THE HOSPITAL HAS RUNG AGAIN. THE SWITCHBOARD HAS BEEN TOLD TO LOG THE CALLS AND NOT PUT THEM THROUGH.' },
-      { atS: 230, text: 'TOWN WARDEN: THE DISPENSARY IS FULL AND THE SCHOOL IS BEING OPENED. THE ROAD TO THE HOSPITAL IS STILL OPEN.' },
-      { atS: 300, pressureOnly: true,
-        text: 'LOGISTICS ASKS FOR A ROUND COUNT BY BATTERY, IN WRITING, BEFORE THE END OF THE WATCH.' },
+      /* BORDER */
+      { atS: 250, text: 'WIDE EYE: ONE CONTACT, LOW AND STRAIGHT, TRACKING FOR THE BORDER. IT IS NOT AIMED AT ANYTHING OF OURS.' },
       { atS: 345, text: 'HAMMER: FOUR LOW OUT OF THE EAST, UNDER EVERYTHING. NOTHING HAS EVER COME FROM THAT SIDE.' },
+      /* BORDER */
+      { atS: 390, pressureOnly: true,
+        text: 'SECTOR OPS: THE SCHEDULE OF DEFENDED PLACES DOES NOT EXTEND PAST THE FRONTIER. IT NEVER HAS.' },
       { atS: 420, pressureOnly: true, text: 'THE HOSPITAL HAS STOPPED RINGING.' },
-      { atS: 480, text: 'TOWN WARDEN REPORTS THE ALL-CLEAR IS NOT YET SOUNDED. THE QUEUE IS STILL INDOORS.' },
+      /* BORDER */
+      { atS: 455, text: 'WIDE EYE: A SECOND CONTACT ON THE SAME LINE AS THE FIRST, SAME HEIGHT, SAME COURSE. FOR THE BORDER.' },
     ],
     assets: [
-      GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, HOSPITAL,
+      GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, GROUND.bridge, HOSPITAL, CAMP,
     ],
     sites: [SITES.bastion, SITES.lanceWest, SITES.thistleTown, SITES.hammer],
     radars: [RADARS.ewrNorth, RADARS.gapSouth],
@@ -1393,8 +1479,27 @@ export const SCENARIOS = [
       // the order with a shrug instead of a decision.
       { atS: 150, type: 'striker', count: 3, bearingDeg: 288, spreadDeg: 14, spacingS: 24, altM: 320,
         targetAssetId: 'a_hospital' },
-      { atS: 195, type: 'striker', count: 3, bearingDeg: 20, spreadDeg: 20, spacingS: 24, altM: 260,
-        distanceKm: 120, targetAssetId: 'a_power' },
+      /*
+       * THE SECOND NORTHERN PACKAGE IS CUT, AND THE INHERITED WARNING IS WHY.
+       *
+       * Three strikers at two hundred and sixty metres out of 020° at the
+       * power station used to sit here, and the merge took the watch to
+       * twenty-three armed aircraft against four batteries. White Noise's
+       * warning, which this watch inherited with White Noise's job, says what
+       * happens then: MORE RAID ON A BATTALION'S WATCH HELPS THE CREWS AND
+       * HURTS THE COMMANDER. Measured, twelve seeds, hand play against
+       * set-free-and-walk-away, counted arrivals (the ones the file
+       * recognises):
+       *
+       *   23 armed   hand 43 vs free 37   the commander LOSES
+       *   20 armed   hand 25 vs free 30   the commander wins
+       *
+       * — and the score dividend goes from +3187 to +3459 on a watch three
+       * aircraft smaller. This package is the one that goes because the
+       * twenty-five-second package comes down the same bearing at the same
+       * building and the east package at three hundred and thirty is what
+       * makes the freeze cost anything.
+       */
       /*
        * THE NORTHERN DECOY GROUP, THE OTHER HALF OF THE FOLD, AND IT IS
        * LOAD-BEARING.
@@ -1460,158 +1565,125 @@ export const SCENARIOS = [
         distanceKm: 78, targetAssetId: 'a_airbase' },
       { atS: 400, type: 'striker', count: 2, bearingDeg: 292, spreadDeg: 14, spacingS: 20, altM: 320,
         distanceKm: 132, targetAssetId: 'a_hospital' },
-    ],
-  },
 
-  {
-    id: 'across-the-line',
-    name: 'Across the Line',
-    subtitle: 'A round has gone wrong, and it is going to come down somewhere that is not our concern.',
-    hour: '17:45',
-    weather: 'overcast',
-    tempC: 1,
-    echelon: 'sector',
-    post: 'battalion',
-    roles: ['net'],
-    seed: 'across-11',
-    /*
-     * ONE, and the camp is not in the count.
-     *
-     * A leaker the file recognises is one at a place the schedule values, and
-     * the encampment is valued at nothing — deliberately, which is the whole
-     * watch. So both strays can come down at Gorna and the verdict will still
-     * read SECTOR HELD; what they cost is four hundred points of score and
-     * whatever you think of yourself. That was free until the curve scrub,
-     * because a cruise missile that arrived registered nothing at all; now it
-     * registers, and `registerLeaker` declines to count it at a place the
-     * schedule values at nothing — the same recognition the freeze uses one
-     * watch earlier. The debrief prints "1 (+1 UNCOUNTED)" and the ground
-     * table underneath names the camp.
-     *
-     * The allowance is therefore about the power station, the crossing and the
-     * town. At two a competent sector held every one of twenty-four seeds. At
-     * one, sixteen seeds a seat with the south-eastern package below in the
-     * table, it holds 75 / 69 / 81 — and a beginner holds 63 / 69 / 31, which
-     * is the only watch in act two where the net seat's novice is inside the
-     * band at all.
-     */
-    leakerTolerance: 1,
-    playerBatteryId: 's_lance_w',
-    roundAllowance: 18,
-    brief: [
-      'One of tonight\'s cruise missiles is not tracking anything in this sector. Its course takes it'
-        + ' west, over the ridge, across the Listonian border, and down near Gorna. A second one'
-        + ' follows the same course four hours later. Two rounds arriving on the same point four'
-        + ' hours apart are not a malfunction.',
-      'There is a camp at Gorna. Four hundred people who left Trans Mordovia and have been living in'
-        + ' tents on the far side of that line for two years, and whose continued existence is a'
-        + ' subject the ministry does not enjoy.',
-      'LANCE WEST holds it at thirty-seven kilometres, five inside its envelope, and BASTION reaches'
-        + ' it with sixty to spare. It is a straight, slow, unmanoeuvring target and you have rounds'
-        + ' on the rails. You can stop it.',
-      'Sector will transmit its position during the watch, and its position will be that the camp'
-        + ' is not your concern.',
-    ],
-    teaches: 'You learn that the schedule of defended places lists installations and does not'
-      + ' list people.',
-    /* The frontier post, the ridge, the crossing, and the fires at Gorna. */
-    chatter: [
-      { atS: 16, text: 'FRONTIER POST TWO REPORTS THE LINE QUIET. THE CAMP AT GORNA HAS LIT ITS FIRES EARLY; IT IS COLD ON THE RIDGE.' },
-      { atS: 55, text: 'LANCE WEST HAS THE KUBIN ROAD PACKAGE UNDER THE HORIZON. THEY ARE COMING IN LOW OVER THE POWER STATION.' },
-      { atS: 100, text: 'RIDGE POST REPORTS ENGINE NOISE THAT IS NOT TURNING FOR THE SECTOR. WHATEVER IT IS, IT IS GOING OVER THE RIDGE.' },
-      { atS: 140, text: 'WIDE EYE: ONE CONTACT, LOW AND STRAIGHT, TRACKING FOR THE BORDER. IT IS NOT AIMED AT ANYTHING OF OURS.' },
-      { atS: 175, pressureOnly: true,
-        text: 'FRONTIER POST TWO: THE FIRES AT GORNA ARE STILL LIT. THEY CAN BE SEEN FROM THE LINE.' },
-      { atS: 215, pressureOnly: true,
-        text: 'SECTOR OPS: THE SCHEDULE OF DEFENDED PLACES DOES NOT EXTEND PAST THE FRONTIER. IT NEVER HAS.' },
-      { atS: 260, text: 'THE CROSSING REPORTS FOUR AT HEIGHT COMING DOWN THE NORTH-EAST. THE BRIDGE GUARD IS IN ITS TRENCH.' },
-      { atS: 300, pressureOnly: true,
-        text: 'FRONTIER POST TWO ASKS WHETHER IT IS TO REPORT ANYTHING THAT COMES DOWN BEYOND THE LINE. SECTOR: NO.' },
-      { atS: 340, text: 'RIDGE POST: LOW PACKAGE OUT OF THE WEST FOR THE TOWN. THE WARDEN HAS BEEN TOLD.' },
-      { atS: 375, text: 'THE CROSSING: TWO ON THE DECK OUT OF THE SOUTH-EAST. NOTHING HAS COME FROM THAT SIDE ALL WATCH.' },
-      { atS: 445, text: 'WIDE EYE: A SECOND CONTACT ON THE SAME LINE AS THE FIRST, SAME HEIGHT, SAME COURSE. FOR THE BORDER.' },
-      { atS: 500, pressureOnly: true,
-        text: 'FRONTIER POST TWO HAS NOTHING FURTHER TO REPORT FROM THE LINE, AND HAS BEEN TOLD THAT IT IS NOT REQUIRED TO.' },
-    ],
-    assets: [
-      GROUND.town, GROUND.c2, GROUND.power, GROUND.bridge, CAMP,
-    ],
-    sites: [SITES.bastion, SITES.lanceWest, SITES.thistleTown, SITES.hammer],
-    radars: [RADARS.ewrNorth, RADARS.gapSouth],
-    waves: [
-      { atS: 20, type: 'striker', count: 3, bearingDeg: 355, spreadDeg: 24, spacingS: 26, altM: 6000,
-        targetAssetId: 'a_power' },
-      /*
-       * The western package, early and close, because LANCE WEST is the cabin
-       * this watch designates and on the shipped table its first legal shot was
-       * at 522 s of an 850 s watch. Down the Kubin road at eighty-two
-       * kilometres it is inside the battery's ring inside two minutes.
-       */
-      { atS: 45, type: 'striker', count: 3, bearingDeg: 288, spreadDeg: 20, spacingS: 20, altM: 210,
-        distanceKm: 82, targetAssetId: 'a_power' },
-      /*
-       * The stray, and the height it comes in at.
+      /* ------------------------------------------------------------ *
+       * ACROSS THE LINE, FOLDED IN. The second hinge of the night.
        *
-       * It used to fly at a hundred and ten metres. BASTION's floor is a
-       * hundred and twenty. So the battery the briefing names in the same
-       * sentence as "reaches it with sixty to spare" could not legally engage
-       * it at any range, ever — the only seconds in which the console said
-       * otherwise were the altitude estimate's own hundred-metre noise lifting
-       * the target over a floor it was under. The whole watch is built on the
-       * claim that you COULD have stopped this, and the claim was false in the
-       * range column's blind spot. Measured over eight seeds, weapons on hold:
-       * LANCE WEST's legal window on the first stray was a median 55 s and
-       * zero seconds on one seed; BASTION's was noise.
+       * The two strays and the package that has to be fought while the
+       * second one runs. Everything else on that watch was another version
+       * of something this one already has — a high northern package at the
+       * power station, a low western package up the Kubin road — and was cut
+       * for pacing rather than for quality. What is kept is what the border
+       * order is ABOUT, plus the one thing that makes the second decision
+       * cost more than the first.
        *
-       * At a hundred and seventy metres both named batteries hold it properly.
-       * And it spawns at ninety-five kilometres instead of the engine's default
-       * hundred and fifty-five, because a cruise missile at two hundred and
-       * fifty metres a second took the better part of ten minutes to arrive and
-       * was not tracked until 456-597 s — the watch's subject spent most of the
-       * watch off the tube. `test/revelations.test.js` now asserts both halves
-       * of the reach, range and height, for every wave aimed at the camp.
+       * THE STRAY'S HEIGHT AND RANGE ARE LOAD-BEARING AND WERE MEASURED ON
+       * THEIR OWN WATCH — do not touch them without reading this. At a
+       * hundred and ten metres it flew under BASTION's floor of a hundred
+       * and twenty, so the battery the brief names in the same sentence as
+       * "reaches it with sixty to spare" could not legally engage it at any
+       * range, ever, and the only seconds in which the console said
+       * otherwise were the altitude estimate's own noise lifting it over a
+       * floor it was under. The whole watch is built on the claim that you
+       * COULD have stopped this. At a hundred and seventy both named
+       * batteries hold it properly, and at ninety-five kilometres instead of
+       * the engine's default hundred and fifty-five it is on the tube in
+       * time to be a decision rather than a rumour.
+       * `test/revelations.test.js` asserts both halves for every wave aimed
+       * at the camp.
+       * ------------------------------------------------------------ */
+      /*
+       * THE FIRST STRAY, AT TWO HUNDRED SECONDS.
+       *
+       * On its own watch it spawned at 130 s and the order came at 150. Here
+       * the freeze has the net until a hundred seconds and the hinge spacing
+       * holds the border order until two hundred and twenty — a hundred and
+       * twenty seconds apart, which is the gap the structural proposal asked
+       * for so the second order compounds the first instead of repeating it.
+       * The stray is up and crossing twenty seconds before the order about
+       * it arrives, which is the same order of events the old watch had.
        */
-      { atS: 130, type: 'cruise', count: 1, bearingDeg: 352, spreadDeg: 0, altM: 170,
+      { atS: 200, type: 'cruise', count: 1, bearingDeg: 352, spreadDeg: 0, altM: 170,
         distanceKm: 95, targetAssetId: 'a_camp', scalable: false, name: 'VAMPIRE STRAY' },
-      { atS: 240, type: 'striker', count: 4, bearingDeg: 15, spreadDeg: 24, spacingS: 22, altM: 240,
-        distanceKm: 132, targetAssetId: 'a_bridge' },
-      { atS: 320, type: 'striker', count: 3, bearingDeg: 297, spreadDeg: 22, spacingS: 18, altM: 220,
-        distanceKm: 130, targetAssetId: 'a_town' },
       /*
        * THE CROSSING, FROM THE SOUTH-EAST, WHILE THE SECOND STRAY IS RUNNING.
        *
-       * The point of this watch is that you decide twice, and the second
-       * decision has to cost something the first one did not. It did not:
-       * measured over eight seeds a seat, competent play conceded nought or
-       * one recognised arrival and held every one of twenty-four cells at
-       * every allowance down to one, so the second stray was answered by a
-       * sector with nothing else on its hands.
+       * The point of the border half of this night is that you decide twice
+       * and the second decision costs something the first did not. Two low
+       * out of 118° on the one bearing nothing has come from tonight; the
+       * crossing is twenty-three kilometres east of the town, only BASTION
+       * reaches it, and only once they are over its horizon — a pair that
+       * appears late and has to be answered at once. They are still being
+       * fought when the second stray crosses the ridge.
        *
-       * Two low out of 118° at three hundred and sixty seconds, on the one
-       * bearing nothing has come from tonight. The crossing is twenty-three
-       * kilometres east of the town; only BASTION reaches it, and only once
-       * they are over its horizon, so this is a pair of contacts that appear
-       * late and have to be answered at once. They are still being fought when
-       * VAMPIRE STRAY 2 crosses the ridge at four hundred and thirty, which is
-       * the whole question asked a second time with the sector's hands full.
-       *
-       * TWO, and it was four first. Four took the watch to nought of eight
-       * held at an allowance of one — the hardest cell in the campaign, on the
-       * watch whose point is a choice rather than a workload — and the height
-       * went from 130 m to 160 m for the same reason the strays did: a
-       * hundred and twenty metres is BASTION's floor, and a package the one
-       * battery that reaches the crossing cannot legally engage is not a
-       * decision, it is a countdown.
+       * TWO, and it was four first: four took the old watch to nought of
+       * eight held at an allowance of one. A hundred and sixty metres and
+       * not a hundred and thirty for the same reason as the strays — a
+       * hundred and twenty is BASTION's floor, and a package the one battery
+       * that reaches the crossing cannot legally engage is not a decision,
+       * it is a countdown.
        */
       { atS: 360, type: 'striker', count: 2, bearingDeg: 118, spreadDeg: 20, spacingS: 16, altM: 160,
         distanceKm: 84, targetAssetId: 'a_bridge' },
-      // A second one goes the same way later. By then you have already decided
-      // what you are, and the only question is whether you do it twice. It sits
-      // at 430 s rather than 330 because the last spawn used to land at 39% of
-      // the watch and the last quarter was one missile crossing an empty map.
-      { atS: 430, type: 'cruise', count: 1, bearingDeg: 348, spreadDeg: 0, altM: 160,
+      /*
+       * And a second one goes the same way later. By then you have already
+       * decided what you are, and the only question is whether you do it
+       * twice.
+       */
+      { atS: 470, type: 'cruise', count: 1, bearingDeg: 348, spreadDeg: 0, altM: 160,
         distanceKm: 95, targetAssetId: 'a_camp', scalable: false, name: 'VAMPIRE STRAY 2' },
     ],
+
+    /*
+     * PARKED FOR THE WRITER — four of Across the Line's twelve chatter lines.
+     *
+     * Nothing reads this. It is here rather than deleted because the panel
+     * scored the prose a nine sentence for sentence and the twelve-to-ten cut
+     * was for pacing, not quality. Each of these described a package that the
+     * merge dropped, so it cannot simply be re-timed into the list above: a
+     * line about a package that is not there is a lie on the net.
+     *
+     *   55  LANCE WEST HAS THE KUBIN ROAD PACKAGE UNDER THE HORIZON. THEY ARE
+     *       COMING IN LOW OVER THE POWER STATION.
+     *       (parked with three of this watch's own, below)
+     *       (this watch's own line at 160 s says the same thing about the
+     *       same package, which is why this one is the one that goes)
+     *   260 THE CROSSING REPORTS FOUR AT HEIGHT COMING DOWN THE NORTH-EAST.
+     *       THE BRIDGE GUARD IS IN ITS TRENCH.
+     *       (the four at height are cut; the bridge guard is not, and this
+     *       line would re-time onto the 360 s pair with "two on the deck")
+     *   340 RIDGE POST: LOW PACKAGE OUT OF THE WEST FOR THE TOWN. THE WARDEN
+     *       HAS BEEN TOLD.
+     *   375 THE CROSSING: TWO ON THE DECK OUT OF THE SOUTH-EAST. NOTHING HAS
+     *       COME FROM THAT SIDE ALL WATCH.
+     *       (this one is still TRUE — the 360 s pair is exactly that — and
+     *       the only reason it is parked rather than kept is that nineteen
+     *       lines is already denser than anything else in the campaign)
+     *
+     * And three of Across the Line's that the twelve-line ceiling left out:
+     *
+     *   175 P FRONTIER POST TWO: THE FIRES AT GORNA ARE STILL LIT. THEY CAN
+     *       BE SEEN FROM THE LINE.
+     *   100 RIDGE POST REPORTS ENGINE NOISE THAT IS NOT TURNING FOR THE
+     *       SECTOR. WHATEVER IT IS, IT IS GOING OVER THE RIDGE.
+     *   500 P FRONTIER POST TWO HAS NOTHING FURTHER TO REPORT FROM THE LINE,
+     *       AND HAS BEEN TOLD THAT IT IS NOT REQUIRED TO.
+     *
+     * And four of this watch's own, for the same reason:
+     *
+     *   125 HAMMER REPORTS THE SNOW THICKENING OVER THE AIRBASE. VISUAL ON
+     *       NOTHING.
+     *   230 TOWN WARDEN: THE DISPENSARY IS FULL AND THE SCHOOL IS BEING
+     *       OPENED. THE ROAD TO THE HOSPITAL IS STILL OPEN.
+     *   300 P LOGISTICS ASKS FOR A ROUND COUNT BY BATTERY, IN WRITING,
+     *       BEFORE THE END OF THE WATCH.
+     *   480 TOWN WARDEN REPORTS THE ALL-CLEAR IS NOT YET SOUNDED. THE QUEUE
+     *       IS STILL INDOORS.
+     *
+     * And one line of Across the Line's that is not chatter at all: its
+     * subtitle, "A round has gone wrong, and it is going to come down
+     * somewhere that is not our concern." This watch keeps its own.
+     */
   },
 
   {

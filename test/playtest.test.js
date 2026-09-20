@@ -100,7 +100,7 @@ describe('the playtest harness', () => {
    */
   test('every seat on every watch can be played to the end', async () => {
     /*
-     * FOURTEEN, and it was fifteen, and twenty-eight before that.
+     * THIRTEEN, and it was fifteen, and twenty-eight before that.
      *
      * The drop from twenty-eight to fifteen was the ladder: every watch used
      * to advertise every seat its formation had — the first night of the war
@@ -108,13 +108,14 @@ describe('the playtest harness', () => {
      * sits on allows, one apiece for the watches below command and the
      * net-and-console pair for the four that are command.
      *
-     * The drop from fifteen to fourteen is the twelve-to-ten cut: White Noise
-     * is dissolved and its one seat goes with it. RE-ANCHORED DELIBERATELY —
+     * The drop from fifteen to thirteen is the twelve-to-ten cut: White Noise
+     * is dissolved and Across the Line is merged into Economy of Force, and a
+     * seat goes with each. RE-ANCHORED DELIBERATELY —
      * a campaign that quietly loses a seat should fail this, so the number is
      * written down rather than derived.
      */
     const combos = SCENARIOS.flatMap((s) => s.roles.map((role) => [s.id, role]));
-    assert.equal(combos.length, 14, 'the campaign offers 14 mission x seat combinations');
+    assert.equal(combos.length, 13, 'the campaign offers 13 mission x seat combinations');
 
     const result = await runMatrix({
       missions: SCENARIOS.map((s) => s.id),
@@ -125,7 +126,7 @@ describe('the playtest harness', () => {
       jobs: Math.max(2, Math.min(4, availableParallelism())),
       quiet: true,
     });
-    assert.equal(result.runs.length, 14);
+    assert.equal(result.runs.length, 13);
     for (const run of result.runs) {
       const where = `${run.mission}/${run.seat}`;
       assert.equal(run.capHit, false, `${where}: the watch never ended inside 40 000 ticks`);

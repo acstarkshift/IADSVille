@@ -101,7 +101,27 @@ export const REVELATIONS = {
 
   border: {
     id: 'border',
-    after: 'across-the-line',
+    /*
+     * THE EVENING AFTER, NOT THE EVENING OF.
+     *
+     * The twelve-to-ten cut put both hinges on one night, and the writer's
+     * decision was that this folder is read on the evening after the merged
+     * watch so that one desk does not carry two folders on the night the
+     * player is already reading the expenditure query. Both orders still
+     * arrive on the one watch; only the paper is staggered.
+     *
+     * THE DESK IT MOVES ONTO ALREADY HAS ONE. `ledger` is keyed to this same
+     * watch, and there is no third evening to give it: six documents, five
+     * evenings between the merged watch and the finale, and the last four are
+     * anchored to the watch they are about — the resupply that did not
+     * arrive, the detention order, the movement order, the manifests. So
+     * Ville Under Fire's desk carries two folders, this one and the depot
+     * return, and `revelationsAfter` returns both rather than the first of
+     * them. That is the whole of the change: `revelationAfter` used to be a
+     * `.find`, which would have handed over this one and silently dropped the
+     * other with nothing failing anywhere. See panel9/conflicts.md §10.
+     */
+    after: 'ville-under-fire',
     tm: 'КООРДИНАТЫ',
     /** Its own reference, on the corner of the sheet. */
     ref: 'ANNEX 7-C',
@@ -260,9 +280,22 @@ export const REVELATIONS = {
   },
 };
 
-/** The revelation that fires on finishing this watch, if any. */
+/**
+ * The revelations that fire on finishing this watch, in campaign order.
+ *
+ * It was a `.find` until the twelve-to-ten cut, which is safe exactly as long
+ * as no two documents share a watch — and when the border folder moved onto
+ * Ville Under Fire's evening, the depot return that was already there would
+ * have stopped firing with nothing in the suite or the smoke to say so. The
+ * list is the shape that cannot do that.
+ */
+export function revelationsAfter(missionId) {
+  return Object.values(REVELATIONS).filter((r) => r.after === missionId);
+}
+
+/** The first of them, for the callers that only ever want one. */
 export function revelationAfter(missionId) {
-  return Object.values(REVELATIONS).find((r) => r.after === missionId) ?? null;
+  return revelationsAfter(missionId)[0] ?? null;
 }
 
 /** Everything the operator knows, in campaign order. */
@@ -317,11 +350,14 @@ export function standing(campaign) {
  * finishes the campaign without it.
  */
 export function learn(campaign, missionId) {
-  const revelation = revelationAfter(missionId);
-  if (!revelation) return null;
+  return learnAll(campaign, missionId)[0] ?? null;
+}
+
+/** Everything this watch puts on the desk that the file does not already hold. */
+export function learnAll(campaign, missionId) {
   campaign.revelations = campaign.revelations ?? [];
-  if (campaign.revelations.includes(revelation.id)) return null;
-  return revelation;
+  return revelationsAfter(missionId)
+    .filter((r) => !campaign.revelations.includes(r.id));
 }
 
 /**

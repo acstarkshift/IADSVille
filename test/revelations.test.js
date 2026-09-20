@@ -16,7 +16,7 @@ import { scenarioById, SCENARIOS } from '../src/engine/scenarios.js';
 import { ASSET_TYPES, DEFENCE_CLASSES, SAM_TYPES, COMMAND } from '../src/engine/config.js';
 import { DIRECTIVES, issueDirective, answerDirective, settleDirectives } from '../src/engine/command.js';
 import {
-  REVELATIONS, revelationAfter, learn, readFolder, knownRevelations, standing,
+  REVELATIONS, revelationAfter, learn, learnAll, readFolder, knownRevelations, standing,
 } from '../src/engine/revelations.js';
 import { emptyCampaign, enlist, recordMission } from '../src/engine/campaign.js';
 import { predictedTarget } from '../src/engine/threat.js';
@@ -230,15 +230,41 @@ describe('the expenditure freeze', () => {
 });
 
 describe('the revelations', () => {
+  /*
+   * RE-ANCHORED BY THE TWELVE-TO-TEN CUT, AND MADE STRICTER BY IT.
+   *
+   * It used to be that no two documents shared an evening, so `at > last` was
+   * both the ordering rule and the no-collision rule. The border folder now
+   * shares Ville Under Fire's evening with the depot return — six documents,
+   * five evenings, and the last four anchored to the watch they are about —
+   * so the ordering is `>=` and the collision is asserted separately: at most
+   * two on any one evening, and never more, because the desk has two folder
+   * slots and a third would be laid out on top of one of them.
+   */
   test('each is keyed to a watch that exists, in campaign order', () => {
     const order = SCENARIOS.map((s) => s.id);
     let last = -1;
+    const perWatch = new Map();
     for (const revelation of Object.values(REVELATIONS)) {
       const at = order.indexOf(revelation.after);
       assert.ok(at >= 0, `${revelation.id} is keyed to a real watch`);
-      assert.ok(at > last, `${revelation.id} comes after the one before it`);
+      assert.ok(at >= last, `${revelation.id} comes after the one before it`);
       last = at;
+      perWatch.set(revelation.after, (perWatch.get(revelation.after) ?? 0) + 1);
     }
+    for (const [missionId, n] of perWatch) {
+      assert.ok(n <= 2, `${missionId} puts ${n} folders on one desk; the desk has two slots`);
+    }
+  });
+
+  test('a watch that puts two folders on the desk hands over both', () => {
+    const campaign = { revelations: [] };
+    const both = learnAll(campaign, 'ville-under-fire').map((r) => r.id);
+    assert.deepEqual(both, ['border', 'ledger'],
+      'the sector target folder and the depot return arrive on the same evening');
+    readFolder(campaign, 'border');
+    assert.deepEqual(learnAll(campaign, 'ville-under-fire').map((r) => r.id), ['ledger'],
+      'and the one that was opened is not offered again');
   });
 
   /*
@@ -341,12 +367,12 @@ describe('the revelations', () => {
 });
 
 describe('the border order', () => {
-  const world = () => new World(scenarioById('across-the-line'), { role: 'net' });
+  const world = () => new World(scenarioById('economy-of-force'), { role: 'net' });
 
   test('the camp is inside a battery envelope, so refusing is a real option', () => {
     // The brief says you could have stopped it. That has to be true, or the
     // watch is asking the player to feel bad about a foregone conclusion.
-    const scenario = scenarioById('across-the-line');
+    const scenario = scenarioById('economy-of-force');
     const camp = scenario.assets.find((a) => a.type === 'camp');
     const canReach = scenario.sites.filter((s) =>
       dist(s.pos, camp.pos) <= SAM_TYPES[s.type].maxRangeKm);
@@ -367,7 +393,7 @@ describe('the border order', () => {
      * decision and not a physics problem — was false in the range column's
      * blind spot.
      */
-    const scenario = scenarioById('across-the-line');
+    const scenario = scenarioById('economy-of-force');
     const camp = scenario.assets.find((a) => a.type === 'camp');
     for (const wave of scenario.waves.filter((w) => w.targetAssetId === camp.id)) {
       const altM = wave.altM ?? 0;
@@ -383,7 +409,7 @@ describe('the border order', () => {
   });
 
   test('the camp is on the far side of the border', () => {
-    const camp = scenarioById('across-the-line').assets.find((a) => a.type === 'camp');
+    const camp = scenarioById('economy-of-force').assets.find((a) => a.type === 'camp');
     const nearest = MAP.border.reduce((best, b) =>
       Math.abs(b.y - camp.pos.y) < Math.abs(best.y - camp.pos.y) ? b : best);
     assert.ok(camp.pos.x < nearest.x, 'the whole watch depends on it being outside the country');

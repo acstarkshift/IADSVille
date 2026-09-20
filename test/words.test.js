@@ -288,7 +288,7 @@ describe('the chrome knows where the player is', () => {
     renderMenu(h, state);
     assert.match(h.innerHTML, /air defence conscript/);
     campaign.appointment = 'region';
-    for (const id of ['first-light', 'low-riders', 'solo-battery', 'weasel-hour', 'economy-of-force', 'across-the-line', 'ville-under-fire']) {
+    for (const id of ['first-light', 'low-riders', 'solo-battery', 'weasel-hour', 'economy-of-force', 'ville-under-fire']) {
       campaign.completed[id] = { score: 1, tier: 'satisfactory', role: 'net' };
     }
     renderMenu(h, state);
@@ -313,7 +313,7 @@ describe('the chrome knows where the player is', () => {
 
 describe('the story watches have voices', () => {
   test('eight to twelve scripted lines on each of the five, in the register of the radio', () => {
-    for (const id of ['economy-of-force', 'across-the-line', 'ville-under-fire', 'four-sectors', 'reinforce-the-capital']) {
+    for (const id of ['economy-of-force', 'ville-under-fire', 'four-sectors', 'reinforce-the-capital']) {
       const chatter = scenarioById(id).chatter ?? [];
       assert.ok(chatter.length >= 8 && chatter.length <= 12, `${id} has ${chatter.length} lines`);
       let last = -1;
@@ -326,7 +326,7 @@ describe('the story watches have voices', () => {
       assert.ok(chatter.some((l) => !l.pressureOnly), `${id}: some of it is information, not colour`);
     }
     assert.ok(scenarioById('economy-of-force').chatter.some((l) => /HOSPITAL/.test(l.text)));
-    assert.ok(scenarioById('across-the-line').chatter.some((l) => /GORNA/.test(l.text)));
+    assert.ok(scenarioById('economy-of-force').chatter.some((l) => /GORNA/.test(l.text)));
     assert.ok(scenarioById('four-sectors').chatter.some((l) => /BRASOV/.test(l.text)));
     assert.ok(scenarioById('reinforce-the-capital').chatter.some((l) => /COLUMN/.test(l.text)));
   });
@@ -382,10 +382,13 @@ describe('the player may answer him', () => {
     const first = stood('economy-of-force');
     const watches = first.campaign.character.watches;
     first.campaign.character.record.push({ kind: 'said', id: 'economy-of-force', reply: 'name', thing: 'the hospital', cost: -3, at: watches });
-    const next = stood('across-the-line', { campaign: first.campaign });
+    // RE-KEYED BY THE TWELVE-TO-TEN CUT: the evening after the hospital watch
+    // used to be Across the Line, which is merged into it. It is Ville Under
+    // Fire now, and the one after that is Four Sectors.
+    const next = stood('ville-under-fire', { campaign: first.campaign });
     const lines = office(next.state, next.result, next.entry).lines;
     assert.ok(lines.some((l) => /you named the hospital/.test(l)), lines.join(' | '));
-    const later = stood('ville-under-fire', { campaign: first.campaign });
+    const later = stood('four-sectors', { campaign: first.campaign });
     assert.ok(!office(later.state, later.result, later.entry).lines.some((l) => /you named the hospital/.test(l)),
       'once, on the very next evening, and not again');
   });

@@ -72,10 +72,25 @@ describe('what is on the desk', () => {
     for (const line of folder.scene.lines) {
       assert.ok(!folder.gist.includes(line.slice(0, 30)), 'the plate does not quote the document');
     }
-    const border = stood('across-the-line');
-    const target = deskFor(border.state, border.result, border.entry).items.find((i) => i.id === 'revelation');
+    /*
+     * THE BORDER FOLDER MOVED, AND IT MOVED ONTO A DESK THAT ALREADY HAD ONE.
+     *
+     * The twelve-to-ten cut put both hinges on the merged watch and the
+     * writer's decision was that the sector target folder is read on the
+     * evening AFTER it, so one desk does not carry two folders on the night
+     * the expenditure query arrives. There is no third evening to give it —
+     * see the note on REVELATIONS.border — so Ville Under Fire's evening
+     * carries this one and the depot return, and the test checks both slots.
+     */
+    const evening = stood('ville-under-fire');
+    const laid = deskFor(evening.state, evening.result, evening.entry).items;
+    const target = laid.find((i) => i.revelationId === 'border');
+    assert.ok(target, 'the sector target folder is on the desk the evening after');
     assert.equal(target.yours, false, 'the sector target folder is not yours');
     assert.match(target.gist, /not yours/i);
+    const depot = laid.find((i) => i.revelationId === 'ledger');
+    assert.ok(depot, 'and so is the depot return, which was already keyed here');
+    assert.notEqual(target.id, depot.id, 'two folders, two slots, two things to pick up');
   });
 
   test('the finale keeps the ending off the desk: it plays on the way out', () => {

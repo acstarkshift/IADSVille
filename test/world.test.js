@@ -475,7 +475,7 @@ describe('a weapon that arrives is a leaker, whatever carried it', () => {
      * registered, is charged in full to the SCORE, and is excluded from the
      * count the leaker allowance is read against.
      */
-    const world = new World(scenarioById('across-the-line'), { role: 'net', seed: 'camp' });
+    const world = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'camp' });
     const camp = world.assets.find((a) => a.type === 'camp');
     assert.ok(camp, 'the watch has an encampment on it');
     world.registerLeaker({ name: 'VAMPIRE STRAY' }, camp);

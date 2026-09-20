@@ -181,7 +181,7 @@ describe('directives', () => {
   });
 
   test('an accepted border restriction stands the subordinates down, not just the tally', () => {
-    const w = new World(scenarioById('across-the-line'), { role: 'net' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net' });
     const camp = w.assets.find((a) => a.type === 'camp');
     const formation = w.formations.find((f) => !f.hq) ?? w.formations[0];
     const onTheCamp = { predictedAssetId: camp.id, pos: { x: 0, y: 60 }, hostility: 'hostile' };

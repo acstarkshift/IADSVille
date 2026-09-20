@@ -16,7 +16,7 @@
 import { COMMAND } from './config.js';
 import { tierFor } from './command.js';
 import { createCharacter, recordWatch, characterModifiers, RANKS, rankIndexOf } from './character.js';
-import { learn } from './revelations.js';
+import { learn, learnAll } from './revelations.js';
 import { emptyFamily, recordFamily, familyBriefingNote } from './family.js';
 import { SCENARIOS } from './scenarios.js';
 import { reachedPost, appointmentNote } from './echelon.js';
@@ -326,10 +326,19 @@ export function recordMission(campaign, result) {
    * operator never fired — so what the evening shows is composed here, while
    * the canonical text stays on the revelation itself.
    */
-  const learned = learn(campaign, result.missionId);
-  const revelation = learned
-    ? { ...learned, lines: learned.linesFor ? learned.linesFor(result) : learned.lines }
-    : null;
+  /*
+   * A LIST, BECAUSE ONE EVENING CARRIES TWO.
+   *
+   * The twelve-to-ten cut moved the border folder onto Ville Under Fire's
+   * evening, which already had the depot return on it. `learn` returned the
+   * first match, so the second document would have stopped arriving with
+   * nothing failing anywhere. `revelation` is kept as the first of them,
+   * because most of the game only ever wants one; `revelations` is all of
+   * them, in campaign order, and the desk lays out a folder for each.
+   */
+  const revelations = learnAll(campaign, result.missionId)
+    .map((r) => ({ ...r, lines: r.linesFor ? r.linesFor(result) : r.lines }));
+  const revelation = revelations[0] ?? null;
 
   const previous = campaign.completed[result.missionId];
   if (!previous || result.score > previous.score) {
@@ -352,7 +361,7 @@ export function recordMission(campaign, result) {
   // which in this service is also a delivery.
   const letter = recordFamily(campaign, result, tier.id);
 
-  return { ...entry, service, revelation, appointment, letter };
+  return { ...entry, service, revelation, revelations, appointment, letter };
 }
 
 /**

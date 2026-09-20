@@ -64,6 +64,37 @@ export const OFFICER = {
 /* ------------------------------------------------------------------ what plays */
 
 /**
+ * The folders this evening puts on the desk, as scenes.
+ *
+ * ONE EVENING CARRIES TWO, and it is exactly one evening: the twelve-to-ten
+ * cut moved the border folder onto Ville Under Fire's, which already had the
+ * depot return on it. `entry.revelations` is the list; `entry.revelation` is
+ * the first of it, kept for every caller that only ever wants one. The second
+ * folder's scene is `revelation-2`, which is the id the desk lays it out by.
+ */
+function revelationScenes(entry, bare) {
+  const list = entry?.revelations ?? (entry?.revelation ? [entry.revelation] : []);
+  return list.map((revelation, i) => ({
+    id: i === 0 ? 'revelation' : `revelation-${i + 1}`,
+    kind: 'folder',
+    speaker: revelation.title,
+    lines: revelation.lines,
+    /** Which document, so the desk can say whose folder it is and what opening it costs. */
+    revelationId: revelation.id,
+    /*
+     * The document's own reference. The sheet used to print 4471-B at the
+     * foot of every one of them, which is the number of the form the sector
+     * writes the operator's watches up on — so the transfer manifests, the
+     * signals annex and the depot return all carried the serial of a
+     * record-of-watch. 4471-B belongs to the record of watch and nothing
+     * else.
+     */
+    ref: revelation.ref ?? null,
+    bare,
+  }));
+}
+
+/**
  * The scenes for the watch that just ended, in order.
  *
  * Every watch gets the printout and the office. The rest depend on what the
@@ -149,26 +180,7 @@ export function scenesFor(state, result, entry, { opened = null } = {}) {
     });
   }
 
-  if (pressure && closing && entry?.revelation) {
-    scenes.push({
-      id: 'revelation',
-      kind: 'folder',
-      speaker: entry.revelation.title,
-      lines: entry.revelation.lines,
-      /** Which document, so the desk can say whose folder it is and what opening it costs. */
-      revelationId: entry.revelation.id,
-      /*
-       * The document's own reference. The sheet used to print 4471-B at the
-       * foot of every one of them, which is the number of the form the sector
-       * writes the operator's watches up on — so the transfer manifests, the
-       * signals annex and the depot return all carried the serial of a
-       * record-of-watch. 4471-B belongs to the record of watch and nothing
-       * else.
-       */
-      ref: entry.revelation.ref ?? null,
-      bare,
-    });
-  }
+  if (pressure && closing) scenes.push(...revelationScenes(entry, bare));
 
   /*
    * A night the post was struck is the one night the section does not have the
@@ -261,26 +273,7 @@ export function scenesFor(state, result, entry, { opened = null } = {}) {
     });
   }
 
-  if (pressure && !closing && entry?.revelation) {
-    scenes.push({
-      id: 'revelation',
-      kind: 'folder',
-      speaker: entry.revelation.title,
-      lines: entry.revelation.lines,
-      /** Which document, so the desk can say whose folder it is and what opening it costs. */
-      revelationId: entry.revelation.id,
-      /*
-       * The document's own reference. The sheet used to print 4471-B at the
-       * foot of every one of them, which is the number of the form the sector
-       * writes the operator's watches up on — so the transfer manifests, the
-       * signals annex and the depot return all carried the serial of a
-       * record-of-watch. 4471-B belongs to the record of watch and nothing
-       * else.
-       */
-      ref: entry.revelation.ref ?? null,
-      bare,
-    });
-  }
+  if (pressure && !closing) scenes.push(...revelationScenes(entry, bare));
 
   /*
    * The letter, as the letter.
@@ -366,17 +359,31 @@ export function scenesFor(state, result, entry, { opened = null } = {}) {
  * reacts: every reply is recorded, not answered.
  */
 const NAMED = {
+  /*
+   * THE MERGED NIGHT NAMES THE HOSPITAL, AND THAT IS THE WRITER'S DECISION.
+   *
+   * The twelve-to-ten cut put both hinges on this one watch, so there are two
+   * things on it that could be named and the office offers one. The hospital
+   * is the stronger of the two and it is the one that is kept.
+   *
+   * PLACEHOLDER FOR THE WRITER. Across the Line's entry is carried below as
+   * `also`, which NOTHING READS. It is here rather than deleted because the
+   * line is good and because a night with two hinges on it is the natural
+   * place for the office to offer two things to name — four replies instead
+   * of three — and if that is what the writer wants, the words are already
+   * written. `namedFor` takes `NAMED[missionId]` as one object today.
+   */
   'economy-of-force': {
     label: 'The hospital.',
     thing: 'the hospital',
     answer: 'The hospital. I have written the word down, and the time you said it. It is still not'
       + ' on the schedule.',
-  },
-  'across-the-line': {
-    label: 'The camp at Gorna.',
-    thing: 'the camp at Gorna',
-    answer: 'Gorna is not a place this office has a file for. It has one for you, and the word is'
-      + ' in it now.',
+    also: {
+      label: 'The camp at Gorna.',
+      thing: 'the camp at Gorna',
+      answer: 'Gorna is not a place this office has a file for. It has one for you, and the word is'
+        + ' in it now.',
+    },
   },
   'ville-under-fire': {
     label: 'The transit had people on it.',

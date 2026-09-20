@@ -333,8 +333,30 @@ export const DIRECTIVES = {
      * sector to have actually shot at something, with a fallback at 220 s so a
      * watch nobody is fighting still gets its order.
      */
-    trigger: (w) => w.assets.some((a) => a.type === 'camp') && w.t > 150
-      && (w.stats.roundsFired > 0 || w.t > 220),
+    /*
+     * AND ON THE NIGHT THAT CARRIES BOTH HINGES IT WAITS FOR ALL OF IT.
+     *
+     * The twelve-to-ten cut put the expenditure freeze and the border
+     * restriction on one watch. The freeze fires at a hundred seconds and
+     * `HINGE_CLEAR_S` keeps sixty seconds of clear air behind it, so on a
+     * night the sector is already fighting this order would land at a
+     * hundred and sixty — a minute after the last one, from the same desk,
+     * about a different building. The structural proposal that asked for the
+     * merge asked for a hundred and twenty seconds between them and said why:
+     * "the freeze is the state not noticing a place, the border restriction
+     * is the state choosing one — arriving 120 s apart, from different
+     * callsigns, they compound rather than repeat".
+     *
+     * So where there is a hospital on the same watch, this order waits for
+     * two hundred and twenty seconds flat. On a watch that carries only the
+     * camp the old rule stands: a hundred and fifty, and the sector must have
+     * fired at something, with the same two hundred and twenty as a fallback
+     * so a watch nobody is fighting still gets its order.
+     */
+    trigger: (w) => w.assets.some((a) => a.type === 'camp')
+      && (w.assets.some((a) => a.type === 'hospital')
+        ? w.t > 220
+        : w.t > 150 && (w.stats.roundsFired > 0 || w.t > 220)),
     onAccept: (w) => {
       const camp = w.assets.find((a) => a.type === 'camp');
       w.command.constraints.borderExcludedId = camp?.id ?? null;

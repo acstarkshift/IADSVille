@@ -31,7 +31,7 @@ import { engagementValue } from '../src/engine/threat.js';
 import { dist, closureRate } from '../src/engine/math.js';
 
 function play(seed, mode) {
-  const w = new World(scenarioById('across-the-line'), { role: 'net', seed });
+  const w = new World(scenarioById('economy-of-force'), { role: 'net', seed });
   w.control.netIsHuman = true;
   const camp = w.assets.find((a) => a.type === 'camp');
 

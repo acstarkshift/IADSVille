@@ -46,7 +46,7 @@ const RUNS = [
   { mission: 'solo-battery', role: 'crew', background: 'border' },
   { mission: 'weasel-hour', role: 'crew', background: 'academy' },
   { mission: 'economy-of-force', role: 'net', background: 'factory' },
-  { mission: 'across-the-line', role: 'net', background: 'border' },
+  { mission: 'economy-of-force', role: 'net', background: 'border' },
   { mission: 'ville-under-fire', role: 'both', background: 'penal' },
   { mission: 'ville-under-fire', role: 'net', background: 'academy' },
   { mission: 'four-sectors', role: 'net', background: 'academy' },

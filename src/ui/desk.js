@@ -122,7 +122,17 @@ function itemFor(scene, state, result, entry, n) {
         gist: `You are appointed ${scene.post}.`,
         stamp: scene.ref ?? 'ORDER 12-4',
       };
-    case 'revelation': {
+    /*
+     * TWO FOLDER SLOTS, BECAUSE ONE EVENING CARRIES TWO FOLDERS.
+     *
+     * The twelve-to-ten cut moved the border folder onto the evening that
+     * already had the depot return, and there is no third evening to give it
+     * — see the note on REVELATIONS.border. The second one lies in front of
+     * the first with its tab showing, which is how a second folder ends up on
+     * a desk that already has one.
+     */
+    case 'revelation':
+    case 'revelation-2': {
       const desk = REVELATIONS[scene.revelationId]?.desk ?? {};
       return {
         ...base,
@@ -177,6 +187,7 @@ const BOXES = {
   commissar: { x: 140, y: 78, w: 40, h: 26 },
   appointment: { x: 206, y: 58, w: 62, h: 48 },
   revelation: { x: 150, y: 122, w: 72, h: 40 },
+  'revelation-2': { x: 122, y: 140, w: 72, h: 34 },
   letter: { x: 232, y: 124, w: 54, h: 34 },
 };
 
@@ -281,6 +292,10 @@ export function drawDesk(ctx, { items = [], opened = [], next = null } = {}) {
   if (has('printout')) drawPrinter(ctx, BOXES.printout, read('printout'), items.find((i) => i.id === 'printout'));
   if (has('appointment')) drawOrder(ctx, BOXES.appointment, read('appointment'));
   if (has('commissar')) drawChit(ctx, BOXES.commissar, items.find((i) => i.id === 'commissar'), read('commissar'));
+  // The second folder first, so the one that arrived on top lies on top.
+  if (has('revelation-2')) {
+    drawFolder(ctx, BOXES['revelation-2'], items.find((i) => i.id === 'revelation-2'), read('revelation-2'));
+  }
   if (has('revelation')) drawFolder(ctx, BOXES.revelation, items.find((i) => i.id === 'revelation'), read('revelation'));
   if (has('letter')) drawEnvelope(ctx, BOXES.letter, items.find((i) => i.id === 'letter'), read('letter'));
   drawPencil(ctx, 270, 108);
@@ -654,8 +669,9 @@ export class Desk {
        * nothing is on the desk to pick up, so the file takes them as it did
        * before there was a desk.
        */
-      if (state.narrativePressure === false && entry?.revelation?.id) {
-        readFolder(state.campaign, entry.revelation.id);
+      const filed = entry?.revelations ?? (entry?.revelation ? [entry.revelation] : []);
+      if (state.narrativePressure === false && filed.length) {
+        for (const revelation of filed) readFolder(state.campaign, revelation.id);
         this.save?.();
       }
     }
