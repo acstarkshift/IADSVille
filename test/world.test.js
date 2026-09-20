@@ -821,6 +821,132 @@ describe('the quiet net gives advice, not the opposite of it', () => {
     assert.match(said, /IS ON |IS BEING WORKED BY/, said);
     assert.ok(!/NOBODY IS ON IT/.test(said), said);
   });
+
+  /*
+   * A VOICE THAT SAYS THREE THINGS MUST SAY THREE THINGS.
+   *
+   * "Never the one I said last" plus a counter that advances by one is a
+   * guarantee of no repeats and a guarantee of a period-2 loop: after A the
+   * fresh list is [B, C] and the parity picks C, after C the fresh list is
+   * [A, B] and the same parity picks A, and the list rotates in lockstep with
+   * the counter forever. Measured on First Light once the lull interval came
+   * down to twelve seconds: A / C / A / C / A / C over a hundred seconds,
+   * with the third sentence never said at all. This is the defect the
+   * comment above `say()` claims to have fixed, so it is pinned.
+   */
+  test('the net does not settle into two sentences and stay there', () => {
+    const world = readyWorld('first-light', { role: 'radar' });
+    // One firm hostile and nothing else, so the net has one subject and the
+    // same branch answers every time.
+    for (let i = 0; i < 12000 && world.phase === 'running'; i++) {
+      world.step(0.1);
+      if ([...world.tracks.values()].some((t) => t.hostility === 'hostile'
+        && t.quality >= DETECTION.firmQuality)) break;
+    }
+    const one = [...world.tracks.values()].find((t) => t.hostility === 'hostile'
+      && t.quality >= DETECTION.firmQuality);
+    assert.ok(one, 'the set holds something');
+    for (const [id, t] of [...world.tracks]) if (t !== one) world.tracks.delete(id);
+
+    /*
+     * Held inside ONE branch, which is the whole point: the loop only shows
+     * up when the same list is asked eight times running. `_lullTrackAtS`
+     * says the net has already spoken about this contact, which is the
+     * three-variant "nothing has changed" list, and the clock is wound back
+     * rather than forward so it stays there.
+     */
+    const said = [];
+    for (let i = 0; i < 12; i++) {
+      world.events = [];
+      world._lastActionAtS = world.t - 999;
+      world._lullTrackAtS = { [one.id]: world.t };
+      world.reportTheLull();
+      const line = world.events.map((e) => e.text).find((t) => t.startsWith('SECTOR: '));
+      if (line) said.push(line);
+      world.step(0.1);
+    }
+    assert.ok(said.length >= 10, `the net kept talking (${said.length} lines)`);
+    for (let i = 1; i < said.length; i++) {
+      assert.notEqual(said[i], said[i - 1], `said the same thing twice running:\n${said.join('\n')}`);
+    }
+    /*
+     * The TAIL, not the whole run. The old guard took a few calls to settle
+     * into its two-cycle, so a set taken over all twelve lines contains three
+     * sentences and says nothing about the loop. What it locks into is what
+     * matters, and it is the last six that show it: A / C / A / C / A / C.
+     */
+    const tail = said.slice(-6);
+    assert.ok(new Set(tail).size >= 3,
+      `the net settled into ${new Set(tail).size} sentences and stayed there:\n${tail.join('\n')}`);
+  });
+
+  /*
+   * AND AT THE SET IT TALKS ABOUT THE SET'S OWN JOB.
+   *
+   * `commandable` answers no for every battery from the radar seat, which is
+   * correct and which made `cannotEngageReason` return "not under your
+   * command" for all of them — so the one device in the engine written to
+   * fill a silence spent the teaching watch telling a first-time operator,
+   * every twelve seconds, that the only battery in the square could not shoot
+   * because he did not command it. True, irrelevant, and the opposite of the
+   * single thing that seat is for.
+   */
+  test('at the set the quiet net says CALL IT, never “not under your command”', () => {
+    /*
+     * Built directly rather than through `readyWorld`, which clears
+     * `netIsHuman` to let the doctrine AI assign — and an assigned contact is
+     * reported as held, which is a different branch. At the set the officer
+     * fires nothing the operator has not called (see `ownsSurveillance` in
+     * doctrine.js), which is exactly the state this line is written for.
+     */
+    const world = new World(scenarioById('first-light'), { role: 'radar', seed: 'lull-set' });
+    for (const radar of world.radars) radar.on = true;
+    for (const site of world.sites) world.setWeaponsState(site.id, 'free');
+    /*
+     * The sentence lives in the branch where the geometry is NOT the problem
+     * — the contact is already inside a battery's ring, so there is nothing
+     * to wait for and the only thing in the way is an order. Outside the ring
+     * the net says "REACHES IT IN", which is a different and perfectly good
+     * line. So the contact is put where the branch is: a real track off a
+     * real watch, moved inside BASTION's envelope at a height the envelope
+     * accepts, still uncalled and still nobody's.
+     */
+    let subject = null;
+    for (let i = 0; i < 12000 && world.phase === 'running'; i++) {
+      world.step(0.1);
+      subject = [...world.tracks.values()].find((t) => t.hostility === 'hostile'
+        && t.quality >= DETECTION.firmQuality);
+      if (subject) break;
+    }
+    assert.ok(subject, 'the set holds a firm hostile');
+    const inRing = world.sites.find((s) => s.alive && s.type === 'bastion') ?? world.sites[0];
+    const reach = SAM_TYPES[inRing.type].maxRangeKm * 0.5;
+    subject.pos = { x: inRing.pos.x, y: inRing.pos.y + reach };
+    subject.vel = { x: 0, y: -0.2 };
+    subject.altM = 5000;
+    subject.assignedTo = [];
+    subject.engagedBy = [];
+    subject.reportedAtS = null;
+    assert.equal(timeToInRangeS(inRing, subject), 0,
+      'the contact is inside the battery\'s envelope, so the order is the only thing missing');
+    for (const [id, t] of [...world.tracks]) if (t !== subject) world.tracks.delete(id);
+
+    const said = [];
+    for (let i = 0; i < 10; i++) {
+      world.events = [];
+      world._lastActionAtS = world.t - 999;
+      world._lullTrackAtS = {};
+      world.reportTheLull();
+      said.push(...world.events.map((e) => e.text).filter((t) => t.startsWith('SECTOR: ')));
+      world.step(0.1);
+    }
+    const all = said.join('\n');
+    assert.ok(said.length > 0, 'the net spoke');
+    assert.ok(!/NOT UNDER YOUR COMMAND/i.test(all),
+      `the set was told the battery is not his to order:\n${all}`);
+    assert.match(all, /CALL IT|READ IT TO THE LAUNCH OFFICER|NOT CALLED IN/,
+      `nothing told the operator to call the contact:\n${all}`);
+  });
 });
 
 describe('a knob the watch turns, and a ledger that agrees with the ticker', () => {

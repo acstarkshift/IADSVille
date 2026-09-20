@@ -222,7 +222,17 @@
         <span class="command-timer" id="command-timer"></span>
       </div>
     </div>
+    <!--
+      The ticker, and the way back down it.
+
+      The log is the console's main voice and it is five readable lines on a
+      desk, so on a busy watch it turns over in about a quarter of a minute.
+      It follows the newest line only while the reader is already ON the
+      newest line; scroll up to find the call you missed and it holds still.
+      This button says how much has been said since and takes you back.
+    -->
     <ol id="event-log" class="event-log strip" aria-live="polite"></ol>
+    <button id="log-unread" class="log-unread" type="button" hidden></button>
   </footer>
 
   <!-- The contact's menu: every battery that could take it, on a right click.

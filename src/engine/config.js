@@ -658,6 +658,34 @@ export const DETECTION = {
    * for this long before it takes the field. Straight hysteresis: the
    * incumbent already gets a margin of geometry in `predictedTarget`, and
    * this is the time to go with it.
+   *
+   * TWELVE STAYS, AND WHAT A LONGER DWELL WOULD COST IS WRITTEN DOWN HERE SO
+   * NOBODY HAS TO MEASURE IT TWICE. Over thirty headless watches with every
+   * set radiating, against the aeroplanes' own briefed targets:
+   *
+   *   dwell  label changes  tracks changing >2x  worst  agrees with the truth
+   *     12s       1591              223            10           47.0%
+   *     20s        920               84             6           49.8%
+   *     30s        540               19             4           54.0%
+   *
+   * A longer dwell is steadier AND more accurate, which is unusual and is the
+   * whole argument for it — the flicker is not two destinations in a close
+   * race, it is the track's own velocity estimate twitching and pointing the
+   * geometry somewhere else wholesale for a few seconds, so making a
+   * challenger hold its claim longer filters noise and not signal. (Raising
+   * the incumbent's margin of geometry in `predictedTarget` from 6 to 24 was
+   * measured instead and moved the change count by six per cent. A margin is
+   * not what this needs.)
+   *
+   * It is still twelve, because twenty is a DIFFICULTY change and not a
+   * cosmetic one. The freeze accounting, the border stand-down and the
+   * finale's ledger all read this label, and a quarter less labelled
+   * track-time moves the curve: measured at twenty-four seeds, competent,
+   * primary seat, Economy of Force 79% -> 63%, Four Sectors 67% -> 75%,
+   * Reinforce the Capital 67% -> 75%, and act three's mean rises to 75.0
+   * against act two's 72.3 — the staircase inverts. That is a ten-watch
+   * re-tune to buy a label that twitches less, on a finding filed as low.
+   * If a later pass wants it, these are the numbers and that is the bill.
    */
   predictionDwellS: 12,
   /** Seconds of observation to classify a track's type. */
@@ -1151,16 +1179,42 @@ export const COMMAND = {
    * have missed something", and until now the game's answer was a blank
    * ticker, which reads as the second.
    *
-   * So the net checks in. Twenty-five seconds is longer than a busy stretch
-   * ever goes quiet for — measured over the four watches this was tuned on, a
-   * fighting sector triggers it a handful of times a watch and a fighting
-   * cabin barely at all — and short enough that the console is never blank for
-   * the half minute at which silence stops reading as a lull and starts
-   * reading as a fault. Each report is state, not filler: what is held, how
+   * So the net checks in. Each report is state, not filler: what is held, how
    * far out it is, which battery will reach it and in how long, so a run of
    * them reads as a countdown rather than as a screensaver.
+   *
+   * TWENTY-FIVE WAS TWICE TOO LONG, AND THE WATCHES IT FAILED WERE THE
+   * TEACHING ONES. The experience critic: "Between 19% and 67% of a watch is
+   * spent in stretches longer than fifteen seconds with nothing said and, on
+   * the radar seat, nothing to do." Re-measured here over six seeds a watch,
+   * every set radiating, at the primary seat — the share of each watch spent
+   * inside a silence longer than fifteen seconds:
+   *
+   *              25 s   12 s          |               25 s   12 s
+   *   First Light  61%    0%          |  Ville Under Fire 14%   0%
+   *   Low Riders   16%    0%          |  Four Sectors      8%   0%
+   *   Solo Battery 73%    0%          |  Reinforce        25%   0%
+   *   Weasel Hour  10%    0%          |  Two Cities       44%   0%
+   *   Economy      26%    0%          |  President's      22%   0%
+   *
+   * The two quietest watches in the campaign were the two that teach a seat:
+   * First Light at 61% and Solo Battery at 73%, because a teaching watch has
+   * few aeroplanes in it on purpose and almost everything the console says is
+   * a consequence of aeroplanes. The watch that exists to hold a beginner's
+   * attention held it worst.
+   *
+   * Twelve is the critic's own number and it is the number that closes the
+   * finding rather than moving it: at fifteen the silences are fifteen to
+   * seventeen seconds, which is the length being complained about. It costs
+   * about a third more lines on the quiet watches (First Light 58 -> 77 over
+   * a whole watch, Solo Battery 88 -> 123) and nothing at all on the busy
+   * ones, where the operator is talking anyway. The repetition guards in
+   * `reportTheLull` are what make that survivable and they were written
+   * before this: `say()` never takes the variant it took last, and a
+   * generated held-contact line may not repeat itself about the same contact
+   * inside a minute.
    */
-  lullReportS: 25,
+  lullReportS: 12,
   /*
    * Half the wedge an accepted civil corridor closes, degrees. Twelve is a
    * scheduled airway's width plus the error in a bearing read off a scope,

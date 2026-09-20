@@ -2436,10 +2436,32 @@ export class World {
     }
     if (!worst && worstHeld) worst = worstHeld;
 
-    // Never the same sentence twice running, whichever list it comes from.
+    /*
+     * NEVER THE SAME SENTENCE TWICE RUNNING — AND NOT A TWO-CYCLE EITHER.
+     *
+     * "Not the one I said last" plus a counter that advances by one is a
+     * guarantee of no repeats and a guarantee of a period-2 loop, which is
+     * the same defect wearing a longer stride. With three variants: say A,
+     * the fresh list is [B, C] and the index parity picks C; say C, the fresh
+     * list is [A, B] and the SAME parity now picks A; and the list rotates in
+     * lockstep with the counter forever. Measured on First Light after the
+     * lull interval came down to twelve seconds, a single held contact
+     * printed A / C / A / C / A / C over a hundred seconds and the third
+     * sentence was never said at all.
+     *
+     * So the guard remembers the last two rather than the last one. A list of
+     * three then has exactly one sentence it is allowed to say, which is the
+     * one it has not said, and it cycles through all three. A list of two
+     * falls back to "not the one I said last", which is the best a list of
+     * two can do.
+     */
     const say = (variants) => {
-      const fresh = variants.filter((v) => v !== this._lullLast);
-      return (fresh.length ? fresh : variants)[(this._lullCount ?? 0) % (fresh.length || 1)];
+      const recent = this._lullRecent ?? [];
+      const fresh = variants.filter((v) => !recent.includes(v));
+      const pool = fresh.length ? fresh
+        : variants.filter((v) => v !== this._lullLast);
+      const use = pool.length ? pool : variants;
+      return use[(this._lullCount ?? 0) % use.length];
     };
 
     let text;
@@ -2518,7 +2540,45 @@ export class World {
          */
         const why = cannotEngageReason(this, bestSite, worst);
         const ringKm = Math.round(dist(bestSite.pos, worst.pos));
-        if (why) {
+        /*
+         * AT THE SET, "NOT UNDER YOUR COMMAND" IS THE WRONG SENTENCE, AND IT
+         * WAS THE MOST COMMON ONE ON THE TEACHING WATCH.
+         *
+         * `commandable` answers no for every battery on the board from the
+         * radar seat, which is correct — the batteries are eleven metres away
+         * and they are not his to order — so `cannotEngageReason` returns
+         * "not under your command" for all of them and the lull read it out.
+         * On First Light, at twelve-second intervals, the net told a
+         * first-time operator over and over that the only battery in the
+         * square could not shoot because he did not command it. That is true,
+         * irrelevant, and the opposite of the one thing the seat is for. The
+         * shootlist already has this rule — see `atTheSet` in panels.js,
+         * where "mine" is the sector's — and the voice on the radio did not.
+         *
+         * The seat's own obstacle is whether the contact has been CALLED. If
+         * it has not, the sentence is the one that hands it over; if it has,
+         * the officer has it and there is nothing to do but watch.
+         */
+        if (this.control.role === 'radar' && why === 'not under your command') {
+          const called = worst.reportedAtS !== null && worst.reportedAtS !== undefined;
+          text = called
+            ? say([
+              `${bestSite.name} HAS ${worst.tn} AT ${ringKm} KM AND THE LAUNCH OFFICER HAS `
+                + 'YOUR CALL. IT IS HIS SHOT NOW.',
+              `${worst.tn} IS WITH CONTROL AT ${ringKm} KM FROM ${bestSite.name}. NOTHING `
+                + 'FURTHER FROM YOU ON THAT ONE.',
+              `${worst.tn} IS CALLED IN AND INSIDE ${bestSite.name}'S RING. WATCH IT AND `
+                + 'KEEP SORTING THE REST.',
+            ])
+            : say([
+              `${worst.tn} IS INSIDE ${bestSite.name}'S RING AT ${ringKm} KM AND YOU HAVE `
+                + 'NOT CALLED IT. READ IT TO THE LAUNCH OFFICER.',
+              `${bestSite.name} COULD TAKE ${worst.tn} AT ${ringKm} KM. HE FIRES AT NOTHING `
+                + 'YOU HAVE NOT CALLED — CALL IT.',
+              `${worst.tn} AT ${ringKm} KM FROM ${bestSite.name} AND STILL NOT CALLED IN. `
+                + 'THAT IS YOUR HALF OF IT.',
+            ]);
+        } else if (why) {
           text = say([
             `${worst.tn} IS INSIDE ${bestSite.name}'S RING AT ${ringKm} KM AND IT CANNOT `
               + `TAKE IT — ${why.toUpperCase()}.`,
@@ -2593,6 +2653,8 @@ export class World {
     }
     this._lullCount = (this._lullCount ?? 0) + 1;
     this._lullLast = text;
+    // The last two, for `say` above.
+    this._lullRecent = [...(this._lullRecent ?? []), text].slice(-2);
     // Sector on the radio, which is what this is and what the console has
     // always rendered `comms` as. It logged as `info` — the kind that means
     // "a machine did something" — so the one line in the engine written to

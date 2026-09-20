@@ -288,6 +288,32 @@ export function scoreAllTracks(world) {
       }
       continue;
     }
+    /*
+     * A ROUND IN THE AIR DOES NOT FREEZE THE LABEL, AND IT WAS TRIED.
+     *
+     * The proposal was the obvious one: the label is the reason the shot was
+     * taken — `creditRounds` bills the round to that place, the freeze and
+     * the border restriction are settled on it, the finale's account of what
+     * you defended reads it — so re-labelling a contact while its round is
+     * still flying re-writes the reason after the decision. Measured over
+     * thirty headless watches, it happens thirty-eight times.
+     *
+     * Holding the label while `engagedBy` is non-empty was written, measured
+     * and REJECTED, because the label is not a caption and the things that
+     * read it are load-bearing. At twenty-four seeds, competent, primary
+     * seat: Weasel Hour 79% -> 63% and Economy of Force 79% -> 88%, two
+     * act-two watches four seeds apart in opposite directions. And on the
+     * merged watch, which carries the campaign's load-bearing property, the
+     * counted-arrivals margin between the commander and his own free crews
+     * went from 50-against-59 to 51-against-52 — nine arrivals of margin
+     * down to one, on the exact clause `conflicts.md` §11 records having had
+     * to be re-expressed once already.
+     *
+     * That is a two-watch re-tune and the campaign's thinnest margin, spent
+     * on a finding filed as low. The flicker is the honest cost of a
+     * kinematic estimator that is allowed to be uncertain. If a later pass
+     * wants it, these are the numbers and that is the bill.
+     */
     const wanted = prediction?.asset.id ?? null;
     if (wanted !== track.predictedCandidateId) {
       track.predictedCandidateId = wanted;

@@ -472,6 +472,28 @@ export const SCENARIOS = [
      * front of a player whose teaching watch was five minutes of nothing.
      */
     playerBatteryId: 's_bastion',
+    /*
+     * THE FIRST THING THE GAME TELLS YOU TO CLICK HAS TO BE ON THE GLASS.
+     *
+     * The battalion's tube opens at 140 km. The raid enters at 155 (the
+     * default `distanceKm` in `spawnWave`), so for the first minute of the
+     * campaign every contact was drawn ABOVE THE TOP EDGE of the canvas while
+     * tutorial card two said, in these words, "Wait for one, then click it on
+     * the scope." Measured over three seeds: first contact painted at t=30 s
+     * at 153-154 km, nothing at all inside the circle until t=90 s, the whole
+     * package not inside until t=160 s. Rendered and looked at: at t=45 s the
+     * only thing on a 1600px tube was a rim caret half off the top edge
+     * reading T-001 152, with the card underneath telling a first-timer to
+     * click a contact.
+     *
+     * So this watch — and only this watch, which is the one that teaches the
+     * scope — opens at 175, which puts the entry at seven eighths of the
+     * radius with the whole approach visible. `rangeDetents` makes a watch's
+     * own opening scale a detent on the range knob, so the knob still lands
+     * on it exactly. The 85 km second element is unaffected and the engine
+     * reads none of this: the scope's range is glass, not geometry.
+     */
+    scopeRangeKm: 175,
     brief: [
       'Four Federation aircraft crossed the northern border at height, tracking south. They are'
         + ' not trying to hide.',

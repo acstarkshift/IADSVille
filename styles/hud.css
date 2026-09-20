@@ -586,7 +586,17 @@ h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-rig
 /* Shootlist headings: the battery a run of rows belongs to, and whether it
    can take another one. Sticky so the battery stays named while you scroll
    its list. */
+/*
+ * A heading, and drawn as one. `.track-row` lights to `--bg-raised` on hover
+ * and carries `cursor: pointer`; the heading must not read as a row that
+ * happens to be hovered, which is what a first-timer was clicking. The arrow
+ * stays a plain arrow over it — a press on it still takes the first contact
+ * underneath, because the heading is sticky and is therefore ALWAYS the top
+ * item in the column the tutorial has just named, but that is a courtesy and
+ * not an invitation.
+ */
 .shootlist-head {
+  cursor: default;
   position: sticky; top: 0; z-index: var(--z-sticky);
   display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
   padding: 4px 8px 2px; margin-top: 3px;
@@ -1624,6 +1634,25 @@ h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-rig
   list-style: none; margin: 0; padding: 5px 10px;
   height: 92px; overflow-y: auto; font-size: 11px; line-height: 1.55;
 }
+/*
+ * The way back down the ticker.
+ *
+ * Only ever on screen when the reader has scrolled off the newest line, so it
+ * is a small lit tab in the ticker's bottom-right corner rather than anything
+ * that competes with a line of traffic. It sits in the log's own grid cell —
+ * the ticker is `position: relative` for the command net and this anchors to
+ * the same box — and it is a button, so it takes a press and a tab stop.
+ */
+.log-unread {
+  position: absolute; right: 10px; bottom: 6px; z-index: var(--z-sticky);
+  padding: 2px 8px; border: 1px solid var(--metal-edge); border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 22%, var(--metal-lo));
+  color: var(--ink-bright); font: inherit; font-size: 9px; letter-spacing: .1em;
+  cursor: pointer;
+}
+.log-unread[hidden] { display: none; }
+.log-unread:hover { background: color-mix(in srgb, var(--accent) 34%, var(--metal-lo)); }
+
 .event-log li { display: flex; gap: 8px; }
 .event-log .t { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 .event-log .kind-alert { color: var(--hostile); }

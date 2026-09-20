@@ -180,6 +180,7 @@ function cacheEls() {
     batteryList: id('battery-list'),
     crewConsole: id('crew-console'),
     eventLog: id('event-log'),
+    logUnread: id('log-unread'),
     commandNet: id('command-net'),
     commandText: id('command-text'),
     commandTimer: id('command-timer'),
@@ -1418,7 +1419,17 @@ function controlUnder(target) {
     // The empty-state row carries no track id; pressing it must not clear the
     // selection out from under the operator.
     ?? target.closest('[data-track]')
-    ?? target.closest('[data-site]');
+    ?? target.closest('[data-site]')
+    /*
+     * And the heading over a section of the list, which a first-timer clicks
+     * because it is the top thing in the column the tutorial just named.
+     * `NOT CALLED IN — 4 STILL TO REPORT` is a label, not a row, so the press
+     * selected nothing and the detail panel answered with the same sentence
+     * the player had just followed — measured by the experience critic as
+     * four NOTHING SELECTED refusals in thirty seconds on a cold first run.
+     * It does the obvious thing instead. See `operate`.
+     */
+    ?? target.closest('.shootlist-head');
 }
 
 /** Do what the control says, whether a finger or the keyboard pressed it. */
@@ -1442,6 +1453,19 @@ function operate(ctl) {
     ui.selectedTrackId = ctl.dataset.track;
   } else if (ctl.dataset.site) {
     ui.selectedSiteId = ctl.dataset.site;
+  } else if (ctl.classList?.contains('shootlist-head')) {
+    /*
+     * A press on a section heading takes the first contact in that section.
+     * The heading is not a control and is not drawn as one — but it IS the
+     * top item in the column, it is sticky so it is always the top item, and
+     * "click a row in the AIR PICTURE list" is the second thing the game ever
+     * asks anybody to do. A press that does the obvious thing beats a press
+     * that refuses, and a press that refuses beats one that says nothing at
+     * all, which is what this was.
+     */
+    let next = ctl.nextElementSibling;
+    while (next && !next.dataset?.track) next = next.nextElementSibling;
+    if (next?.dataset.track) ui.selectedTrackId = next.dataset.track;
   }
   // Whatever it did, the panel should be showing it on the next frame.
   ui.lastPanelAt = 0;
@@ -1594,6 +1618,33 @@ function wirePanelInput() {
   }
   window.addEventListener('pointerup', endPress);
   window.addEventListener('pointercancel', endPress);
+
+  /*
+   * THE TICKER HOLDS STILL WHILE YOU ARE READING IT.
+   *
+   * Five readable lines of the game's main voice, turning over in about
+   * twelve seconds on a busy net, and every new line used to scroll the box
+   * to the bottom — so a reader who went back for the call they missed was
+   * thrown forward again by the next thing anybody said. `data-held` is the
+   * pointer being over it; `renderEventLog` also holds still whenever the
+   * reader has scrolled away from the newest line, and counts what arrives.
+   */
+  if (els.eventLog) {
+    els.eventLog.addEventListener('pointerenter', () => { els.eventLog.dataset.held = '1'; });
+    els.eventLog.addEventListener('pointerleave', () => { delete els.eventLog.dataset.held; });
+    els.eventLog.addEventListener('scroll', () => {
+      const log = els.eventLog;
+      if (log.scrollHeight - log.scrollTop - log.clientHeight < 24) {
+        state.logUnread = 0;
+        if (els.logUnread) els.logUnread.hidden = true;
+      }
+    });
+  }
+  els.logUnread?.addEventListener('click', () => {
+    els.eventLog.scrollTop = els.eventLog.scrollHeight;
+    state.logUnread = 0;
+    els.logUnread.hidden = true;
+  });
 
   els.speedGroup.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-speed]');

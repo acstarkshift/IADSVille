@@ -2909,6 +2909,18 @@ export function renderEventLog(world, els, state) {
   if (!fresh.length) return;
   state.lastEventSeq = fresh[fresh.length - 1].seq;
 
+  /*
+   * Was the reader on the newest line BEFORE these arrived? It has to be
+   * asked first: once the lines are in the box, a log that has never been
+   * touched reports a scrollTop of 0 against a scrollHeight of fourteen
+   * hundred and is indistinguishable from one the reader has deliberately
+   * wound back to the top. Measured while building this — the first batch of
+   * eighty-one lines on Four Sectors never scrolled down at all and the
+   * console opened showing its oldest line.
+   */
+  const wasAtBottom = els.eventLog.scrollHeight - els.eventLog.scrollTop
+    - els.eventLog.clientHeight < 24;
+
   // The `personal` flag marks the handful of lines that are about the
   // operator's own street — written by the engine since the first build and
   // consumed nowhere until now.
@@ -2930,7 +2942,40 @@ export function renderEventLog(world, els, state) {
    * 900px), and it is anchored to its own first word, so what the console says
    * always starts with its clock and its first word.
    */
-  els.eventLog.scrollTop = isPhoneConsole() ? 0 : els.eventLog.scrollHeight;
+  /*
+   * AND IT DOES NOT YANK THE READER BACK.
+   *
+   * The log is the game's main voice and it is five readable lines on a
+   * desk, so on a busy watch it turns over in about a quarter of a minute —
+   * "anything you look away from, you lose". It was always scrollable; what
+   * made scrolling useless was this line, which jumped to the bottom on EVERY
+   * new event, so a reader who scrolled up to find the call they missed was
+   * thrown back to the newest line by the next thing anybody said, which on a
+   * fighting net is within a second or two.
+   *
+   * So the ticker follows the newest line only while the reader is already at
+   * the newest line. Scroll up and it holds still and counts what has arrived
+   * since; the counter is the way back down. The phone is unchanged — it
+   * draws one line and anchors it to its own first word.
+   */
+  if (isPhoneConsole()) {
+    els.eventLog.scrollTop = 0;
+    state.logUnread = 0;
+    if (els.logUnread) els.logUnread.hidden = true;
+    return;
+  }
+  const log = els.eventLog;
+  if (wasAtBottom && !log.dataset.held) {
+    log.scrollTop = log.scrollHeight;
+    state.logUnread = 0;
+  } else {
+    state.logUnread = (state.logUnread ?? 0) + fresh.length;
+  }
+  if (els.logUnread) {
+    const n = state.logUnread ?? 0;
+    els.logUnread.hidden = n === 0;
+    els.logUnread.textContent = `${n} NEW ▾`;
+  }
 }
 
 /* ---------------------------------------------------------- command net */
