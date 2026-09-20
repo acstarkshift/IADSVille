@@ -369,21 +369,29 @@ describe('the playtest harness', () => {
    * thirty points of held rate the day that landed. Twenty-four seeds,
    * competent, primary seat, before the cold start and after the re-tune:
    *
-   *   watch                    hot    cold   re-tuned   what moved
-   *   Low Riders                75      54      83      allowance 2->3, one
-   *                                                     cruise off the 435 s run
-   *   Solo Battery              88      81      88      one cruise off the 330 s run
-   *   Weasel Hour               88      79      79      nothing
-   *   Economy of Force          69      79      79      nothing (the hinge gate
-   *                                                     below gave it back)
-   *   Ville Under Fire          63      54      71      allowance 3->5
-   *   Four Sectors              75      63      71      one cruise off the 210 s
-   *                                                     stream; 8 reads 63 and 9
-   *                                                     reads 88, so the dial
-   *                                                     could not express act 3
-   *   Reinforce the Capital     63      71      71      nothing
-   *   The Two Cities            63      54      67      allowance 4->5
-   *   The President's Flight    88      58      58      nothing
+   *   watch                    hot   cold   tuned   envelope   what moved
+   *   Low Riders                75     54     83       79       allowance 2->3,
+   *                                                             one cruise off 435 s
+   *   Solo Battery              88     81     88       88       one cruise off 330 s
+   *   Weasel Hour               88     79     79       79       nothing
+   *   Economy of Force          69     79     79       79       nothing
+   *   Ville Under Fire          63     54     71       67       allowance 3->5
+   *   Four Sectors              75     63     71       67       one cruise off the
+   *                                                             210 s stream, then
+   *                                                             one striker off the
+   *                                                             265 s package
+   *   Reinforce the Capital     63     71     71       67       nothing
+   *   The Two Cities            63     54     67       58       allowance 4->5
+   *   The President's Flight    88     58     58       63       nothing
+   *
+   * The last column is the second difficulty change in the same pass: a round
+   * climbs six hundred metres for every kilometre of ground it covers, and
+   * the ENVELOPE did not know it, so a target high and close read as a legal
+   * shot and the round arrived underneath the aeroplane. That shot is refused
+   * at the press now and the drawn lens is cut back to agree, and it costs
+   * the campaign seven to thirteen points wherever the raid comes in high and
+   * close. Four Sectors is the watch it hurt most and the watch whose
+   * allowance could not answer — eight reads 58 and nine reads 83.
    *
    * NOT ONE BAND WAS WIDENED TO FIT A NUMBER. Where a watch would not come
    * into its act's band on the allowance dial it was the aeroplanes that
@@ -393,18 +401,24 @@ describe('the playtest harness', () => {
    * First Light is the documented exception and is asserted separately: a
    * teaching watch that fails a learner has failed.
    */
+  /*
+   * IN NIGHTS OUT OF TWENTY-FOUR, not in per cent, because that is what the
+   * instrument actually produces and a band expressed as a decimal is a band
+   * with a rounding error on each edge: sixteen of twenty-four is 66.7 per
+   * cent and was failing a floor written as 0.67.
+   */
+  const SEEDS = 24;
   const ACT_BANDS = {
-    1: { lo: 0.79, hi: 1.00, target: 0.88 },
-    2: { lo: 0.67, hi: 0.88, target: 0.78 },
-    3: { lo: 0.63, hi: 0.79, target: 0.70 },
-    4: { lo: 0.50, hi: 0.71, target: 0.62 },
+    1: { lo: 19, hi: 24, target: 21 },   //  79-100%, aiming at 88
+    2: { lo: 16, hi: 21, target: 19 },   //  67- 88%, aiming at 78
+    3: { lo: 15, hi: 19, target: 17 },   //  63- 79%, aiming at 70
+    4: { lo: 12, hi: 17, target: 15 },   //  50- 71%, aiming at 62
   };
-  /** How far apart two acts' means must be for the staircase to be a step. */
-  const STEP = 0.04;
+  /** How far apart two acts' means must be, in nights, for a step to be a step. */
+  const STEP = 1;
 
   test('the campaign gets harder act by act, and it is measured not asserted', async () => {
     const ACT = { battalion: 1, sector: 2, region: 3, national: 4 };
-    const SEEDS = 24;
     const held = new Map();
     for (const scenario of SCENARIOS) {
       const seat = scenario.roles[0];
@@ -412,37 +426,39 @@ describe('the playtest harness', () => {
       for (let i = 1; i <= SEEDS; i++) {
         if (playRun({ mission: scenario.id, seat, policy: 'competent', seed: `p${i}` }).run.held) n++;
       }
-      held.set(scenario.id, n / SEEDS);
+      held.set(scenario.id, n);
     }
     const acts = [1, 2, 3, 4].map((a) => SCENARIOS
       .filter((s) => ACT[s.echelon] === a && s.id !== 'first-light')
       .map((s) => [s.id, held.get(s.id)]));
+    const pc = (nights) => `${Math.round((nights / SEEDS) * 100)}%`;
 
-    assert.equal(held.get('first-light'), 1, 'the tutorial is held by everyone who plays it');
+    assert.equal(held.get('first-light'), SEEDS,
+      'the tutorial is held by everyone who plays it');
 
     for (const [i, act] of acts.entries()) {
       const band = ACT_BANDS[i + 1];
-      for (const [id, rate] of act) {
-        assert.ok(rate >= band.lo - 1e-9 && rate <= band.hi + 1e-9,
-          `${id} is outside act ${i + 1}'s published band of `
-          + `${Math.round(band.lo * 100)}-${Math.round(band.hi * 100)}% `
-          + `(${Math.round(rate * 100)}%)`);
+      for (const [id, nights] of act) {
+        assert.ok(nights >= band.lo && nights <= band.hi,
+          `${id} held ${nights} of ${SEEDS} (${pc(nights)}), outside act ${i + 1}'s `
+          + `published band of ${band.lo}-${band.hi} nights (${pc(band.lo)}-${pc(band.hi)})`);
       }
     }
 
-    const mean = (list) => list.reduce((x, [, r]) => x + r, 0) / list.length;
+    const mean = (list) => list.reduce((x, [, n]) => x + n, 0) / list.length;
     for (let i = 1; i < acts.length; i++) {
       assert.ok(mean(acts[i]) <= mean(acts[i - 1]) - STEP + 1e-9,
-        `act ${i + 1} (${Math.round(mean(acts[i]) * 100)}%) must be at least four points `
-        + `harder than act ${i} (${Math.round(mean(acts[i - 1]) * 100)}%), and it is a `
-        + 'staircase or it is a floor');
+        `act ${i + 1} (${pc(mean(acts[i]))}) must be at least one night of twenty-four `
+        + `harder than act ${i} (${pc(mean(acts[i - 1]))}), and it is a staircase or it `
+        + 'is a floor');
     }
     // And the whole thing must actually descend from the top of the ladder to
     // the bottom: a campaign that is flat in the middle and steep at the ends
-    // passes the pairwise test above and is not a curve.
-    assert.ok(mean(acts[0]) - mean(acts[3]) >= 0.18 - 1e-9,
-      `the campaign must fall at least eighteen points from act one to act four `
-      + `(${Math.round((mean(acts[0]) - mean(acts[3])) * 100)})`);
+    // passes the pairwise test above and is not a curve. Measured at six
+    // nights of twenty-four; asserted at four.
+    assert.ok(mean(acts[0]) - mean(acts[3]) >= 4 - 1e-9,
+      'the campaign must fall at least four nights of twenty-four from act one to act '
+      + `four (${pc(mean(acts[0]))} to ${pc(mean(acts[3]))})`);
   });
 
   test('a switch flipping in an empty sky is not something happening', () => {

@@ -18,7 +18,7 @@ import { SAM_TYPES, AIR_TYPES, ASSET_TYPES } from '../engine/config.js';
 import { bearing, dist, headingVec, len, clamp01,
   horizonFloorM, radarHorizonKm,
 } from '../engine/math.js';
-import { inEnvelope, timeToInRangeS, computeSamPk } from '../engine/weapons.js';
+import { inEnvelope, reachableAltM, timeToInRangeS, computeSamPk } from '../engine/weapons.js';
 import { MAP } from '../engine/geography.js';
 import { Lettering, withAlpha } from './labels.js';
 
@@ -985,7 +985,16 @@ export class CrewConsole extends Lettering {
       const km = type.minRangeKm + f * (type.maxRangeKm - type.minRangeKm);
       // Ceiling: full at the first third, easing down to two thirds at the rim.
       const ceil = type.maxAltM * (1 - 0.55 * Math.pow(Math.max(0, f - 0.35) / 0.65, 1.7));
-      lens.push([rx(km), ry(Math.min(ceil, maxAltM))]);
+      /*
+       * AND CUT BACK AT THE NEAR END BY THE CLIMB SLOPE, which is the same
+       * line `inEnvelope` now refuses on. A round gains six hundred metres of
+       * height per kilometre of ground at best, so the inner edge of the lens
+       * is a ramp and not a wall: a target high and close is over the top of
+       * a battery that would take it comfortably twice as far out. The chart
+       * drew that shot as legal and the operator took it, and the round went
+       * underneath. The instrument and the refusal say the same thing now.
+       */
+      lens.push([rx(km), ry(Math.min(ceil, reachableAltM(type, km), maxAltM))]);
     }
     for (let i = steps; i >= 0; i -= 1) {
       const f = i / steps;

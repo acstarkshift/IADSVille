@@ -55,6 +55,47 @@ export const launchRunKm = (sitePos, target, missileSpeed) =>
   launchSolution(sitePos, target, missileSpeed).runKm;
 
 /** Is `pos` at `altM` a valid engagement for this site right now? */
+/**
+ * How high this battery can actually put a round at a given ground range.
+ *
+ * `FLIGHT.maxClimbSlope` is honest: a round gains at most six hundred metres
+ * of height for every kilometre of ground it covers, and the flight model has
+ * obeyed that since the flat-round fix. The ENVELOPE did not. A target high
+ * and close was inside `maxAltM` and inside `maxRangeKm`, so the console said
+ * the shot was legal, the operator took it, and the round arrived underneath
+ * the aeroplane and went past — which the three-dimensional intercept now
+ * correctly scores as a miss. Measured over ninety-six headless watches,
+ * seventy-five per cent of the remaining vertical misses were predictable at
+ * the moment of the press.
+ *
+ * So the same arithmetic that flies the round decides whether the shot exists,
+ * and it is the lesser of two things.
+ *
+ * The first is the slope itself, at four fifths of the theoretical figure,
+ * because a round spends part of its run turning onto the intercept and none
+ * of it climbing at the catalogue rate for the whole distance. At the full
+ * slope the refusal essentially never fired.
+ *
+ * The second is the battery's own geometry: it reaches its advertised ceiling
+ * at half its advertised range, and the reachable height falls away linearly
+ * inside that. This second clause exists because the first one alone is a
+ * statement about the ROUND and this is a question about the BATTERY. Measured
+ * on the four types in the catalogue, the slope alone puts THISTLE TOWN's full
+ * ceiling at 12.5 km against a twelve-kilometre reach and HAMMER's at 5.2
+ * against four — two batteries that could never, at any range, reach the
+ * height their own nomenclature plate advertises. A weapon whose catalogue
+ * entry is unreachable everywhere is not a lens, it is a misprint.
+ */
+const CLIMB_REACH = 0.8;
+const CEILING_AT = 0.5;
+export function reachableAltM(type, rangeKm) {
+  return Math.min(
+    type.maxAltM,
+    rangeKm * 1000 * FLIGHT.maxClimbSlope * CLIMB_REACH,
+    type.maxAltM * (rangeKm / (type.maxRangeKm * CEILING_AT)),
+  );
+}
+
 export function inEnvelope(site, pos, altM) {
   const type = SAM_TYPES[site.type];
   const r = dist(site.pos, pos);
@@ -62,6 +103,15 @@ export function inEnvelope(site, pos, altM) {
   if (r > type.maxRangeKm) return { ok: false, reason: 'OUT OF RANGE', rangeKm: r };
   if (r < type.minRangeKm) return { ok: false, reason: 'TOO CLOSE', rangeKm: r };
   if (altM > type.maxAltM) return { ok: false, reason: 'TOO HIGH', rangeKm: r };
+  /*
+   * And the shot a round cannot climb to, refused at the press rather than
+   * thirty seconds later as a round that went underneath. A battery that can
+   * take this aeroplane twice as far out cannot take it from here, which is
+   * the one thing about a missile envelope that a rectangle can never say.
+   */
+  if (altM > reachableAltM(type, r)) {
+    return { ok: false, reason: 'TOO HIGH AT THIS RANGE', rangeKm: r };
+  }
   if (altM < type.minAltM) return { ok: false, reason: 'TOO LOW', rangeKm: r };
   return { ok: true, reason: 'IN ENVELOPE', rangeKm: r };
 }

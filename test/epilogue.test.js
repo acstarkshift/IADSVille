@@ -410,16 +410,35 @@ function play({ posture = 'free', shootTheFlight = false, seed = 'epilogue-test'
     world.step(0.1);
     if (world.command.pending) world.answer(answer);
 
-    if (shootTheFlight && !fired) {
+    /*
+     * KEEP TRYING UNTIL A ROUND IS ACTUALLY AWAY, not until an assignment is
+     * accepted. The two are not the same thing and the difference showed up
+     * when the sets started the watch cold: the sector's picture builds
+     * twenty seconds later, so the raid's engagements pile up later, and the
+     * nearest battery to the flight is now often at "all channels engaged" in
+     * exactly the window this test used to take its one shot in. An operator
+     * with a fire order presses again.
+     */
+    if (shootTheFlight && world.stats.vipRoundsFired === 0) {
       const vip = world.vipAircraft();
       const track = vip && [...world.tracks.values()].find((t) => t.truthId === vip.id);
       if (track && track.hostility === 'friendly') {
-        // Only batteries this appointment actually commands: at national level
-        // most of the country belongs to somebody else.
-        const site = world.sites
+        /*
+         * Only batteries this appointment actually commands: at national
+         * level most of the country belongs to somebody else. And EVERY one
+         * of them in turn, nearest first, rather than the nearest alone: a
+         * round climbs six hundred metres per kilometre of ground and the
+         * envelope refuses the shot it cannot climb to, so the battery the
+         * aircraft is passing directly over is often the one that cannot
+         * take it. An operator with a fire order does not give up at the
+         * first refusal.
+         */
+        const takers = world.sites
           .filter((s) => s.alive && s.readyRounds > 0 && world.commandable(s.id))
-          .sort((a, b) => dist(a.pos, vip.pos) - dist(b.pos, vip.pos))[0];
-        if (site && world.assign(track.id, site.id)) fired = true;
+          .sort((a, b) => dist(a.pos, vip.pos) - dist(b.pos, vip.pos));
+        for (const site of takers) {
+          if (world.assign(track.id, site.id)) { fired = true; break; }
+        }
       }
     }
     n++;

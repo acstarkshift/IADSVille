@@ -2079,7 +2079,18 @@ export const SCENARIOS = [
       // Kubin, second, and from a bearing the western gapfiller is poor against.
       { atS: 120, type: 'striker', count: 5, bearingDeg: 300, spreadDeg: 26, spacingS: 12, altM: 5600,
         distanceKm: 145, targetAssetId: 'a_kubin_depot' },
-      { atS: 265, type: 'striker', count: 5, bearingDeg: 288, spreadDeg: 22, spacingS: 11, altM: 170,
+      /*
+       * FOUR, AND IT WAS FIVE — the envelope re-tune. A round climbs six
+       * hundred metres for every kilometre of ground it covers and the
+       * envelope did not know it, so a target high and close read as a legal
+       * shot, the operator took it, and the round arrived underneath. That
+       * shot is refused at the press now, and the district paid thirteen
+       * points of held rate for it: 71 per cent over twenty-four seeds
+       * becomes 58. The allowance cannot answer — eight reads 58 and nine
+       * reads 83 — so one aeroplane comes off the low western package and it
+       * reads 67.
+       */
+      { atS: 265, type: 'striker', count: 4, bearingDeg: 288, spreadDeg: 22, spacingS: 11, altM: 170,
         distanceKm: 145, targetAssetId: 'a_kubin' },
 
       // And the valley, which is small, and which you will want to take anyway.

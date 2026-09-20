@@ -1,7 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  closestApproachKm, inEnvelope, timeToInRangeS, computeSamPk, computeArmPk,
+  closestApproachKm, inEnvelope, reachableAltM, timeToInRangeS, computeSamPk, computeArmPk,
   samPkTerms, missReason,
   createMissile, stepMissiles,
 } from '../src/engine/weapons.js';
@@ -52,6 +52,44 @@ describe('engagement envelope', () => {
 
   test('a dead battery cannot engage anything', () => {
     assert.equal(inEnvelope({ ...s, alive: false }, { x: 0, y: 20 }, 6000).ok, false);
+  });
+
+  /*
+   * THE SHOT THE ROUND CANNOT CLIMB TO.
+   *
+   * `FLIGHT.maxClimbSlope` has been honest since the flat-round fix: a round
+   * gains at most six hundred metres of height per kilometre of ground it
+   * covers. The envelope was a box and did not know it, so a target high and
+   * close was inside `maxAltM` and inside `maxRangeKm`, the console called
+   * the shot legal, the operator took it, and thirty seconds later the round
+   * arrived underneath the aeroplane and went past. Measured over ninety-six
+   * headless watches, three quarters of the remaining vertical misses were
+   * predictable at the moment of the press.
+   *
+   * The refusal is worth what it costs. Twenty-four seeds, competent play:
+   * Four Sectors fell from 71 per cent held to 58 and The Two Cities from 67
+   * to 58, and both were re-tuned back inside their acts' published bands.
+   */
+  test('a target the round cannot climb to is refused at the press', () => {
+    const type2 = SAM_TYPES.bastion;
+    const b = site('bastion');
+    const near = 6;
+    const far = 60;
+    const high = Math.min(type2.maxAltM - 500, 14000);
+    assert.ok(high > reachableAltM(type2, near),
+      'the case only exists if the weapon out-climbs itself at short range');
+    assert.equal(inEnvelope(b, { x: 0, y: near }, high).reason, 'TOO HIGH AT THIS RANGE',
+      'high and close is over the top of the battery, and it says so');
+    assert.equal(inEnvelope(b, { x: 0, y: far }, high).ok, true,
+      'and the same aeroplane twice as far out is a perfectly good shot');
+    // The reach is monotone in range and never exceeds the catalogue ceiling.
+    let last = -1;
+    for (let km = 0; km <= type2.maxRangeKm; km += 5) {
+      const r = reachableAltM(type2, km);
+      assert.ok(r >= last, 'a battery cannot reach lower as the target gets further out');
+      assert.ok(r <= type2.maxAltM, 'and never above its own ceiling');
+      last = r;
+    }
   });
 });
 
