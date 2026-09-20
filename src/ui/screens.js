@@ -28,7 +28,7 @@ import { composeEnding, endingSummary } from '../engine/endings.js';
 import { composeFlightEnding, flightEndingSummary } from '../engine/epilogue.js';
 import { standing as arcStanding } from '../engine/revelations.js';
 import { briefLine } from '../engine/family.js';
-import { drawEndingStill, plainLedgerReason } from './scenes.js';
+import { drawEndingStill, plainLedgerReason, SCENE_W, SCENE_H } from './scenes.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => (
   { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1278,6 +1278,30 @@ export function renderDebrief(host, state, result, entry) {
 }
 
 /**
+ * The largest WHOLE multiple of the still that still covers the window.
+ *
+ * The valley is a 320 x 180 picture and it used to be fitted with
+ * `object-fit: cover`, which is a real-numbered scale: 5.28x on a 1600 x 950
+ * desk, 4.44x at 1280 x 800 and 9.38x on a phone at two device pixels to one.
+ * A source pixel therefore landed on five device pixels in one band and six in
+ * the next, at random across the frame — visible as a stutter straight through
+ * the Bayer dither the dawn sky is built out of, which is the best art in the
+ * game. Rounded UP to a whole number the picture covers the window in both
+ * axes and bleeds off whichever one is over, and every pixel in it is the same
+ * square size.
+ */
+let stillFitted = false;
+function fitStill() {
+  const k = Math.max(1, Math.ceil(Math.max(
+    window.innerWidth / SCENE_W, window.innerHeight / SCENE_H)));
+  document.documentElement.style.setProperty('--still-k', String(k));
+  if (!stillFitted) {
+    stillFitted = true;
+    window.addEventListener('resize', fitStill);
+  }
+}
+
+/**
  * The card the evening ends on.
  *
  * The scenes have said what happened; this is one line of it and the ways
@@ -1332,7 +1356,7 @@ export function renderEndCard(host, state, result) {
    * the watch ended — and the block is centred over it either way.
    */
   host.innerHTML = `<div class="screen-inner is-endcard is-title-card">
-    <canvas class="endcard-sky" width="320" height="180" aria-hidden="true"></canvas>
+    <canvas class="endcard-sky" width="${SCENE_W}" height="${SCENE_H}" aria-hidden="true"></canvas>
     <div class="endcard-block">
       ${/*
        * The card the evening ends on is the file entry for the night, so it is
@@ -1385,9 +1409,13 @@ export function renderEndCard(host, state, result) {
       </span>
     </div>
   </div>`;
-  // The evening's last picture, dimmed, behind the words it belongs to.
+  // The evening's last picture, at full strength and at a whole multiple,
+  // behind the words it belongs to.
   const sky = host.querySelector('.endcard-sky');
-  if (sky) drawEndingStill(sky, { held: !result.abandoned && !!result.success });
+  if (sky) {
+    fitStill();
+    drawEndingStill(sky, { held: !result.abandoned && !!result.success });
+  }
   paintFilePhotos(host);
   toTop(host);
 }

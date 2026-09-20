@@ -3463,14 +3463,43 @@ table.ledger .down { color: var(--hostile); }
  * also leaves a 300px empty black foreground under its buttons" — which was
  * the valley's own foreground, taken down to a third of itself. The ridge, the
  * dusk, the window lights and the road are the best art in the game and the
- * judges said so; they are not wallpaper to print on. They keep two thirds of
- * their value, and what goes over them is a card that carries its own ground.
+ * judges said so; they are not wallpaper to print on. So they are shown at
+ * full strength, and what goes over them is a card that carries its own
+ * ground.
+ *
+ * AT A WHOLE MULTIPLE, AND AT FULL STRENGTH.
+ *
+ * `object-fit: cover` on a 320x180 source gave 5.28x at 1600x950, 4.44x at
+ * 1280x800 and 9.38x on the phone, so a source pixel landed on five device
+ * pixels in one band and six in the next, straight across the dither the sky
+ * is made of. The still is therefore drawn at the largest WHOLE multiple that
+ * still covers the window — `--still-k`, set by fitStill() in screens.js — and
+ * allowed to bleed off whichever axis is over. And `opacity: .66` took the
+ * fire's brightest ink to a dull ochre, which on the lost ending is the one
+ * thing in the frame that is supposed to be burning. The card earns its own
+ * legibility below; the picture is not dimmed to pay for it.
  */
 .endcard-sky {
-  position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1;
-  object-fit: cover; image-rendering: pixelated; opacity: .66;
+  position: fixed; left: 50%; top: 50%; z-index: -1;
+  width: calc(320px * var(--still-k, 5));
+  height: calc(180px * var(--still-k, 5));
+  transform: translate(-50%, -50%);
+  image-rendering: pixelated;
   pointer-events: none;
 }
+/*
+ * And the legibility is earned with the card, not with the picture: a soft
+ * pool of dusk under the stock and the two action rows, falling away to the
+ * untouched valley at the edges of the frame.
+ */
+.is-endcard.is-title-card::before {
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(58% 54% at 50% 52%,
+    rgba(4, 7, 6, .74), rgba(4, 7, 6, .46) 52%, rgba(4, 7, 6, 0) 78%);
+}
+/* Both of the things that stand on it are positioned, so both stand above it. */
+.is-endcard.is-title-card > .endcard-block,
+.is-endcard.is-title-card > .is-endcard-actions { position: relative; z-index: 1; }
 /*
  * AND WHAT THE ENDING IS TYPED ON IS A CARD.
  *
