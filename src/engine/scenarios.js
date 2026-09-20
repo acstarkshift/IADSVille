@@ -1082,11 +1082,29 @@ export const SCENARIOS = [
       { atS: 600, text: 'POLITICAL SECTION WANTS TO KNOW WHY THE EMISSIONS LOG HAS GAPS IN IT.' },
       { atS: 700, text: 'BORDER POSTS REPORT THE LAST OF THEM CROSSING BACK NORTH. NOBODY IS STANDING YOU DOWN.' },
     ],
+    /*
+     * PLACEHOLDER FOR THE WRITER. The last two lines are White Noise's own
+     * brief, carried here with the jammers and the decoys they describe when
+     * that watch was dissolved. They are that watch's words, not this one's,
+     * and the four lines have not been written to sit together — the first
+     * two are about a suppression aircraft listening to you and the last two
+     * about a picture you cannot trust. Nothing is missing; the join is.
+     */
     brief: [
       'Suppression aircraft are working the sector. They need about twelve seconds of your emissions'
         + ' to build a firing solution, and they carry two rounds each.',
       'Sector command will order you to keep radiating. It is not the one being shot at.',
+      'Two standoff jammers are on station beyond your reach. Inside their noise you will see nothing'
+        + ' until burnthrough, and burnthrough gets better the further out they sit.',
+      'They are also sending decoys. The decoys are built to look like strike aircraft and they'
+        + ' succeed.',
     ],
+    /*
+     * PLACEHOLDER FOR THE WRITER. White Noise taught "to see through jamming,
+     * to tell a decoy from a strike aircraft, and to count your rounds", and
+     * the first two thirds of that lesson are fought here now. The sentence
+     * below is this watch's own and has not been re-written to carry them.
+     */
     teaches: 'The set has to be dark to keep you alive and lit to let you shoot, and every second'
       + ' either way is paid for.',
     assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, GROUND.bridge],
@@ -1155,7 +1173,28 @@ export const SCENARIOS = [
      * is what the third weasel is waiting for.
      */
     waves: [
+      /*
+       * WHITE NOISE'S JAMMERS AND ITS NORTHERN DECOY GROUP, FOLDED IN HERE.
+       *
+       * The twelve-to-ten cut dissolved White Noise, whose subject was a
+       * picture you cannot trust. Its raid is not preserved — the cut was for
+       * pacing — but its two mechanisms are, and this is the watch they
+       * belong on: a suppression pair that wants twelve seconds of your
+       * emissions is a far worse problem when half of what is on the tube is
+       * not there, and a cabin that has spent rounds on a lie has fewer left
+       * for the package the weasels are escorting. The jammers sit at a
+       * hundred and fifty-eight kilometres, beyond everything on the
+       * position, exactly as they did on their own watch.
+       */
+      { atS: 8, type: 'jammer', count: 2, bearingDeg: 0, spreadDeg: 70, spacingS: 20,
+        distanceKm: 158, scalable: false },
       { atS: 20, type: 'sead', count: 2, bearingDeg: 5, spreadDeg: 40, spacingS: 45, distanceKm: 125 },
+      /*
+       * The decoy group, ahead of the first real package by eighty seconds,
+       * so the rounds spent on it are spent before the strike arrives rather
+       * than instead of it.
+       */
+      { atS: 40, type: 'decoy', count: 6, bearingDeg: 350, spreadDeg: 40, spacingS: 14, altM: 5200 },
       { atS: 120, type: 'striker', count: 6, bearingDeg: 350, spreadDeg: 30, spacingS: 24, altM: 6400,
         distanceKm: 105, targetAssetId: 'a_airbase' },
       /*
@@ -1195,153 +1234,6 @@ export const SCENARIOS = [
   },
 
   {
-    id: 'white-noise',
-    name: 'White Noise',
-    subtitle: 'Half of what you can see is not there.',
-    hour: '01:05',
-    weather: 'clear',
-    tempC: -8,
-    echelon: 'sector',
-    /* THE THIRD RUNG. From here you stop touching a console and start
-     * pointing batteries: the battalion is yours, and none of its cabins is. */
-    post: 'battalion',
-    roles: ['net'],
-    seed: 'white-noise-07',
-    /*
-     * ONE, AND THE WAVE TABLE IS NOT TO BE GROWN. READ THIS BEFORE TOUCHING IT.
-     *
-     * This is the watch that carries the campaign's load-bearing property —
-     * that a commander choosing targets beats crews left to themselves — and
-     * `test/funfix.test.js` measures it here in two forms: hand play against
-     * set-free-and-walk-away, and an AI battle manager laid over free crews
-     * against those crews alone. The second is a ratio with a floor of 0.95.
-     *
-     * The curve scrub tried three times to make this watch harder by adding a
-     * fourth axis, and every version broke that ratio. Twenty-four seeds, the
-     * test's own construction: shipped table 0.977; four aeroplanes on the deck
-     * out of 248° 0.858; the same four at nine hundred metres 0.858; at four
-     * thousand two hundred metres and a hundred and ten kilometres 0.723;
-     * moving them to 196° so the crewed battery could not cover them 0.700.
-     * Even growing the existing low package from five aircraft to six and
-     * pulling it six kilometres closer reads 0.896. The mechanism is the same
-     * every time and it is worth writing down: MORE RAID ON THIS WATCH HELPS
-     * THE CREWS AND HURTS THE COMMANDER. A free crew shoots what enters its
-     * own ring and needs no picture to do it; a commander pairing the whole
-     * sector is the one who runs out of channels, and a package that arrives
-     * while he is already saturated is answered by whoever happens to be
-     * pointing at it. On the deck it was worse still — hand play scored 42.8
-     * per cent BELOW the walk-away — because he cannot pair what he has not
-     * seen.
-     *
-     * So the difficulty here is the STANDARD and not the aeroplanes, and one
-     * is what the standard has to be. Sixteen seeds a seat on the shipped
-     * table: competent play concedes nothing at all on eleven nights of
-     * sixteen, and holds 69 / 63 / 81 per cent at an allowance of none,
-     * 81 / 88 / 94 at one and 94 / 100 / 94 at two. One is the number, and on
-     * a watch whose whole subject is whether you can SEE what is coming, "one
-     * got through" being the difference between held and penetrated is the
-     * right sentence for it to end on.
-     */
-    leakerTolerance: 1,
-    playerBatteryId: 's_lance_w',
-    roundAllowance: 22,
-    brief: [
-      'Two standoff jammers are on station beyond your reach. Inside their noise you will see nothing'
-        + ' until burnthrough, and burnthrough gets better the further out they sit.',
-      'They are also sending decoys. The decoys are built to look like strike aircraft and they succeed.',
-      'You have twenty-two rounds in the allocation. There are more contacts than that.',
-    ],
-    teaches: 'You learn to see through jamming, to tell a decoy from a strike aircraft, and to count'
-      + ' your rounds.',
-    /*
-     * NO STORE CUT ON THIS WATCH, AND THE MEASUREMENT THAT SETTLED IT.
-     *
-     * The obvious way to make "there are more contacts than that" mechanically
-     * true is to shorten the sector's stores, and it was tried three ways:
-     * half stores, six tenths, seven tenths. All three invert the property
-     * this watch exists to carry, and this is the watch two of the campaign's
-     * load-bearing measurements are taken on. Twelve seeds, hand play against
-     * set-free-and-walk-away: at full stores the commander concedes ten
-     * leakers against the walk-away's nineteen and loses three structures
-     * against eight; at seven tenths it concedes twenty-two against
-     * twenty-two, loses eleven against four, and the score dividend goes
-     * NEGATIVE. Scarcity punishes the player who is choosing targets across
-     * the whole sector far harder than it punishes crews who only ever shoot
-     * what wanders into their own ring, because the commander's reach — the
-     * exact thing attention buys here — is what he can no longer afford.
-     * Slower reloads do the same thing to the delegation ladder: with the
-     * store at eight tenths the AI net over free crews fell to 0.91 of free
-     * crews alone against a 0.95 floor.
-     *
-     * So the allocation stays a ledger constraint — twenty-two rounds against
-     * a raid of thirty-odd objects, priced at five points a round — and the
-     * difficulty comes from the raid: two axes instead of one, and nineteen
-     * strike aircraft in the table instead of twelve.
-     */
-    /*
-     * The EW picket speaks first, because on this watch the noise arrives
-     * before the aeroplanes do and that is the whole subject. The old order
-     * had the net reporting a held contact at 52 s against a first paint at
-     * 86 s — the room describing something that did not exist yet.
-     */
-    chatter: [
-      { atS: 24, text: 'EW PICKET REPORTS SWEEP JAMMING RISING ON THE NORTHERN BEARINGS. EXPECT A DIRTY PICTURE.' },
-      { atS: 96, text: 'WIDE EYE HOLDS A STREAM ON THE NORTHERN AXIS. NOT ALL OF THAT IS AEROPLANES.' },
-    ],
-    assets: [GROUND.town, GROUND.c2, GROUND.airbase, GROUND.power, GROUND.depot, GROUND.bridge],
-    sites: [SITES.bastion, SITES.lanceWest, SITES.lanceEast, SITES.thistleTown, SITES.hammer],
-    radars: [RADARS.ewrNorth, RADARS.gapSouth],
-    waves: [
-      { atS: 6, type: 'jammer', count: 2, bearingDeg: 0, spreadDeg: 70, spacingS: 20, distanceKm: 158, scalable: false },
-      { atS: 30, type: 'decoy', count: 6, bearingDeg: 350, spreadDeg: 40, spacingS: 14, altM: 5200 },
-      { atS: 130, type: 'striker', count: 6, bearingDeg: 10, spreadDeg: 34, spacingS: 20, altM: 5600,
-        distanceKm: 134 },
-      /*
-       * The western stream, down the Kubin road at the power station.
-       *
-       * LANCE WEST is the battery this file names and it sits twenty-four
-       * kilometres west of the centre with a forty-two-kilometre reach, so a
-       * raid that runs entirely down the northern axis never enters its
-       * envelope: measured, the designated cabin's first legal shot was at
-       * 469.5 s and its first own round at 659 s on a watch that averaged
-       * fifteen minutes. This stream passes within eight kilometres of it.
-       *
-       * That it is decoys first is the point. The cabin's first shot of the
-       * night is spent on a lie, and the rails are half-empty when the real
-       * package comes down the same road four minutes later — which is this
-       * watch's lesson arriving in the seat instead of in the debrief.
-       */
-      { atS: 44, type: 'decoy', count: 3, bearingDeg: 288, spreadDeg: 16, spacingS: 16, altM: 4600,
-        distanceKm: 86, targetAssetId: 'a_power' },
-      civilTransit(240),
-      { atS: 300, type: 'decoy', count: 4, bearingDeg: 20, spreadDeg: 30, spacingS: 12, altM: 4800 },
-      { atS: 300, type: 'striker', count: 4, bearingDeg: 292, spreadDeg: 18, spacingS: 18, altM: 900,
-        distanceKm: 104, targetAssetId: 'a_power' },
-      /*
-       * The low package. It used to spawn at the engine's default hundred and
-       * fifty-five kilometres, which is eleven minutes of transit at a hundred
-       * and eighty metres — so the last aircraft of it was still being chased
-       * at 1040 s and it, not the raid, was what set the length of the watch.
-       * At a hundred and four it crosses the horizon at seventy-eight and the
-       * fight over it happens inside the rings.
-       */
-      { atS: 355, type: 'striker', count: 5, bearingDeg: 340, spreadDeg: 28, spacingS: 18, altM: 180,
-        distanceKm: 98 },
-      /*
-       * And a late package, because the back half had nothing in it.
-       * Measured: the last spawn used to land at forty per cent of the
-       * watch, and the remaining eight minutes ran at four to eight events a
-       * minute with no rounds in the air — the raid was decided long before
-       * the watch admitted it. This one arrives with the allocation nearly
-       * spent, which is the ammunition lesson arriving as a raid instead of
-       * as a number in the debrief.
-       */
-      { atS: 480, type: 'striker', count: 4, bearingDeg: 5, spreadDeg: 26, spacingS: 16, altM: 5200,
-        distanceKm: 96 },
-    ],
-  },
-
-  {
     id: 'economy-of-force',
     name: 'Economy of Force',
     subtitle: 'There are rounds on the rails. You have been told what they are for.',
@@ -1352,6 +1244,32 @@ export const SCENARIOS = [
     post: 'battalion',
     roles: ['net'],
     seed: 'economy-08',
+    /*
+     * THE FIRST WATCH AT BATTALION, AND THE WAVE TABLE IS NOT TO BE GROWN.
+     * READ THIS BEFORE TOUCHING IT. It is White Noise's warning, inherited
+     * with White Noise's job when that watch was dissolved and this one
+     * became the first night the player commands a net.
+     *
+     * This is now the watch that carries the campaign's load-bearing property
+     * — that a commander choosing targets beats crews left to themselves —
+     * and `test/funfix.test.js` measures it here in two forms: hand play
+     * against set-free-and-walk-away, and an AI battle manager laid over free
+     * crews against those crews alone. The second is a ratio with a floor of
+     * 0.95.
+     *
+     * The curve scrub tried three times to make the old watch harder by
+     * adding a fourth axis, and every version broke that ratio. Twenty-four
+     * seeds: shipped table 0.977; four aeroplanes on the deck out of 248°
+     * 0.858; the same four at nine hundred metres 0.858; at four thousand two
+     * hundred metres and a hundred and ten kilometres 0.723; moving them to
+     * 196° so the crewed battery could not cover them 0.700. The mechanism is
+     * the same every time and it is worth writing down: MORE RAID ON A
+     * BATTALION'S WATCH HELPS THE CREWS AND HURTS THE COMMANDER. A free crew
+     * shoots what enters its own ring and needs no picture to do it; a
+     * commander pairing the whole sector is the one who runs out of channels,
+     * and a package that arrives while he is already saturated is answered by
+     * whoever happens to be pointing at it.
+     */
     /*
      * TWO, and the standard is about designated places only.
      *
@@ -1382,6 +1300,14 @@ export const SCENARIOS = [
         + ' inside its envelope. It is not on the schedule of designated defended places. Nothing in'
         + ' this sector is, except the airbase, the power station and sector operations.',
       'You have rounds. You will be told they are not yours to spend.',
+      /*
+       * PLACEHOLDER FOR THE WRITER — White Noise's jamming line, carried here
+       * with the jammer and the decoy stream that came off that watch when it
+       * was dissolved. It is that watch's sentence and it has not been written
+       * to sit under the three above it.
+       */
+      'There is a standoff jammer on station beyond your reach, and the decoys it is escorting are'
+        + ' built to look like strike aircraft. They succeed.',
     ],
     teaches: 'You find out what the ammunition allocation is actually for.',
     /*
@@ -1415,8 +1341,28 @@ export const SCENARIOS = [
     sites: [SITES.bastion, SITES.lanceWest, SITES.thistleTown, SITES.hammer],
     radars: [RADARS.ewrNorth, RADARS.gapSouth],
     waves: [
+      /*
+       * WHITE NOISE'S OTHER HALF: ONE JAMMER AND THE WESTERN DECOY STREAM.
+       *
+       * The dissolved watch's two mechanisms were split between the two
+       * watches that could carry them. Weasel Hour took the pair of jammers
+       * and the northern decoy group; this takes the single standoff jammer
+       * and the stream that came down the Kubin road — and the Kubin road is
+       * this watch's own road, the one the hospital is twenty-one kilometres
+       * along and the one the hospital package will use later.
+       *
+       * That it is decoys first is the point, and it was the point on its own
+       * watch too: the cabin's first rounds of the night are spent on a lie,
+       * on the bearing the whole moral geometry of this night runs down, and
+       * the rails are that much lighter when the order arrives to stop
+       * spending them.
+       */
+      { atS: 8, type: 'jammer', count: 1, bearingDeg: 350, spreadDeg: 0, spacingS: 0,
+        distanceKm: 158, scalable: false },
       { atS: 25, type: 'striker', count: 3, bearingDeg: 350, spreadDeg: 22, spacingS: 26, altM: 6200,
         targetAssetId: 'a_airbase' },
+      { atS: 44, type: 'decoy', count: 3, bearingDeg: 288, spreadDeg: 16, spacingS: 16, altM: 4600,
+        distanceKm: 86, targetAssetId: 'a_power' },
       /*
        * The probe up the Kubin road, and the reason the whole watch works.
        *
@@ -1449,6 +1395,25 @@ export const SCENARIOS = [
         targetAssetId: 'a_hospital' },
       { atS: 195, type: 'striker', count: 3, bearingDeg: 20, spreadDeg: 20, spacingS: 24, altM: 260,
         distanceKm: 120, targetAssetId: 'a_power' },
+      /*
+       * THE NORTHERN DECOY GROUP, THE OTHER HALF OF THE FOLD, AND IT IS
+       * LOAD-BEARING.
+       *
+       * White Noise's own decoys are why `test/funfix.test.js` could measure
+       * the campaign's central property here — that a commander choosing
+       * targets beats crews left to themselves. Measured on this watch with
+       * three decoys only, over twelve seeds: hand play scored six times the
+       * walk-away and conceded fifteen fewer arrivals, but it spent MORE
+       * rounds doing it (387 against 373) and engaged 0.69 of the walk-away's
+       * decoys against a bar of 0.55 — because free crews on a small raid
+       * simply do not get the chance to waste anything. The dividend was
+       * real and the frugality half of it was not measurable.
+       *
+       * Four more of them, at three hundred seconds, on the bearing the
+       * second package came down: the crews left free shoot them and the
+       * commander does not, which is the discrimination the test is about.
+       */
+      { atS: 300, type: 'decoy', count: 4, bearingDeg: 20, spreadDeg: 30, spacingS: 12, altM: 4800 },
       // Same deck as the first package: at 180 m the covering battery's
       // low-altitude penalty stacked with evasion into a tail that a
       // deliberate westward watch could not actually kill — measured, the

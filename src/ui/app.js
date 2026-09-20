@@ -238,12 +238,12 @@ function boot() {
  *
  * The old rule kept whatever battery was selected as long as it appeared
  * somewhere in the new mission's site list, which sounds harmless and is not:
- * BASTION is in the site list of nine watches, so anybody who played First
- * Light and then chose White Noise, Economy of Force, Across the Line or Ville
- * Under Fire was silently seated in BASTION — while every one of those four
- * files names a different cabin, three of the four briefs are written about
- * that cabin, and on Across the Line the battery you were given is the one
- * whose altitude floor makes the watch's own moral hinge unreachable.
+ * BASTION is in the site list of most watches, so anybody who played First
+ * Light and then chose Economy of Force or Ville Under Fire was silently
+ * seated in BASTION — while each of those files names a different cabin, the
+ * briefs are written about that cabin, and on the border half of Economy of
+ * Force the battery you were given is the one whose altitude floor makes the
+ * watch's own second moral hinge unreachable.
  *
  * So the selection is remembered together with the watch it was made for. Stay
  * where you put yourself for as long as you are on that watch; change watch and

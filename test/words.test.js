@@ -288,7 +288,7 @@ describe('the chrome knows where the player is', () => {
     renderMenu(h, state);
     assert.match(h.innerHTML, /air defence conscript/);
     campaign.appointment = 'region';
-    for (const id of ['first-light', 'low-riders', 'solo-battery', 'weasel-hour', 'white-noise', 'economy-of-force', 'across-the-line', 'ville-under-fire']) {
+    for (const id of ['first-light', 'low-riders', 'solo-battery', 'weasel-hour', 'economy-of-force', 'across-the-line', 'ville-under-fire']) {
       campaign.completed[id] = { score: 1, tier: 'satisfactory', role: 'net' };
     }
     renderMenu(h, state);

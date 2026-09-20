@@ -193,7 +193,7 @@ describe('directives', () => {
   });
 
   test('an accepted civil corridor closes a wedge, and firing into it is counted', () => {
-    const w = new World(scenarioById('white-noise'), { role: 'net' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net' });
     // Put a transit and a hostile on the same bearing, and a third well off it.
     const transit = createAircraft({
       type: 'civil', seq: 900, pos: { x: 0, y: 120 }, hdg: 180, altM: 10200, name: 'TRANSIT 118',
@@ -399,7 +399,7 @@ describe('the net says something new, and stops before the watch does', () => {
    * — three of the four repeated verbatim.
    */
   test('no routine order is transmitted twice in the same words', () => {
-    for (const mission of ['weasel-hour', 'four-sectors', 'reinforce-the-capital', 'white-noise']) {
+    for (const mission of ['weasel-hour', 'four-sectors', 'reinforce-the-capital', 'economy-of-force']) {
       for (const seed of ['net-1', 'net-2', 'net-3']) {
         const w = playOut(mission, seed);
         const seen = new Map();
@@ -438,7 +438,7 @@ describe('the net says something new, and stops before the watch does', () => {
   });
 
   test('an expenditure order does not come back with the figure it already quoted', () => {
-    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'conserve-1' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'conserve-1' });
     w.stats.roundsFired = Math.ceil(w.roundAllowance * 0.7);
     assert.ok(DIRECTIVES.conserve.trigger(w), 'expenditure is over the line');
     issueDirective(w, DIRECTIVES.conserve);

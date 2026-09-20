@@ -246,16 +246,30 @@ describe('a gauge with nothing behind it is dead weight', () => {
 });
 
 describe('the act-one examination', () => {
-  test('Weasel Hour flies twenty-two aircraft, and its comment says so', () => {
+  test('Weasel Hour flies twenty-two aircraft that can hurt you, and eight that cannot', () => {
     const scenario = scenarioById('weasel-hour');
-    const total = scenario.waves.reduce((n, wave) => n + wave.count, 0);
+    /*
+     * RE-ANCHORED FOR THE TWELVE-TO-TEN CUT, AND MADE MORE EXACT BY IT.
+     *
+     * This assertion counted every wave, which was the same number while
+     * every wave was an armed aeroplane. White Noise's jammers and its
+     * northern decoy group fold into this watch now, and neither can do
+     * anything to the ground — so the count the comment below is about is the
+     * ARMED count, and it is unchanged at twenty-two. The eight that carry
+     * nothing are asserted separately, because a fold that quietly dropped
+     * them would otherwise read as a pass.
+     */
+    const count = (kinds) => scenario.waves
+      .filter((wave) => kinds.includes(wave.type)).reduce((n, wave) => n + wave.count, 0);
     // Fifteen could not be failed by a beginner; twenty-one could not be
     // failed by a competent net once arriving cruise missiles were counted
     // (88% held at sixteen seeds, above act one's hardest watch). The
     // twenty-second is one more missile on the late run at the operations
     // centre — the package that arrives after the allocation is spent.
-    assert.equal(total, 22,
+    assert.equal(count(['striker', 'cruise', 'sead']), 22,
       'fifteen aircraft against four batteries could not be failed by a beginner');
+    assert.equal(count(['jammer', 'decoy']), 8,
+      'the dissolved jamming watch left two jammers and six decoys here');
   });
 
   test('the strike package that walks home comes in inside the ring it walks out of', () => {

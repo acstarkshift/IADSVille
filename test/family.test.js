@@ -230,10 +230,16 @@ describe('the post follows the file', () => {
   });
 
   test('a review that concludes with a quiet evening to spare still gets its own sheet', () => {
-    // Condemned on the fifth watch, with nothing to withhold; the review opens,
-    // two clean watches close it, and the seventh watch has no letter of its
+    // Condemned on a watch with nothing to withhold; the review opens, two
+    // clean watches close it, and the watch it closes on has no letter of its
     // own, so the notice arrives as paper in its own right.
-    const early = (id) => (id === 'white-noise' ? 5 : 60);
+    //
+    // RE-KEYED FOR THE TWELVE-TO-TEN CUT: this was the fifth watch, which was
+    // White Noise and carried no letter. The fifth watch is now Economy of
+    // Force, which carries the road letter, so condemning there withholds it
+    // and the walk measures a release instead of a notice. Weasel Hour is the
+    // watch that has the shape this test is about now.
+    const early = (id) => (id === 'weasel-hour' ? 5 : 60);
     const { sequence, payloads } = walk('sister', early);
     const notice = sequence.find((s) => s.id === 'permit-close');
     assert.deepEqual(notice, { id: 'permit-close', disposition: 'notice' });
@@ -311,10 +317,10 @@ describe('the surfaces', () => {
     const { campaign } = walk('sister', CLEAN);
     const ville = briefLine(campaign, 'ville-under-fire');
     assert.match(ville, /the mill quarter/, "the sister's household lives in the mill quarter");
-    assert.equal(briefLine(campaign, 'white-noise'), null, 'quiet when there is nothing to say');
+    assert.equal(briefLine(campaign, 'economy-of-force'), null, 'quiet when there is nothing to say');
 
     campaign.family.permit = 'review';
-    assert.match(briefLine(campaign, 'white-noise'), /residence permit/);
+    assert.match(briefLine(campaign, 'economy-of-force'), /residence permit/);
   });
 
   test('a withholding colours the next briefing note, and the epilogue silences the office', () => {

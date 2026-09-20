@@ -40,7 +40,7 @@ function trackAt(from, bearingDeg, rangeKm, extra = {}) {
 
 describe('the battalion has two sets', () => {
   test('long-range batteries carry an acquisition set and a sectored fire-control set', () => {
-    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'two-sets' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'two-sets' });
     const bastion = w.sites.find((s) => s.type === 'bastion');
     const sets = w.radarsOf(bastion);
     assert.equal(sets.length, 2, 'a battalion runs two antennas');
@@ -54,7 +54,7 @@ describe('the battalion has two sets', () => {
   });
 
   test('every other class keeps its single omnidirectional set', () => {
-    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'one-set' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'one-set' });
     for (const site of w.sites) {
       if (site.type === 'bastion') continue;
       assert.equal(w.radarsOf(site).length, 1, `${site.name} should run one set`);
@@ -65,7 +65,7 @@ describe('the battalion has two sets', () => {
   });
 
   test('one switch still runs the whole battery', () => {
-    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'switch' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'switch' });
     const bastion = w.sites.find((s) => s.type === 'bastion');
     w.setRadar(bastion.radarId, true);
     assert.ok(w.radarsOf(bastion).every((r) => r.on),
@@ -78,7 +78,7 @@ describe('the battalion has two sets', () => {
 
 describe('the arc is a real constraint', () => {
   test('a contact behind the antenna is neither seen nor guided on', () => {
-    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'arc' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'arc' });
     const bastion = w.sites.find((s) => s.type === 'bastion');
     const fc = fcRadarOf(w, bastion);
     fc.boresightDeg = 0;
@@ -94,7 +94,7 @@ describe('the arc is a real constraint', () => {
   });
 
   test('the mount traverses at five degrees a second and no faster', () => {
-    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'slew' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'slew' });
     const bastion = w.sites.find((s) => s.type === 'bastion');
     const fc = fcRadarOf(w, bastion);
     fc.boresightDeg = 0;
@@ -108,7 +108,7 @@ describe('the arc is a real constraint', () => {
   });
 
   test('the crew covers both targets when they fit, and the worst when they do not', () => {
-    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'cover' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'cover' });
     const bastion = w.sites.find((s) => s.type === 'bastion');
     const fc = fcRadarOf(w, bastion);
 
@@ -135,7 +135,7 @@ describe('the arc is a real constraint', () => {
   });
 
   test('a sectored set still detects: it rasters inside its wedge', () => {
-    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'raster' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'raster' });
     const bastion = w.sites.find((s) => s.type === 'bastion');
     const fc = fcRadarOf(w, bastion);
     fc.boresightDeg = 0;
@@ -159,7 +159,7 @@ describe('the arc is a real constraint', () => {
   });
 
   test('the sequence waits for the antenna, and the wait is the arc', () => {
-    const w = new World(scenarioById('white-noise'), { role: 'net', seed: 'wait' });
+    const w = new World(scenarioById('economy-of-force'), { role: 'net', seed: 'wait' });
     w.control.netIsHuman = true;
     const bastion = w.sites.find((s) => s.type === 'bastion');
     const fc = fcRadarOf(w, bastion);

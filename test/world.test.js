@@ -176,7 +176,7 @@ describe('engagement mechanics', () => {
   });
 
   test('rounds fired never exceed rounds carried', () => {
-    const world = readyWorld('white-noise');
+    const world = readyWorld('economy-of-force');
     run(world, 900);
     const capacity = world.sites.reduce((n, s) => n + SAM_TYPES[s.type].readyRounds + SAM_TYPES[s.type].magazine, 0);
     assert.ok(world.stats.roundsFired <= capacity, 'no rounds appeared from nowhere');
@@ -409,7 +409,7 @@ describe('scoring', () => {
   });
 
   test('shooting civil traffic is catastrophic for your file', () => {
-    const world = readyWorld('white-noise');
+    const world = readyWorld('economy-of-force');
     run(world, 400);
     const civil = world.aircraft.find((a) => a.type === 'civil' && a.alive);
     if (!civil) return;

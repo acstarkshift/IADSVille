@@ -217,8 +217,9 @@ export class CrewConsole extends Lettering {
   /**
    * The noise this battery's own set is looking into.
    *
-   * White Noise is a whole watch about standoff jamming and not one pixel of
-   * it was drawn: the detection model degraded the picture and the display
+   * The campaign has standoff jamming on two watches — Weasel Hour and
+   * Economy of Force, which inherited it when White Noise was dissolved — and
+   * not one pixel of it was drawn: the detection model degraded the picture and the display
    * said nothing, so a hole on a bearing looked exactly like empty sky. The
    * strobe is computed from the same numbers `effectiveRangeKm` uses — main
    * lobe half-width, and a burn-through range that grows the further off the

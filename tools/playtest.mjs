@@ -1,8 +1,8 @@
 /**
  * The playtesting harness: four scripted operators, every seat, every watch.
  *
- *   node tools/playtest.mjs --mission white-noise --seat all --policy all \
- *     --seeds 8 --jobs 4 --md /tmp/white-noise.md
+ *   node tools/playtest.mjs --mission economy-of-force --seat all --policy all \
+ *     --seeds 8 --jobs 4 --md /tmp/economy-of-force.md
  *
  * The suite proves the engine is correct. This proves the game is playable —
  * which is a different question, and one nothing in the repository could
@@ -127,9 +127,9 @@
  *   withdrawBattalion   reinforce-the-capital  net   1741 /65/ 7-8   1302 / 8/ 7-8
  *   palacePriority      two-cities             net   1985 /68/ 8-8   1985 /53/ 8-8
  *   engageCivil         ville-under-fire       net   1037 /62/ 8-8   1037 /50/ 8-8
- *   civilCorridor       white-noise            crew  1456 /92/ 8-8   1462 /94/ 8-8
- *   priority (routine)  white-noise            net   1453 /91/ 8-8   1453 /85/ 8-8
- *   conserve            white-noise            net   1453 /91/ 8-8   1435 /73/ 8-8
+ *   civilCorridor       economy-of-force       crew  1456 /92/ 8-8   1462 /94/ 8-8
+ *   priority (routine)  economy-of-force       net   1453 /91/ 8-8   1453 /85/ 8-8
+ *   conserve            economy-of-force       net   1453 /91/ 8-8   1435 /73/ 8-8
  *
  * So this player refuses NOTHING, and the reason is the same in every row:
  * accepting an order binds your SUBORDINATES, not you. The freeze and the

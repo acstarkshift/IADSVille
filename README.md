@@ -1382,8 +1382,8 @@ A few decisions worth knowing about if you read the source:
   Reproduce a watch's table with:
 
   ```
-  node tools/playtest.mjs --mission white-noise --seat all --policy all \
-    --seeds 8 --jobs 4 --md /tmp/white-noise.md
+  node tools/playtest.mjs --mission economy-of-force --seat all --policy all \
+    --seeds 8 --jobs 4 --md /tmp/economy-of-force.md
   ```
 
 - **The rack comes back a rail at a time.** A reload used to put the battery
