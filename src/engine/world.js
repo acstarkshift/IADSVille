@@ -17,7 +17,7 @@
  */
 
 import {
-  SIM, SAM_TYPES, RADAR_TYPES, ASSET_TYPES, AIR_TYPES, DETECTION, DIFFICULTY, COMMAND, DAMAGE,
+  SIM, SAM_TYPES, RADAR_TYPES, ASSET_TYPES, AIR_TYPES, DETECTION, DIFFICULTY, COMMAND, DAMAGE, WATCH,
 } from './config.js';
 import { makeRng } from './rng.js';
 import {
@@ -950,6 +950,15 @@ export class World {
       }
     }
     this.pendingWaves.sort((a, b) => a.atS - b.atS);
+    /*
+     * And the moment sector stops waiting. Counted off the last aeroplane the
+     * table puts in the air, not off the clock, so a watch that is still
+     * launching has not run out of time — see WATCH in config.js.
+     */
+    const lastSpawnS = this.pendingWaves.length
+      ? this.pendingWaves[this.pendingWaves.length - 1].atS : 0;
+    this.watchCeilingS = this.scenario.watchCeilingS
+      ?? lastSpawnS + (this.scenario.watchTailS ?? WATCH.tailAfterLastSpawnS);
     // Friendly movements are not sorties. An airliner crossing the corridor and
     // a state aircraft leaving the country are both traffic, not raid.
     this.stats.sortiesTotal = this.pendingWaves.filter((w) => !AIR_TYPES[w.type]?.friendly).length;
@@ -2546,6 +2555,21 @@ export class World {
        */
       if (this.scenario.finale || this.scenario.epilogue) this.playOutWithoutYou();
       this.finish('site-lost');
+      return;
+    }
+    /*
+     * THE CEILING. Sector calls the raid off, and the watch is scored on what
+     * happened rather than on whether the dice eventually agreed.
+     *
+     * It is said out loud and it is said as an order, because a watch that
+     * simply stopped would read as a bug — and because on the teaching watch
+     * this is the sentence a hesitant player will actually get, and it should
+     * sound like being stood down rather than like being switched off.
+     */
+    if (this.t >= (this.watchCeilingS ?? Infinity)) {
+      this.log('good', 'SECTOR: RAID WITHDRAWN. STAND DOWN AND REPORT.', { severity: 'high' });
+      this.comms?.('SECTOR ACTUAL', 'THEY HAVE TURNED FOR HOME. STAND YOUR SECTION DOWN AND GET ME A COUNT.');
+      this.finish('raid-withdrawn');
       return;
     }
     // An aircraft running for the border with a hundred kilometres behind it is

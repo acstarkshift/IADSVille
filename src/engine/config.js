@@ -1065,6 +1065,40 @@ export const DAMAGE = {
  * mission, it decides the tone of the next briefing, and at the bottom of the
  * scale it starts changing the missions you are given.
  */
+/**
+ * How long a watch is allowed to go on.
+ *
+ * A watch ended when the raid was spent, and nothing said how long that could
+ * take. The experience critic measured the consequence on the teaching watch
+ * and it is the wrong way round: "the teaching watch has no ceiling and gets
+ * LONGER the worse you are. A competent hand finishes it in 5:58; a hand that
+ * hesitates sits there for 15:50 and loses. That is backwards: the player most
+ * likely to be slow is the one playing watch one." Their own cold first-timer
+ * run took 15:43 and the last nine minutes were watching one battery re-engage
+ * two stragglers.
+ *
+ * So sector calls the raid off. The ceiling is counted from the LAST SPAWN of
+ * the scenario's own table rather than being a flat number, because a watch
+ * that is still putting aeroplanes into the air has not finished; what is
+ * being cut is the tail behind them. Five minutes is long enough for anything
+ * already airborne to reach whatever it was sent to and be answered — the
+ * slowest thing in the catalogue crosses the longest approach in about four —
+ * so nothing that could still arrive is taken off the board by this.
+ *
+ * `watchCeilingS` on a scenario overrides it outright; `watchTailS` overrides
+ * the five minutes.
+ *
+ * FIVE MINUTES AND NOT FOUR, AND THE FOUR WAS MEASURED. A four-minute tail
+ * takes the campaign from 118.8 median minutes to 113.0, and pays for it by
+ * taking aeroplanes off the board that were still going to arrive: The Two
+ * Cities goes from 63 per cent held to 83 and Low Riders from 83 to 96 over
+ * twenty-four seeds, act four's mean rises above act three's, and the
+ * staircase inverts. Five cuts the chase and nothing else.
+ */
+export const WATCH = {
+  tailAfterLastSpawnS: 300,
+};
+
 export const COMMAND = {
   startingStanding: 50,
   minStanding: 0,

@@ -394,15 +394,82 @@ describe('the raid', () => {
   });
 });
 
+describe('the watch has a ceiling', () => {
+  /*
+   * THE TEACHING WATCH GOT LONGER THE WORSE YOU WERE, and that is backwards.
+   * Measured by the experience critic: a competent hand finished First Light
+   * in 5:58 and a hand that hesitated sat there for 15:50 and lost, with the
+   * last nine minutes spent watching one battery re-engage two stragglers.
+   * The player most likely to be slow is the one playing watch one.
+   *
+   * Sector calls the raid off now, five minutes after the last aeroplane the
+   * scenario's own table puts in the air, and the watch is scored on what
+   * happened rather than on whether the dice eventually agreed.
+   */
+  test('a watch nobody fights is called off rather than run to a standstill', () => {
+    const w = new World(scenarioById('first-light'), { role: 'net', seed: 'ceiling-1' });
+    for (const radar of w.radars) radar.on = false;
+    for (const site of w.sites) w.setWeaponsState(site.id, 'hold');
+    run(w, 3000, (world) => { for (const r of world.radars) r.on = false; });
+    assert.equal(w.phase, 'complete');
+    assert.equal(w.outcome.reason, 'raid-withdrawn');
+    assert.ok(w.t <= w.watchCeilingS + 0.2,
+      `the watch ran to ${Math.round(w.t)}s against a ceiling of ${Math.round(w.watchCeilingS)}s`);
+    assert.ok(w.events.some((e) => /RAID WITHDRAWN/.test(e.text)),
+      'and it is said out loud, as an order, not as the screen simply stopping');
+  });
+
+  test('the ceiling is counted off the last spawn, so a watch still launching is never cut', () => {
+    for (const scenario of SCENARIOS) {
+      const w = new World(scenario, { role: scenario.roles[0], seed: 'ceiling-2' });
+      const lastSpawnS = w.pendingWaves[w.pendingWaves.length - 1].atS;
+      assert.ok(w.watchCeilingS > lastSpawnS + 200,
+        `${scenario.id} would be called off ${Math.round(w.watchCeilingS - lastSpawnS)}s `
+        + 'after its last aeroplane leaves the ground');
+    }
+  });
+
+  /*
+   * And the ceiling may not be a rescue. Five minutes is long enough for
+   * anything already airborne to reach whatever it was sent to — a
+   * four-minute tail was measured and takes The Two Cities from 63 per cent
+   * held to 83 and inverts act four against act three, which is the shape of
+   * a raid being taken off the board rather than a chase being cut.
+   */
+  test('a watch that is fought still ends when the raid is spent, not at the ceiling', () => {
+    const w = readyWorld('first-light', { seed: 'ceiling-3' });
+    run(w, 3000, (world) => { if (world.command.pending) world.answer('accepted'); });
+    assert.equal(w.outcome.reason, 'raid-spent');
+    assert.ok(w.t < w.watchCeilingS,
+      'competent play finishes inside the ceiling, which is what makes it a ceiling');
+  });
+});
+
 describe('scoring', () => {
   test('a clean watch beats a penetrated one', () => {
+    /*
+     * BOTH ARMS ANSWER THE NET, and the good one did not used to.
+     *
+     * `readyWorld` sets `netIsHuman = false` so the doctrine AI drives the
+     * assignment, and nothing then answers sector command — so the defended
+     * watch was charged twenty-four points for ignoring two orders while the
+     * abandoned one was charged nothing, because a console that never
+     * radiates has no hostile track count and the orders never trigger. That
+     * was survivable while the abandoned arm ran twelve minutes and collected
+     * thirty-four points of emissions silence. Sector calls the raid off at
+     * the watch ceiling now, the silence charge halves, and the paperwork
+     * penalty on the defending arm became the whole difference. It is not
+     * what this test is about: a clean watch beats a penetrated one on what
+     * was defended, not on who filled in a form.
+     */
+    const answerTheNet = (w) => { if (w.command.pending) w.answer('accepted'); };
     const good = readyWorld('first-light');
-    run(good, 3000);
+    run(good, 3000, answerTheNet);
 
     const bad = new World(scenarioById('first-light'), { role: 'net' });
     for (const radar of bad.radars) radar.on = false;
     for (const site of bad.sites) bad.setWeaponsState(site.id, 'hold');
-    run(bad, 3000, (w) => { for (const r of w.radars) r.on = false; });
+    run(bad, 3000, (w) => { for (const r of w.radars) r.on = false; answerTheNet(w); });
 
     assert.ok(good.outcome.score > bad.outcome.score, 'defending the sector is worth points');
     assert.ok(good.command.standing > bad.command.standing, 'and worth standing');

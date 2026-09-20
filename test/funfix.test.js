@@ -236,7 +236,19 @@ describe('attention matters at sector level', () => {
      * Forty seconds of build time is the price of the campaign's load-bearing
      * property being measured rather than sampled.
      */
-    const ladderSeeds = Array.from({ length: 24 }, (_, i) => `g${i + 1}`);
+    /*
+     * FORTY-EIGHT SEEDS AND NOT TWENTY-FOUR, AND THE MEASUREMENT IS WHY.
+     *
+     * When sector started calling the raid off at the watch ceiling this read
+     * 0.937 over twenty-four seeds — the AI net apparently taxing its own
+     * crews by six per cent — and 1.118 over forty-eight on the same tree.
+     * The property did not move; the sample did. This is the third time in
+     * one pass that a paired statistic on this watch has been the thing being
+     * measured rather than the thing measured (the band test went to
+     * twenty-four seeds for the same reason, and the district withdrawal's
+     * paired count to sixteen). It costs the suite about a minute.
+     */
+    const ladderSeeds = Array.from({ length: 48 }, (_, i) => `g${i + 1}`);
     let aiScore = 0;
     let freeScore = 0;
     for (const seed of ladderSeeds) {
