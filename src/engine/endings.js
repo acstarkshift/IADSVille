@@ -265,8 +265,8 @@ export const ENDINGS = {
     plainTitle: 'PALACE HELD, VILLE LOST',
     plainSummary: (r) => `The palace stands. The Ville is ${harmPhrase(r.villeHarm)}, with ${r.casualties} casualties.`,
     standing: 14,
-    card: 'Your file closes on this watch with a recommendation in it. The recommendation does not'
-      + ' mention the valley.',
+    card: 'Your file closes on this watch with a recommendation in it. The recommendation is two'
+      + ' lines long, and both lines are about the palace.',
     lines: (r, character) => [
       `The presidential palace at ${CAPITAL.en} is undamaged. The state broadcast at 0600 described the`
         + ' defence of the capital as exemplary and did not mention the western valley.',
@@ -340,8 +340,8 @@ export const ENDINGS = {
     plainTitle: 'BOTH DAMAGED',
     plainSummary: (r) => `${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')}, with ${r.casualties} casualties.`,
     standing: -12,
-    card: 'The finding goes into the file tonight. Nobody at the district has asked to see you'
-      + ' about it.',
+    card: 'The finding goes into the file tonight. The district\'s copy goes up in the morning bag'
+      + ' with the returns.',
     lines: (r, character) => [
       `Both places were struck. ${harmPair(r.palaceHarm, r.villeHarm, 'The palace', 'the Ville')},`
         + ` with ${r.casualties} casualties recorded in the valley.`,
@@ -360,15 +360,15 @@ export const ENDINGS = {
           + ' to that note.'
         : 'It does not mention the third axis, or the strike package that came for this post, or what'
           + ' answering it cost the other two. Those aircraft are recorded as having been engaged.',
-      `The finding is correct as far as it goes. It does not record that ${r.sorties || 28} aircraft`
-        + ' were committed against this sector, or how many rounds were on the rails, because those'
-        + ' figures were not asked for.',
+      `The finding is correct as far as it goes. The ${r.sorties || 28} aircraft that were committed`
+        + ' against this sector, and what was on the rails to meet them, are on the tape; the'
+        + ' finding was written from the returns.',
       r.homeDistrictHit
         ? `${homeSentence(character)} is on the damage returns.`
         : `${homeSentence(character)} is not on the damage returns.`,
       `${householdSubject(character)} will be notified if there is anything to notify, and the`
-        + ' sector has undertaken that in writing. Nothing else about tonight was put in writing'
-        + ' for you.',
+        + ' sector has undertaken that in writing. The undertaking is the one paper from tonight'
+        + ' with your name at the top of it.',
       // A plain fact to end on, for the ending most people get.
       'You remain on the watch roster. Your relief arrives at seven, on time, and takes the seat'
         + ' from you with the log open at the same page.',
@@ -489,8 +489,9 @@ export const ENDINGS = {
         + ` the valley's returns came up carrying ${r.casualties} names. The batteries that were already`
         + ' engaged finished their engagements and then stopped, because nobody was left to give'
         + ' them anything else.',
-      'The review will find that the post neither displaced nor engaged the third axis. It will not'
-        + ' record what either of those would have cost the two cities, because it was not asked to.',
+      'The review will find that the post neither displaced nor engaged the third axis. It is a'
+        + ' review of the post; the two cities are on other returns, and the returns are in a'
+        + ' different office.',
       `${householdSubject(character)} will hear from the district office in writing, whenever the`
         + ' district office gets to it. You are not on the list of people it writes to.',
       'The sector will record the loss of the post as an equipment casualty, because the alternative'
@@ -512,9 +513,10 @@ export const ENDINGS = {
       'The presidential palace and the Ville are both destroyed. The valley\'s returns carry'
         + ` ${r.casualties} names, and the figure for the capital has not been released.`,
       'The post is intact. Nobody attacked it in the end, or nobody attacked it successfully, and the'
-        + ' distinction is not one the review will trouble itself with.',
+        + ' review has one heading for both.',
       `The raid was ${r.sorties || 28} aircraft against six batteries with no resupply behind them.`
-        + ' The review will not record that, because the review is about you.',
+        + ' The review is about you. The raid has a form of its own, and the two forms are filed'
+        + ' apart.',
       r.orderRefused
         ? 'You refused the priority of fires on the net, and neither city was defended after it. The'
           + ' referral will quote the refusal and nothing that followed, because nothing did.'
@@ -522,8 +524,8 @@ export const ENDINGS = {
       r.homeDistrictHit
         ? `${homeSentence(character)} was among the quarters struck.`
         : `Every quarter was struck, ${homePhrase(character)} among them.`,
-      `${householdSubject(character)} had no notification, and there is nobody left at the sector`
-        + ' office to ask.',
+      `${householdSubject(character)} had no notification. The sector office's telephone rings`
+        + ' out.',
       'You are removed from the watch roster and referred to the political section. The referral does'
         + ' not specify a charge. They rarely do at this stage.',
     ],

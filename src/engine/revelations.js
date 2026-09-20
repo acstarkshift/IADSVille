@@ -227,13 +227,13 @@ export const REVELATIONS = {
     title: 'THE TRANSFER',
     desk: {
       plate: 'THE TRANSFER MANIFESTS',
-      gist: 'Left open on the desk. Nobody in the office that files them has come in.',
+      gist: 'Left open on the desk. The office that files them is dark.',
       yours: true,
     },
     lines: [
-      'The transfer manifests are not secret. They are boring, and they are filed in a room nobody'
-        + ' has a reason to enter. Tonight they are on your desk, open, because nobody in the'
-        + ' office that files them has come in.',
+      'The transfer manifests are not secret. They are boring, and they are filed in a room with'
+        + ' one clerk and no lock. Tonight they are on your desk, open, because the clerk went home'
+        + ' at four and the room is dark.',
       'Two hundred and sixty rounds left this sector across eleven months, on a schedule of routine'
         + ' redistributions. The same office signed off every one of them, and every one crossed the'
         + ' frontier within a week of being recorded.',

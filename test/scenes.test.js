@@ -441,7 +441,7 @@ describe('what is said', () => {
         state.campaign.standing = 60;
         const clean = scenesFor(state, { ...result, tier: 'satisfactory' }, entry)
           .find((s) => s.id === 'appointment');
-        assert.ok(!clean.lines.some((l) => /Nobody has withdrawn it|will sit in the same file/.test(l)),
+        assert.ok(!clean.lines.some((l) => /It stands, and so does the entry|will sit in the same file/.test(l)),
           'a decent night gets the order without a caveat');
         const bad = scenesFor(state, { ...result, tier: 'condemned' }, entry)
           .find((s) => s.id === 'appointment');

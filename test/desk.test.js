@@ -154,7 +154,7 @@ describe('the morning the office is empty', () => {
     assert.equal(office.kind, 'finding', 'the room is drawn the way the finding draws it: empty');
     assert.equal(office.empty, true);
     assert.match(office.speaker, /NOBODY IN/);
-    assert.ok(office.lines.some((l) => /since five/.test(l)), 'the note agrees with the ending about the hour');
+    assert.ok(office.lines.some((l) => /\bat five\b|since five/.test(l)), 'the note agrees with the ending about the hour');
     assert.ok(!office.lines.some((l) => /^Dismissed\.$|^You may go\.$|^Sign here/.test(l)),
       'nobody is dismissed by an empty room');
     assert.ok(office.lines.length >= 2 && office.lines.length <= 3, 'two or three lines of paper the clerk left');

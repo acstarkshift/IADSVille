@@ -240,7 +240,8 @@ export const FLIGHT_ENDINGS = {
       'The paperwork names the Federation once, as the origin of the fighters, and does not mention'
         + ' it again. Nineteen months of this war and nobody has written down what it is about.',
       'The state broadcast said nothing for two days and then described an accident during a routine'
-        + ' inspection flight. Nobody in the sector has repeated this and nobody has contradicted it.',
+        + ' inspection flight. The sector\'s own return says shot down, and both papers are in the'
+        + ' same file.',
       `${householdSubject(character)} had no notification either way, and the office that would`
         + ' make one is being packed into crates.',
       'You are relieved of the watch pending the inquiry. Nobody has told you where to go, which is'
@@ -259,7 +260,8 @@ export const FLIGHT_ENDINGS = {
     plainTitle: 'YOU SHOT DOWN STATE 01',
     plainSummary: (r) => `STATE 01 was destroyed by ${r.firedBy ?? 'your own battery'}`
       + `, ${r.roundsAtFlight} round${r.roundsAtFlight === 1 ? '' : 's'} expended.`,
-    card: 'You are still at the console at noon. Nobody has come to relieve you.',
+    card: 'You are still at the console at noon. The duty clerk has brought a second chair in and'
+      + ' is sitting on it.',
     lines: (r, character) => [
       `STATE 01 was engaged by ${r.firedBy ?? 'this sector'} and came down in the Tavrov district,`
         + ' which is farmland with villages in it. The list of who was aboard is held by the ministry'
@@ -270,7 +272,8 @@ export const FLIGHT_ENDINGS = {
           + ' did this. Both transmissions are on the same tape, four minutes apart.'
         : r.orderRefused
           ? 'You refused the order to protect it at all cost, on the net, in the clear, and then you did'
-            + ' this. The refusal and the launch are on one tape, and nobody has asked for the tape.'
+            + ' this. The refusal and the launch are on one tape, and the tape is in the drawer with'
+            + ' the others.'
           : 'You were ordered to protect it at all cost. You did not answer the net. The silence and the'
             + ' launch are eleven seconds apart on the tape.',
       'No board of inquiry has been convened. The political section has not been reached since 0500 and'
@@ -290,7 +293,8 @@ export const FLIGHT_ENDINGS = {
        * saying the middle of the page again.
        */
       'At ten the duty clerk brought the morning returns in and put them on the desk beside you,'
-        + ' because that is where they go. He did not ask you to sign for them.',
+        + ' because that is where they go. He had signed for them himself, in the space where your'
+        + ' signature goes.',
     ],
   },
 
@@ -304,7 +308,7 @@ export const FLIGHT_ENDINGS = {
     subtitle: 'THE WATCH WAS BROKEN OFF',
     plainTitle: 'THE FLIGHT LEFT THE PICTURE UNRESOLVED',
     plainSummary: () => 'The watch ended with STATE 01 still airborne and unaccounted for.',
-    card: 'You are relieved at 0700 by a man who does not ask what happened.',
+    card: 'You are relieved at 0700 by a man from the district who has brought his own log.',
     lines: (r, character) => [
       'The watch ended with STATE 01 still airborne, south-east of Tavrov, outside the coverage of'
         + ' anything this sector still had on the air.',

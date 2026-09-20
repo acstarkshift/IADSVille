@@ -10,6 +10,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { World } from '../src/engine/world.js';
 import { scenarioById } from '../src/engine/scenarios.js';
@@ -83,8 +84,10 @@ describe('refusal is legible', () => {
     const quiet = { ...result, ledger: [{ t: 700, delta: -14, charged: -14, reason: 'acknowledged the engagement order and did not carry it out' }] };
     const line = office(state, quiet, entry).lines.find((l) => /civil transit/.test(l));
     assert.ok(line, 'the quiet refusal is read back');
-    assert.match(line, /you agreed/);
-    assert.ok(!/fail/.test(line.replace('failed to carry', '')), 'he is not accusing them of failing');
+    // He says what the file calls it, and names the heading he could have used.
+    assert.match(line, /an acknowledgement, in your voice/);
+    assert.match(line, /a heading for an order not carried out, and I have not used it/);
+    assert.ok(!/fail/.test(line), 'he is not accusing them of failing');
     const done = { ...result, ledger: [{ t: 700, delta: 2, charged: 2, reason: 'civil transit engaged as ordered' }] };
     assert.ok(office(state, done, entry).lines.some((l) => /engaged as ordered/.test(l)),
       'and so is doing it');
@@ -472,5 +475,54 @@ describe('the hook is paid', () => {
     readFolder(campaign, 'buyer');
     assert.match(standing(campaign), /Brasov/);
     assert.ok(scenarioById('four-sectors').brief.some((l) => /Brasov/.test(l)), 'and the hook is still pulled');
+  });
+});
+
+/*
+ * The player: "The commissar spends too much time saying 'no one will look at
+ * this.' I don't even know what that means." The construction — nobody, no
+ * one, and a verb of attention in the negative — was the dominant sentence
+ * shape of the whole closing register, doing four different jobs in the same
+ * words: a threat, a reassurance, a trap, and a complaint about his own work.
+ * The survivors each do one of those plainly, and there are few enough of
+ * them to land. This reads the source the way the palette test does, so the
+ * count cannot creep back up a line at a time.
+ */
+describe('nobody is rare', () => {
+  test('nobody, with a verb of attention, appears in the closing register a handful of times', () => {
+    const FILES = ['src/engine/endings.js', 'src/engine/epilogue.js', 'src/engine/revelations.js',
+      'src/engine/campaign.js', 'src/ui/scenes.js', 'src/ui/screens.js', 'src/ui/desk.js'];
+    const LIT = /'((?:[^'\\]|\\.)*)'|"((?:[^"\\]|\\.)*)"|`((?:[^`\\]|\\.)*)`/g;
+    const SHAPE = /\b(nobody|no one|no-one)\b[^.;]{0,40}\b(ask\w*|read\w*|look\w*|mention\w*|notic\w*|record\w*|enter\w*|sign\w*|listen\w*|tell|tells|told|say|says|said|see|seen|shown|reliev\w*|come|came|offer\w*|written|write|writes|explain\w*|claim\w*|withdraw\w*)\b/i;
+    const hits = [];
+    for (const f of FILES) {
+      const src = readFileSync(new URL(`../${f}`, import.meta.url), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+      for (const m of src.matchAll(LIT)) {
+        const s = m[1] ?? m[2] ?? m[3] ?? '';
+        if (SHAPE.test(s)) hits.push(`${f}: ${s.slice(0, 90)}`);
+      }
+    }
+    assert.ok(hits.length <= 8, `${hits.length} lines say nobody will look:\n${hits.join('\n')}`);
+    // And the ones that stay are the ones with a job: his own file, the war
+    // nobody has written down, the clerk's advice about the form.
+    assert.ok(hits.some((h) => /nobody has offered/.test(h)), 'the one thing he says about himself');
+    assert.ok(hits.some((h) => /written down what it is about/.test(h)));
+    assert.ok(hits.some((h) => /nobody reads the/.test(h)), 'the clerk, once, about the reason box');
+  });
+
+  test('the office says what the district reads, in more than one way, and never that nobody will look', () => {
+    const { state, result, entry } = stood('economy-of-force');
+    const all = [];
+    for (let turn = 0; turn < 4; turn++) {
+      state.campaign.standing = 60;
+      state.campaign.history = Array.from({ length: turn }, () => ({ tier: 'satisfactory' }));
+      all.push(...office(state, result, entry).lines);
+    }
+    const text = all.join(' ');
+    // A sincere reassurance with the mechanism in it...
+    assert.match(text, /loss return clipped to the front|loss return is blank|goes in the drawer and stays there/);
+    // ...and no evening tells the player nobody will look at anything.
+    assert.ok(!/nobody will|no one will|read by nobody|nobody has asked/i.test(text), text);
   });
 });

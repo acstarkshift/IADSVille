@@ -232,8 +232,9 @@ describe('leaving the post', () => {
     // The history line used to read tier 'satisfactory', and the debrief read
     // that word back under a headline that said the post had been left.
     assert.equal(campaign.history[0].tier, 'abandoned');
-    // And the file has something of its own to say about it next time.
-    assert.match(briefingNote(campaign), /signed for you/);
+    // And the file has something of its own to say about it next time: the
+    // clerk signed the log for the watch that was left.
+    assert.match(briefingNote(campaign), /signed the log for the watch you left/);
   });
 
   test('the cause clause is one clause, with the clock in it', () => {

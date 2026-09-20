@@ -144,7 +144,7 @@ const NOT_HELD = [
   '',
   'The next rung. You will be given it when you are given it.',
   'Two appointments above yours. You have not met the man who holds it.',
-  'Three appointments above yours. Nobody has told you who holds it.',
+  'Three appointments above yours. The name on it changes with the gazette.',
   'Four appointments above yours. It is a name on a signature block.',
   'Five appointments above yours. It is held in Mostrograd.',
 ];
@@ -1249,7 +1249,7 @@ export function renderDebrief(host, state, result, entry) {
       ${state.narrativePressure && (consequence.tier.id === 'flagged' || consequence.tier.id === 'condemned')
     ? `<p>${consequence.tier.id === 'condemned'
       ? 'The order is dated today and mentions nothing that happened tonight.'
-      : 'The order was drawn up before tonight\'s entry reached the file. Nobody has withdrawn it.'}</p>` : ''}
+      : 'The order was drawn up before tonight\'s entry reached the file. It stands, and so does the entry.'}</p>` : ''}
       <p class="note">${esc(entry.appointment.echelon.blurb)}</p>
     </div>` : ''}
 
