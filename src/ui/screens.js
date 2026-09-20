@@ -366,7 +366,34 @@ export function renderMenu(host, state) {
       </div>
     </div>
 
-    <div class="actions">
+    ${/*
+     * THE WATCH STARTS WITHOUT SCROLLING FOR IT, AND SO DOES THE DIFFICULTY.
+     *
+     * Two findings, one bar. The experience critic measured the menu at
+     * 390x844: "the first watch card 1.4 screens down, the seat row 2.9
+     * screens down, BRIEF 3.7 screens down... roughly thirteen screens of
+     * thumb-scrolling and five taps before the game starts, every single
+     * watch". And separately: "CONSCRIPT / OFFICER / EXPENDABLE sit at
+     * y=1784 — 1.9 screens down at 1600x950... Given that the teaching watch
+     * runs sixteen minutes for a slow player, the control that would fix that
+     * is the one they will never find."
+     *
+     * Their fix for the first is "sticky action bars. Nobody should ever have
+     * to scroll to start", and for the second "put the difficulty row next to
+     * the seat row, above the BRIEF button". The difficulty row IS next to
+     * the seat row already — both are simply under a ten-watch list — so
+     * pinning the bar answers both at once, and the bar carries the three
+     * words as chips so the control the player needs is on screen from the
+     * first pixel of the menu.
+     *
+     * The chips share `[data-difficulty]` with the card below, which is how
+     * they are already wired: `showMenu` binds every one on the page.
+     */ ''}
+    <div class="actions is-pinned">
+      <div class="pinned-diff" role="group" aria-label="Difficulty">
+        ${Object.values(DIFFICULTY).map((d) => `<button class="chip ${state.difficulty === d.id ? 'is-active' : ''}"
+          data-difficulty="${d.id}" title="${esc(d.blurb)}">${esc(d.label)}${d.recommended ? ' ★' : ''}</button>`).join('')}
+      </div>
       <button class="btn-primary" id="btn-brief">TAKE THE WATCH</button>
       <button class="btn" id="btn-dossier">DOSSIER</button>
       <button class="btn" id="btn-keys">CONTROLS</button>
@@ -520,7 +547,7 @@ export function renderBriefing(host, state) {
     <div class="record-foot-line"><span>${esc(issuedBy(mission))}</span>
       <span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}</span></div>
 
-    <div class="actions">
+    <div class="actions is-pinned">
       <button class="btn-primary" id="btn-start">BEGIN</button>
       <button class="btn" id="btn-back">BACK</button>
     </div>
@@ -1343,7 +1370,7 @@ export function renderEndCard(host, state, result) {
     ...(result.abandoned
       ? [['SCORE', 'NOT SCORED']]
       : [['SCORE', String(result.score)],
-        ['STANDING', `${Math.round(result.standing)} — ${result.tierLabel}`]]),
+        ['STANDING THIS WATCH', `${Math.round(result.standing)} — ${result.tierLabel}`]]),
     ['SEAT', ROLES[result.role].label],
   ];
 
@@ -1634,11 +1661,56 @@ export function renderControls(host, { salvo = true, ride = true, displace = tru
       air.</p>
     </div>
 
+    ${/*
+     * THE SECTION THAT SAYS WHAT TO DO.
+     *
+     * The experience critic: "The handbook is a handsome, complete,
+     * four-section keyboard reference, and for two of the four seats it is
+     * the only teaching that exists. It tells you which key does what. It
+     * does not tell you what to do: nothing in it says when to go silent,
+     * what an ARM warble means you should do in the next ten seconds, why a
+     * battery is refusing, or how to spend eighteen rounds across nine
+     * contacts. On a phone, where there are no keys, most of it is
+     * inapplicable."
+     *
+     * So: eight sentences of doctrine, which is what they asked for, in the
+     * order a watch actually presents them. It is deliberately not a list of
+     * keys and it is the one section on this page that is worth anything to
+     * a thumb.
+     */ ''}
+    <div class="card">
+      <h3>The trade</h3>
+      <p><b>Radiate to see, and be seen for it.</b> Nothing is on the scope until a set is
+      transmitting, and everything that can hear is listening while it does. The whole game is
+      that one sentence; every other decision here is a consequence of it.</p>
+      <p><b>The exposure figure is how well they have you.</b> It climbs while you radiate and
+      falls while you do not. It is not a score — it is the probability that the next
+      anti-radiation round has a bearing worth flying down.</p>
+      <p><b>Go quiet before the round arrives, not after.</b> A warble on the net means something
+      is homing on one of your sets. Switching that set off ends the warble and the round falls in
+      a field — but anything you are guiding falls with it, so it is a choice and not a reflex.</p>
+      <p><b>Point the set, and know what you stopped watching.</b> Holding a sector paints what is
+      inside it six times as often and paints nothing outside it at all. Use it to be sure of one
+      contact, not to watch one corner all night.</p>
+      <p><b>Call it before anybody shoots it.</b> At the set the launch officer fires at nothing
+      you have not read to him. At the net a battery fires at nothing you have not given it. A
+      contact nobody has been told about is a contact nobody is on.</p>
+      <p><b>A refusal is information.</b> When a battery will not take a contact the console says
+      why in its own words — out of range, too high at this range, no channel free, wrong side of
+      the arc, not under your command. The reason is the next thing to fix.</p>
+      <p><b>Spend rounds where the shot is good.</b> The kill estimate on the cabin's panel is the
+      crew's own arithmetic: range, height, whether the target is manoeuvring. Two rounds at a poor
+      shot cost more than one round at a good one and buy less.</p>
+      <p><b>The net remembers both answers.</b> Sector command's orders can be acknowledged or
+      refused, and your file records which — including the orders you never answered at all. The
+      figures in the morning are what happened; the file is what you said.</p>
+    </div>
+
     ${/* The foot of an issued manual: what edition it is and who issued it. */ ''}
     <div class="record-foot-line"><span>Issued with the console</span>
       <span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}</span></div>
 
-    <div class="actions"><button class="btn-primary" id="btn-close-help">BACK</button></div>
+    <div class="actions is-pinned"><button class="btn-primary" id="btn-close-help">BACK</button></div>
   </div>`;
   paintNomenclature(host);
   toTop(host);

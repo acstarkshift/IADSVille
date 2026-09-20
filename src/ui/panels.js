@@ -2798,6 +2798,30 @@ export function renderActionBar(world, ui, els, cabin) {
       extra: `pb-fire pb-rail${status.canFire ? ' is-armed' : ''}`,
       title: fireCapNote(crewed, status, unfit, !aim),
     }));
+    /*
+     * AND RELOAD, ON A PHONE, BECAUSE OTHERWISE IT IS NOT ON THE SCREEN.
+     *
+     * The interface critic, measured in both orientations: "RELOAD measures
+     * outside the viewport in both portrait and landscape — so the one
+     * control that decides whether you can go on shooting is off the screen
+     * on the seat where running dry ends the watch, and it is not on the
+     * rail." With a directive up the whole cabin pad is below the fold. The
+     * rail is the one strip on a phone that never scrolls, and it exists for
+     * exactly this: "whichever verbs the seat cannot be played without".
+     *
+     * Only on a phone. On a desk the cap is on the cabin pad where it belongs,
+     * beside the store count it is about, and a second copy on the rail would
+     * be two controls for one verb on a screen with room for the first.
+     */
+    if (isPhoneConsole()) {
+      caps.push(press(CONTROLS.reload, {
+        act: 'reload', site: crewed.id, extra: 'pb-rail',
+        disabled: !canStartLoading(world, crewed),
+        title: canStartLoading(world, crewed) ? 'Loaders out — fill the rails now'
+          : crewed.magazine <= 0 ? 'Nothing left in store to load'
+            : 'The rails are full or the loaders are already out',
+      }));
+    }
   } else if (world.control.role === 'radar') {
     /*
      * And the set's launch is a sentence on the radio. One cap, no battery to

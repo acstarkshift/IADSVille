@@ -166,7 +166,7 @@ export function renderEnlistment(host, state) {
     <div class="record-foot-line"><span>Kept by the sector political section</span>
       <span>${esc(STATE.serviceShort.tm)} · ${esc(STATE.serviceShort.en)}</span></div>
 
-    <div class="actions">
+    <div class="actions is-pinned">
       <button class="btn-primary" id="enlist-confirm">ENLIST</button>
       <button class="btn" id="enlist-defaults"
         title="Take the suggested name and the clerk's defaults, and get to the console">
@@ -229,7 +229,9 @@ export function renderDossier(host, state) {
       { mood: character.wounded ? 'is-bad' : '' }),
   ])}
       ${fields([
-    field('Standing', Math.round(state.campaign.standing)),
+    // The running figure, not tonight's. See CONTROLS.standing in lexicon.js:
+    // three screens said STANDING and meant three different numbers.
+    field('Standing in the file', Math.round(state.campaign.standing)),
     field('Experience', grouped(character.xp)),
     field('Watches', character.watches),
     field('Training points', character.points, { mood: character.points ? 'is-good' : '' }),

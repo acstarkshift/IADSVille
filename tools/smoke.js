@@ -736,6 +736,35 @@ async function touchRun(browser) {
           failures.push(`${label}: NEXT TARGET selected nothing`);
         }
 
+        /*
+         * A THUMB, NOT A MOUSE.
+         *
+         * Measured before the phone pass, over three seats and both
+         * orientations: 108 of 130 touchable controls on this console were
+         * under 44px in one dimension — the speed caps at 46x24, the cabin's
+         * channel rows at 363x19 (under even WCAG 2.5.8's 24px floor), the
+         * net's ACKNOWLEDGE and REFUSE at 34px tall with a countdown running
+         * on them. It is a CSS floor, so it can come back the next time a row
+         * is made to fit; this is the thing that says so.
+         */
+        const small = await page.evaluate(() => {
+          const out = [];
+          for (const el of document.querySelectorAll('#shell button')) {
+            const r = el.getBoundingClientRect();
+            if (!r.width || !r.height) continue;
+            const cs = getComputedStyle(el);
+            if (cs.display === 'none' || cs.visibility === 'hidden'
+              || cs.pointerEvents === 'none') continue;
+            if (r.height >= 43.5) continue;
+            out.push(`${(el.textContent || el.id || el.className).replace(/\s+/g, ' ').trim()
+              .slice(0, 22)} ${Math.round(r.width)}x${Math.round(r.height)}`);
+          }
+          return out;
+        });
+        if (small.length) {
+          failures.push(`${label}: ${small.length} control(s) under a thumb — ${small.join(', ')}`);
+        }
+
         let fired = 0;
         if (run.role === 'radar') {
           /*

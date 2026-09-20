@@ -220,7 +220,26 @@ export const STATUS = {
   airPicture: { tm: 'ВОЗДУШНАЯ ОБСТАНОВКА', en: 'AIR PICTURE' },
   /** The heading over the rack, as against CONTROLS.hold/tight/free. */
   weaponsPanel: { tm: 'ОГНЕВЫЕ СРЕДСТВА', en: 'WEAPONS' },
-  standing: { tm: 'АТТЕСТАЦИЯ', en: 'STANDING' },
+  /*
+   * THREE NUMBERS, THREE NAMES.
+   *
+   * The experience critic, in one session: "'STANDING' means at least three
+   * different things on three screens. The personnel file on the menu says
+   * STANDING 64. The console's top bar says STANDING 50 at t=0 of the same
+   * watch. The report says 'Standing this watch: 3 — REFERRED' immediately
+   * above 'Standing in the file: 49'. Nothing on screen distinguishes them."
+   *
+   * They are genuinely three things. The file's is the running figure that
+   * travels with you. The console's starts at fifty every watch and is what
+   * TONIGHT has been worth so far. The report's tier is the grade tonight
+   * earned. So the console bar says THIS WATCH — it is the only one of the
+   * three the player is watching move — the file says STANDING IN THE FILE,
+   * and the report already said both in prose and now says them in its
+   * labels too.
+   */
+  standing: { tm: 'АТТЕСТАЦИЯ ЗА СМЕНУ', en: 'THIS WATCH' },
+  /** The running figure, on the personnel file and on the report's tape. */
+  standingFile: { tm: 'АТТЕСТАЦИЯ В ДЕЛЕ', en: 'STANDING IN THE FILE' },
   commandNet: { tm: 'СЕТЬ КОМАНДОВАНЬЯ', en: 'COMMAND NET' },
   rounds: { tm: 'РАСХОД', en: 'EXPENDED' },
   airborne: { tm: 'В ВОЗДУХЕ', en: 'AIRBORNE' },

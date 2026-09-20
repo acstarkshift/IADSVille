@@ -2080,6 +2080,57 @@ h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-rig
 .choice:disabled b, .choice:disabled small { color: var(--ink-dim); }
 
 .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
+
+/*
+ * NOBODY SHOULD EVER HAVE TO SCROLL TO START.
+ *
+ * Measured by the experience critic at 390x844: "the first watch card 1.4
+ * screens down, the seat row 2.9 screens down, BRIEF 3.7 screens down...
+ * roughly thirteen screens of thumb-scrolling and five taps before the game
+ * starts, every single watch, twelve times" — and on a laptop at 1280x800,
+ * ENLIST 1.4 screens down and BRIEF 2.2. Their fix is this one: sticky
+ * action bars.
+ *
+ * `bottom: 0` against `.screen-inner`, which spans the whole page, so the row
+ * rides the bottom of the window for the entire scroll and settles into the
+ * page at its foot. It keeps its own backing and a rule, because a row of
+ * buttons floating over a form reads as a bug; with the backing it reads as
+ * the bottom of the desk it is on.
+ */
+.actions.is-pinned {
+  position: sticky; bottom: 0; z-index: var(--z-sticky);
+  margin-top: 18px; padding: 10px 0 12px;
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--bg) 70%, transparent) 0%, var(--bg) 38%);
+  border-top: 1px solid var(--metal-edge);
+}
+
+/*
+ * And the difficulty in it, which is the other half of the same problem:
+ * "CONSCRIPT / OFFICER / EXPENDABLE sit at y=1784 — 1.9 screens down at
+ * 1600x950... the control that would fix that is the one they will never
+ * find." The full cards with their blurbs stay where they are; these are the
+ * same three choices as chips, on screen from the menu's first pixel. They
+ * carry `data-difficulty`, which is what binds them.
+ */
+.pinned-diff { display: flex; gap: 4px; margin-right: auto; }
+.pinned-diff .chip {
+  padding: 8px 10px; min-height: 44px;
+  background: var(--metal-lo); color: var(--ink-dim);
+  border: 1px solid var(--metal-edge); border-radius: var(--radius);
+  font: inherit; font-size: 10px; letter-spacing: .1em; cursor: pointer;
+  white-space: nowrap;
+}
+.pinned-diff .chip.is-active {
+  background: color-mix(in srgb, var(--accent) 26%, var(--metal-lo));
+  color: var(--ink-bright); border-color: var(--accent);
+}
+.pinned-diff .chip:focus-visible { outline: 2px solid var(--ink-bright); outline-offset: 2px; }
+@media (max-width: 560px) {
+  .actions.is-pinned { gap: 6px; }
+  .pinned-diff { margin-right: 0; width: 100%; }
+  .pinned-diff .chip { flex: 1 1 0; padding: 8px 4px; }
+}
 .btn-primary {
   padding: 9px 24px; font-weight: 700; letter-spacing: .2em;
   background: var(--accent); color: var(--bg); border: 1px solid var(--accent);
@@ -2592,6 +2643,62 @@ table.ledger .down { color: var(--hostile); }
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
   }
   .ab-caps .sw-body, .ab-caps .sw-legends { grid-row: 2; }
+
+  /* ------------------------------------------------- a thumb, not a mouse */
+
+  /*
+   * EVERY PRESSABLE THING ON THIS CONSOLE IS FORTY-FOUR PIXELS TALL.
+   *
+   * Measured before this, over three seats and both orientations: 108 of 130
+   * touchable controls were under 44px in one dimension. The interface
+   * critic listed them — "the speed rack is 46x24 CSS px, HELP 48x24, LEAVE
+   * POST 78x24, each battery's RADIATE/SILENCE switch 71x32, the cabin's
+   * channel rows 363x19, RELOAD 183x28, and ACKNOWLEDGE / REFUSE — the two
+   * the command net puts a countdown on — 100x34 and 62x34" — and the 19px
+   * channel rows are under even WCAG 2.5.8's 24px floor, never mind the 44
+   * both platform guidelines ask for.
+   *
+   * The height comes out of the rack's row count and the log, which is where
+   * the critic said to take it from, and NOT out of the tube: the rack's
+   * window is `20vh` and its pitch is declared once below, so a taller row
+   * simply means fewer rows on the net and the picture is the same size it
+   * was. Nothing here touches `.scope-wrap`.
+   */
+  .topbar .rack .pb { height: 44px; padding: 0 9px; }
+  /*
+   * AND THE MOST DANGEROUS CAP ON THE SCREEN STOPS SITTING EIGHT PIXELS FROM
+   * THE MOST USED ONE. LEAVE POST abandons the watch; it was in the same
+   * flex row as 1x / 2x / 4x with the rack's 4px gap between them. It keeps
+   * its place at the end of the row — a player looks for it there — with a
+   * thumb's width of nothing in front of it and a rule to say the group
+   * ended.
+   */
+  .topbar .rack #btn-abort {
+    margin-left: 26px;
+    border-left: 1px solid var(--metal-edge);
+  }
+
+  /* The lesson card's dismiss: a finger, not a cursor. The card's right-hand
+     padding grows with it so the text never runs under the cap. */
+  .scope-wrap > .tutorial-card { padding-right: 48px; }
+  .scope-wrap > .tutorial-card .tut-skip { width: 44px; height: 44px; top: 0; right: 0; }
+
+  /* The rack's pitch. One number, read back by the snapping code. */
+  .battery-list { --rack-row: 44px; }
+  .rack-strip { height: var(--rack-row, 44px); }
+  .rack-strip .sw { min-height: 44px; }
+
+  /* The cabin's channel rows were the worst on the console at nineteen
+     pixels, and they are how the seat hands a channel back. */
+  .chan-rows .chan { min-height: 44px; }
+  .cabin-pad .pb { min-height: 44px; }
+
+  /*
+   * And the two caps that answer the net, which carry a countdown and decide
+   * both of the campaign's moral hinges. Forty-eight, not forty-four: a cap
+   * with a clock running on it is pressed in a hurry.
+   */
+  .command-actions .pb { min-height: 48px; padding: 0 14px; }
 }
 
 /*
