@@ -9,7 +9,7 @@
  */
 
 import { World } from '../engine/world.js';
-import { SCENARIOS, scenarioById, rosterFor, consoleCaps, watchConditions } from '../engine/scenarios.js';
+import { SCENARIOS, scenarioById, rosterFor, consoleCaps, watchConditions, teachesSeat } from '../engine/scenarios.js';
 import { SIM, SAM_TYPES, DEFENCE_CLASSES, ASSET_TYPES, DIFFICULTY } from '../engine/config.js';
 import {
   loadCampaign, saveCampaign, browserStore, recordMission, emptyCampaign,
@@ -78,6 +78,8 @@ const ui = {
   tutorialStep: -1,
   tutorialStepAtS: 0,
   tutorialRendered: null,
+  /** Folded to its number by the ×, not thrown away. */
+  tutorialFolded: false,
 };
 
 let world = null;
@@ -477,11 +479,16 @@ function startMission() {
   ui.speedHintShown = false;
   ui.netPauseNoted = false;
   ui.hoverInfo = null;
-  // The guided walk-through runs on the teaching watch, in whichever seat the
-  // player took: the net gets the picture-and-assignment five, the cabin gets
-  // the acquire-lock-launch five. It used to be gated off for `crew` entirely,
-  // on the watch that exists to teach the controls.
-  ui.tutorialStep = world.scenario.tutorial ? 0 : -1;
+  /*
+   * The guided walk-through runs on the first watch that offers this seat, in
+   * that seat's own five cards: the set gets the switch-and-hand-over five,
+   * the cabin the acquire-lock-launch five, the net the picture-and-assignment
+   * five. It used to run only where `tutorial: true` was declared, which was
+   * one watch offering one seat, so two of the four seats were never taught at
+   * all. See `teachesSeat`.
+   */
+  ui.tutorialStep = teachesSeat(world.scenario, state.role) ? 0 : -1;
+  ui.tutorialFolded = false;
   ui.tutorialStepAtS = 0;
   ui.tutorialRendered = null;
   if (els.tutorialCard) els.tutorialCard.hidden = true;
@@ -1081,6 +1088,16 @@ function tutorialSteps() {
   return state.role === 'crew' ? CREW_TUTORIAL_STEPS : NET_TUTORIAL_STEPS;
 }
 
+/**
+ * How long a lesson card stays up at the least, in simulation seconds.
+ *
+ * Four seconds is about the time it takes to read one of these cards out loud.
+ * It is simulation time and not wall time on purpose: a player running the
+ * watch at four times speed is going four times faster through everything
+ * else too, and a card that outstayed the wave it is about would be furniture.
+ */
+const TUTORIAL_MIN_DWELL_S = 4;
+
 function renderTutorial() {
   if (!els.tutorialCard) return;
   const steps = tutorialSteps();
@@ -1088,8 +1105,25 @@ function renderTutorial() {
     els.tutorialCard.hidden = true;
     return;
   }
-  while (ui.tutorialStep < steps.length
-    && steps[ui.tutorialStep].done(world, ui, world.t - ui.tutorialStepAtS)) {
+  /*
+   * ONE CARD AT A TIME, AND EVERY CARD LONG ENOUGH TO BE READ.
+   *
+   * This was a `while`, so every step whose condition was already satisfied
+   * cleared in the same frame. Card 4 — "press HAND OVER, or L, to read the
+   * contact to the launch officer" — is the only instruction that teaches the
+   * radar seat's ONLY verb, and a player who handed a contact over before it
+   * was identified cleared steps 3 and 4 together: the card went from 3/5 to
+   * 5/5 and the verb was never taught. Measured by the experience critic on a
+   * clean run, the cards actually shown were 1, 2, 3, 5; on a cold first-timer
+   * run, 1, 2, 5.
+   *
+   * So: one step per frame, and no card leaves before it has been up long
+   * enough to read. A lesson the player completed by accident is still a
+   * lesson they have not read.
+   */
+  const upFor = world.t - ui.tutorialStepAtS;
+  if (upFor >= TUTORIAL_MIN_DWELL_S
+    && steps[ui.tutorialStep].done(world, ui, upFor)) {
     ui.tutorialStep++;
     ui.tutorialStepAtS = world.t;
     ui.tutorialRendered = null;
@@ -1109,18 +1143,29 @@ function renderTutorial() {
    * rather than leaving the other machine's instructions up.
    */
   const phone = isPhoneConsole();
-  const key = `${step.id}${phone ? '/phone' : ''}`;
+  const key = `${step.id}${phone ? '/phone' : ''}${ui.tutorialFolded ? '/folded' : ''}`;
   if (ui.tutorialRendered === key) return;
   ui.tutorialRendered = key;
   els.tutorialCard.hidden = false;
-  els.tutorialCard.innerHTML = `
-    <button class="tut-skip" id="tut-skip" title="Dismiss the tutorial">×</button>
+  /*
+   * The × folds the card to its own number; it does not destroy the lesson.
+   *
+   * It used to set `ui.tutorialStep = -1` for the rest of the watch, and
+   * nothing anywhere brought the cards back — so a player who closed it to see
+   * what was underneath had thrown the teaching away and had no way of knowing
+   * they had. Folded, the tab keeps counting and a click opens it again.
+   */
+  els.tutorialCard.classList.toggle('is-folded', !!ui.tutorialFolded);
+  els.tutorialCard.innerHTML = ui.tutorialFolded
+    ? `<button class="tut-tab" id="tut-open" title="Open the lesson again"
+        >${ui.tutorialStep + 1} / ${steps.length}</button>`
+    : `<button class="tut-skip" id="tut-skip" title="Fold the lesson away">×</button>
     <span class="tut-step">${ui.tutorialStep + 1} / ${steps.length}</span>
     <b>${stepText(step, phone)}</b>`;
-  els.tutorialCard.querySelector('#tut-skip').onclick = () => {
-    ui.tutorialStep = -1;
-    els.tutorialCard.hidden = true;
-  };
+  const skip = els.tutorialCard.querySelector('#tut-skip');
+  if (skip) skip.onclick = () => { ui.tutorialFolded = true; ui.tutorialRendered = null; renderTutorial(); };
+  const open = els.tutorialCard.querySelector('#tut-open');
+  if (open) open.onclick = () => { ui.tutorialFolded = false; ui.tutorialRendered = null; renderTutorial(); };
 }
 
 /* --------------------------------------------------------------- input */

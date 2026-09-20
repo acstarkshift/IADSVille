@@ -2918,6 +2918,32 @@ export function positionCanBeHunted(scenario) {
  * A control that has been removed is removed everywhere: the binding, the
  * button and the help entry go together.
  */
+/**
+ * Is this the watch that teaches this seat?
+ *
+ * It used to be one boolean on one scenario. `tutorial: true` sat on
+ * `first-light`, `first-light` offers the radar seat and nothing else, and
+ * `tutorialSteps()` in app.js had a branch for the cabin and a branch for the
+ * net — so CREW_TUTORIAL_STEPS and NET_TUTORIAL_STEPS, a hundred and ten lines
+ * of written, phone-aware, unit-tested teaching, could never be shown to
+ * anybody. The player arrived at watch 3 in a missile cabin with LOCK, LAUNCH
+ * and RELOAD and got nothing; at watch 5 at a battle-management console with
+ * forty-four visible buttons and got nothing; at watch 8 in the commander's
+ * chair with fifty-eight and got nothing.
+ *
+ * So it is derived instead of declared: the teaching watch for a seat is the
+ * FIRST watch on the ladder that offers it. That survives the campaign being
+ * re-cut — a watch can be merged away or reordered and the lesson simply moves
+ * to whatever is first afterwards — which is how it was orphaned in the first
+ * place. `tutorial: false` on a scenario still opts it out by hand.
+ */
+export function teachesSeat(scenario, role) {
+  if (!scenario || !role) return false;
+  if (scenario.tutorial === false) return false;
+  const first = SCENARIOS.find((s) => s.roles?.includes(role));
+  return first?.id === scenario.id;
+}
+
 export function consoleCaps(scenario) {
   const basic = !!scenario?.basicConsole;
   return {

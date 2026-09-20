@@ -38,6 +38,20 @@
  */
 
 /** The card as this console should say it. */
+/**
+ * How long a card waits before it gives up and moves on by itself.
+ *
+ * It was 120 seconds on most steps and 150 on two, which is longer than the
+ * gap between waves: the balance critic caught the card still on step two of
+ * five two and a half minutes into a 343-second watch, with four hostiles on
+ * the plot and every one of them reading NOT CALLED, and counted that steps
+ * one to three alone could eat six minutes of it. A card whose way out is
+ * slower than the raid is furniture. Forty-five seconds is long enough to
+ * read the card and try the thing, and short enough that a player who does
+ * not is moved along rather than parked.
+ */
+export const TUTORIAL_FALLBACK_S = 45;
+
 export function stepText(step, phone) {
   return (phone && step.phone) || step.en;
 }
@@ -71,7 +85,7 @@ export const RADAR_TUTORIAL_STEPS = [
     phone: 'Your radar, WIDE EYE, is switched off, so the scope is blank. Flip the switch '
       + 'marked WIDE EYE on the bar at the bottom of the screen up to RADIATE.',
     radars: ['WIDE EYE'],
-    done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > 120,
+    done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'watch',
@@ -81,7 +95,7 @@ export const RADAR_TUTORIAL_STEPS = [
     // list and NEXT TARGET walks it.
     phone: 'Contacts appear on the scope as the beam sweeps past them. Wait for one, then '
       + 'press it on the scope, or press NEXT TARGET, to pick it.',
-    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
+    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'hold',
@@ -95,7 +109,7 @@ export const RADAR_TUTORIAL_STEPS = [
       + 'range, height, and then what it is. One you have only seen once is not one you '
       + 'can report.',
     done: (w, u, sinceS) => [...w.tracks.values()]
-      .some((t) => t.quality >= 0.55 && t.hostility === 'hostile') || sinceS > 120,
+      .some((t) => t.quality >= 0.55 && t.hostility === 'hostile') || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'call',
@@ -105,7 +119,7 @@ export const RADAR_TUTORIAL_STEPS = [
     phone: 'Press HAND OVER on the bar at the bottom to read the contact to the launch '
       + 'officer. He answers on the radio and puts a battery on it. He will not fire at '
       + 'anything you have not called.',
-    done: (w, u, sinceS) => (w.stats.handovers ?? 0) > 0 || sinceS > 120,
+    done: (w, u, sinceS) => (w.stats.handovers ?? 0) > 0 || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'net-radar',
@@ -131,7 +145,7 @@ export const NET_TUTORIAL_STEPS = [
     phone: 'Your long-range radar, WIDE EYE, is switched off, so the scope is blank. '
       + 'Flip the RADIATE switch on the bar at the bottom of the screen.',
     radars: ['WIDE EYE'],
-    done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > 120,
+    done: (w, u, sinceS) => w.radars.some((r) => !r.siteId && r.on) || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'select',
@@ -141,7 +155,7 @@ export const NET_TUTORIAL_STEPS = [
     // where the picture itself is the list and NEXT TARGET walks it.
     phone: 'Contacts appear on the scope as the beam sweeps past them. '
       + 'Press one on the scope, or press NEXT TARGET, to pick it.',
-    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
+    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'assign',
@@ -155,13 +169,13 @@ export const NET_TUTORIAL_STEPS = [
     // the watch has moved on is furniture — and this one used to be
     // unclearable by the key it teaches, so it sat here for two and a half
     // minutes while the raid ran on around it.
-    done: (w, u, sinceS) => [...w.tracks.values()].some((t) => t.assignedTo.length > 0) || sinceS > 90,
+    done: (w, u, sinceS) => [...w.tracks.values()].some((t) => t.assignedTo.length > 0) || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'intercept',
     en: 'The battery fires when the shot is good. WAITING FOR RANGE means it is aiming, '
       + 'not refusing. Watch the missile fly out and meet the contact.',
-    done: (w, u, sinceS) => w.stats.kills > 0 || sinceS > 150,
+    done: (w, u, sinceS) => w.stats.kills > 0 || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'net',
@@ -196,7 +210,7 @@ export const CREW_TUTORIAL_STEPS = [
     en: 'Your battery’s own radar is switched off. Sector’s picture shows you where the '
       + 'contacts are, but you cannot shoot on it — flip your switch up to RADIATE.',
     done: (w, u, sinceS) => w.radarsOf(w.siteById.get(w.control.crewedBatteryId) ?? {})
-      .some((r) => r.on) || sinceS > 120,
+      .some((r) => r.on) || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'designate',
@@ -206,20 +220,20 @@ export const CREW_TUTORIAL_STEPS = [
     // and the rail.
     phone: 'Contacts appear as your beam sweeps past them. Press one on the scope, '
       + 'or press NEXT TARGET, to make it your target.',
-    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > 120,
+    done: (w, u, sinceS) => !!u.selectedTrackId || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'lock',
     en: 'Press LOCK to lock a fire-control channel onto your target. If the battery '
       + 'cannot take the shot, the console says why in plain words.',
     done: (w, u, sinceS) => (w.siteById.get(w.control.crewedBatteryId)?.engagements.length ?? 0) > 0
-      || sinceS > 150,
+      || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'launch',
     en: 'LAUNCH lights up when the shot is ready. Press it — and keep your radar on '
       + 'until the missile arrives, because your radar is steering it.',
-    done: (w, u, sinceS) => w.stats.roundsFired > 0 || sinceS > 150,
+    done: (w, u, sinceS) => w.stats.roundsFired > 0 || sinceS > TUTORIAL_FALLBACK_S,
   },
   {
     id: 'net-crew',

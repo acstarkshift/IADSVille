@@ -14,7 +14,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 
 import { World } from '../src/engine/world.js';
-import { SCENARIOS, scenarioById, consoleCaps } from '../src/engine/scenarios.js';
+import { SCENARIOS, scenarioById, consoleCaps, teachesSeat } from '../src/engine/scenarios.js';
 import { emptyCampaign, enlist, recordMission, briefingNote } from '../src/engine/campaign.js';
 import { SPEED_BY_KEY, digitPressed } from '../src/ui/keymap.js';
 import {
@@ -26,7 +26,7 @@ import { Scope } from '../src/ui/scope.js';
 import { seatPicture, rangeDetents, detentAngle } from '../src/ui/panels.js';
 import {
   NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, RADAR_TUTORIAL_STEPS, radarNamesIn,
-  stepText, stepTexts,
+  stepText, stepTexts, TUTORIAL_FALLBACK_S,
 } from '../src/ui/tutorial.js';
 
 const watch = (id, opts = {}) => new World(scenarioById(id), { role: 'net', seed: 5, ...opts });
@@ -716,5 +716,68 @@ describe('a contact off the scale can still be pressed', () => {
     scope.edgeHits = [{ id: 'gone', x: 10, y: 10 }];
     scope.drawOffScale([]);
     assert.deepEqual(scope.edgeHits, []);
+  });
+});
+
+describe('every seat is taught, and on the watch that first offers it', () => {
+  /*
+   * The experience critic's only critical: "Only `first-light` carries
+   * `tutorial: true`, and `first-light` has `roles: ['radar']`. So the crew's
+   * five cards and the net's five cards — 110 lines of carefully written,
+   * phone-aware teaching — can never be shown to anybody. The player arrives
+   * at watch 3 in a missile cabin with LOCK/LAUNCH/RELOAD and gets nothing; at
+   * watch 5 at a battle-management console with forty-four visible buttons and
+   * gets nothing; at watch 8 in the COMMANDER seat with fifty-eight and gets
+   * nothing."
+   *
+   * It is derived from the ladder now rather than declared on one scenario, so
+   * that the campaign can be re-cut without orphaning a lesson again — which
+   * is exactly how it was orphaned. This holds that.
+   */
+  const SEATS = ['radar', 'crew', 'net', 'both'];
+
+  test('each seat has exactly one teaching watch', () => {
+    for (const seat of SEATS) {
+      const teaching = SCENARIOS.filter((s) => teachesSeat(s, seat));
+      assert.equal(teaching.length, 1,
+        `${seat} is taught on ${teaching.length} watches: ${teaching.map((s) => s.id).join(', ')}`);
+      assert.ok(teaching[0].roles.includes(seat), `${teaching[0].id} does not offer the ${seat} seat`);
+    }
+  });
+
+  test('it is the first watch on the ladder that offers the seat', () => {
+    for (const seat of SEATS) {
+      const first = SCENARIOS.find((s) => s.roles.includes(seat));
+      assert.ok(teachesSeat(first, seat), `${first.id} offers ${seat} first and does not teach it`);
+      for (const later of SCENARIOS.filter((s) => s.roles.includes(seat) && s.id !== first.id)) {
+        assert.ok(!teachesSeat(later, seat),
+          `${later.id} teaches ${seat} again, after ${first.id}`);
+      }
+    }
+  });
+
+  test('a seat a watch does not offer is not taught at it', () => {
+    for (const scenario of SCENARIOS) {
+      for (const seat of SEATS.filter((r) => !scenario.roles.includes(r))) {
+        assert.ok(!teachesSeat(scenario, seat), `${scenario.id} teaches ${seat}, which it has no chair for`);
+      }
+    }
+  });
+
+  test('no card can park on the glass for longer than the gap between waves', () => {
+    /*
+     * Every step's way out was 90, 120 or 150 seconds, on watches of 343.
+     * Measured by the balance critic: the card still on step two of five two
+     * and a half minutes in, four hostiles on the plot, every one of them
+     * reading NOT CALLED.
+     */
+    assert.ok(TUTORIAL_FALLBACK_S <= 45, `a card waits ${TUTORIAL_FALLBACK_S}s before it moves on`);
+    const world = new World(scenarioById('first-light'), { role: 'radar', seed: 4 });
+    for (const steps of [RADAR_TUTORIAL_STEPS, NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS]) {
+      for (const step of steps) {
+        assert.ok(step.done(world, {}, TUTORIAL_FALLBACK_S + 1),
+          `${step.id} has no way out on a timer inside ${TUTORIAL_FALLBACK_S}s`);
+      }
+    }
   });
 });

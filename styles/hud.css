@@ -3184,13 +3184,23 @@ table.ledger .down { color: var(--hostile); }
    track list's way, and dies with the console in a blackout. */
 .tutorial-card {
   position: absolute;
-  /* Clear of the tube's own two readouts, which the canvas draws at y=16 and
-     y=30: the card used to be laid straight over RANGE 140 KM. The card is
-     mounted in the bezel now rather than in the tube — so that a phone can
-     take it out of the picture entirely — and these are the bezel's 12px of
-     padding plus the same 42 and 14 as before, measured from the bezel's
-     padding box, which lands on the same pixel it always did. */
-  top: 54px;
+  /*
+   * OUT OF THE QUADRANT THE RAID ARRIVES IN, AND OUT OF THE WAY OF A PRESS.
+   *
+   * It stood at the top-left of the glass, over 6.4% of the tube — and
+   * specifically the upper left, which on a raid coming in from bearing
+   * 333-355 is where the blips appear. The card telling you to watch the scope
+   * was standing on the part of the scope you are meant to watch. It goes to
+   * the bottom-left instead, clear of the legend strip: the opposite corner
+   * from the frontier, and the quietest part of the picture on every watch in
+   * the game.
+   *
+   * And it is transparent to the pointer. Measured: a press on a contact's
+   * off-scale caret at First Light landed on the card's dismiss cap instead,
+   * because a panel over the glass takes every press that crosses it. Only its
+   * own two buttons answer now; everything else goes through to the tube.
+   */
+  bottom: 62px;
   left: 26px;
   max-width: 320px;
   padding: 10px 34px 10px 12px;
@@ -3198,7 +3208,22 @@ table.ledger .down { color: var(--hostile); }
   border: 1px solid var(--accent);
   box-shadow: 0 0 0 1px var(--engrave), 0 4px 18px rgba(0, 0, 0, .45);
   z-index: var(--z-tutorial);
+  pointer-events: none;
 }
+.tutorial-card button { pointer-events: auto; }
+/*
+ * Folded to its own number, in the same corner, when the × is pressed.
+ */
+.tutorial-card.is-folded {
+  padding: 0; border-color: var(--edge); background: transparent; box-shadow: none;
+  max-width: none;
+}
+.tut-tab {
+  display: block; padding: 5px 9px; min-width: 44px; min-height: 30px;
+  background: var(--bg); border: 1px solid var(--accent); color: var(--ink);
+  font: inherit; font-size: 10px; letter-spacing: .2em; cursor: pointer;
+}
+.tut-tab:hover { background: var(--bg-raised); }
 .tutorial-card b { display: block; font-size: 12.5px; line-height: 1.45; color: var(--ink); letter-spacing: .02em; }
 .tutorial-card i { display: block; margin-top: 3px; font-size: 10px; font-style: normal; opacity: .68; letter-spacing: .14em; }
 .tutorial-card .tut-step { display: block; font-size: 9.5px; letter-spacing: .2em; opacity: .6; margin-bottom: 4px; }
