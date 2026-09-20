@@ -172,6 +172,7 @@ function cacheEls() {
     ledNet: id('led-net'),
     trackDetail: id('track-detail'),
     workedUnit: id('worked-unit'),
+    unitPlate: id('unit-plate'),
     batteryList: id('battery-list'),
     crewConsole: id('crew-console'),
     eventLog: id('event-log'),

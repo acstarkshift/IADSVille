@@ -22,6 +22,7 @@ import {
 } from '../src/ui/lexicon.js';
 import { RADAR_TYPES, SAM_TYPES } from '../src/engine/config.js';
 import { planGeography } from '../src/ui/console.js';
+import { Scope } from '../src/ui/scope.js';
 import { seatPicture, rangeDetents, detentAngle } from '../src/ui/panels.js';
 import {
   NET_TUTORIAL_STEPS, CREW_TUTORIAL_STEPS, RADAR_TUTORIAL_STEPS, radarNamesIn,
@@ -662,5 +663,52 @@ describe('every set on the board has a name of its own', () => {
     for (const radar of world.radars.filter((r) => !r.siteId)) {
       assert.ok(nomenclatureFor(radar.typeLabel), `${radar.label} has no plate`);
     }
+  });
+});
+
+describe('a contact off the scale can still be pressed', () => {
+  /*
+   * A contact outside the picture is drawn as a caret on the rim with its
+   * number and range beside it, and the caret was scenery: `pick` tested every
+   * track at its TRUE screen position, which for an off-scale contact is
+   * somewhere past the bezel, so clicking the one mark that says "it is out
+   * there, that way" selected nothing and could be handed to nobody. On a
+   * battalion watch whose batteries outreach the default scale that is most of
+   * the raid.
+   *
+   * Built off the prototype rather than a canvas: `pick` uses the device
+   * ratio, the projection and the carets, and none of those needs a context.
+   */
+  const scopeAt = (rangeKm) => {
+    const scope = Object.create(Scope.prototype);
+    Object.assign(scope, {
+      dpr: 1, w: 600, h: 600, rangeKm, centre: { x: 0, y: 0 }, origin: { x: 0, y: 0 },
+      edgeHits: [],
+    });
+    return scope;
+  };
+
+  test('the caret is what the press lands on', () => {
+    // An empty board, so what the press finds is the caret and nothing else.
+    const world = { tracks: new Map(), sites: [], radars: [], assets: [] };
+    const scope = scopeAt(60);
+    // Something far outside a 60 km picture.
+    const far = { id: 'trk-far', tn: 'T-099', pos: { x: 400, y: 400 }, vel: { x: 0, y: 0 } };
+    const screen = scope.toScreen(far.pos);
+    assert.ok(screen.x > scope.w || screen.y < 0, 'the test contact is not off the scale');
+    // Nothing to press before the caret is drawn...
+    assert.equal(scope.pick(560, 40, world), null);
+    // ...and the caret is the contact once it is.
+    scope.edgeHits = [{ id: far.id, x: 560, y: 40 }];
+    assert.deepEqual(scope.pick(560, 40, world), { kind: 'track', id: far.id });
+    // And it is a mark, not the whole rim: a press well away from it misses.
+    assert.equal(scope.pick(300, 300, world), null);
+  });
+
+  test('the carets do not outlive the frame that drew them', () => {
+    const scope = scopeAt(60);
+    scope.edgeHits = [{ id: 'gone', x: 10, y: 10 }];
+    scope.drawOffScale([]);
+    assert.deepEqual(scope.edgeHits, []);
   });
 });

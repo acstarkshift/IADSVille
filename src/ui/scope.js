@@ -173,6 +173,25 @@ export class Scope extends Lettering {
       if (d < bestDist) { bestDist = d; best = { kind, id }; }
     };
 
+    /*
+     * THE CARET ON THE RIM IS THE CONTACT.
+     *
+     * A contact outside the picture is drawn as a caret at the edge with its
+     * number and its range beside it, and the caret was scenery: `pick` tested
+     * every track at its TRUE screen position, which for an off-scale contact
+     * is somewhere past the bezel, so clicking the mark that says "it is out
+     * there, that way" selected nothing, opened nothing and could not be
+     * handed to a battery. On a battalion watch whose batteries outreach the
+     * default scale that is most of the raid. The carets are hit-tested first,
+     * from the positions they were actually drawn at last frame, because a
+     * mark you can see is a mark you should be able to press.
+     */
+    for (const hit of this.edgeHits ?? []) {
+      const d = Math.hypot(hit.x - p.x, hit.y - p.y);
+      if (d < bestDist) { bestDist = d; best = { kind: 'track', id: hit.id }; }
+    }
+    if (best) return best;
+
     for (const track of world.tracks.values()) consider('track', track.id, track.pos);
     if (best) return best;
     for (const site of world.sites) consider('site', site.id, site.pos);
@@ -267,17 +286,56 @@ export class Scope extends Lettering {
       ctx.globalCompositeOperation = 'source-over';
     }
 
-    // Every echo of every simulation step this frame, when the frame ran more
-    // than one; the world's own last step otherwise. See the frame loop.
+    /*
+     * Every echo of every simulation step this frame, when the frame ran more
+     * than one; the world's own last step otherwise. See the frame loop.
+     *
+     * A RETURN IS A SMEAR ALONG THE BEAM, NOT A DOT.
+     *
+     * The graphics critic: "the one place the paint layer does show is a soft
+     * round green smear behind each contact, which is a Gaussian blob, not a
+     * beam-smeared return." It was `ctx.arc(x, y, r, 0, TAU)` — a circle, the
+     * same shape whatever set painted it and from wherever. An antenna has a
+     * beam of some width and a pulse of some length, so what it lays on the
+     * tube is an arc struck from the set that painted it: short in range,
+     * spread in bearing by the beam, and brighter along the edge the beam is
+     * moving towards, which is where the paint is newest. Two hundred
+     * kilometres out that is a visible streak, and close in it is almost a
+     * point — which is the whole reason a plot at range is called a smudge.
+     */
+    const beamHalfRad = (2.4 / 2) * Math.PI / 180;
     for (const plot of ui.framePlots ?? world.plots ?? []) {
       const s = this.toScreen(plot.pos);
-      const r = Math.max(1.6, 3.2 * this.dpr);
       const alpha = 0.55 + 0.45 * clamp01(plot.strength ?? 0.5);
+      const radar = world.radarById?.get(plot.radarId);
       ctx.fillStyle = p.accent;
+      ctx.strokeStyle = p.accent;
       ctx.globalAlpha = alpha;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, r, 0, TAU);
-      ctx.fill();
+      if (radar) {
+        const o = this.toScreen(radar.pos);
+        const rPx = Math.hypot(s.x - o.x, s.y - o.y);
+        const a = Math.atan2(s.y - o.y, s.x - o.x);
+        // Half the beam, on the glass, never narrower than the pulse is long.
+        const half = Math.max((2.2 * this.dpr) / Math.max(rPx, 1), beamHalfRad);
+        ctx.lineCap = 'round';
+        // The body of the return, across the whole beam.
+        ctx.lineWidth = Math.max(2, 3.4 * this.dpr);
+        ctx.globalAlpha = alpha * 0.5;
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, rPx, a - half, a + half);
+        ctx.stroke();
+        // And its leading edge, which is the freshest paint on the tube. The
+        // beam turns with increasing bearing, which on the glass is clockwise.
+        ctx.globalAlpha = alpha;
+        ctx.lineWidth = Math.max(2, 2.6 * this.dpr);
+        ctx.beginPath();
+        ctx.arc(o.x, o.y, rPx, a + half * 0.25, a + half);
+        ctx.stroke();
+      } else {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, Math.max(1.6, 3.2 * this.dpr), 0, TAU);
+        ctx.fill();
+      }
       ctx.globalAlpha = 1;
     }
   }
@@ -975,8 +1033,24 @@ export class Scope extends Lettering {
         continue;
       }
 
+      /*
+       * AND THE SYMBOL IS AS OLD AS THE LOOK THAT MADE IT.
+       *
+       * "Track symbols are drawn at full brightness all the time, everywhere,
+       * whether the beam passed them a moment ago or five seconds ago. The
+       * sweep is decoration over a static vector chart rather than the thing
+       * that puts the picture on the tube." So a contact is brightest at the
+       * instant it is painted and fades back towards a floor as the picture
+       * goes stale — which is not only truer to the hardware, it is the answer
+       * to a question the operator is always asking: how old is this? On a set
+       * with a twelve second revisit the difference is most of the watch. The
+       * contact the operator has selected stays at full strength whatever the
+       * beam is doing, because that one is theirs.
+       */
+      const sinceLook = Math.max(0, world.t - (track.lastUpdateS ?? world.t));
+      const fresh = selected ? 1 : clamp01(1 - sinceLook / 9);
       ctx.save();
-      ctx.globalAlpha = track.coasting ? 0.5 : 1;
+      ctx.globalAlpha = track.coasting ? 0.42 : 0.55 + 0.45 * fresh;
       ctx.strokeStyle = colour;
       ctx.fillStyle = colour;
       ctx.lineWidth = (selected ? 2.2 : 1.4) * this.dpr;
@@ -1149,6 +1223,9 @@ export class Scope extends Lettering {
    * outreach the picture, that difference is most of the watch.
    */
   drawOffScale(edge) {
+    // Where each caret was drawn, so `pick` can find it. Cleared every frame,
+    // whether or not there is anything out there.
+    this.edgeHits = [];
     if (!edge.length) return;
     const { ctx } = this;
     const cx = this.w / 2;
@@ -1194,6 +1271,10 @@ export class Scope extends Lettering {
       const onSide = Math.abs(x - cx) > cx - inset.side - 1;
       const inward = 11 * this.dpr;
       this.reserve(x - 6 * this.dpr, y - 6 * this.dpr, 12 * this.dpr, 12 * this.dpr);
+      // The caret is the contact, as far as a finger is concerned: the press
+      // lands a little inboard of the point, over the caption as well.
+      this.edgeHits.push({ id: track.id,
+        x: x - Math.sign(dx) * 4 * this.dpr, y: y - Math.sign(dy) * 4 * this.dpr });
       // Stamped rather than written: the caption owns its corner of the rim,
       // so nothing the placer fits afterwards is printed across it.
       this.stamp(`${track.tn} ${Math.round(len(track.pos))}`,

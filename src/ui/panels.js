@@ -397,6 +397,30 @@ export function stampLegends(root = document) {
 export function renderTopbar(world, ui, els) {
   els.clock.textContent = clockString(world.t);
   els.missionName.textContent = world.scenario.name;
+  /*
+   * THE PLATE SAYS WHICH FORMATION THIS CONSOLE BELONGS TO.
+   *
+   * It said СЕКТОР 4-Б · SECTOR 4-B on every watch in the game, including the
+   * two fought from district command over four sectors of which 4-B is one,
+   * and the two fought from the national staff. The player sitting at the
+   * district was looking at a plate naming one of their own subordinates as
+   * their unit. It is stamped from the echelon now: the sector's designation
+   * at the two echelons that ARE a sector, and the formation's own at the two
+   * that are not. Rewritten only when it changes, because this runs eight
+   * times a second.
+   */
+  const plate = els.unitPlate ?? document.getElementById('unit-plate');
+  if (plate) {
+    const echelon = world.echelon;
+    const here = echelon && (echelon.id === 'region' || echelon.id === 'national')
+      ? { tm: echelon.tm, en: echelon.en.toUpperCase() } : STATE.sector;
+    if (plate.dataset.unit !== here.en) {
+      plate.dataset.unit = here.en;
+      const stencil = [STATE.serviceShort, here];
+      plate.innerHTML = `<b>${stencil.map((e) => esc(e.tm)).join(' · ')}</b>`
+        + `<br>${stencil.map((e) => esc(e.en)).join(' · ')}`;
+    }
+  }
 
   const airborne = world.aircraft.filter((a) => a.alive && a.type !== 'civil').length;
   els.airCount.textContent = String(airborne);
@@ -1345,7 +1369,16 @@ function rackStrips(world, ui, caps, {
     // `<= 1` and not `=== 1`: on a phone the rail can take the only set on a
     // one-battery net off this list altogether, and an empty rack that said
     // END OF THE NET would be a list announcing the end of nothing.
-    + (foot ? `<div class="rack-empty">${rows.length <= 1 ? 'NOTHING ELSE ON THIS NET'
+    /*
+     * And it says the same thing whether there is one row or ten.
+     *
+     * It used to print NOTHING ELSE ON THIS NET directly under the one row
+     * that IS on the net, beneath a head reading "1 ON THE NET" — three
+     * statements in a hand's width, two of which appeared to contradict the
+     * third. END OF THE NET is true of a list of one and a list of ten; only
+     * an empty rack says there is nothing.
+     */
+    + (foot ? `<div class="rack-empty">${rows.length === 0 ? 'NOTHING ON THIS NET'
       : 'END OF THE NET'}</div>` : '');
 }
 
