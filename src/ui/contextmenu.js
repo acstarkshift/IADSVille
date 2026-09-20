@@ -125,6 +125,28 @@ export function rowText(row) {
   };
 }
 
+/**
+ * Why a folded group of batteries cannot take the shot, in their own words.
+ *
+ * One reason if they all share it, otherwise the two commonest with their
+ * counts and a tally of the rest. The summary is a sentence a player can act
+ * on without opening it: nine batteries out of reach is a different board from
+ * nine that are not yours to order.
+ */
+export function whyNot(rows) {
+  const counts = new Map();
+  for (const r of rows) {
+    const reason = r.reason ?? (r.mine ? null : 'not yours to order');
+    if (reason) counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  }
+  if (!counts.size) return '';
+  const sorted = [...counts].sort((a, b) => b[1] - a[1]);
+  if (sorted.length === 1) return sorted[0][0];
+  const named = sorted.slice(0, 2).map(([reason, n]) => `${n} ${reason}`);
+  const rest = sorted.slice(2).reduce((sum, [, n]) => sum + n, 0);
+  return rest ? `${named.join(', ')}, ${rest} more` : named.join(', ');
+}
+
 export class ContextMenu {
   /**
    * `host` is the menu's element (see index.html); `onPick(siteId, trackId,
@@ -156,18 +178,13 @@ export class ContextMenu {
   /** Open the menu for a contact at a point on the page, kept inside the window. */
   show(world, track, x, y) {
     const rows = menuRowsFor(world, track);
-    this.trackId = track.id;
-    const kind = track.classification && track.classification !== 'unknown'
-      ? String(track.classification).toUpperCase() : String(track.hostility).toUpperCase();
-    this.host.innerHTML = `
-      <div class="ctx-head"><b>${esc(track.tn)}</b> · ${esc(kind)} · ${Math.round(track.altM).toLocaleString('en-US')} m
-        <span class="ctx-hint">${world.control?.role === 'radar'
-    ? 'Hand it to CONTROL. Esc closes.' : 'Pick a battery. Esc closes.'}</span></div>
-      ${rows.map((r) => {
-    const t = rowText(r);
-    const live = r.can || r.already;
-    return `<button type="button" role="menuitem" class="ctx-row ${live ? 'is-live' : 'is-dead'} ${r.already ? 'is-on' : ''}"
-        data-site="${esc(r.siteId)}" data-already="${r.already}" ${r.control ? 'data-control="1"' : ''} ${live ? '' : 'disabled'}
+    const live = rows.filter((r) => r.can || r.already);
+    const dead = rows.filter((r) => !(r.can || r.already));
+    const rowHtml = (r) => {
+      const t = rowText(r);
+      const on = r.can || r.already;
+      return `<button type="button" role="menuitem" class="ctx-row ${on ? 'is-live' : 'is-dead'} ${r.already ? 'is-on' : ''}"
+        data-site="${esc(r.siteId)}" data-already="${r.already}" ${r.control ? 'data-control="1"' : ''} ${on ? '' : 'disabled'}
         title="${esc(t.note)}">
         <span class="ctx-name"><b>${esc(r.name)}</b><i>${esc(r.nomenclature)}</i></span>
         <span class="ctx-when">${esc(t.when)}</span>
@@ -175,9 +192,39 @@ export class ContextMenu {
         <span class="ctx-rounds">${esc(t.rounds)}</span>
         <span class="ctx-pk"><i>est. kill</i>${esc(t.pk)}</span>
         <span class="ctx-cmd ${r.mine ? '' : 'is-not'}">${esc(t.command)}</span>
-        ${live ? '' : `<span class="ctx-why">${esc(r.reason)}</span>`}
+        ${on ? '' : `<span class="ctx-why">${esc(r.reason)}</span>`}
       </button>`;
-  }).join('')}
+    };
+    this.trackId = track.id;
+    const kind = track.classification && track.classification !== 'unknown'
+      ? String(track.classification).toUpperCase() : String(track.hostility).toUpperCase();
+    this.host.innerHTML = `
+      <div class="ctx-head"><b>${esc(track.tn)}</b> · ${esc(kind)} · ${Math.round(track.altM).toLocaleString('en-US')} m
+        <span class="ctx-hint">${world.control?.role === 'radar'
+    ? 'Hand it to CONTROL. Esc closes.' : 'Pick a battery. Esc closes.'}</span></div>
+      ${live.map(rowHtml).join('')}
+      ${/*
+       * THE ANSWERS THAT ARE NO, FOLDED INTO ONE LINE.
+       *
+       * The menu is the best instrument in the game and it was blinding the
+       * player while they used it: on Four Sectors it measured 600 x 687 over
+       * an 856 x 703 tube — 68% of the radar picture — and outgrew itself as
+       * well, thirteen rows of 854 px inside a 685 px box, so the last
+       * batteries were behind the menu's own scroll. And twelve of those
+       * thirteen rows said NEVER ON THIS COURSE or "not yours to order". One
+       * row was an answer; the rest were a wall.
+       *
+       * Every word of the reasons is kept — they are the best writing on this
+       * console and the critic's `keep` list says so — but the ones that
+       * cannot take the shot are folded behind a line that counts them and
+       * says, in their own words, why. Open it and they are all there,
+       * unabridged.
+       */ ''}
+      ${dead.length ? `<details class="ctx-rest">
+        <summary>${dead.length} other${dead.length === 1 ? '' : 's'}${
+  whyNot(dead) ? ` — ${esc(whyNot(dead))}` : ''}</summary>
+        ${dead.map(rowHtml).join('')}
+      </details>` : ''}
       ${rows.length ? '' : '<p class="ctx-empty">No batteries on this net.</p>'}`;
     this.host.hidden = false;
     /*

@@ -426,15 +426,26 @@ h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-rig
  */
 .track-head, .track-row {
   display: grid;
-  /* Wide enough for the heads to be words: TRACK, TYPE, BRG°, RANGE, HEIGHT, BATTERY. */
-  grid-template-columns: 3.7em 5.6em 2.8em 3.4em 4.4em 1fr;
+  /*
+   * TRACK TYPE BRG RANGE HEIGHT THREAT BATTERY, every head a word.
+   *
+   * In PIXELS and not `em`, which is what let the head come apart when the
+   * seventh column arrived: `.track-head` sets its own 8.5px type and a grid
+   * column stated in `em` resolves against the element's OWN font size, so the
+   * head's columns were four-fifths the width of the rows they label and the
+   * words ran into each other — BRG°RANGEHEIGHT — while the figures below
+   * lined up under nothing. One set of absolute widths, shared.
+   */
+  grid-template-columns: 36px 60px 22px 28px 32px 32px minmax(0, 1fr);
   gap: 3px; padding: 2px 8px;
   border-left: 3px solid transparent;
   /* 15 + 4 + 1 = the 20px pitch the empty board is ruled at. */
   font-size: 11px; line-height: 15px; font-variant-numeric: tabular-nums;
 }
 .track-head {
-  color: var(--engrave-dim); font-size: 8.5px; letter-spacing: .1em;
+  color: var(--engrave-dim); font-size: 8px; letter-spacing: .04em;
+  /* A head may never run into its neighbour, whatever face the browser
+     falls back to: the words used to overlap into BRG°RANGEHEIGHT. */
   padding-top: 5px; padding-bottom: 3px;
   /* The list below is inset by its own 5px margin and 1px border; the head
      has to stand off by the same, or the columns do not line up under it. */
@@ -515,7 +526,7 @@ h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-rig
 .bs-row.is-hurt b { color: var(--warn); }
 .bs-row.is-lost b { color: var(--hostile); }
 .bs-row.is-lost span { color: var(--hostile); }
-.track-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track-row > span, .track-head > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .track-row {
   cursor: pointer; align-items: center;
   border-bottom: 1px solid color-mix(in srgb, var(--edge) 35%, transparent);
@@ -532,7 +543,14 @@ h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-rig
 .unit-type.store.is-empty, .unit-type.store.is-empty b { color: var(--hostile); }
 .track-row .asgn .own-call { color: var(--warn); font-style: normal; font-size: 8px; letter-spacing: .08em; margin-right: 3px; vertical-align: 1px; }
 .chan.is-own { box-shadow: inset 2px 0 0 var(--warn); }
-.track-row .pips { color: var(--hostile); font-style: normal; }
+/* The pips take the row's own hostility colour, which the row already sets on
+   .tn — a high-scoring unidentified contact used to show the hostile red in a
+   column about batteries. */
+.track-row .pips { color: inherit; font-size: 9px; letter-spacing: -.08em; }
+.track-head span:nth-child(6), .track-row .pips { text-align: center; }
+.track-row.is-hostile .pips { color: var(--hostile); }
+.track-row.is-friendly .pips { color: var(--friendly); }
+.track-row.is-unknown .pips { color: var(--unknown); }
 /* "no contacts" is a sentence, not a row of columns: it had been landing in
    the five-em TYPE cell and being clipped in half. */
 .track-row.is-empty { opacity: .5; cursor: default; display: block; }
@@ -1814,7 +1832,10 @@ h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-rig
  * the smaller half. Left to shrink in proportion to their content the two
  * split 75px to 504px the wrong way round.
  */
-.battery-list.with-formations { flex: 0 1 40%; }
+.battery-list.with-formations { flex: 1 1 40%; }
+/* `1 1` and not `0 1`: the formation list above now closes on a whole card
+   (see closeOnAWholeChild), and what it gives up used to become painted steel
+   because the rack was not allowed to grow into it. */
 
 /*
  * The unit the keys are pointed at, standing above the rack.
@@ -3529,6 +3550,19 @@ table.ledger .down { color: var(--hostile); }
 .ctx-cmd.is-not { color: var(--warn); }
 .ctx-why { grid-column: 1 / -1; font-size: 10px; color: var(--warn); }
 .ctx-empty { margin: 8px; color: var(--ink-dim); }
+/*
+ * The answers that are no, folded into one line — see contextmenu.js. Kept
+ * word for word; just not thirteen rows deep over the picture they are about.
+ */
+.ctx-rest { border-top: 1px solid var(--edge); margin-top: 4px; }
+.ctx-rest > summary {
+  list-style: none; cursor: pointer; padding: 7px 8px;
+  color: var(--ink-dim); font-size: 10.5px; letter-spacing: .06em;
+}
+.ctx-rest > summary::-webkit-details-marker { display: none; }
+.ctx-rest > summary::before { content: '▸ '; color: var(--accent); }
+.ctx-rest[open] > summary::before { content: '▾ '; }
+.ctx-rest > summary:hover { color: var(--ink); background: var(--bg-raised); }
 @media (max-width: 900px) {
   .ctx-menu { min-width: 0; width: calc(100vw - 16px); }
   .ctx-row { grid-template-columns: 1.2fr 1fr 1fr; }

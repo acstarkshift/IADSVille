@@ -452,7 +452,18 @@ export function renderTopbar(world, ui, els) {
   }
   const armInbound = Number.isFinite(soonestArm);
   const anyRadiating = world.radars.some((r) => r.state === 'radiating');
-  const faulted = world.radars.some((r) => !r.alive) || world.sites.some((s) => !s.alive);
+  /*
+   * The FAULT lamp counts, and names what went last.
+   *
+   * It lit amber the moment anything of yours was destroyed and stayed lit for
+   * the rest of the watch, naming nothing, acknowledging nothing, with its
+   * only explanation in a hover title — and on a phone there is no hover. The
+   * lamp beside it does it right: INBOUND ARM prints the seconds on its own
+   * face. So FAULT prints how many, and its tooltip names the last thing lost.
+   */
+  const lost = [...world.radars.filter((r) => !r.alive), ...world.sites.filter((s) => !s.alive)];
+  const faulted = lost.length > 0;
+  const lastLost = lost.map((u) => u.label ?? u.name).filter(Boolean).at(-1) ?? '';
   /*
    * The master annunciator, with a short caption for a narrow bar.
    *
@@ -474,7 +485,9 @@ export function renderTopbar(world, ui, els) {
     // along the bar whenever a round was inbound.
     armLamp(soonestArm),
     lamp(STATUS.fault, faulted, { colour: 'amber',
-      title: faulted ? 'A radar or battery of yours has been destroyed'
+      figure: faulted ? String(lost.length) : '',
+      title: faulted
+        ? `${lost.length} of yours destroyed — the last was ${lastLost}`
         : 'Lights when a radar or battery of yours is destroyed' }),
   ].join(''));
 
@@ -748,7 +761,17 @@ export function renderTrackList(world, ui, els) {
       <span>${String(brg).padStart(3, '0')}</span>
       <span>${rng}</span>
       <span>${alt}</span>
-      <span class="asgn">${engaged ? '◆' : track.assignedTo.length ? '◇' : ''}${cued ? '<i class="cued" title="Called to you by the net — you did not pick this one">▸</i>' : ''}${ownCall ? '<i class="own-call" title="Your own call — the net did not call this one to you, and it is on your authority">OWN</i>' : ''}${esc(assigned)} <em class="pips">${pips}</em></span>
+      ${/*
+       * The threat pips have a column of their own now, headed THREAT, in the
+       * row's own hostility colour. They were printed inside the column headed
+       * BATTERY, in the hostile red whatever the contact was, under a header
+       * whose own key listed four glyphs and did not mention them: eleven of
+       * twelve rows on The Two Cities carried a mark the column could not
+       * explain, and an unidentified contact with a high score wore the
+       * hostile colour in a column about batteries.
+       */ ''}
+      <span class="pips">${pips}</span>
+      <span class="asgn">${engaged ? '◆' : track.assignedTo.length ? '◇' : ''}${cued ? '<i class="cued" title="Called to you by the net — you did not pick this one">▸</i>' : ''}${ownCall ? '<i class="own-call" title="Your own call — the net did not call this one to you, and it is on your authority">OWN</i>' : ''}${esc(assigned)}</span>
     </li>`;
   };
 
@@ -915,8 +938,19 @@ function renderBoardState(world, ui, els, { tracks, unpaired, mine, atTheSet = f
       ${figure(atTheSet ? 'NOT CALLED' : 'NOT ASSIGNED', unpaired.length,
     unpaired.length ? 'is-warn' : '')}
       ${figure('ASSIGNED', paired, paired ? 'is-good' : '')}
-      ${figure('IN FLIGHT', roundsUp)}
-      ${figure('CAN FIRE', `${armed.length}/${mine.length}`,
+      ${/*
+       * AND THE TWO THAT COUNT SOMETHING ELSE SAY SO.
+       *
+       * Six figures under one head reading THE SECTOR, four of which count the
+       * whole board and two of which count only the player's own batteries,
+       * with nothing to tell them apart — so the panel contradicted itself:
+       * at Four Sectors the formation cards read SECTOR 2-A ENGAGED 1/3 and
+       * SECTOR 7-C ENGAGED 2/3 while IN FLIGHT four inches away read 0. It
+       * was never wrong; it was answering a different question in the same
+       * type. The two that are about you say YOURS.
+       */ ''}
+      ${figure('YOUR ROUNDS UP', roundsUp)}
+      ${figure('YOUR BATTERIES', `${armed.length}/${mine.length}`,
     armed.length ? '' : 'is-bad')}
     </div>
     <div class="bs-note">${rails} round${rails === 1 ? '' : 's'} on the rails${(() => {
@@ -1109,6 +1143,41 @@ export function renderFormations(world, ui, els) {
     <div class="unit-explain">Each formation fights on the standing order you leave it with.
       TAKE one to command its batteries yourself; the rest are their officers' watch.</div>
     ${cards}${renderReserve(world)}`);
+  closeOnAWholeChild(host);
+}
+
+/**
+ * Close a scroller at the last whole child that fits, so the fold never falls
+ * through the middle of one.
+ *
+ * The phone's rack has done this for some time; the desk's subordinate-commands
+ * list did not, and the fold landed inside a card — at Four Sectors through
+ * SECTOR 7-C / LOZAN / MAJ. VOLOH's BTY / ROUNDS / ENGAGED / ORDER row, at The
+ * President's Flight through TAVROV SECTION's UNDER YOUR HAND — hiding that
+ * formation's ORDER WEAPONS and TAKE caps entirely behind a scrollbar that is
+ * not drawn. Sliced type reads as a rendering fault; a list that stops on a
+ * card reads as a list.
+ *
+ * The height it gives up goes to the rack below, which is why `.battery-list`
+ * may grow. Nothing here can chase its own tail: the cap is computed from the
+ * height the stylesheet gave this element, and it is cleared before it is
+ * measured, so every pass starts from the sheet's own answer.
+ */
+function closeOnAWholeChild(host) {
+  if (!host || host.hidden) return;
+  host.style.maxHeight = '';
+  const free = host.clientHeight;
+  if (!free || host.scrollHeight <= free + 1) return;
+  const top = host.getBoundingClientRect().top - host.scrollTop;
+  let cut = 0;
+  for (const child of host.children) {
+    const bottom = Math.round(child.getBoundingClientRect().bottom - top);
+    if (bottom > free + 1) break;
+    cut = bottom;
+  }
+  // Never nothing: a window too short for even one card still shows one, and
+  // scrolls inside it.
+  if (cut > 0 && cut < free) host.style.maxHeight = `${cut}px`;
 }
 
 /**

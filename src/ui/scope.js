@@ -1457,8 +1457,8 @@ export const NOMENCLATURE = [
   { id: 'coasting', name: 'Coasting', note: 'no paint this sweep; the position is dead reckoned' },
   { id: 'destroyed', name: 'Splashed', note: 'held for a few seconds, then the track drops' },
   { id: 'vip', name: 'Protected flight', note: 'the one aircraft a watch is about' },
-  { id: 'claimed', name: 'Assigned', note: 'a battery has it; its name is under the contact' },
-  { id: 'firing', name: 'Engaged', note: 'that battery has a round in the air on it' },
+  { id: 'claimed', name: 'Assigned \u25c7', note: 'a battery has it; its name is under the contact, and \u25c7 marks it in the list' },
+  { id: 'firing', name: 'Engaged \u25c6', note: 'that battery has a round in the air on it; \u25c6 in the list' },
   { id: 'offscale', name: 'Off the scale', note: 'outside the picture, on the bearing shown' },
   { id: 'battery', name: 'Battery', note: 'filled while its radar is radiating' },
   { id: 'radar', name: 'Surveillance radar', note: 'a set of its own, not a battery’s' },
@@ -1626,8 +1626,18 @@ export function assignmentShape(world, track) {
     .filter(Boolean);
   const engaged = (track.engagedBy?.length ?? 0) > 0;
   const bracket = engaged ? 'solid' : holders.length ? 'dashed' : 'none';
+  /*
+   * ONE PAIR OF GLYPHS FOR ONE FACT.
+   *
+   * Assignment and engagement were encoded three ways in two panels a hand's
+   * width apart: the shootlist said ◇ and ◆, this tag said → and ▲, and the
+   * bracket round the contact said dashed and solid. A player who learned one
+   * had learned none of the others. The tube and the list now use the same two
+   * marks, and the nomenclature plate prints them beside the brackets they go
+   * with.
+   */
   const tag = holders.length
-    ? `${engaged ? '▲ ' : '→ '}${holders[0]}${holders.length > 1 ? ` +${holders.length - 1}` : ''}`
+    ? `${engaged ? '◆ ' : '◇ '}${holders[0]}${holders.length > 1 ? ` +${holders.length - 1}` : ''}`
     : null;
   return { bracket, holders, tag };
 }
