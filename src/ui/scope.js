@@ -411,21 +411,38 @@ export class Scope extends Lettering {
 
     ctx.save();
 
+    /*
+     * THE CHART IS SCRIBED ON THE FACEPLATE, IN ONE WAX.
+     *
+     * The graphics critic: "place names and terrain shapes are drawn in
+     * desaturated grey and grey-blue on a green phosphor. A CRT cannot show
+     * grey. Map furniture on a real PPI is either scribed on the faceplate or
+     * projected, and either way it is a different physical layer with its own
+     * single colour." It was `inkDim` for the ridges and the roads and
+     * `friendly` — a pale blue — for the water, which is two impossible
+     * colours and, worse, the same substance as the data. Everything that is
+     * geography is now the one warm wax (`--chart`), and nothing that is
+     * geography glows. What stays coloured is an ORDER drawn on the chart —
+     * the river line when sector command has named it — because that is not
+     * geography, it is the thing you must not let anything cross.
+     */
+    const wax = p.chart;
+
     // High ground: filled, with a lighter crest line so ridges read as ridges.
     for (const range of MAP.highGround) {
       path(range.points, true);
-      ctx.fillStyle = withAlpha(p.inkDim, 0.07);
+      ctx.fillStyle = withAlpha(wax, 0.05);
       ctx.fill();
-      ctx.strokeStyle = withAlpha(p.inkDim, 0.22);
+      ctx.strokeStyle = withAlpha(wax, 0.2);
       ctx.lineWidth = 1 * this.dpr;
       ctx.stroke();
     }
 
     for (const lake of MAP.lakes) {
       path(lake.points, true);
-      ctx.fillStyle = withAlpha(p.friendly, 0.09);
+      ctx.fillStyle = withAlpha(wax, 0.07);
       ctx.fill();
-      ctx.strokeStyle = withAlpha(p.friendly, 0.24);
+      ctx.strokeStyle = withAlpha(wax, 0.22);
       ctx.stroke();
     }
 
@@ -433,7 +450,7 @@ export class Scope extends Lettering {
       path(river.points);
       ctx.strokeStyle = riverMarked
         ? withAlpha(p.hostile, riverFlashing ? 0.85 : 0.45)
-        : withAlpha(p.friendly, 0.19);
+        : withAlpha(wax, 0.2);
       ctx.lineWidth = (riverMarked ? (riverFlashing ? 2.4 : 1.8) : 1.2) * this.dpr;
       ctx.stroke();
     }
@@ -441,7 +458,7 @@ export class Scope extends Lettering {
     ctx.setLineDash([6 * this.dpr, 5 * this.dpr]);
     for (const road of MAP.roads) {
       path(road.points);
-      ctx.strokeStyle = withAlpha(p.inkDim, 0.3);
+      ctx.strokeStyle = withAlpha(wax, 0.26);
       ctx.lineWidth = 1.1 * this.dpr;
       ctx.stroke();
     }
@@ -457,7 +474,7 @@ export class Scope extends Lettering {
     // The Listonian border. A different kind of line: nothing comes over it, and
     // on one watch that is exactly the problem.
     path(MAP.border);
-    ctx.strokeStyle = withAlpha(p.unknown, 0.3);
+    ctx.strokeStyle = withAlpha(wax, 0.34);
     ctx.stroke();
     ctx.setLineDash([]);
 
@@ -466,7 +483,7 @@ export class Scope extends Lettering {
     if (s > 1.1) {
       for (const town of MAP.settlements) {
         const q = this.toScreen(town.pos);
-        ctx.fillStyle = withAlpha(p.inkDim, town.capital ? 0.55 : 0.36);
+        ctx.fillStyle = withAlpha(wax, town.capital ? 0.5 : 0.34);
         ctx.beginPath();
         ctx.arc(q.x, q.y, (town.capital ? 3 : 2) * this.dpr, 0, TAU);
         ctx.fill();
@@ -477,7 +494,7 @@ export class Scope extends Lettering {
           // tube for no one's benefit; the player asked for the Cyrillic to
           // be scaled back to the plates, and a map label is not a plate.
           text: town.en,
-          colour: withAlpha(p.inkDim, town.capital ? 0.7 : 0.5),
+          colour: withAlpha(wax, town.capital ? 0.62 : 0.44),
           x: q.x, y: q.y,
           priority: town.capital ? 8 : 4,
           offset: 5,
@@ -612,13 +629,22 @@ export class Scope extends Lettering {
       ctx.lineWidth = 1 * this.dpr;
       ctx.stroke();
 
-      // The boresight itself — the line the crew has actually chosen.
+      /*
+       * The boresight itself — the line the crew has actually chosen.
+       *
+       * It was drawn at the same brightness as the sweep's leading edge and to
+       * the battery's full reach, which can be well past the edge of the
+       * glass, so on a battalion board two of them ran corner to corner as
+       * full-tube diagonals and read as scratches on the faceplate. Half the
+       * alpha, a long dash that no rotating beam has, and cut to the tube.
+       */
       const h = headingVec(radar.boresightDeg);
+      const onGlass = Math.min(reach, Math.hypot(this.w, this.h) * 0.5);
       ctx.beginPath();
       ctx.moveTo(origin.x, origin.y);
-      ctx.lineTo(origin.x + h.x * reach, origin.y - h.y * reach);
-      ctx.strokeStyle = withAlpha(p.accent, lit ? 0.42 : 0.2);
-      ctx.setLineDash([3 * this.dpr, 5 * this.dpr]);
+      ctx.lineTo(origin.x + h.x * onGlass, origin.y - h.y * onGlass);
+      ctx.strokeStyle = withAlpha(p.accent, lit ? 0.22 : 0.1);
+      ctx.setLineDash([9 * this.dpr, 7 * this.dpr]);
       ctx.stroke();
       ctx.setLineDash([]);
     }

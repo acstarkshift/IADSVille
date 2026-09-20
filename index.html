@@ -160,6 +160,14 @@
       <canvas class="crest-cut" id="crest-canvas" width="64" height="72"
         role="img" aria-label="Arms of Trans Mordovia"></canvas>
       <span class="crest-plate" id="crest-plate"></span>
+      <!-- Standing, at the widths the top bar has no room for it. It used to
+           be deleted outright below 1400px — a scored quantity the commander's
+           TAKE and RELEASE decisions are weighed against, with nowhere on the
+           console to read it. This column carries the crest and has room. -->
+      <span class="readout standing is-lip" title="Your standing with sector command">
+        <label data-legend="STATUS.standing" data-gloss-only></label><b id="standing-lip">50</b>
+        <span class="standing-bar"><i id="standing-lip-fill"></i></span>
+      </span>
     </div>
     <!--
       The card reader, and the operator's identity card standing out of it.

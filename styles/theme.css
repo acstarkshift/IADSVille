@@ -30,6 +30,17 @@
   --unknown: #ffd447;
   --warn: #ffa53d;
   --good: #6cff8f;
+  /*
+   * THE CHART IS NOT ON THE PHOSPHOR, IT IS ON THE FACEPLATE.
+   *
+   * The map — the ridges, the lakes, the rivers, the roads, the border and the
+   * place names — was drawn in dim green and a pale blue, which is two things
+   * a single-gun tube cannot show and, worse, is the same substance as the
+   * data. On the hardware this console is modelled on the chart is scribed or
+   * waxed on the glass in front of the phosphor, so it is one colour, it does
+   * not glow, and it is instantly not a contact. A warm off-white wax.
+   */
+  --chart: #cfc2a2;
   --shadow: 0 0 12px rgba(64, 255, 158, .18);
   --glow: 0 0 6px rgba(64, 255, 158, .55);
   --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;

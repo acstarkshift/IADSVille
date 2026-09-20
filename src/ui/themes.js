@@ -78,6 +78,8 @@ export function readPalette() {
     unknown: get('--unknown', '#ffd447'),
     warn: get('--warn', '#ffa53d'),
     good: get('--good', '#6cff8f'),
+    /* The wax the chart is scribed in — see --chart in theme.css. */
+    chart: get('--chart', '#cfc2a2'),
   };
 }
 

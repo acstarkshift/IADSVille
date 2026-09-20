@@ -412,8 +412,11 @@ export function renderTopbar(world, ui, els) {
   const plate = els.unitPlate ?? document.getElementById('unit-plate');
   if (plate) {
     const echelon = world.echelon;
+    // The heading and not the full designation: AIR DEFENCE DISTRICT and
+    // NATIONAL AIR DEFENCE COMMAND are a hundred pixels of a bar that has to
+    // hold the clock, the raid, the lamps and the speed rack at 1280 as well.
     const here = echelon && (echelon.id === 'region' || echelon.id === 'national')
-      ? { tm: echelon.tm, en: echelon.en.toUpperCase() } : STATE.sector;
+      ? { tm: echelon.tm, en: echelon.heading } : STATE.sector;
     if (plate.dataset.unit !== here.en) {
       plate.dataset.unit = here.en;
       const stencil = [STATE.serviceShort, here];
@@ -427,12 +430,28 @@ export function renderTopbar(world, ui, els) {
   els.rounds.textContent = `${world.stats.roundsFired}/${world.roundAllowance}`;
   els.rounds.parentElement.classList.toggle('is-over', world.stats.roundsFired > world.roundAllowance);
 
+  /*
+   * Standing, in both places it can be read.
+   *
+   * The top bar's copy is deleted below 1400px, because at 1280 the card
+   * reader was being drawn across the master lamps for want of its ninety
+   * pixels — and that left a scored quantity the commander's TAKE and RELEASE
+   * decisions are weighed against with nowhere on the console to read it at
+   * one of the two desk widths. The second copy is in the desk lip beside the
+   * crest, in a column that carried nothing, and the stylesheet shows exactly
+   * one of the two at any width.
+   */
   const standing = Math.round(world.command.standing);
-  els.standing.textContent = String(standing);
-  els.standingFill.style.width = `${standing}%`;
-  const wrap = els.standing.closest('.standing');
-  wrap.classList.toggle('is-low', standing < 34);
-  wrap.classList.toggle('is-mid', standing >= 34 && standing < 55);
+  for (const [value, fill] of [[els.standing, els.standingFill],
+    [els.standingLip, els.standingLipFill]]) {
+    if (!value) continue;
+    value.textContent = String(standing);
+    if (fill) fill.style.width = `${standing}%`;
+    const wrap = value.closest('.standing');
+    if (!wrap) continue;
+    wrap.classList.toggle('is-low', standing < 34);
+    wrap.classList.toggle('is-mid', standing >= 34 && standing < 55);
+  }
 
   // The one legend on the picture panel that had no English at all was
   // ЕДИНАЯ КАРТА, sitting in the header of the panel the whole seat reads.

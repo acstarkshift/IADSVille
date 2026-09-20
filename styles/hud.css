@@ -97,21 +97,48 @@ kbd {
 .topbar-group:first-child > .badge { flex: 0 1 auto; min-width: 11em; }
 @media (max-width: 1400px) {
   .topbar { gap: 4px 8px; padding: 5px 10px; }
-  .topbar-group:first-child > .badge { min-width: 9.5em; }
-  .topbar .readout label { display: none; }
+  /*
+   * The room the captions and the fuller unit plate cost, taken back from the
+   * things that can spare it: the watch's name (which is also on the briefing,
+   * the end card and the roster), the gaps between the instruments, and the
+   * lamps' own tracking. Measured at 1280: the FAULT lamp ends 40px inside the
+   * group rather than 48px past it.
+   */
+  .topbar-group:first-child > .badge { min-width: 6.5em; font-size: 11px; }
+  .topbar-group { gap: 6px; }
+  .lamps { gap: 6px; margin-left: 0; }
+  .topbar .lamp { font-size: 8.5px; letter-spacing: .02em; }
+  /*
+   * The captions get smaller; they do not go.
+   *
+   * They were `display: none` below 1400, which left three bare figures —
+   * "2:30  4  0/18" — whose meanings existed only in title attributes, on a
+   * bar that is the console's primary status row. The room comes from the
+   * standing readout moving to the desk lip rather than from the words.
+   */
+  .topbar .readout label { font-size: 7px; letter-spacing: .06em; }
+  .topbar .readout { gap: 3px; }
   #unit-plate { font-size: 7px; padding: 2px 4px; }
 }
-/* Below 1400 the readouts themselves start to go, youngest first, rather than
-   anything on the bar abbreviating itself into a code: the standing figure
-   is the first to go, because at 1280 the card reader was drawn across the
-   master lamps for want of its ninety pixels, and the standing is on the
-   file and the debrief besides. The rack's caps give up a little padding
-   too. Measured at 1280: the reader now starts thirty pixels clear of the
-   last lamp. */
+/* Below 1400 the standing readout moves off the bar and into the desk lip,
+   rather than being deleted: at 1280 the card reader was drawn across the
+   master lamps for want of its ninety pixels, and standing is a scored
+   quantity the commander's TAKE and RELEASE decisions are weighed against.
+   The rack's caps give up a little padding too. Measured at 1280: the reader
+   starts thirty pixels clear of the last lamp. */
 @media (max-width: 1400px) {
   .topbar .readout.standing { display: none; }
   .topbar .rack .pb { padding: 0 18px 0 8px; }
 }
+/* One copy at a time: the lip's below 1400, the bar's above it. It sits at the
+   right-hand end of the desk lip's first column and gives up its bar before it
+   gives up its word. */
+.readout.standing.is-lip { display: none; margin-left: auto; min-width: 0; }
+.readout.standing.is-lip label { font-size: 7px; }
+.readout.standing.is-lip b { font-size: 11px; }
+.readout.standing.is-lip .standing-bar { width: 34px; flex: 0 1 34px; min-width: 0; }
+@media (max-width: 1400px) { .readout.standing.is-lip { display: flex; } }
+@media (max-width: 900px) { .readout.standing.is-lip { display: none; } }
 
 .badge {
   color: var(--engrave); letter-spacing: .13em; text-transform: uppercase;
@@ -1526,7 +1553,8 @@ h3 .rank-board, p .rank-board, td .rank-board { vertical-align: -4px; margin-rig
   image-rendering: pixelated;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .5));
 }
-.crest-plate { min-width: 0; overflow: hidden; }
+/* The country's name is not the thing that gives way in this corner. */
+.crest-plate { min-width: 0; overflow: hidden; flex: 0 0 auto; }
 .crest-plate .lg { align-items: flex-start; text-align: left; }
 .crest-plate .lg b { font-size: 10px; letter-spacing: .09em; white-space: nowrap; }
 .crest-plate .lg i { font-size: 8px; letter-spacing: .15em; white-space: nowrap; }

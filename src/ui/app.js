@@ -161,6 +161,8 @@ function cacheEls() {
     rounds: id('rounds'),
     standing: id('standing'),
     standingFill: id('standing-fill'),
+    standingLip: id('standing-lip'),
+    standingLipFill: id('standing-lip-fill'),
     fusionState: id('fusion-state'),
     trackList: id('track-list'),
     flightStrip: id('flight-strip'),
