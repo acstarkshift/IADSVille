@@ -171,6 +171,7 @@ function cacheEls() {
     ledCard: id('led-card'),
     ledNet: id('led-net'),
     trackDetail: id('track-detail'),
+    workedUnit: id('worked-unit'),
     batteryList: id('battery-list'),
     crewConsole: id('crew-console'),
     eventLog: id('event-log'),
@@ -792,6 +793,9 @@ function render(now, frameDtS = 1 / 60) {
       els.batteryList.classList.toggle('is-secondary', cabin);
       els.formationList.classList.toggle('is-secondary', cabin);
       els.batteryList.classList.toggle('with-formations', world.formations.length > 1);
+      // The worked unit's card is the cabin's own console's business there,
+      // and the phone has no room for a card at all.
+      if (els.workedUnit) els.workedUnit.classList.toggle('is-secondary', cabin);
       updateLegend();
       renderTutorial();
     }

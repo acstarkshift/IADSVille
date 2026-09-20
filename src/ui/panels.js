@@ -926,7 +926,7 @@ function pictureSources(world, ui) {
         : radar.on ? 'ON' : 'OFF';
     const cls = !radar.alive ? 'is-lost' : radar.on ? '' : 'is-hurt';
     // The callsign, which is the set's one name everywhere on the console.
-    return `<div class="bs-row ${cls}" title="${esc(nomenclatureFor(radar.label)?.en ?? radar.label)}">`
+    return `<div class="bs-row ${cls}" title="${esc(nomenclatureFor(radar.typeLabel ?? radar.label)?.en ?? radar.label)}">`
       + `<span>${esc(radar.label)}</span><b>${esc(state)}</b></div>`;
   }).join('');
   return `<div class="bs-head is-second">YOUR RADARS</div>${rows}`;
@@ -1269,11 +1269,26 @@ function railSwitchFor(world, ui) {
  */
 function rackStrips(world, ui, caps, {
   selectable = false, dropRailed = false, onlyWorkable = false,
+  skipSiteId = null, skipRadarId = null, deadLast = false, foot = true,
+  skipSets = false, skipBatteries = false,
 } = {}) {
   const onRail = railSwitchFor(world, ui);
   const rows = [];
-  for (const radar of world.radars.filter((r) => !r.siteId)) {
+  /*
+   * A wreck is a fact, not an instrument.
+   *
+   * The sets were listed in world order, so on the two watches with a dead set
+   * and a live one, WIDE EYE — destroyed, its exposure bar pinned at 100%, its
+   * switch greyed — took the one visible slot and LOW LOOK, the only set still
+   * alive and the only emissions switch on the board that does anything, was
+   * below the fold. The left panel said WIDE EYE DESTROYED / LOW LOOK ON in the
+   * same glance while the controls on screen were the wreck's.
+   */
+  const sets = skipSets ? [] : world.radars.filter((r) => !r.siteId);
+  if (deadLast) sets.sort((a, b) => Number(b.alive) - Number(a.alive));
+  for (const radar of sets) {
     if (dropRailed && onRail.radarId === radar.id) continue;
+    if (skipRadarId && radar.id === skipRadarId) continue;
     rows.push({
       key: `data-radar="${radar.id}"`,
       name: radar.label,
@@ -1286,11 +1301,14 @@ function rackStrips(world, ui, caps, {
         !!radar.on, { act: 'emcon-radar', radar: radar.id, disabled: !radar.alive }),
     });
   }
-  for (const site of rackBatteries(world, ui)) {
+  const batteries = skipBatteries ? [] : rackBatteries(world, ui);
+  if (deadLast) batteries.sort((a, b) => Number(b.alive) - Number(a.alive));
+  for (const site of batteries) {
     if (dropRailed && onRail.siteId === site.id) continue;
-    const sets = world.radarsOf(site);
-    const radar = sets.find((r) => r.alive) ?? world.radarById.get(site.radarId);
-    const armEtaS = Math.min(...sets.filter((r) => r.alive)
+    if (skipSiteId && site.id === skipSiteId) continue;
+    const own = world.radarsOf(site);
+    const radar = own.find((r) => r.alive) ?? world.radarById.get(site.radarId);
+    const armEtaS = Math.min(...own.filter((r) => r.alive)
       .map((r) => armTimeToImpact(world, r)), Infinity);
     rows.push({
       key: `data-site="${site.id}"`,
@@ -1327,8 +1345,8 @@ function rackStrips(world, ui, caps, {
     // `<= 1` and not `=== 1`: on a phone the rail can take the only set on a
     // one-battery net off this list altogether, and an empty rack that said
     // END OF THE NET would be a list announcing the end of nothing.
-    + `<div class="rack-empty">${rows.length <= 1 ? 'NOTHING ELSE ON THIS NET'
-      : 'END OF THE NET'}</div>`;
+    + (foot ? `<div class="rack-empty">${rows.length <= 1 ? 'NOTHING ELSE ON THIS NET'
+      : 'END OF THE NET'}</div>` : '');
 }
 
 /**
@@ -1527,7 +1545,38 @@ export function renderBatteries(world, ui, els) {
    * on the net, and dropping the duplicate is also the height the cabin's own
    * controls needed.
    */
-  const units = rackBatteries(world, ui).map((site, index) => {
+  /*
+   * ONE CARD, AND EVERY OTHER BATTERY AS A ROW.
+   *
+   * At the two highest seats the rack was a porthole. A card is 180-300 px
+   * tall and the window they scroll in is 154-248, so measured on the tree
+   * before this change: Four Sectors at the district, 17 cards, 3,944 px of
+   * them in a 230 px window — ONE whole card above the fold, fifteen hidden,
+   * 6% of the rack visible; at 1280x800 not one whole card and 4%; The Two
+   * Cities at the commander's seat, 8%. Every DISPLACE, RELOAD, SALVO and
+   * weapons-state cap for every battery but the first was behind a scroll with
+   * no scrollbar drawn, on a panel whose own subhead named a battery you could
+   * not see.
+   *
+   * The full card is the wrong object for sixteen of seventeen batteries. The
+   * one it is right for is the one the keyboard is pointed at — which the rack
+   * head already names, and whose caps already carry the only key chips on the
+   * panel. So that battery gets its card, at the top where the head is talking
+   * about it, and every other unit on the net is one uniform row: name, the
+   * anti-radiation clock, exposure, rounds and engagements, and its emissions
+   * switch. Click a row and the card follows.
+   *
+   * Seventeen rows at 42 px is 714 px against 3,944, and the thing you are
+   * working is never under the fold.
+   */
+  const workedId = batteryOrder(world).find((s) => s.id === ui.selectedSiteId)?.id
+    ?? batteryOrder(world).find((s) => s.id === world.homeBatteryId)?.id
+    ?? null;
+  const onTheRack = rackBatteries(world, ui);
+  const units = onTheRack.filter((s) => s.id === workedId).map((site) => {
+    // Its own number on the rack, which is the number the keyboard addresses
+    // it by — not its position in a list of one.
+    const index = onTheRack.indexOf(site);
     const type = SAM_TYPES[site.type];
     /*
      * The battery's emissions lamp and switch follow whichever set is still
@@ -1698,8 +1747,32 @@ export function renderBatteries(world, ui, els) {
   const blind = world.tracks.size === 0
     && world.aircraft.some((a) => a.alive && !AIR_TYPES[a.type]?.friendly);
 
-  const surveillance = world.radars.filter((r) => !r.siteId).map((radar, index) => {
-    const nomenclature = nomenclatureFor(radar.label);
+  /*
+   * THE LIVING SET FIRST, AND A WRECK IN ONE LINE.
+   *
+   * The sets were listed in world order, so on The Two Cities and The
+   * President's Flight WIDE EYE — destroyed, its card reading DESTROY...
+   * truncated, its exposure bar pinned at 100%, its switch greyed — took the
+   * one slot above the fold, and LOW LOOK, the only set still alive and the
+   * only emissions switch on the board that does anything, was cut off below
+   * it. The left panel said WIDE EYE DESTROYED / LOW LOOK ON in the same
+   * glance while the controls on screen were the wreck's. A dead set is sorted
+   * to the bottom and collapsed to what it is: a name, the word, and no
+   * instrument.
+   */
+  /*
+   * ONE SET GETS THE CARD, AND IT IS A LIVING ONE.
+   *
+   * The card is where the teaching is — what an early-warning set is for, what
+   * a gap-filler is for, the exposure bar that says how well the enemy has
+   * heard it — and at the district there are four sets, so four cards of it
+   * came to a thousand pixels of a rack whose window is two hundred and
+   * thirty. The lead living set keeps its card; the rest are rows with the
+   * same switch on them.
+   */
+  const lead = world.radars.find((r) => !r.siteId && r.alive) ?? null;
+  const surveillance = (lead ? [lead] : []).map((radar, index) => {
+    const nomenclature = nomenclatureFor(radar.typeLabel ?? radar.label);
     const armEta = radar.alive ? armTimeToImpact(world, radar) : Infinity;
     return `<div class="unit" data-radar="${radar.id}">
       <span class="screw ${'abcd'[index % 4]}"></span>
@@ -1747,7 +1820,58 @@ export function renderBatteries(world, ui, els) {
     </div>`;
   }).join('');
 
-  paint(els.batteryList, ui.view === 'crew' ? rackStrips(world, ui, caps) : surveillance + units);
+  /*
+   * AT THE SET THE BATTERIES ARE REFERENCE, NOT CONTROLS.
+   *
+   * The seat whose whole lesson is "one switch, one picture, one hand-over"
+   * presented four full battery cards carrying five caps each — a
+   * RADIATE/SILENCE switch and HOLD, TIGHT, FREE, RELOAD — all greyed, all
+   * with their key chips still stencilled on them, under a subhead reading
+   * KEYS -> BASTION for a keyboard that is not wired from this post. Fifteen
+   * of the twenty-four buttons on the console were disabled, and the only
+   * explanation was the word DETACHED in dim eight-pixel type, which is
+   * defined nowhere. `onlyWorkable` draws no control the seat cannot work, so
+   * the rows carry what this seat is actually watching for: rounds on the
+   * rails and engagements running, which is how the operator sees that the
+   * hand-over landed. The launch officer, who is the thing this seat talks to,
+   * is named at the head of the rack instead of a battery.
+   */
+  const atTheSet = ui.view !== 'crew' && world.control.role === 'radar';
+  // The card is at the top of the rack, so when the card changes the rack goes
+  // back to the top with it: picking a battery off a strip you had scrolled
+  // down to must not leave its card out of sight above you.
+  if (!atTheSet && els.batteryList.dataset.worked !== String(workedId)) {
+    els.batteryList.dataset.worked = String(workedId);
+    els.batteryList.scrollTop = 0;
+  }
+  /*
+   * The card stands ABOVE the rack, not inside it.
+   *
+   * A card is 220-300 px and the rack's window at the district seat is 230, so
+   * whichever card was first simply WAS the panel — measured, one whole card
+   * above the fold out of seventeen units, and at 1280x800 not one. Out of the
+   * scroller the card is always there and the list under it is uniform rows
+   * that a cut can only land between.
+   *
+   * Which card: the set at the radar seat, whose one switch is the whole of
+   * that post; the battery the keys are pointed at everywhere else.
+   */
+  const workedCard = atTheSet ? surveillance : units;
+  if (els.workedUnit) {
+    els.workedUnit.hidden = ui.view === 'crew' || !workedCard;
+    if (ui.view !== 'crew') paint(els.workedUnit, workedCard);
+  }
+  paint(els.batteryList, ui.view === 'crew' ? rackStrips(world, ui, caps)
+    : rackStrips(world, ui, caps, {
+      skipBatteries: true, deadLast: true, foot: false,
+      skipRadarId: atTheSet ? lead?.id ?? null : null,
+    })
+      + rackStrips(world, ui, caps, {
+        skipSets: true, deadLast: true,
+        selectable: !atTheSet,
+        onlyWorkable: atTheSet,
+        skipSiteId: atTheSet ? null : workedId,
+      }));
 
   /*
    * Which card the keyboard is pointed at, said at the head of the rack.
@@ -1767,10 +1891,19 @@ export function renderBatteries(world, ui, els) {
      * the word WEAPONS alone on a full-width band of empty painted steel at
      * the top of the column — a heading with nothing to head.
      */
+    /*
+     * And at the set it names the man, not a battery.
+     *
+     * KEYS -> BASTION promised a keyboard this post does not have: every cap
+     * on every battery card is greyed from the radar seat, because the
+     * operator gives no orders to a battery — the launch officer does, and the
+     * officer is what this seat actually talks to.
+     */
     const text = ui.view === 'crew'
       ? `${rackBatteries(world, ui).length + world.radars.filter((r) => !r.siteId).length}`
         + ' ON THE NET · NOT YOUR SEAT'
-      : target ? `KEYS → ${target.name}` : '';
+      : atTheSet ? 'THE LAUNCH OFFICER’S · L HANDS HIM ONE'
+        : target ? `KEYS → ${target.name}` : '';
     if (els.rackKeys.textContent !== text) els.rackKeys.textContent = text;
   }
 }

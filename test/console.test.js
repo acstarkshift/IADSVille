@@ -626,3 +626,41 @@ describe('the range selector says which scale the tube is on', () => {
     }
   });
 });
+
+describe('every set on the board has a name of its own', () => {
+  /*
+   * The interface critic: "YOUR RADARS in the left panel lists LOW LOOK, LOW
+   * LOOK, LOW LOOK. Three sets a hundred and fifty kilometres apart, one name,
+   * and no way to tell which of them the event log means." A callsign used
+   * twice on one board is qualified with the place the set sits at — the way
+   * every battery on that same board is already named — and a callsign used
+   * once is left alone, so the tutorial's "find WIDE EYE" still finds it.
+   */
+  test('no two sets on one board answer to the same name', () => {
+    const clashes = [];
+    for (const scenario of SCENARIOS) {
+      const world = new World(scenario, { role: scenario.roles[0], seed: 7 });
+      const seen = new Map();
+      for (const radar of world.radars.filter((r) => !r.siteId)) {
+        seen.set(radar.label, (seen.get(radar.label) ?? 0) + 1);
+      }
+      for (const [label, n] of seen) {
+        if (n > 1) clashes.push(`${scenario.id}: ${n} sets called ${label}`);
+      }
+    }
+    assert.deepEqual(clashes, [], clashes.join('\n'));
+  });
+
+  test('a set that is the only one of its kind keeps its plain callsign', () => {
+    const world = new World(scenarioById('first-light'), { role: 'radar', seed: 7 });
+    const labels = world.radars.filter((r) => !r.siteId).map((r) => r.label);
+    assert.ok(labels.includes('WIDE EYE'), `First Light's sets are ${labels.join(', ')}`);
+  });
+
+  test('a qualified set still finds its nomenclature plate', () => {
+    const world = new World(scenarioById('four-sectors'), { role: 'net', seed: 7 });
+    for (const radar of world.radars.filter((r) => !r.siteId)) {
+      assert.ok(nomenclatureFor(radar.typeLabel), `${radar.label} has no plate`);
+    }
+  });
+});

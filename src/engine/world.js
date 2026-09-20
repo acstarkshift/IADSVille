@@ -42,6 +42,7 @@ import {
 } from './command.js';
 import { composeEnding } from './endings.js';
 import { echelonForScenario, postForScenario } from './echelon.js';
+import { MAP } from './geography.js';
 import { composeFlightEnding } from './epilogue.js';
 
 /** Minutes on a road, in seconds. The reserve is not an inventory screen. */
@@ -403,6 +404,36 @@ export class World {
       const type = RADAR_TYPES[spec.type];
       const radar = this.addRadar({ ...type, ...spec, pos: spec.pos, on: spec.on ?? true });
       radar.exposureMult = this.modifiers.exposureMult;
+      // What KIND of set it is, kept apart from what it is CALLED, so the
+      // nomenclature plate still finds its entry when the callsign is
+      // qualified below.
+      radar.typeLabel = type.label;
+    }
+    /*
+     * THREE SETS, THREE NAMES.
+     *
+     * A watch fought over four districts puts three gap-fillers on the board
+     * and every one of them was called LOW LOOK — in the rack, in YOUR RADARS
+     * on the left panel, in the event log and on the tube. "LOW LOOK — NEW
+     * CONTACT" named one of three sets a hundred and fifty kilometres apart,
+     * and the operator could not tell which of them had just been found by the
+     * suppression aircraft. Where a callsign is used more than once it is
+     * qualified with the place the set sits at, which is how every battery on
+     * the same board is already named: LANCE KUBIN, HAMMER LOZAN, and now LOW
+     * LOOK KUBIN beside them. A set with a callsign of its own keeps it.
+     */
+    const standalone = this.radars.filter((r) => !r.siteId);
+    const count = new Map();
+    for (const r of standalone) count.set(r.label, (count.get(r.label) ?? 0) + 1);
+    for (const radar of standalone) {
+      if ((count.get(radar.label) ?? 0) < 2) continue;
+      let best = null;
+      let bestD = Infinity;
+      for (const town of MAP.settlements) {
+        const d = dist(radar.pos, town.pos);
+        if (d < bestD) { bestD = d; best = town; }
+      }
+      if (best) radar.label = `${radar.label} ${best.en.toUpperCase()}`;
     }
 
     for (const spec of this.scenario.sites) {
