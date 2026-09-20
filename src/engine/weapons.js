@@ -102,8 +102,32 @@ export function timeToInRangeS(site, track, horizonS = 600) {
  * rounds on cruise missiles.
  */
 export function computeSamPk(site, target, missile, difficulty) {
+  return samPkTerms(site, target, missile, difficulty).pk;
+}
+
+/**
+ * What a miss is going to say, if it misses.
+ *
+ * The experience critic: "A miss gets a warn-coloured line, a puff and a
+ * sound: 'T-005 — MISS' / 'BASTION: NO JOY ON T-005.' It never says why.
+ * computeSamPk knows the range factor, the altitude factor, whether the target
+ * was evading, whether the battery was degraded — none of it reaches the
+ * player. On the hard watches misses outnumber kills, each one costs a scarce
+ * round, and the player cannot learn anything from any of them. I watched
+ * T-005 be missed at 7:23, 7:52, 8:02, 8:13 with no explanation offered once."
+ *
+ * So the probability is worked out as a list of the things that cost it,
+ * rather than a number with its reasons thrown away, and whichever cost the
+ * most is the clause the crew puts on the net. The arithmetic is the same to
+ * the last decimal — `computeSamPk` is this function's `pk` — so nothing about
+ * the balance moves.
+ */
+export function samPkTerms(site, target, missile, difficulty) {
   const type = SAM_TYPES[site.type];
   let pk = type.pkBase * (difficulty?.friendlyPkMult ?? 1);
+  /** Each thing that took something off the shot: `factor` below 1 costs. */
+  const terms = [];
+  const charge = (id, factor, said) => { terms.push({ id, factor, said }); return factor; };
 
   /*
    * Geometry: where the round was fired from, and where it caught up.
@@ -138,6 +162,16 @@ export function computeSamPk(site, target, missile, difficulty) {
     geometry = Math.min(geometry,
       lerp(ENGAGEMENT.edgeRangePk, 1, invLerp(type.minRangeKm, type.minRangeKm * 1.6, r)));
   }
+  /*
+   * Which of the three geometry cases actually bit, for the readback. The
+   * clause names the one the crew would say on the net, not the arithmetic.
+   */
+  if (geometry < 1) {
+    const tooClose = r < type.minRangeKm * 1.6;
+    charge('geometry', geometry, tooClose
+      ? 'WE SNAPPED IT OFF INSIDE OUR MINIMUM'
+      : 'IT WAS RIGHT AT THE EDGE OF OUR ENVELOPE');
+  }
   pk *= geometry;
 
   /*
@@ -149,19 +183,43 @@ export function computeSamPk(site, target, missile, difficulty) {
    */
   const lowBand = Math.max(type.minAltM * 3, 200);
   if (target.altM < lowBand) {
-    pk *= lerp(ENGAGEMENT.lowAltPk, 1, invLerp(type.minAltM, lowBand, target.altM));
+    pk *= charge('low', lerp(ENGAGEMENT.lowAltPk, 1, invLerp(type.minAltM, lowBand, target.altM)),
+      'HE WAS DOWN IN THE GROUND RETURN');
   }
 
   const airType = AIR_TYPES[target.type];
   if (airType) {
-    if (target.evadingUntilS > (target.worldTimeS ?? 0)) pk *= airType.evadeFactor;
-    if (airType.rcs < 0.5) pk *= ENGAGEMENT.smallTargetPk;
+    if (target.evadingUntilS > (target.worldTimeS ?? 0)) {
+      pk *= charge('evading', airType.evadeFactor, 'HE BROKE HARD AT THE LAST');
+    }
+    if (airType.rcs < 0.5) {
+      pk *= charge('small', ENGAGEMENT.smallTargetPk, 'THERE IS ALMOST NOTHING OF IT TO LOCK ON TO');
+    }
   }
 
   // The round is only as good as the radar behind it.
-  if (missile?.unguidedS > 0) pk *= ENGAGEMENT.unguidedPk;
+  if (missile?.unguidedS > 0) {
+    pk *= charge('unguided', ENGAGEMENT.unguidedPk, 'WE LOST GUIDANCE ON THE WAY OUT');
+  }
 
-  return clamp01(pk);
+  return { pk: clamp01(pk), terms };
+}
+
+/**
+ * The one clause a crew puts on the net after a miss: whatever cost the shot
+ * the most. Null when nothing did — a shot that was simply unlucky is not
+ * given a lesson it does not contain.
+ */
+export function missReason(site, target, missile, difficulty) {
+  if (!site) return null;
+  const { terms } = samPkTerms(site, target, missile, difficulty);
+  let worst = null;
+  for (const term of terms) {
+    // A term that took less than a tenth off is not what lost the round.
+    if (term.factor > 0.9) continue;
+    if (!worst || term.factor < worst.factor) worst = term;
+  }
+  return worst?.said ?? null;
 }
 
 /**
@@ -550,7 +608,9 @@ function resolveIntercept(world, missile, prevPos) {
       // sound at all.
       world.log('warn', `${missile.trackLabel ?? 'TRACK'} — MISS`, { trackId: missile.trackId });
       if (site) {
-        world.comms(site.name, `NO JOY ON ${missile.trackLabel ?? 'THAT TRACK'}.`,
+        const why = missReason(site, target, missile, world.difficulty);
+        world.comms(site.name,
+          `NO JOY ON ${missile.trackLabel ?? 'THAT TRACK'}${why ? ` — ${why}.` : '.'}`,
           { siteId: site.id, trackId: missile.trackId });
       }
       // And it gets a pixel: the round detonating wide, a puff that dissipates

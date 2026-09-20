@@ -2,6 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   closestApproachKm, inEnvelope, timeToInRangeS, computeSamPk, computeArmPk,
+  samPkTerms, missReason,
   createMissile, stepMissiles,
 } from '../src/engine/weapons.js';
 import { SAM_TYPES, ENGAGEMENT, ARM, DIFFICULTY } from '../src/engine/config.js';
@@ -236,5 +237,52 @@ describe('the intercept is resolved in three dimensions', () => {
     const lethalM = ENGAGEMENT.lethalRadiusKm * 1000 * ENGAGEMENT.verticalLethalMult;
     assert.equal(shootAt(8000, 8000 - lethalM * 0.9), true, 'inside the fuze');
     assert.equal(shootAt(8000, 8000 - lethalM * 1.2), false, 'outside it');
+  });
+});
+
+describe('a miss says what cost the round', () => {
+  /*
+   * The experience critic watched one contact be missed four times in ninety
+   * seconds — 7:23, 7:52, 8:02, 8:13 — with "NO JOY ON T-005." and no reason
+   * offered once, while `computeSamPk` knew the range factor, the altitude
+   * factor, whether the target was evading and whether guidance had been lost.
+   * On the hard watches misses outnumber kills and every one costs a scarce
+   * round, so a miss that explains nothing is a dice roll where a lesson ought
+   * to be. The arithmetic is unchanged: `computeSamPk` is `samPkTerms().pk`.
+   */
+  const bastion = () => ({ id: 's1', type: 'bastion', pos: { x: 0, y: 0 } });
+  const at = (over = {}) => ({ type: 'striker', pos: { x: 0, y: 15 }, altM: 6000,
+    evadingUntilS: -1, worldTimeS: 0, ...over });
+
+  test('the terms add up to exactly what the old number was', () => {
+    for (const target of [at(), at({ altM: 60 }), at({ evadingUntilS: 30 }),
+      at({ type: 'cruise', altM: 90 }), at({ pos: { x: 0, y: 240 } })]) {
+      for (const missile of [{ unguidedS: 0 }, { unguidedS: 3 }]) {
+        const { pk } = samPkTerms(bastion(), target, missile, null);
+        assert.equal(pk, computeSamPk(bastion(), target, missile, null));
+      }
+    }
+  });
+
+  test('the clause is whichever term cost the most', () => {
+    // Down in the clutter, and nothing else wrong with the shot.
+    assert.match(missReason(bastion(), at({ altM: 30 }), { unguidedS: 0 }, null),
+      /GROUND RETURN/);
+    // Guidance gone is worse than anything a clean shot can suffer.
+    assert.match(missReason(bastion(), at(), { unguidedS: 3 }, null), /GUIDANCE/);
+    // A hard break, by itself.
+    assert.match(missReason(bastion(), at({ evadingUntilS: 30 }), { unguidedS: 0 }, null),
+      /BROKE HARD/);
+    // Fired at the far edge of the envelope.
+    assert.match(missReason(bastion(), at({ pos: { x: 0, y: 115 } }),
+      { unguidedS: 0, launchRangeKm: 118 }, null), /EDGE OF OUR ENVELOPE/);
+  });
+
+  test('a shot with nothing wrong with it is not given a reason it does not have', () => {
+    assert.equal(missReason(bastion(), at(), { unguidedS: 0, launchRangeKm: 15 }, null), null);
+  });
+
+  test('no battery answers for a round nobody fired', () => {
+    assert.equal(missReason(null, at(), { unguidedS: 0 }, null), null);
   });
 });
