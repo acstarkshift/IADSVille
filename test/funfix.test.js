@@ -20,18 +20,50 @@ import { DIRECTIVES } from '../src/engine/command.js';
 import { railLoadS } from '../src/engine/doctrine.js';
 import { answerableBy } from '../src/ui/panels.js';
 
-/** Drive a watch with the AI's radars up and directives answered. */
+/**
+ * Drive a watch with the AI's radars up and directives answered.
+ *
+ * `answer` may be a string or a function of the pending order's id, because
+ * two of the orders in this game now bind the player's own console and a test
+ * about something else has to be able to say which road it is on.
+ *
+ * The radars are brought up every tick and that line is not decoration: every
+ * surveillance set the player owns starts the watch COLD now, which is the
+ * trade the whole game is built on finally being asked. A test about the
+ * ledger, the dividend or the cadence answers that question the way a
+ * competent operator does — at once — so that it is measuring its own subject.
+ */
 function drive(w, { onTick = null, maxTicks = 40000, answer = 'accepted' } = {}) {
   let n = 0;
   while (w.phase === 'running' && n < maxTicks) {
     for (const radar of w.radars) if (radar.alive && !radar.siteId) radar.on = true;
     w.step(0.1);
-    if (w.command.pending) w.answer(answer);
+    if (w.command.pending) {
+      w.answer(typeof answer === 'function' ? answer(w.command.pending.id) : answer);
+    }
     onTick?.(w);
     n++;
   }
   return w;
 }
+
+/**
+ * Accept everything routine and refuse the two orders that bind the console.
+ *
+ * The expenditure freeze and the border restriction now REFUSE the player's
+ * own `assign()` against a track predicted onto the place they strike off —
+ * which is the point of them, and which makes them a term in any measurement
+ * taken on a watch that carries one. Measured on the merged hinge watch,
+ * twelve seeds, hand play against set-free-and-walk-away, with both arms
+ * accepting: the commander's counted arrivals went from 25 to 31 while the
+ * walk-away's stayed at 30, because a crew released weapons-free is not bound
+ * by an order the commander accepted and a commander who is bound cannot
+ * shoot a contact the picture has mislabelled. That is the order working. It
+ * is also not what a test about ATTENTION is measuring, so both arms refuse
+ * the two hinges and the comparison is about the raid again.
+ */
+const HINGES = new Set(['expenditureFreeze', 'borderRestriction']);
+const refuseTheHinges = (id) => (HINGES.has(id) ? 'refused' : 'accepted');
 
 /** The scripted hand player: assign, discriminate, per the game's own hints. */
 function handTick(w) {
@@ -104,7 +136,7 @@ describe('attention matters at sector level', () => {
       for (const site of w.sites) {
         w.setWeaponsState(site.id, strategy === 'free' ? 'free' : 'tight');
       }
-      drive(w, { onTick: strategy === 'hand' ? handTick : null });
+      drive(w, { onTick: strategy === 'hand' ? handTick : null, answer: refuseTheHinges });
       agg.score += w.outcome.score;
       agg.rounds += w.outcome.stats.roundsFired;
       agg.decoys += w.outcome.stats.decoysEngaged;
@@ -211,12 +243,12 @@ describe('attention matters at sector level', () => {
       const netted = new World(scenarioById('economy-of-force'), { role: 'net', seed });
       netted.control.netIsHuman = false;
       for (const f of netted.formations) netted.setPosture(f.id, 'free');
-      drive(netted);
+      drive(netted, { answer: refuseTheHinges });
       aiScore += netted.outcome.score;
 
       const alone = new World(scenarioById('economy-of-force'), { role: 'net', seed });
       for (const site of alone.sites) alone.setWeaponsState(site.id, 'free');
-      drive(alone);
+      drive(alone, { answer: refuseTheHinges });
       freeScore += alone.outcome.score;
     }
     /*
@@ -543,30 +575,41 @@ describe('the file bills what you decided', () => {
       'stickiness must not survive kilometres of new geometry');
   });
 
-  test('obeying the freeze is not billed for it; defending it is', () => {
+  test('obeying the freeze is not billed for it, and cannot be: it binds the console', () => {
     /*
-     * The defending road has to be a DEFENCE, not a hand that happens to shoot
-     * a hospital-bound track on the way past. That distinction is the watch's
-     * own design — "a defence that saved the hospital by accident was
-     * answering the order with a shrug instead of a decision" — and the test
-     * used to blur it: its defender picked whatever scored highest on
-     * `engagementValue`, which reads the state's own schedule, on which the
-     * hospital is worth eight. Once the act-two scrub gave the watch a western
-     * probe and moved the second hospital package out to a hundred and
-     * thirty-two kilometres, that hand stopped breaching the freeze at all on
-     * one seed of three (one round billed against a bar of three) — which
-     * measured the hand, not the ledger. The defender now does what
-     * `tools/measure-moral.mjs` does: it watches the west and claims anything
-     * committed to the struck-off place as soon as the track is worth
-     * believing. Measured over the three seeds below, that road is billed
-     * 4 / 8 / 13 rounds against the obedient road's 0 / 0 / 0; the bar is set
-     * at nine of the twenty-five so seed noise cannot flap the build.
+     * RE-ANCHORED WHEN THE ORDER STARTED BINDING THE PLAYER'S OWN HAND.
+     *
+     * The old version had the defending road ACCEPT the freeze and then
+     * defend the hospital anyway, and measured the rounds the ledger billed
+     * it: 4 / 8 / 13 against the obedient road's 0 / 0 / 0. That road no
+     * longer exists. Across nine hundred and sixty measured runs not one
+     * directive was ever refused, because obeying paid four points of
+     * standing and bound nobody while refusing cost nine and bought nothing —
+     * so `cannotEngageReason` refuses an assignment against a firm track
+     * predicted onto the struck-off place, and the only way to defend the
+     * building is to say no on the net.
+     *
+     * Which is what this now measures. Three roads:
+     *
+     *   obey     accepts the order and is billed nothing, BECAUSE IT CANNOT
+     *            SPEND: the console refuses the press.
+     *   defend   accepts the order and tries anyway — the refusal, in the
+     *            console's own words, at the moment of the press.
+     *   refuse   says no on the net, is released, spends rounds on the
+     *            hospital, and the ledger bills every one of them.
+     *
+     * The bill still exists on the refusing road because `freezeExcludedId`
+     * is the FACT the order is about — the building is not on tonight's
+     * schedule either way — and only `freezeAccepted` binds. Without that,
+     * THE ALLOCATION's query paragraph would read identically on both roads.
      */
     function freezeWatch(mode, seed) {
       const w = new World(scenarioById('economy-of-force'), { role: 'net', seed });
       w.control.netIsHuman = true;
       const hospital = w.assets.find((a) => a.type === 'hospital');
+      const refusals = [];
       drive(w, {
+        answer: (id) => (mode === 'refuse' && id === 'expenditureFreeze' ? 'refused' : 'accepted'),
         onTick: (world) => {
           for (const t of world.tracks.values()) {
             if (t.destroyed || t.hostility !== 'hostile') continue;
@@ -582,11 +625,15 @@ describe('the file bills what you decided', () => {
             // in on the hospital is claimed before the generic firmness bar.
             const towardHospital = t.predictedAssetId === hospital.id
               || (t.altM < 1500 && dist(t.pos, hospital.pos) < 70);
-            if (mode === 'defend' && towardHospital && (t.quality ?? 0) >= 0.35) {
+            if (mode !== 'obey' && towardHospital && (t.quality ?? 0) >= 0.35) {
               const taker = world.sites
-                .filter((s) => world.commandable(s.id) && engagementValue(world, s, t))
+                .filter((s) => world.commandable(s.id))
                 .sort((a, b) => dist(a.pos, t.pos) - dist(b.pos, t.pos))[0];
-              if (taker) world.assign(t.id, taker.id, { salvo: 2 });
+              if (taker) {
+                const why = cannotEngageReason(world, taker, t);
+                if (why) refusals.push(why);
+                else world.assign(t.id, taker.id, { salvo: 2 });
+              }
               continue;
             }
             if ((t.quality ?? 0) < 0.5) continue;
@@ -604,16 +651,44 @@ describe('the file bills what you decided', () => {
           }
         },
       });
-      return w.stats.roundsAgainstFreeze;
+      return { billed: w.stats.roundsAgainstFreeze, refusals };
     }
     const seeds = ['bill-1', 'bill-2', 'bill-3'];
-    const obeyed = seeds.reduce((n, s) => n + freezeWatch('obey', s), 0);
-    const defended = seeds.reduce((n, s) => n + freezeWatch('defend', s), 0);
-    assert.ok(obeyed <= 2,
-      `an obedient watch was billed ${obeyed} rounds against the freeze`);
-    assert.ok(defended >= 9,
-      `a deliberate defence was billed only ${defended} rounds — the breach went unseen`);
-    assert.ok(defended > obeyed, 'the two roads must read differently in the file');
+    const sum = (mode) => seeds.reduce((acc, s) => {
+      const r = freezeWatch(mode, s);
+      acc.billed += r.billed;
+      acc.refusals.push(...r.refusals);
+      return acc;
+    }, { billed: 0, refusals: [] });
+
+    const obeyed = sum('obey');
+    const tried = sum('defend');
+    const refused = sum('refuse');
+
+    assert.equal(obeyed.billed, 0,
+      `an obedient watch was billed ${obeyed.billed} rounds against the freeze`);
+    assert.ok(tried.refusals.some((r) => /struck off/.test(r)),
+      'an operator who accepted the order and pressed anyway must be refused at the press, '
+      + `in the console's own words: ${[...new Set(tried.refusals)].slice(0, 6).join(' / ')}`);
+    assert.ok(!obeyed.refusals.some((r) => /struck off/.test(r)),
+      'and an operator who never presses is never told off for it');
+    /*
+     * NOT ZERO, AND THE REMAINDER IS HONEST. An order that arrives at a
+     * hundred seconds cannot un-fire what is already in the air, and a track
+     * the picture has not yet labelled is not covered by an order about a
+     * place — so a commander who accepted the freeze and went on trying is
+     * billed the two or three rounds that were committed before the order
+     * could bind them, and nothing after. Measured 2 across these three
+     * seeds, against the refusing road's 25.
+     */
+    assert.ok(tried.billed <= 3,
+      `the accepted order must bind, and it billed ${tried.billed} rounds instead`);
+    // Measured 4 / 8 / 13 across these three seeds on the road that says no;
+    // the bar is nine of the twenty-five so seed noise cannot flap the build.
+    assert.ok(refused.billed >= 9,
+      `refusing the order must release the batteries, and it spent ${refused.billed} rounds`);
+    assert.ok(refused.billed > tried.billed * 3,
+      `the two roads must read differently in the file (${refused.billed} vs ${tried.billed})`);
   });
 
   test('a valley defence is filed under the valley, not under the officers', () => {

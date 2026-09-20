@@ -1128,6 +1128,23 @@ export const COMMAND = {
     /** Per minute of total emissions silence, once past the grace period. */
     perDarkMinute: -2.5,
     darkGraceS: 120,
+    /*
+     * WHEN SECTOR HAS TO BRING THE SETS UP FOR YOU.
+     *
+     * Every surveillance set the player owns now starts cold, which is the
+     * whole game's signature decision finally being asked. A watch nobody is
+     * playing still has to produce a picture, so sector reaches over and
+     * flips the switch — and that is a failure, not a service. The dark time
+     * accrued to that moment is charged at `perDarkMinute` with NO grace,
+     * because the grace exists for an operator who chose to be dark and this
+     * one did not choose anything. Ninety seconds is -3.75.
+     *
+     * `radarSafetyAtS` on a scenario overrides the ninety; the teaching
+     * watch sets sixty and is exempt from the charge, because a watch whose
+     * job is to teach the switch may not fine a learner for not yet knowing
+     * where it is.
+     */
+    radarSafetyS: 90,
     /** Awarded for finishing with every defended asset intact. */
     cleanSweep: 8,
     /** Awarded for surviving with your own site intact. */

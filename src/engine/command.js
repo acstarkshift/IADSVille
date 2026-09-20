@@ -263,7 +263,25 @@ export const DIRECTIVES = {
       w.command.constraints.freezeExcludedId = hospital?.id ?? null;
       w.command.constraints.freezeAccepted = true;
     },
-    onRefuse: (w) => { w.command.constraints.freezeRefused = true; },
+    /*
+     * A REFUSAL STILL LEAVES THE BUILDING OFF THE SCHEDULE.
+     *
+     * `freezeExcludedId` is not the order; it is the fact the order is about
+     * — the hospital is not a designated defended place tonight and was not
+     * one before sector transmitted anything. Three things read it: the
+     * ledger that counts rounds spent outside the freeze, the price of losing
+     * the building, and the leaker count. If a refusal cleared it, an
+     * operator who said no would be billed the full price of a building the
+     * state does not list, and the query paragraph in THE ALLOCATION would
+     * read the same on both roads because neither had spent a round "outside
+     * the freeze". What the refusal clears is `freezeAccepted`, which is the
+     * only thing that binds the player's own hand.
+     */
+    onRefuse: (w) => {
+      const hospital = w.assets.find((a) => a.type === 'hospital');
+      w.command.constraints.freezeExcludedId = hospital?.id ?? null;
+      w.command.constraints.freezeRefused = true;
+    },
   },
 
   /**
@@ -362,7 +380,12 @@ export const DIRECTIVES = {
       w.command.constraints.borderExcludedId = camp?.id ?? null;
       w.command.constraints.borderAccepted = true;
     },
-    onRefuse: (w) => { w.command.constraints.borderRefused = true; },
+    /** Same reasoning as the freeze: the fact stands, the binding does not. */
+    onRefuse: (w) => {
+      const camp = w.assets.find((a) => a.type === 'camp');
+      w.command.constraints.borderExcludedId = camp?.id ?? null;
+      w.command.constraints.borderRefused = true;
+    },
   },
 
   /**

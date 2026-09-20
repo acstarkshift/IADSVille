@@ -262,6 +262,49 @@ async function main() {
       if (await page.evaluate(() => !document.getElementById('context-menu').hidden)) failures.push(`${run.mission}/${run.role}: Escape did not close the contact menu`);
     }
 
+    /*
+     * HOLD READS; IT DOES NOT ORDER.
+     *
+     * Measured in the browser before the fix: at speed 0 the world clock does
+     * not move and `world.assign()` still returned a live engagement, so every
+     * time-pressure decision in the game was optional for anybody who found
+     * the space bar. This drives it the way a player does — the HOLD cap, then
+     * the key that hands a contact to a battery — and asks the world whether
+     * anything was committed. Reading stays free, which is why the selection
+     * made just above must survive.
+     */
+    if (detected && run.role === 'net') {
+      await page.click('[data-speed="0"]');
+      await wait(60);
+      const before = await page.evaluate(() => {
+        const w = window.__world;
+        window.__ui.selectedTrackId = [...w.tracks.keys()][0] ?? null;
+        return { engagements: w.sites.reduce((n, s) => n + s.engagements.length, 0),
+          selected: window.__ui.selectedTrackId };
+      });
+      await page.keyboard.press('Shift+Digit1');
+      await page.keyboard.press('e');
+      await page.keyboard.press('s');
+      await wait(120);
+      const after = await page.evaluate(() => {
+        const w = window.__world;
+        return { engagements: w.sites.reduce((n, s) => n + s.engagements.length, 0),
+          selected: window.__ui.selectedTrackId,
+          said: w.events.some((ev) => /NOT LISTENING TO A STOPPED CLOCK/.test(ev.text)) };
+      });
+      if (after.engagements > before.engagements) {
+        failures.push(`${run.mission}/${run.role}: a stopped clock still took an order `
+          + `(${before.engagements} -> ${after.engagements} engagements)`);
+      }
+      if (!after.said) {
+        failures.push(`${run.mission}/${run.role}: HOLD refused the order and said nothing`);
+      }
+      if (after.selected !== before.selected) {
+        failures.push(`${run.mission}/${run.role}: HOLD took the selection away; reading must stay free`);
+      }
+      await page.click('[data-speed="4"]');
+    }
+
     // Exercise both renderers where the seat allows it.
     if (run.role === 'both') {
       await page.click('#view-toggle');
@@ -597,10 +640,20 @@ async function touchRun(browser) {
         await wait(400);
         if (!await page.evaluate(() => window.__world.radars.some((r) => r.on))) {
           failures.push(`${label}: tapping the emissions switch did not bring a set up`);
-          await page.evaluate(() => {
-            for (const r of window.__world.radars) window.__world.setRadar(r.id, true);
-          });
         }
+        /*
+         * And then the sector's own sets, which start COLD on every watch the
+         * player owns them — the trade the whole game is built on, finally
+         * being asked. The rail's emissions switch is the seat's own battery;
+         * at the cabin and at the two-seat post it does not reach the
+         * surveillance sets, so a touch run that only taps the switch fights
+         * the watch on the battery's own horizon and finds nothing to lock in
+         * twenty-eight seconds. A player would come up on the net view. This
+         * is that, done the way the desktop runs already do it.
+         */
+        await page.evaluate(() => {
+          for (const r of window.__world.radars) window.__world.setRadar(r.id, true);
+        });
         await tap('[data-speed="4"]');
         await page.waitForFunction(() => window.__world.tracks.size > 0, null, { timeout: 90000 });
 
@@ -660,8 +713,17 @@ async function touchRun(browser) {
           }
           // The launch cap arms when the solution is ready; tap it until it
           // takes — rolled and perfect taps alternately, because both happen.
+          /*
+           * SIXTY, AND IT WAS FORTY. The sets the sector owns start the watch
+           * cold now, so the cabin's own list fills from a picture that began
+           * twenty seconds of warming later than this loop was written
+           * against — and on the two-seat watch in landscape the lamp armed
+           * a few seconds past the old budget. Forty-two seconds of wall time
+           * at four times speed, which is about a hundred and seventy seconds
+           * of watch.
+           */
           let sawCap = false;
-          for (let i = 0; i < 40 && fired === 0; i++) {
+          for (let i = 0; i < 60 && fired === 0; i++) {
             await wait(700);
             const state = await (i % 2 ? rolledTap : tap)('.ab-caps [data-act="fire"]');
             if (state === 'absent' || state === 'off-screen') {
@@ -670,8 +732,23 @@ async function touchRun(browser) {
             }
             sawCap = true;
             fired = await page.evaluate(() => window.__world.stats.roundsFired);
+            /*
+             * And if the battery is holding nothing, lock again — the SAME
+             * contact, not the next one. An engagement can be broken before a
+             * round leaves the rail: the target turns out of reach, the
+             * guidance is lost, the track fades. A thumb would press LOCK
+             * again rather than press LAUNCH at a dead lamp. Stepping the
+             * target here instead was tried and is wrong: it walks the two
+             * cabin runs off a contact they were about to take, and both
+             * failed on it.
+             */
+            if (!fired && i % 6 === 5
+              && !await page.evaluate(() => window.__world
+                .siteById.get(window.__world.control.crewedBatteryId)?.engagements.length)) {
+              await rolledTap('.ab-caps [data-act="lock"]');
+            }
           }
-          if (sawCap && fired === 0) failures.push(`${label}: no round left the rail by touch in 28 s`);
+          if (sawCap && fired === 0) failures.push(`${label}: no round left the rail by touch in 42 s`);
         } else {
           /*
            * The net's launch is the assignment: hand the contact over and the

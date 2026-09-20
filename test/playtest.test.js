@@ -339,45 +339,72 @@ describe('the playtest harness', () => {
    * up for, and nothing else.
    */
   /*
-   * THE CURVE, PINNED.
+   * THE CURVE, PUBLISHED AND HELD.
    *
-   * The campaign is four acts and it is supposed to get harder. Before the
-   * curve scrub it did not: measured on each watch's primary seat, act one
-   * held 100 / 63 / 88 per cent competently played and act two held 100 / 88 /
-   * 100 / 100 / 88 — the second act of four was the easiest thing in the game
-   * — while act four held 75 and 75 against act three's 63 and 63. Every one
-   * of those numbers came out of a leaker count that could not see a cruise
-   * missile arrive, which is why the property was never visible.
+   * The campaign is four acts and it is supposed to get harder. It did not:
+   * the balance critic measured from watch four to watch twelve every night
+   * the same difficulty, acts three and four identical to the decimal at
+   * 71.9 per cent, and said why the old assertion could not see it — "it
+   * compares act MEANS with one seed of slack (6.25 points) and the observed
+   * act-1-to-act-2 difference is 0.6 points. A contract that cannot fail is
+   * not a contract."
    *
-   * Sixteen seeds and not eight, and it costs the suite about a minute. At
-   * eight a held rate is a multiple of 12.5 against a band sixty points wide,
-   * so there are three rungs for four acts and the ordering below cannot be
-   * expressed, let alone tested: the same tree reads act three ABOVE act two
-   * on eight seeds purely on which eight.
+   * So this is a contract. Four published bands, one per act, and a staircase
+   * between the means, measured on each watch's primary seat at competent
+   * play. Their asked-for shape was 88 / 78 / 70 / 62; what the campaign
+   * measures, at twenty-four seeds, is 85.5 / 76.3 / 71.0 / 62.5.
    *
-   * Asserted with one seed of slack in the ordering, because the bar is a
-   * design property and not a fixture — a change that moves one watch by one
-   * night out of sixteen has not broken the campaign's shape, and a change
-   * that moves an act has.
+   * TWENTY-FOUR SEEDS AND NOT SIXTEEN, and it costs the suite about eighty
+   * seconds. At sixteen a held rate is a multiple of 6.25 against bands two
+   * to four rungs wide, and the tuning below chases differences of one and
+   * two nights — the sample was the thing being measured. At twenty-four a
+   * rung is 4.17 points. The evidence that this mattered: Economy of Force
+   * read 63 per cent over sixteen seeds and 92 over twenty-four on trees that
+   * differed by one gate.
    *
-   * RE-MEASURED FOR THE LADDER, AND NOT RE-ANCHORED, BECAUSE NOTHING MOVED.
-   * `scenario.roles[0]` is the seat this reads each watch at, and the ladder
-   * changed it on three of the twelve. Sixteen seeds apiece, competently
-   * played, before and after:
+   * THE RE-TUNE THIS ANCHORS, AND WHAT CAUSED IT. Every surveillance set the
+   * player owns now starts the watch COLD — the game's signature decision,
+   * which eleven of twelve watches used to ship already answered — and coming
+   * up costs the EWR twenty seconds of warming. The campaign fell fifteen to
+   * thirty points of held rate the day that landed. Twenty-four seeds,
+   * competent, primary seat, before the cold start and after the re-tune:
    *
-   *   First Light   net  16/16  ->  radar 16/16
-   *   Low Riders    net  12/16  ->  radar 12/16
-   *   Weasel Hour   net  13/16  ->  crew  13/16
+   *   watch                    hot    cold   re-tuned   what moved
+   *   Low Riders                75      54      83      allowance 2->3, one
+   *                                                     cruise off the 435 s run
+   *   Solo Battery              88      81      88      one cruise off the 330 s run
+   *   Weasel Hour               88      79      79      nothing
+   *   Economy of Force          69      79      79      nothing (the hinge gate
+   *                                                     below gave it back)
+   *   Ville Under Fire          63      54      71      allowance 3->5
+   *   Four Sectors              75      63      71      one cruise off the 210 s
+   *                                                     stream; 8 reads 63 and 9
+   *                                                     reads 88, so the dial
+   *                                                     could not express act 3
+   *   Reinforce the Capital     63      71      71      nothing
+   *   The Two Cities            63      54      67      allowance 4->5
+   *   The President's Flight    88      58      58      nothing
    *
-   * — with Solo Battery (crew both times, 13/16) as the control. The band and
-   * the staircase below therefore hold on the same numbers they held on
-   * before, which is the property the re-gating had to have: the rungs change
-   * who the player is, not how hard the night is.
+   * NOT ONE BAND WAS WIDENED TO FIT A NUMBER. Where a watch would not come
+   * into its act's band on the allowance dial it was the aeroplanes that
+   * moved, which is the only way to tune a dial whose adjacent settings are
+   * twenty points apart.
+   *
+   * First Light is the documented exception and is asserted separately: a
+   * teaching watch that fails a learner has failed.
    */
+  const ACT_BANDS = {
+    1: { lo: 0.79, hi: 1.00, target: 0.88 },
+    2: { lo: 0.67, hi: 0.88, target: 0.78 },
+    3: { lo: 0.63, hi: 0.79, target: 0.70 },
+    4: { lo: 0.50, hi: 0.71, target: 0.62 },
+  };
+  /** How far apart two acts' means must be for the staircase to be a step. */
+  const STEP = 0.04;
+
   test('the campaign gets harder act by act, and it is measured not asserted', async () => {
     const ACT = { battalion: 1, sector: 2, region: 3, national: 4 };
-    const SEEDS = 16;
-    const SLACK = 1 / SEEDS;             // one night in sixteen
+    const SEEDS = 24;
     const held = new Map();
     for (const scenario of SCENARIOS) {
       const seat = scenario.roles[0];
@@ -388,32 +415,34 @@ describe('the playtest harness', () => {
       held.set(scenario.id, n / SEEDS);
     }
     const acts = [1, 2, 3, 4].map((a) => SCENARIOS
-      .filter((s) => ACT[s.echelon] === a)
+      .filter((s) => ACT[s.echelon] === a && s.id !== 'first-light')
       .map((s) => [s.id, held.get(s.id)]));
 
-    // First Light is the documented exception: a teaching watch that fails a
-    // learner has failed, so it is excluded from the ordering and asserted
-    // separately as the one watch that cannot be lost by anyone who plays.
     assert.equal(held.get('first-light'), 1, 'the tutorial is held by everyone who plays it');
-    const ranked = acts.map((act) => act.filter(([id]) => id !== 'first-light'));
 
-    for (const [a, act] of ranked.entries()) {
+    for (const [i, act] of acts.entries()) {
+      const band = ACT_BANDS[i + 1];
       for (const [id, rate] of act) {
-        assert.ok(rate >= 0.60 - 1e-9 && rate <= 0.90 + 1e-9,
-          `${id} is inside the difficulty band (${Math.round(rate * 100)}%)`);
+        assert.ok(rate >= band.lo - 1e-9 && rate <= band.hi + 1e-9,
+          `${id} is outside act ${i + 1}'s published band of `
+          + `${Math.round(band.lo * 100)}-${Math.round(band.hi * 100)}% `
+          + `(${Math.round(rate * 100)}%)`);
       }
-      if (a === 0) continue;
-      const previousHardest = Math.min(...ranked[a - 1].map(([, r]) => r));
-      for (const [id, rate] of act) {
-        assert.ok(rate <= previousHardest + SLACK + 1e-9,
-          `${id} at ${Math.round(rate * 100)}% may not be easier than act ${a}'s `
-          + `hardest watch at ${Math.round(previousHardest * 100)}%`);
-      }
-      const mean = (list) => list.reduce((x, [, r]) => x + r, 0) / list.length;
-      assert.ok(mean(act) <= mean(ranked[a - 1]) + SLACK + 1e-9,
-        `act ${a + 1} (${Math.round(mean(act) * 100)}%) may not be easier than `
-        + `act ${a} (${Math.round(mean(ranked[a - 1]) * 100)}%)`);
     }
+
+    const mean = (list) => list.reduce((x, [, r]) => x + r, 0) / list.length;
+    for (let i = 1; i < acts.length; i++) {
+      assert.ok(mean(acts[i]) <= mean(acts[i - 1]) - STEP + 1e-9,
+        `act ${i + 1} (${Math.round(mean(acts[i]) * 100)}%) must be at least four points `
+        + `harder than act ${i} (${Math.round(mean(acts[i - 1]) * 100)}%), and it is a `
+        + 'staircase or it is a floor');
+    }
+    // And the whole thing must actually descend from the top of the ladder to
+    // the bottom: a campaign that is flat in the middle and steep at the ends
+    // passes the pairwise test above and is not a curve.
+    assert.ok(mean(acts[0]) - mean(acts[3]) >= 0.18 - 1e-9,
+      `the campaign must fall at least eighteen points from act one to act four `
+      + `(${Math.round((mean(acts[0]) - mean(acts[3])) * 100)})`);
   });
 
   test('a switch flipping in an empty sky is not something happening', () => {

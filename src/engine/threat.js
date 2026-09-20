@@ -329,6 +329,46 @@ export function cannotEngageReason(world, site, track) {
    */
   const fc = world.radarById?.get(site.fcRadarId ?? site.radarId);
   if (fc && !fc.alive) return 'fire control destroyed';
+  /*
+   * AND THE ORDER YOU ACCEPTED BINDS YOUR OWN HAND.
+   *
+   * Across nine hundred and sixty measured runs not one directive was ever
+   * refused or allowed to time out, and the reason is arithmetic: obeying
+   * paid four points of standing and bound nobody, refusing cost nine and a
+   * mark in the file and bought nothing the player could not already do. The
+   * crews were bound — `doctrine.js` has had the same two lines for a while,
+   * so an officer told a grid is a border incident does not take that shot on
+   * his own authority — and the one hand in the sector that was not was the
+   * player's. That is not a moral choice; it is a Y key.
+   *
+   * So an accepted order refuses the assignment at the moment of the press,
+   * in the same sentence a battery uses to say it has no rounds. The only way
+   * to defend the place the order struck off is to refuse the order, which
+   * releases every battery at once and puts the referral in the file there
+   * and then, mid-watch, in front of the player.
+   *
+   * It reads the PREDICTED destination, which is the same column the crews
+   * are gated on and the same one the operator can see. A contact the picture
+   * has not yet decided about is not covered by an order about a place.
+   *
+   * AND IT WAITS FOR A FIRM TRACK, which is not fussiness. The prediction is
+   * a ray through a velocity estimate, and on a soft track it is often the
+   * wrong building: measured on the merged hinge watch over twelve seeds,
+   * binding every track cost the obedient commander one more counted arrival
+   * than leaving him free, because contacts refused as hospital-bound turned
+   * out to be going to the power station. An order about a place binds you
+   * where the picture is sure and not where it is guessing, which is also
+   * what an officer would say if asked.
+   */
+  const orders = world.command?.constraints;
+  if (orders && track.predictedAssetId && (track.quality ?? 0) >= DETECTION.firmQuality) {
+    if (orders.freezeAccepted && orders.freezeExcludedId === track.predictedAssetId) {
+      return 'struck off tonight\'s schedule';
+    }
+    if (orders.borderAccepted && orders.borderExcludedId === track.predictedAssetId) {
+      return 'outside national territory';
+    }
+  }
   const type = SAM_TYPES[site.type];
   if (track.altM > type.maxAltM) {
     return `above its ceiling (${Math.round(type.maxAltM / 1000)}km)`;

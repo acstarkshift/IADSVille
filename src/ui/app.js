@@ -1291,6 +1291,7 @@ function stepRange() {
  * rest of the campaign's muscle memory is "drag it onto a battery".
  */
 function handOverSelected(trackArg) {
+  if (refusedByHold()) return;
   const trackId = trackArg ?? ui.selectedTrackId;
   if (!trackId) {
     world?.logThrottled?.('reportNothing', 10, 'warn',
@@ -1301,6 +1302,7 @@ function handOverSelected(trackArg) {
 }
 
 function assignSelected(siteId, trackArg) {
+  if (refusedByHold()) return;
   /*
    * Not at the set. Shooting is not your job tonight, and the console says so
    * in the same breath as it says whose job it is — a greyed button that eats
@@ -1631,8 +1633,50 @@ function closeAbort() {
   document.getElementById('btn-abort')?.focus();
 }
 
+/**
+ * The verbs that commit the sector to something, as against the ones that
+ * only look at it.
+ *
+ * HOLD reads. It does not command. With the clock stopped the console used to
+ * accept every order it accepts running — measured in the browser: at speed 0
+ * the world clock does not move and `world.assign()` still returns a live
+ * engagement — so every time-pressure decision in the game was optional. The
+ * shootlist, the pairing, the salvo, the sweet spot on a crossing target, the
+ * reload you take before the next package: all of them free, for any player
+ * who found the space bar.
+ *
+ * What stays free is everything that is reading: selection, hover, the track
+ * list, the battery cards, the range knob, the handbook, the seat toggle, and
+ * stepping through contacts to look at them. A player on a thirteen-inch
+ * screen who stops the clock to find something has lost nothing.
+ *
+ * `report` is on the list and it is the one that might look wrong. Handing a
+ * contact to the launch officer IS the radar seat's whole verb, and a seat
+ * whose only act is free under HOLD has no time pressure at all.
+ */
+const HOLD_REFUSES = new Set([
+  'direct', 'posture', 'reserve', 'emcon', 'emcon-radar', 'weapons', 'salvo',
+  'ride', 'reload', 'scoot', 'lock', 'fire', 'assign', 'report',
+]);
+
+/**
+ * True when the clock is stopped and the thing being asked for is an order.
+ * Every path that commits goes through here — `runAction`, and the two that
+ * reach `assignSelected` and `handOverSelected` round the side of it.
+ */
+function refusedByHold() {
+  if (!world || state.speed !== 0 || world.phase !== 'running') return false;
+  // One line, in the register the game already uses for this. Throttled,
+  // because a player who has not noticed will press several things.
+  world.logThrottled('heldClock', 8, 'warn',
+    'THE BATTERY IS NOT LISTENING TO A STOPPED CLOCK. HOLD READS; IT DOES NOT ORDER.');
+  audio.deny?.();
+  return true;
+}
+
 function runAction(act, siteId, radarId, formationId, stateArg, trackArg) {
   if (!world) return;
+  if (HOLD_REFUSES.has(act) && refusedByHold()) return;
   const site = siteId ? world.siteById.get(siteId) : null;
   const formation = formationId ? world.formationById.get(formationId) : null;
   /*

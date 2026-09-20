@@ -987,6 +987,32 @@ export class World {
       const radar = this.radarById.get(site?.radarId);
       if (radar) radar.on = false;
     }
+    /*
+     * AND SO DOES THE SECTOR'S, ON EVERY WATCH THE PLAYER OWNS ONE.
+     *
+     * This is the game's signature decision — you must transmit to see, and
+     * transmitting is how they find you — and it was asked exactly once in
+     * twelve watches, on the tutorial, on a timer. Eleven of twelve shipped
+     * every surveillance set already radiating at t=0: the seat's defining
+     * switch was found in the ON position and the operator's first act was
+     * to look at a picture somebody else had already paid for.
+     *
+     * So a seat that owns the surveillance sets is handed them cold. The
+     * cost of being wrong is already modelled and none of it had anything to
+     * bite on: `radiateAll` asks for them at forty-five seconds dark with
+     * hostiles up, `COMMAND.standing.perDarkMinute` charges two and a half
+     * points a minute past a hundred and twenty seconds of grace, and
+     * `stepAdvisories` brings them up for you at the scenario's safety and
+     * says so out loud. What changes here is only that the question gets
+     * asked.
+     *
+     * A cabin operator does not own the sector's sets and is not handed
+     * them: on a crew watch they stay under AI emissions discipline, which
+     * is what `ownsSurveillance` has always meant.
+     */
+    if (this.control.ownsSurveillance) {
+      for (const radar of this.radars) if (!radar.siteId) radar.on = false;
+    }
   }
 
   /* ---------------------------------------------------------------- *
@@ -2157,8 +2183,16 @@ export class World {
   stepAdvisories() {
     // The teaching-watch safety: a scenario that starts its surveillance set
     // cold names the moment sector stops waiting for you.
-    if (this.scenario.radarSafetyAtS && !this._radarSafetyDone
-      && this.t >= this.scenario.radarSafetyAtS) {
+    /*
+     * AND IT IS EVERY WATCH NOW, NOT THE THREE THAT DECLARED ONE.
+     *
+     * The sets start cold wherever the player owns them, so every watch
+     * needs the safety this used to be scoped to. `radarSafetyAtS` still
+     * overrides the default where a scenario has an opinion — the teaching
+     * watch waits sixty seconds, not ninety.
+     */
+    const safetyAtS = this.scenario.radarSafetyAtS ?? COMMAND.standing.radarSafetyS;
+    if (safetyAtS && !this._radarSafetyDone && this.t >= safetyAtS) {
       this._radarSafetyDone = true;
       let flipped = false;
       for (const radar of this.radars) {
@@ -2167,6 +2201,24 @@ export class World {
       if (flipped) {
         this.log('warn', 'SECTOR HAS BROUGHT THE SURVEILLANCE SET UP REMOTELY. THE SWITCH IS YOURS TO KEEP.',
           { severity: 'high' });
+        /*
+         * AND IT IS CHARGED FOR. The balance critic's words: "replace the
+         * safety with a cost rather than an override... the player then
+         * learns the trade by paying for the wrong answer instead of having
+         * the right one pressed for them." The cost is the one the file
+         * already models — two and a half points a minute of silence — with
+         * the grace spent, because the grace is for an operator who chose to
+         * be dark and this one chose nothing. The teaching watch does not
+         * charge: a watch whose job is to teach the switch may not fine a
+         * learner for not knowing where it is yet.
+         */
+        if (!this.scenario.basicConsole) {
+          const minutes = this.command.darkTimeS / 60;
+          if (minutes > 0) {
+            standingDelta(this, COMMAND.standing.perDarkMinute * minutes,
+              'the sets were brought up for you');
+          }
+        }
       }
       /*
        * And the cabin's own set, which sector cannot reach.

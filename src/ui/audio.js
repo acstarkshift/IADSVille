@@ -137,6 +137,14 @@ export class Audio {
   press() {
     this.tone({ freq: 1150, to: 640, dur: 0.045, type: 'triangle', gain: 0.05 });
   }
+  /**
+   * A cap that went down and did nothing, because the clock is stopped. Half
+   * the press, no travel, and a flat low tone rather than a falling one: the
+   * sound a switch makes against a dead panel.
+   */
+  deny() {
+    this.tone({ freq: 190, dur: 0.055, type: 'square', gain: 0.035 });
+  }
   /** The range knob: one detent. */
   detent() {
     this.tone({ freq: 2400, dur: 0.02, type: 'square', gain: 0.035 });

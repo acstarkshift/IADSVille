@@ -553,7 +553,22 @@ export const SCENARIOS = [
      * is where the second watch of the teaching act belongs. The raid, the
      * store and the five axes are untouched.
      */
-    leakerTolerance: 2,
+    /*
+     * RE-TUNED FOR THE COLD START, AND THE NUMBER IS A CONSEQUENCE OF IT.
+     *
+     * Every surveillance set the player owns begins the watch cold now, and
+     * coming up takes the EWR twenty seconds of warming and the gap-filler
+     * nine. That is the game's central trade finally being charged for, and
+     * it costs the sector the opening of every raid: measured over
+     * twenty-four seeds, competent play at the primary seat, the campaign
+     * fell fifteen to thirty points of held rate across the board. The
+     * allowances move with it, because the alternative is a campaign that
+     * asks its own question and then punishes the answer.
+     *
+     * The published per-act bands and the whole before-and-after table are in
+     * `test/playtest.test.js`.
+     */
+    leakerTolerance: 3,
     /*
      * Eighty-five seconds before sector command starts testing you, for the
      * same reason the teaching watch waits ninety-five. The first contact on
@@ -773,7 +788,19 @@ export const SCENARIOS = [
        * that no allowance at all put the watch in the sixty-to-ninety band.
        * At four the tail comes in and the beat is unchanged.
        */
-      { atS: 435, type: 'cruise', count: 4, bearingDeg: 255, spreadDeg: 20, spacingS: 12, altM: 50,
+      /*
+       * THREE, AND IT WAS FOUR, AND THE COLD START IS WHY.
+       *
+       * The western cruise run is the last thing this watch does and it
+       * arrives at fifty metres, which is under every floor on the position
+       * but the two sections'. With the sets handed to the operator already
+       * radiating, the sector had the whole opening of the raid to build a
+       * picture before it. Cold, it does not: measured over twenty-four
+       * seeds, competent, the watch fell from 81 per cent held to 54. One
+       * missile off this package and the allowance at three reads 83, which
+       * is where the second watch of the campaign belongs.
+       */
+      { atS: 435, type: 'cruise', count: 3, bearingDeg: 255, spreadDeg: 20, spacingS: 12, altM: 50,
         distanceKm: 50, targetAssetId: 'a_bridge' },
     ],
   },
@@ -979,7 +1006,15 @@ export const SCENARIOS = [
         distanceKm: 70 },
       { atS: 180, type: 'striker', count: 4, bearingDeg: 70, spreadDeg: 26, spacingS: 30, altM: 250,
         distanceKm: 80 },
-      { atS: 330, type: 'cruise', count: 5, bearingDeg: 55, spreadDeg: 30, spacingS: 12, altM: 90,
+      /*
+       * FOUR, AND IT WAS FIVE — the cold-start re-tune, as above. This
+       * battery's own set starts cold and always has; what is new is that the
+       * sector's two do as well, so a cabin fighting alone gets its first
+       * cue later than the watch was built for. Twenty-four seeds: 88 per
+       * cent held with four, against 81 with five and a tolerance dial that
+       * does not move it at any setting from four to seven.
+       */
+      { atS: 330, type: 'cruise', count: 4, bearingDeg: 55, spreadDeg: 30, spacingS: 12, altM: 90,
         distanceKm: 85 },
       { atS: 470, type: 'striker', count: 4, bearingDeg: 25, spreadDeg: 20, spacingS: 26, altM: 900,
         distanceKm: 60, targetAssetId: 'a_bridge' },
@@ -1718,7 +1753,22 @@ export const SCENARIOS = [
      * four was tried and moves the net seat by six points only, because half
      * the net's failures here are the operations centre and not the count.
      */
-    leakerTolerance: 3,
+    /*
+     * RE-TUNED FOR THE COLD START, AND THE NUMBER IS A CONSEQUENCE OF IT.
+     *
+     * Every surveillance set the player owns begins the watch cold now, and
+     * coming up takes the EWR twenty seconds of warming and the gap-filler
+     * nine. That is the game's central trade finally being charged for, and
+     * it costs the sector the opening of every raid: measured over
+     * twenty-four seeds, competent play at the primary seat, the campaign
+     * fell fifteen to thirty points of held rate across the board. The
+     * allowances move with it, because the alternative is a campaign that
+     * asks its own question and then punishes the answer.
+     *
+     * The published per-act bands and the whole before-and-after table are in
+     * `test/playtest.test.js`.
+     */
+    leakerTolerance: 5,
     playerBatteryId: 's_thistle_t',
     roundAllowance: 30,
     /*
@@ -2016,7 +2066,14 @@ export const SCENARIOS = [
       { atS: 25, type: 'sead', count: 2, bearingDeg: 20, spreadDeg: 30, spacingS: 24, distanceKm: 165 },
       { atS: 70, type: 'striker', count: 6, bearingDeg: 15, spreadDeg: 24, spacingS: 11, altM: 6200,
         distanceKm: 145, targetAssetId: 'a_lozan_power' },
-      { atS: 210, type: 'cruise', count: 5, bearingDeg: 22, spreadDeg: 26, spacingS: 9, altM: 90,
+      /*
+       * FOUR, AND IT WAS FIVE — the cold-start re-tune. This watch's
+       * allowance is eight and the rung above it is nine, which reads 63 and
+       * 88 per cent over twenty-four seeds with nothing between: the dial
+       * cannot express act three. One missile off the Kubin stream reads 71
+       * at an allowance of eight, which can.
+       */
+      { atS: 210, type: 'cruise', count: 4, bearingDeg: 22, spreadDeg: 26, spacingS: 9, altM: 90,
         distanceKm: 145, targetAssetId: 'a_lozan' },
 
       // Kubin, second, and from a bearing the western gapfiller is poor against.
@@ -2264,7 +2321,22 @@ export const SCENARIOS = [
      * the net seat under the floor — measured, at an allowance of three the
      * net holds 4 of 16 — so the exception is recorded in the README instead.
      */
-    leakerTolerance: 4,
+    /*
+     * RE-TUNED FOR THE COLD START, AND THE NUMBER IS A CONSEQUENCE OF IT.
+     *
+     * Every surveillance set the player owns begins the watch cold now, and
+     * coming up takes the EWR twenty seconds of warming and the gap-filler
+     * nine. That is the game's central trade finally being charged for, and
+     * it costs the sector the opening of every raid: measured over
+     * twenty-four seeds, competent play at the primary seat, the campaign
+     * fell fifteen to thirty points of held rate across the board. The
+     * allowances move with it, because the alternative is a campaign that
+     * asks its own question and then punishes the answer.
+     *
+     * The published per-act bands and the whole before-and-after table are in
+     * `test/playtest.test.js`.
+     */
+    leakerTolerance: 5,
     playerBatteryId: 's_bastion',
     roundAllowance: 26,
     /**

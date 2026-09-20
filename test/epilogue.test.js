@@ -224,6 +224,15 @@ describe('the corridor', () => {
      * twenty kilometres and leave.
      */
     const w = new World(epilogue, { role: 'net', seed: 'corridor-2' });
+    /*
+     * The sets start cold on every watch the player owns them now — that is
+     * the trade the whole game is built on, finally being asked — so a test
+     * about the ARITHMETIC of a deadline brings them up the way a player
+     * does. Without this the fighters are only three minutes old when the
+     * assertion reads them and the track carries the wrong one of its two
+     * clocks for a reason that has nothing to do with the clocks.
+     */
+    for (const radar of w.radars) if (!radar.siteId) w.setRadar(radar.id, true);
     while (w.phase === 'running' && w.t < 240) w.step(0.1);
     const hunters = [...w.tracks.values()].filter((t) => t.classification === 'interceptor'
       && !t.destroyed && huntsTheFlight(w, t));

@@ -182,7 +182,7 @@ describe('the net measures silence the way the bar does', () => {
 });
 
 describe('the raid the cabin owns', () => {
-  test('Low Riders flies twenty-eight aircraft in seven packages, as its file says', () => {
+  test('Low Riders flies twenty-seven aircraft in seven packages, as its file says', () => {
     const scenario = scenarioById('low-riders');
     const total = scenario.waves.reduce((n, wave) => n + wave.count, 0);
     // Thirty until the curve scrub, when a cruise missile that arrives became
@@ -190,7 +190,14 @@ describe('the raid the cabin owns', () => {
     // BASTION cannot see under were the largest single source of arrivals on
     // the watch and had been free; at four the beat is unchanged and the
     // allowance means what it says.
-    assert.equal(total, 28, 'the count in the scenario comment must match the table');
+    //
+    // TWENTY-SEVEN, AND IT WAS TWENTY-EIGHT, and the cold start is why: the
+    // sector's surveillance sets are handed to the operator switched off now,
+    // and twenty seconds of warming is the opening of the raid. One missile
+    // off the western run at 435 s. Measured, twenty-four seeds, competent:
+    // the watch fell 75 -> 54 per cent held on the cold start alone, and
+    // reads 83 with the missile gone and the allowance at three.
+    assert.equal(total, 27, 'the count in the scenario comment must match the table');
     assert.equal(scenario.waves.length, 7, 'seven packages');
     // Five distinct axes: 350 / 340 / 330 out of the north-west, about 20 out
     // of the north-east (three packages share it), and 255 from the west. The
@@ -239,9 +246,19 @@ describe('a gauge with nothing behind it is dead weight', () => {
     assert.deepEqual(waves.map((w) => [w.atS, w.type, w.count, w.distanceKm]), [
       [25, 'striker', 3, 70],
       [180, 'striker', 4, 80],
-      [330, 'cruise', 5, 85],
+      [330, 'cruise', 4, 85],
       [470, 'striker', 4, 60],
     ], 'seven alternatives were measured at thirty-two seeds and every one is worse');
+    /*
+     * THE CRUISE PACKAGE IS FOUR AND IT WAS FIVE, and this is the one line of
+     * that table the cold-start re-tune moved. The seven alternatives above
+     * were all measured against a cabin whose sector had two sets already
+     * radiating; it has neither now, so the cabin's first cue arrives later
+     * than the watch was built for and the watch fell from 88 per cent held
+     * to 81. The allowance dial does not move this watch at any setting from
+     * four to seven — measured, sixteen seeds, 81 per cent at all four — so
+     * the aeroplane moved instead, and twenty-four seeds read 88.
+     */
   });
 });
 
